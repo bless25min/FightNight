@@ -21,7 +21,7 @@ export const siteConfig = {
 // ── Hero ─────────────────────────────────────────
 export const heroContent = {
   title: '今晚，一起進入狀態。',
-  subtitle: '這不是一堂課。是一張讓你從日常切出去的入場券。',
+  subtitle: '這是一張讓你脫離日常的入場券。',
   primaryCta: '立即搶位',
   secondaryCta: '這一晚會發生什麼',
   tags: ['🥊 拳套入場', '🎧 DJ 現場', '👥 集體同步', '🔥 壓力釋放'],
@@ -29,8 +29,8 @@ export const heroContent = {
 
 // ── 共同困境 ──────────────────────────────────────
 export const painSectionContent = {
-  title: '你不是缺活動。',
-  subtitle: '你是缺一個真正讓你進入狀態的地方。',
+  title: '對生活提不起勁。',
+  subtitle: '你只是缺一個真正讓你「進入狀態」的機會。',
   description:
     '每天都在找事情填滿時間，但填完之後還是覺得悶。因為問題從來不是「沒事做」，而是「沒有一件事能真的讓你從日常裡切出去」。',
 }
@@ -101,7 +101,7 @@ export const newModelContent = {
 
 // ── 三大核心價值 ──────────────────────────────────
 export const coreValueSectionContent = {
-  title: '你真正需要的，不是活動。',
+  title: '你真正需要的',
   subtitle: '是被一個設計好的空間，接住。',
 }
 
@@ -181,7 +181,7 @@ export const formulaItems: FormulaItem[] = [
 // ── 六大體驗機制 ──────────────────────────────────
 export const mechanismSectionContent = {
   title: '六個環節，每一個都有作用。',
-  subtitle: '這不是隨便拼湊的活動。每一步都在往「進入狀態」推進。',
+  subtitle: '每一步都在往「進入狀態」推進。',
 }
 
 export const mechanisms: Mechanism[] = [
@@ -225,10 +225,10 @@ export const mechanisms: Mechanism[] = [
 
 // ── 拳套區 ────────────────────────────────────────
 export const glovesContent = {
-  title: '不是贈品。是你今晚的身份。',
-  subtitle: '這副拳套不是附送的小東西',
+  title: '這是你今晚的入場券。',
+  subtitle: '戴上它，你就不再是旁觀者。',
   description:
-    '它是你進場的象徵，是你今晚身份的表態。戴上它，你就不再是旁觀者——你是這個夜晚的一部分。帶走它，它會記得你今晚的每一拳。',
+    '它是你進場的象徵，是你今晚身份的表態。戴上它，你就不再是旁觀者——你是這個夜晚的一部分。',
   features: ['專屬設計', '活動限定配色', '帶走收藏'],
 }
 
@@ -354,10 +354,10 @@ export const ticketPlans: TicketPlan[] = [
 
 // ── 群體身份區 ────────────────────────────────────
 export const identityContent = {
-  title: '你買的不是票。',
-  subtitle: '是今晚你屬於哪一群人。',
+  title: '你買的不只是脫離生活的入場券。',
+  subtitle: '而是今晚你屬於哪一群人。',
   description:
-    '這不是加入一堂課。是決定今晚你要不要走進場，成為這個夜晚的一部分。進場的人不是來上課的，是來進入狀態的。',
+    '這是決定今晚你要不要走進場，成為這個夜晚的一部分。進場的人都是來進入狀態的。',
 }
 
 // ── FAQ ───────────────────────────────────────────
@@ -403,7 +403,7 @@ export const faqItems: FAQItem[] = [
 // ── Final CTA ─────────────────────────────────────
 export const finalCtaContent = {
   title: '不是每個夜晚都值得出門。',
-  subtitle: '但如果你最近真的需要一個出口——這一場，值得。',
+  subtitle: '但如果你最近真的需要一個出口，這一場，值得。',
   primaryCta: '選擇你的 Pass',
   secondaryCta: '跟朋友一起進場',
   ghostCta: '先加 LINE 聊聊',
