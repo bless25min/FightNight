@@ -1,0 +1,69 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-abyss text-pearl font-body;
+    overflow-x: hidden;
+  }
+
+  ::selection {
+    @apply bg-neon/30 text-pearl;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-abyss;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-neon/30 rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-neon/50;
+  }
+}
+
+@layer components {
+  /* 玻璃擬態 */
+  .glass {
+    background: rgba(20, 20, 32, 0.6);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  /* 螢光紫光暈 */
+  .glow-neon {
+    box-shadow: 0 0 20px rgba(191, 90, 242, 0.3),
+                0 0 60px rgba(191, 90, 242, 0.1);
+  }
+
+  /* 電光紅光暈 */
+  .glow-blaze {
+    box-shadow: 0 0 20px rgba(255, 59, 92, 0.3),
+                0 0 60px rgba(255, 59, 92, 0.1);
+  }
+
+  /* 漸層文字 */
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-neon via-volt to-blaze;
+  }
+
+  .text-gradient-warm {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-blaze to-gold;
+  }
+
+  /* Section 裝飾線 */
+  .section-divider {
+    @apply w-16 h-0.5 bg-gradient-to-r from-neon to-transparent mx-auto;
+  }
+}
