@@ -5,7 +5,6 @@ import { OldFrameworkBreakSection } from './components/sections/OldFrameworkBrea
 import { NewModelSection } from './components/sections/NewModelSection'
 import { CoreValueSection } from './components/sections/CoreValueSection'
 import { FormulaSection } from './components/sections/FormulaSection'
-import { MechanismSection } from './components/sections/MechanismSection'
 import { GlovesSection } from './components/sections/GlovesSection'
 import { ExperienceFlowSection } from './components/sections/ExperienceFlowSection'
 import { AudienceFitSection } from './components/sections/AudienceFitSection'
@@ -29,7 +28,6 @@ function App() {
         <NewModelSection />
         <CoreValueSection />
         <FormulaSection />
-        <MechanismSection />
         <GlovesSection />
         <ExperienceFlowSection />
         <AudienceFitSection />

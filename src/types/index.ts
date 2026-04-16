@@ -24,13 +24,6 @@ export type FormulaItem = {
   description: string
 }
 
-export type Mechanism = {
-  id: string
-  icon: string
-  title: string
-  description: string
-}
-
 export type FlowStep = {
   id: string
   stage: number
