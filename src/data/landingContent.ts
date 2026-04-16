@@ -23,7 +23,7 @@ export const heroContent = {
   subtitle: '這是一張讓你脫離日常的入場券。',
   primaryCta: '立即搶位',
   secondaryCta: '這一晚會發生什麼',
-  tags: ['🥊 拳套入場', '🎧 DJ 現場', '👥 集體同步', '🔥 壓力釋放'],
+  tags: ['🥊 拳套入場', '👥 集體同步', '🔥 壓力釋放'],
 }
 
 // ── 共同困境 ──────────────────────────────────────
@@ -31,7 +31,7 @@ export const painSectionContent = {
   title: '對生活提不起勁。',
   subtitle: '你缺的是一個讓你「進入狀態」的機會。',
   description:
-    '每天都在找事情填滿時間，但填完之後還是覺得悶。問題是「沒有一件事能讓你脫離枯燥窒息的日常」。',
+    '每天都在找事情填滿時間，但填完之後還是覺得悶，彷彿「沒有一件事能讓你脫離枯燥窒息的日常」。',
 }
 
 export const painPoints: PainPoint[] = [
@@ -187,8 +187,8 @@ export const glovesContent = {
 
 // ── 情緒流程區 ────────────────────────────────────
 export const flowSectionContent = {
-  title: '安全的失控',
-  subtitle: '這是一段你會記住，但不會受傷的過程。',
+  title: '安全並且精心編排的失控',
+  subtitle: '你可能會出神，事後忘記過程做了什麼，但不會受傷。',
 }
 
 export const flowSteps: FlowStep[] = [
@@ -196,14 +196,14 @@ export const flowSteps: FlowStep[] = [
     id: 'flow-1',
     stage: 1,
     title: '動態暖身',
-    description: '從最簡單的動態暖身動作開始，讓教練快速判別每個人的身體能力差異。',
+    description: '從任何人都能做到的簡單動作開始，讓教練快速判別每個人的身體能力差異。',
     emotionLevel: 1,
   },
   {
     id: 'flow-2',
     stage: 2,
     title: '程度分組與鏡像動作',
-    description: '根據暖身時的狀況，進行分組，讓大家專注在鏡像動作與口號上。',
+    description: '根據暖身時的狀況，進行分組，讓大家專注在編排好的動作與節奏上。',
     emotionLevel: 2,
   },
   {
@@ -211,7 +211,7 @@ export const flowSteps: FlowStep[] = [
     stage: 3,
     title: '堆疊同步與專注',
     description:
-      '在教練的引導下，你跟著大家一起出拳、一起吶喊。',
+      '在教練的引導下，你也跟著大家一起出拳、一起吶喊。',
     emotionLevel: 3,
   },
   {
@@ -219,7 +219,7 @@ export const flowSteps: FlowStep[] = [
     stage: 4,
     title: '堆疊並釋放情緒',
     description:
-      '隨著節奏與強度的堆疊，你的思緒將飛走，只剩下純粹的釋放。',
+      '隨著節奏與強度的堆疊，你漸漸專注到聽不見教練高能量的吶喊聲，彷彿世界只剩下你跟沙包，思緒飛走，只剩下純粹的釋放。',
     emotionLevel: 4,
   },
   {
