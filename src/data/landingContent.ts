@@ -294,9 +294,6 @@ export const ticketPlans: TicketPlan[] = [
     features: [
       'Fight Night VIP 入場',
       '限定色系拳套一副（帶走）',
-      '前排專屬位置',
-      'DJ 音樂節奏體驗全程',
-      '後場 VIP 社交區',
       '專屬紀念品',
       '下次活動優先報名',
     ],
