@@ -19,7 +19,7 @@ function App() {
   useScrollProgress()
 
   return (
-    <>
+    <div className="overflow-x-hidden w-full relative">
       <Header />
       <main>
         <HeroSection />
@@ -39,7 +39,7 @@ function App() {
       <footer className="py-8 text-center text-mist/50 text-xs border-t border-pearl/5">
         <p>© {new Date().getFullYear()} UFCGYM TAIWAN. All rights reserved.</p>
       </footer>
-    </>
+    </div>
   )
 }
 
