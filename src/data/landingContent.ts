@@ -258,7 +258,7 @@ export const ticketPlans: TicketPlan[] = [
     id: 'starter-pass',
     name: 'Starter Pass',
     subtitle: '一個人先試水溫',
-    price: 'NT$2,200',
+    price: 'NT$1,800',
     features: [
       'Fight Night 入場資格',
       '專屬拳套一副（帶走）',
@@ -272,7 +272,7 @@ export const ticketPlans: TicketPlan[] = [
     id: 'duo-pass',
     name: 'Duo Pass',
     subtitle: '揪人一起更有感',
-    price: 'NT$3,800',
+    price: 'NT$3,000',
     badge: '雙人最划算',
     features: [
       '兩人 Fight Night 入場',
@@ -289,7 +289,7 @@ export const ticketPlans: TicketPlan[] = [
     id: 'signature-pass',
     name: 'Signature Pass',
     subtitle: '今晚拉到最滿',
-    price: 'NT$4,500',
+    price: 'NT$3,600',
     badge: 'VIP體驗',
     features: [
       'Fight Night VIP 入場',
