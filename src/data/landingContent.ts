@@ -197,14 +197,14 @@ export const flowSteps: FlowStep[] = [
     stage: 1,
     title: '新手也能做到的動作',
     description: '從任何人都能做到的簡單動作開始，讓教練快速判別每個人的身體能力差異。',
-    emotionLevel: 1,
+    emotionLevel: 3,
   },
   {
     id: 'flow-2',
     stage: 2,
     title: '程度分組與鏡像動作',
     description: '根據暖身時的狀況，進行分組，讓大家專注在編排好的動作與節奏上。',
-    emotionLevel: 2,
+    emotionLevel: 5,
   },
   {
     id: 'flow-3',
@@ -212,7 +212,7 @@ export const flowSteps: FlowStep[] = [
     title: '堆疊同步與專注',
     description:
       '透過教練高能量的吶喊聲引導，隨著節奏與強度的堆疊，你也不自覺地跟著大家一起出拳、一起吶喊。',
-    emotionLevel: 3,
+    emotionLevel: 7,
   },
   {
     id: 'flow-4',
@@ -220,7 +220,7 @@ export const flowSteps: FlowStep[] = [
     title: '全力專注並釋放情緒',
     description:
       '隨著動作與節奏的堆疊，你漸漸專注到聽不見教練的吶喊聲，彷彿世界只剩下你跟沙包，只剩下純粹的情緒釋放。',
-    emotionLevel: 4,
+    emotionLevel: 9,
   },
   {
     id: 'flow-5',
@@ -228,7 +228,7 @@ export const flowSteps: FlowStep[] = [
     title: '歸屬與延續',
     description:
       '你完成了平常不會做的事，你與運動夥伴互相激勵，全力克服共同的挑戰後，獲得了新的身份。',
-    emotionLevel: 5,
+    emotionLevel: 6,
   },
 ]
 
