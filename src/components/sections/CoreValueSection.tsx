@@ -11,7 +11,7 @@ export function CoreValueSection() {
     <SectionWrapper id="core-value">
       <SectionHeading
         title={coreValueSectionContent.title}
-        subtitle={coreValueSectionContent.subtitle}
+        subtitle={(coreValueSectionContent as any).subtitle}
       />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">

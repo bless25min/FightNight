@@ -187,8 +187,8 @@ export const glovesContent = {
 
 // ── 情緒流程區 ────────────────────────────────────
 export const flowSectionContent = {
-  title: '這一晚的情緒曲線',
-  subtitle: '不是課表，是一段你會記住的過程。',
+  title: '安全的失控',
+  subtitle: '這是一段你會記住，但不會受傷的過程。',
 }
 
 export const flowSteps: FlowStep[] = [
