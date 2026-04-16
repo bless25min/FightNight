@@ -195,7 +195,7 @@ export const flowSteps: FlowStep[] = [
   {
     id: 'flow-1',
     stage: 1,
-    title: '動態暖身',
+    title: '新手也能做到的動作',
     description: '從任何人都能做到的簡單動作開始，讓教練快速判別每個人的身體能力差異。',
     emotionLevel: 1,
   },
@@ -235,7 +235,7 @@ export const flowSteps: FlowStep[] = [
 // ── 適合誰 ────────────────────────────────────────
 export const audienceSectionContent = {
   title: '這個體驗適合你嗎？',
-  subtitle: '如果你中了三項以上，那你就是我們在等的人。',
+  subtitle: '如果這些項目其中有符合你的，那你就是我們在等的人。',
 }
 
 export const audiencePoints: AudiencePoint[] = [

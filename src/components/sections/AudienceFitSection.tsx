@@ -55,7 +55,7 @@ export function AudienceFitSection() {
         })}
       </div>
 
-      {checked.size >= 3 && (
+      {checked.size >= 1 && (
         <motion.p
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}

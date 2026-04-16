@@ -28,8 +28,8 @@ function App() {
         <NewModelSection />
         <CoreValueSection />
         <FormulaSection />
-        <GlovesSection />
         <ExperienceFlowSection />
+        <GlovesSection />
         <AudienceFitSection />
         <TicketSection />
         <IdentitySection />
