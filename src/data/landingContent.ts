@@ -137,9 +137,9 @@ export const formulaItems: FormulaItem[] = [
   },
   {
     id: 'f-seed',
-    term: '種子傳染',
+    term: '情緒感染',
     description:
-      '當某個人因為某件事而大笑，身邊的人也會跟著笑，你也會跟著大笑。',
+      '當一個人的情緒被點燃，周圍的人也會被帶動，整個群體的狀態會快速擴散。',
   },
 ]
 

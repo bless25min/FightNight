@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import flowOverviewPoster from '../../assets/landing/flow-overview-poster.svg'
+import flowOverviewPoster from '../../assets/landing/flow-overview-poster.png'
 import flowStep1Poster from '../../assets/landing/flow-step-1.png'
 import flowStep2Poster from '../../assets/landing/flow-step-2.png'
 import flowStep3Poster from '../../assets/landing/flow-step-3.png'
