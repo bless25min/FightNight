@@ -1,7 +1,6 @@
 import type {
   PainPoint,
   FrameworkCard,
-  CoreValue,
   FormulaItem,
   FlowStep,
   AudiencePoint,
@@ -98,38 +97,6 @@ export const newModelContent = {
   keywords: ['同步', '釋放', '歸屬', '進場', '身份'],
 }
 
-// ── 三大核心價值 ──────────────────────────────────
-export const coreValueSectionContent = {
-  title: '你真正需要的，是被一個設計好的情境接住。',
-}
-
-export const coreValues: CoreValue[] = [
-  {
-    id: 'cv-release',
-    icon: '🔥',
-    title: '釋放',
-    subtitle: '合法失控的安全場域',
-    description:
-      '一副拳套、一個夜晚。把壓力打出去，把那些悶住的東西轟出來。在這裡，你被允許用力，被允許吶喊，被允許把那些日常裡不能表達的情緒，全部都丟出去。',
-  },
-  {
-    id: 'cv-belonging',
-    icon: '👥',
-    title: '歸屬',
-    subtitle: '你不是一個人',
-    description:
-      '左邊的人跟你一起出拳，右邊的人跟你一起喘氣。整個場都在教練控制的同一頻率上。你不需要認識任何人，但你會感覺到：這裡有一群人跟你一樣。',
-  },
-  {
-    id: 'cv-transcend',
-    icon: '⚡',
-    title: '自我超越',
-    subtitle: '短暫離開那個悶住的自己',
-    description:
-      '在這裡你不是上班族、不是誰的誰、不用回訊息、不用表現得體。你只是一個聽指示全力揮拳的人。那段時間，你會忘記日常，忘記身份，只記得你還能這樣活著。',
-  },
-]
-
 // ── 公式區 ────────────────────────────────────────
 export const formulaContent = {
   title: '為什麼你會被帶進去？',
@@ -175,15 +142,6 @@ export const formulaItems: FormulaItem[] = [
       '當某個人因為某件事而大笑，身邊的人也會跟著笑，你也會跟著大笑。',
   },
 ]
-
-// ── 拳套區 ────────────────────────────────────────
-export const glovesContent = {
-  title: '這是你今晚的入場券。',
-  subtitle: '戴上它，你就不再是旁觀者。',
-  description:
-    '它是你進場的象徵，是你今晚身份的表態。戴上它，你就不再是旁觀者，你是這個夜晚的一部分。',
-  features: ['專屬設計', '活動限定配色', '帶走收藏'],
-}
 
 // ── 情緒流程區 ────────────────────────────────────
 export const flowSectionContent = {
@@ -257,11 +215,11 @@ export const ticketPlans: TicketPlan[] = [
   {
     id: 'starter-pass',
     name: 'Starter Pass',
-    subtitle: '一個人先試水溫',
+    subtitle: '租用/自備拳套',
     price: 'NT$1,800',
     features: [
       'Fight Night 入場資格',
-      '專屬拳套一副（帶走）',
+      '拳套可租用或自備',
       '完整TRAIN DIFFERENT體驗',
       'Pro Fighter 職業選手合照與簽名',
     ],
@@ -269,26 +227,26 @@ export const ticketPlans: TicketPlan[] = [
     ctaVariant: 'secondary',
   },
   {
-    id: 'duo-pass',
-    name: 'Duo Pass',
-    subtitle: '揪人一起更有感',
+    id: 'boutique-pass',
+    name: 'Boutique Pass',
+    subtitle: '單人附專屬拳套',
     price: 'NT$3,000',
-    badge: '雙人最划算',
+    badge: '附專屬拳套',
     features: [
-      '兩人 Fight Night 入場',
-      '雙人各一副專屬拳套（帶走）',
-      '雙人體驗紀念',
+      'Fight Night 入場資格',
+      '專屬拳套一副（帶走）',
+      '單人體驗紀念',
       '完整TRAIN DIFFERENT體驗',
       'Pro Fighter 職業選手合照與簽名',
     ],
     highlight: true,
-    ctaLabel: '選擇 Duo',
+    ctaLabel: '選擇 Boutique',
     ctaVariant: 'primary',
   },
   {
     id: 'signature-pass',
     name: 'Signature Pass',
-    subtitle: '今晚拉到最滿',
+    subtitle: '個人',
     price: 'NT$3,600',
     badge: 'VIP體驗',
     features: [
@@ -330,7 +288,7 @@ export const faqItems: FAQItem[] = [
     id: 'faq-3',
     question: '拳套可以帶走嗎？',
     answer:
-      '可以。每位入場者都會拿到專屬拳套，它是你的。活動結束直接帶走，作為這個夜晚的紀念。',
+      '依票種而定。Starter Pass 可租用或自備拳套；Boutique Pass 與 Signature Pass 都附專屬拳套，活動結束後可以直接帶走。',
   },
   {
     id: 'faq-4',
@@ -342,7 +300,7 @@ export const faqItems: FAQItem[] = [
     id: 'faq-5',
     question: '可以跟朋友一起參加嗎？',
     answer:
-      '當然。我們有 Duo Pass 雙人票種，專門設計給想一起進場的朋友。兩個人一起來，感覺會更強烈。',
+      '當然可以。你們可以各自選擇適合自己的 Pass 一起進場；如果想要附專屬拳套，可以選 Boutique Pass 或 Signature Pass。',
   },
   {
     id: 'faq-6',

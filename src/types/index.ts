@@ -10,14 +10,6 @@ export type TicketPlan = {
   ctaVariant: 'primary' | 'secondary' | 'ghost'
 }
 
-export type CoreValue = {
-  id: string
-  icon: string
-  title: string
-  subtitle: string
-  description: string
-}
-
 export type FormulaItem = {
   id: string
   term: string

@@ -3,9 +3,7 @@ import { HeroSection } from './components/sections/HeroSection'
 import { PainSection } from './components/sections/PainSection'
 import { OldFrameworkBreakSection } from './components/sections/OldFrameworkBreakSection'
 import { NewModelSection } from './components/sections/NewModelSection'
-import { CoreValueSection } from './components/sections/CoreValueSection'
 import { FormulaSection } from './components/sections/FormulaSection'
-import { GlovesSection } from './components/sections/GlovesSection'
 import { ExperienceFlowSection } from './components/sections/ExperienceFlowSection'
 import { AudienceFitSection } from './components/sections/AudienceFitSection'
 import { TicketSection } from './components/sections/TicketSection'
@@ -26,10 +24,8 @@ function App() {
         <PainSection />
         <OldFrameworkBreakSection />
         <NewModelSection />
-        <CoreValueSection />
         <FormulaSection />
         <ExperienceFlowSection />
-        <GlovesSection />
         <AudienceFitSection />
         <TicketSection />
         <IdentitySection />
