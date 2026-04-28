@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+  <title id="title">3 堆疊同步與專注</title>
+  <desc id="desc">透過教練高能量的吶喊聲引導，隨著節奏與強度的堆疊，你也不自覺地跟著大家一起出拳、一起吶喊。</desc>
+  <defs>
+    <linearGradient id="bg3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#050505" />
+      <stop offset="100%" stop-color="#151113" />
+    </linearGradient>
+    <linearGradient id="panel3" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#020202" stop-opacity="0.98" />
+      <stop offset="75%" stop-color="#09090c" stop-opacity="0.94" />
+      <stop offset="100%" stop-color="#09090c" stop-opacity="0.18" />
+    </linearGradient>
+    <linearGradient id="accent3" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ff3b30" />
+      <stop offset="100%" stop-color="#ff7a21" />
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#bg3)" />
+  <rect width="760" height="900" fill="url(#panel3)" />
+  <g opacity="0.16">
+    <circle cx="1260" cy="450" r="260" fill="none" stroke="#ff3b30" stroke-width="2" />
+    <circle cx="1260" cy="450" r="210" fill="none" stroke="#ffffff" stroke-opacity="0.12" stroke-width="2" />
+    <path d="M1040 150 H1530" stroke="#ff3b30" stroke-width="3" />
+    <path d="M1040 750 H1530" stroke="#ffffff" stroke-opacity="0.12" stroke-width="2" />
+  </g>
+  <g transform="translate(92 112)">
+    <text x="0" y="0" fill="#ff3b30" font-size="28" font-weight="800" font-family="'Arial Black', 'Noto Sans TC', sans-serif" letter-spacing="3">FLOW 03</text>
+    <rect x="0" y="36" width="180" height="42" rx="21" fill="#17181c" stroke="#ffffff" stroke-opacity="0.12" />
+    <text x="26" y="65" fill="#ffffff" font-size="24" font-weight="700" font-family="'Noto Sans TC', 'Microsoft JhengHei', sans-serif">SYNC UP</text>
+    <text x="0" y="190" fill="#ffffff" font-size="78" font-weight="900" font-family="'Noto Sans TC', 'Microsoft JhengHei', sans-serif">堆疊同步與專注</text>
+    <rect x="0" y="236" width="118" height="8" rx="4" fill="url(#accent3)" />
+    <text x="0" y="344" fill="#f5f5f6" font-size="36" font-weight="500" font-family="'Noto Sans TC', 'Microsoft JhengHei', sans-serif">
+      <tspan x="0" dy="0">透過教練高能量的吶喊聲引導，</tspan>
+      <tspan x="0" dy="54">隨著節奏與強度的堆疊，</tspan>
+      <tspan x="0" dy="54">你也不自覺地跟著大家一起出拳、一起吶喊。</tspan>
+    </text>
+    <text x="0" y="682" fill="#d4d4d6" font-size="26" font-weight="500" font-family="'Noto Sans TC', 'Microsoft JhengHei', sans-serif">當節奏開始推進，你的注意力也開始被帶走。</text>
+  </g>
+  <g transform="translate(1000 166)">
+    <text x="0" y="0" fill="#ffffff" fill-opacity="0.08" font-size="420" font-weight="900" font-family="'Arial Black', Impact, sans-serif">3</text>
+    <rect x="64" y="124" width="420" height="340" rx="28" fill="#0d0f12" stroke="#ff3b30" stroke-opacity="0.65" stroke-width="4" />
+    <path d="M140 214 H404" stroke="#ff3b30" stroke-width="12" stroke-linecap="round" />
+    <path d="M140 284 H404" stroke="#ffffff" stroke-opacity="0.85" stroke-width="12" stroke-linecap="round" />
+    <path d="M140 354 H404" stroke="#ff3b30" stroke-width="12" stroke-linecap="round" />
+    <path d="M140 424 H404" stroke="#ffffff" stroke-opacity="0.85" stroke-width="12" stroke-linecap="round" />
+    <circle cx="118" cy="214" r="14" fill="#ff3b30" />
+    <circle cx="426" cy="284" r="14" fill="#ffffff" fill-opacity="0.85" />
+    <circle cx="118" cy="354" r="14" fill="#ff3b30" />
+    <circle cx="426" cy="424" r="14" fill="#ffffff" fill-opacity="0.85" />
+  </g>
+</svg>
