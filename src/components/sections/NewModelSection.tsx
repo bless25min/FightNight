@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import trainDifferentPoster from '../../assets/landing/train-different-poster.png'
 import { newModelContent } from '../../data/landingContent'
 import { SectionWrapper } from '../ui/SectionWrapper'
 
@@ -8,49 +9,30 @@ export function NewModelSection() {
       {/* 背景光暈 */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-neon/5 rounded-full blur-[120px] pointer-events-none" />
 
-      <div className="relative text-center max-w-3xl mx-auto">
-        <motion.h2
+      <div className="relative max-w-6xl mx-auto">
+        <motion.figure
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.7 }}
-          className="text-3xl md:text-5xl lg:text-6xl font-heading font-bold text-gradient leading-tight"
+          className="overflow-hidden rounded-[2rem] border border-pearl/10 bg-black/40 shadow-[0_30px_80px_rgba(0,0,0,0.35)]"
         >
-          {newModelContent.title}
-        </motion.h2>
-
-        <motion.p
-          initial={{ opacity: 0, y: 15 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6, delay: 0.3 }}
-          className="mt-8 text-lg md:text-xl text-mist leading-relaxed"
-        >
-          {newModelContent.description}
-        </motion.p>
-
-        {/* 浮動關鍵詞 */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6, delay: 0.5 }}
-          className="mt-10 flex flex-wrap justify-center gap-3"
-        >
-          {newModelContent.keywords.map((keyword, i) => (
-            <motion.span
-              key={keyword}
-              initial={{ opacity: 0, scale: 0.8 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.4, delay: 0.6 + i * 0.1 }}
-              className="px-5 py-2.5 rounded-full glass border border-neon/20 text-neon font-heading font-medium text-sm animate-float"
-              style={{ animationDelay: `${i * 0.5}s` }}
-            >
-              {keyword}
-            </motion.span>
-          ))}
-        </motion.div>
+          <img
+            src={trainDifferentPoster}
+            alt={`${newModelContent.title} ${newModelContent.description}`}
+            className="w-full h-auto"
+            loading="lazy"
+          />
+          <figcaption className="sr-only">
+            <p>{newModelContent.title}</p>
+            <p>{newModelContent.description}</p>
+            <ul>
+              {newModelContent.keywords.map((keyword) => (
+                <li key={keyword}>{keyword}</li>
+              ))}
+            </ul>
+          </figcaption>
+        </motion.figure>
       </div>
     </SectionWrapper>
   )

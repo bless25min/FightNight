@@ -1,7 +1,18 @@
 import { motion } from 'framer-motion'
+import belongingCard from '../../assets/landing/belonging-card.png'
+import collectiveEuphoriaCard from '../../assets/landing/collective-euphoria-card.png'
+import electronicOpiumCard from '../../assets/landing/electronic-opium-card.png'
+import grindTrainingCard from '../../assets/landing/grind-training-card.png'
 import { frameworkCards, oldFrameworkContent } from '../../data/landingContent'
 import { SectionWrapper } from '../ui/SectionWrapper'
 import { SectionHeading } from '../ui/SectionHeading'
+
+const frameworkImageMap: Record<string, string> = {
+  'fw-1': electronicOpiumCard,
+  'fw-2': grindTrainingCard,
+  'fw-3': collectiveEuphoriaCard,
+  'fw-4': belongingCard,
+}
 
 export function OldFrameworkBreakSection() {
   return (
@@ -19,38 +30,14 @@ export function OldFrameworkBreakSection() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: i * 0.1 }}
-            className={`rounded-2xl p-6 md:p-8 border transition-all duration-300 ${
-              card.type === 'old'
-                ? 'bg-smoke/50 border-pearl/5 opacity-60'
-                : 'glass border-neon/20 glow-neon'
-            }`}
+            className="overflow-hidden rounded-[1.75rem] border border-pearl/10 bg-black/40 shadow-[0_20px_60px_rgba(0,0,0,0.3)] transition-transform duration-300 hover:-translate-y-1"
           >
-            {/* 標籤 */}
-            <span
-              className={`inline-block text-xs font-heading font-medium px-3 py-1 rounded-full mb-4 ${
-                card.type === 'old'
-                  ? 'bg-pearl/5 text-mist'
-                  : 'bg-neon/15 text-neon'
-              }`}
-            >
-              {card.type === 'old' ? '過去的方式' : '全新體驗'}
-            </span>
-
-            <h3
-              className={`text-xl font-heading font-bold mb-3 ${
-                card.type === 'old' ? 'text-mist' : 'text-pearl'
-              }`}
-            >
-              {card.label}
-            </h3>
-
-            <p
-              className={`text-sm leading-relaxed ${
-                card.type === 'old' ? 'text-mist/70' : 'text-mist'
-              }`}
-            >
-              {card.description}
-            </p>
+            <img
+              src={frameworkImageMap[card.id]}
+              alt={`${card.label} ${card.description}`}
+              className="w-full h-auto"
+              loading="lazy"
+            />
           </motion.div>
         ))}
       </div>

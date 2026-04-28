@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion'
-import { heroContent, siteConfig } from '../../data/landingContent'
+import heroPoster from '../../assets/landing/hero-poster.png'
+import { heroContent } from '../../data/landingContent'
 import { Button } from '../ui/Button'
-import { Badge } from '../ui/Badge'
 import { useTracking } from '../../hooks/useTracking'
 
 export function HeroSection() {
@@ -28,45 +28,37 @@ export function HeroSection() {
       </div>
 
       {/* 主要內容 */}
-      <div className="relative z-10 max-w-4xl mx-auto px-5 sm:px-8 text-center">
-        {/* Quick Tags */}
+      <div className="relative z-10 max-w-6xl mx-auto px-5 sm:px-8">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          className="flex flex-wrap justify-center gap-2 mb-8"
-        >
-          {heroContent.tags.map((tag) => (
-            <Badge key={tag}>{tag}</Badge>
-          ))}
-        </motion.div>
-
-        {/* 主標題 */}
-        <motion.h1
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.4 }}
-          className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-heading font-bold tracking-tight leading-tight"
+          className="mx-auto overflow-hidden rounded-[2rem] border border-pearl/10 bg-black/40 shadow-[0_30px_80px_rgba(0,0,0,0.45)]"
         >
-          <span className="text-gradient">{heroContent.title}</span>
-        </motion.h1>
+          <img
+            src={heroPoster}
+            alt={`${heroContent.title} ${heroContent.subtitle}`}
+            className="w-full h-auto"
+            loading="eager"
+          />
+        </motion.div>
 
-        {/* 副標題 */}
-        <motion.p
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, delay: 0.7 }}
-          className="mt-6 text-lg sm:text-xl md:text-2xl text-mist max-w-2xl mx-auto leading-relaxed"
-        >
-          {heroContent.subtitle}
-        </motion.p>
+        <div className="sr-only">
+          <h1>{heroContent.title}</h1>
+          <p>{heroContent.subtitle}</p>
+          <ul>
+            {heroContent.tags.map((tag) => (
+              <li key={tag}>{tag}</li>
+            ))}
+          </ul>
+        </div>
 
         {/* CTAs */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 1.0 }}
-          className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4"
+          className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4"
         >
           <Button
             size="lg"
@@ -90,16 +82,6 @@ export function HeroSection() {
             {heroContent.secondaryCta}
           </Button>
         </motion.div>
-
-        {/* 品牌標示 */}
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.6, delay: 1.3 }}
-          className="mt-12 text-xs text-mist/50 tracking-widest uppercase"
-        >
-          Presented by {siteConfig.brandName}
-        </motion.p>
       </div>
 
       {/* 向下滾動指示 */}
