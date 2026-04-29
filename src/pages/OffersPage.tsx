@@ -555,9 +555,11 @@ function OffersWhyItWorksSection() {
 function OffersPlans({
   gateState,
   onPrimaryAction,
+  onCtaAction,
 }: {
   gateState: GateState
   onPrimaryAction: () => void
+  onCtaAction: (redirectUrl: string) => void
 }) {
   return (
     <SectionWrapper id="offers-plans">
@@ -637,7 +639,7 @@ function OffersPlans({
               <Button
                 variant={plan.ctaVariant}
                 className="w-full"
-                href={siteConfig.lineUrl}
+                onClick={() => onCtaAction(siteConfig.lineUrl)}
                 data-cta={`offers-plan-${plan.id}`}
               >
                 {plan.ctaLabel}
@@ -716,9 +718,11 @@ function OffersCoaches({
 function OffersSessions({
   gateState,
   onPrimaryAction,
+  onCtaAction,
 }: {
   gateState: GateState
   onPrimaryAction: () => void
+  onCtaAction: (redirectUrl: string) => void
 }) {
   return (
     <SectionWrapper id="offers-sessions">
@@ -771,7 +775,11 @@ function OffersSessions({
                 <Button
                   variant={capacity.available ? 'ghost' : 'secondary'}
                   className="w-full mt-auto"
-                  href={capacity.available ? session.lineUrl : siteConfig.lineUrl}
+                  onClick={() =>
+                    onCtaAction(
+                      capacity.available ? session.lineUrl : siteConfig.lineUrl,
+                    )
+                  }
                   data-cta={`offers-session-${session.id}`}
                 >
                   {capacity.available
@@ -794,9 +802,11 @@ function OffersSessions({
 function OffersVenues({
   gateState,
   onPrimaryAction,
+  onCtaAction,
 }: {
   gateState: GateState
   onPrimaryAction: () => void
+  onCtaAction: (redirectUrl: string) => void
 }) {
   return (
     <SectionWrapper id="offers-venues">
@@ -830,7 +840,7 @@ function OffersVenues({
               <Button
                 variant="secondary"
                 className="w-full mt-1"
-                href={venue.lineUrl}
+                onClick={() => onCtaAction(venue.lineUrl)}
                 data-cta={`offers-venue-${venue.id}`}
               >
                 {offersVenueSectionContent.ctaLabel}
@@ -996,6 +1006,45 @@ export function OffersPage() {
     }
   }, [liffId, runGateCheck])
 
+  const handleCtaAction = useCallback(
+    async (redirectUrl: string) => {
+      if (!liffId) {
+        setGateState({
+          status: 'missing-config',
+          message: '找不到 VITE_LINE_LIFF_ID，請先補上正式環境變數。',
+        })
+        return
+      }
+
+      try {
+        const liff = await loadLiffSdk()
+        await liff.init({
+          liffId,
+          withLoginOnExternalBrowser: false,
+        })
+
+        if (!liff.isLoggedIn()) {
+          liff.login({ redirectUri: window.location.href })
+          return
+        }
+
+        const friendship = await liff.getFriendship()
+        if (!friendship.friendFlag) {
+          await liff.requestFriendship()
+          await runGateCheck()
+          return
+        }
+
+        window.open(redirectUrl, '_blank', 'noopener,noreferrer')
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : 'LIFF 驗證失敗，請稍後再試。'
+        setGateState({ status: 'error', message })
+      }
+    },
+    [liffId, runGateCheck],
+  )
+
   useEffect(() => {
     const onHeaderAction = () => {
       void handlePrimaryAction()
@@ -1025,15 +1074,24 @@ export function OffersPage() {
         <OffersSessions
           gateState={gateState}
           onPrimaryAction={() => void handlePrimaryAction()}
+          onCtaAction={(url) => void handleCtaAction(url)}
         />
-        <OffersPlans gateState={gateState} onPrimaryAction={() => void handlePrimaryAction()} />
-        <OffersVenues gateState={gateState} onPrimaryAction={() => void handlePrimaryAction()} />
+        <OffersPlans
+          gateState={gateState}
+          onPrimaryAction={() => void handlePrimaryAction()}
+          onCtaAction={(url) => void handleCtaAction(url)}
+        />
+        <OffersVenues
+          gateState={gateState}
+          onPrimaryAction={() => void handlePrimaryAction()}
+          onCtaAction={(url) => void handleCtaAction(url)}
+        />
         <OffersFinalCta
           gateState={gateState}
           onPrimaryAction={() => void handlePrimaryAction()}
         />
       </main>
-      <Footer />
+      <Footer onVenueAction={(url) => void handleCtaAction(url)} />
     </div>
   )
 }

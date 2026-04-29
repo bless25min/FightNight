@@ -2,7 +2,11 @@ import { motion } from 'framer-motion'
 import { siteConfig, venues } from '../../data/landingContent'
 import logo from '../../assets/ufcgymtaiwan_logo.svg'
 
-export function Footer() {
+type FooterProps = {
+  onVenueAction?: (url: string) => void
+}
+
+export function Footer({ onVenueAction }: FooterProps = {}) {
   return (
     <footer className="border-t border-pearl/10 bg-abyss/60">
       <div className="max-w-6xl mx-auto px-3 sm:px-8 py-10 md:py-16">
@@ -30,15 +34,26 @@ export function Footer() {
                 <p>{venue.address}</p>
                 <p className="text-mist/60">{venue.transit}</p>
               </div>
-              <a
-                href={venue.lineUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-sm font-medium text-neon hover:text-neon/80 transition-colors mt-1"
-              >
-                加入好友
-                <span aria-hidden>→</span>
-              </a>
+              {onVenueAction ? (
+                <button
+                  type="button"
+                  onClick={() => onVenueAction(venue.lineUrl)}
+                  className="inline-flex items-center gap-1.5 text-sm font-medium text-neon hover:text-neon/80 transition-colors mt-1"
+                >
+                  加入好友
+                  <span aria-hidden>→</span>
+                </button>
+              ) : (
+                <a
+                  href={venue.lineUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-sm font-medium text-neon hover:text-neon/80 transition-colors mt-1"
+                >
+                  加入好友
+                  <span aria-hidden>→</span>
+                </a>
+              )}
             </motion.div>
           ))}
         </div>
