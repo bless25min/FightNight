@@ -4,16 +4,8 @@ import { SectionWrapper } from '../ui/SectionWrapper'
 
 const formulaContent = {
   title: '為什麼你會被帶進去？',
-  subtitle: '這不是偶然的嗨。每一個環節都經過設計。',
   resultLabel: '集體亢奮',
-  items: [
-    '共同注意力',
-    '身體同步',
-    '預期堆疊',
-    '腦內啡的釋放',
-    '你屬於這裡',
-    '情緒感染',
-  ],
+  items: ['共同注意力', '身體同步', '預期堆疊', '腦內啡的釋放', '你屬於這裡', '情緒感染'],
 }
 
 export function FormulaSection() {
@@ -29,15 +21,9 @@ export function FormulaSection() {
           transition={{ duration: 0.7 }}
           className="overflow-hidden rounded-[2rem] border border-pearl/10 bg-black/40 shadow-[0_30px_80px_rgba(0,0,0,0.35)]"
         >
-          <img
-            src={formulaPoster}
-            alt={`${formulaContent.title} ${formulaContent.subtitle}`}
-            className="w-full h-auto"
-            loading="lazy"
-          />
+          <img src={formulaPoster} alt={formulaContent.title} className="w-full h-auto" loading="lazy" />
           <figcaption className="sr-only">
             <p>{formulaContent.title}</p>
-            <p>{formulaContent.subtitle}</p>
             <ul>
               {formulaContent.items.map((item) => (
                 <li key={item}>{item}</li>
