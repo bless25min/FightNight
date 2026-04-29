@@ -6,16 +6,13 @@ import {
   curriculumModules,
   offersCoachSectionContent,
   offersCurriculumSectionContent,
-  offersFinalCtaContent,
   offersHeroContent,
   offersPlans,
   offersPlanSectionContent,
   offersSessionSectionContent,
   offersStatusCopy,
-  offersVenueSectionContent,
   sessions,
   siteConfig,
-  venues,
 } from '../data/landingContent'
 import { loadLiffSdk } from '../lib/liff'
 import type { SessionCapacity } from '../types'
@@ -28,27 +25,23 @@ import { SectionWrapper } from '../components/ui/SectionWrapper'
 
 const capacityStyles: Record<
   SessionCapacity,
-  { label: string; className: string; available: boolean }
+  { label: string; className: string }
 > = {
   仍可報名: {
     label: '仍可報名',
     className: 'bg-neon/15 text-neon border-neon/30',
-    available: true,
   },
   名額緊張: {
     label: '名額緊張',
     className: 'bg-gold/15 text-gold border-gold/30',
-    available: true,
   },
   即將額滿: {
     label: '即將額滿',
     className: 'bg-blaze/15 text-blaze border-blaze/30',
-    available: true,
   },
   本月已額滿: {
     label: '本月已額滿',
     className: 'bg-pearl/10 text-mist/60 border-pearl/10',
-    available: false,
   },
 }
 
@@ -66,90 +59,39 @@ type GateState = {
   profileName?: string
 }
 
-const unlockPreviewItems = [
-  {
-    title: '壓力為什麼會一路累積',
-    description:
-      '你不是太脆弱，而是每次都把委屈、壓力和害怕吞回去，久了身體和情緒都會開始抗議。',
-  },
-  {
-    title: '你現在都怎麼撐過去',
-    description:
-      '食慾亂掉、睡不好、躲人、靠酒精或別的東西麻痺自己，很多方法都只是暫時撐過去。',
-  },
-  {
-    title: '職業選手怎麼把恐懼變可控',
-    description:
-      '職業格鬥選手不是靠天生勇敢，而是把恐懼、壓力、打擊和重新站起來，練成身體習慣。',
-  },
-  {
-    title: '什麼方案最值得你',
-    description:
-      '你也會看到由誰帶你走、什麼時候進場，以及每一種方案到底值在哪裡。',
-  },
-]
-
 const pressurePainPoints = [
   {
-    title: '遇到狀況時，你總是先吞下去',
+    title: '遇到狀況，先吞下去',
     description:
-      '面對強勢的人、帶壓迫感的場面，第一反應常常不是表達，而是先低頭、先忍住、先讓事情趕快過去。',
+      '面對壓迫或衝突時，你習慣先低頭、先忍住，讓事情趕快過去。',
   },
   {
-    title: '久了，身體會先開始抗議',
+    title: '久了，身體開始抗議',
     description:
-      '很多人壓力長期累積後，會開始睡不好、心悸、胸悶、頭痛，甚至整個人一直處在很緊、很累、很難真正放鬆的狀態。',
+      '睡不好、胸悶、頭痛、心悸，整個人一直很緊，很難真正放鬆。',
   },
   {
-    title: '情緒也會慢慢失去彈性',
+    title: '生活變得越來越小',
     description:
-      '你可能會反覆想起不舒服的事、變得更容易煩躁、注意力很難集中，甚至對很多人和事慢慢失去感覺。',
-  },
-  {
-    title: '生活會開始越縮越小',
-    description:
-      '你會避開某些情境、不想見人、對原本喜歡的事情失去興趣，最後不是事情變少了，而是你能活得自在的空間變小了。',
+      '你開始躲開人和情境，對原本喜歡的事沒感覺，自在的空間越縮越小。',
   },
 ]
 
 const oldFrameworkPoints = [
   {
-    title: '習慣開始失衡',
+    title: '麻痺自己',
     description:
-      '有些人會突然吃很多，有些人會完全沒胃口。看起來只是狀態不好，其實是壓力已經開始改變你的日常。',
+      '滑手機、喝酒、暴食或讓自己忙到沒時間感覺，只是把壓力往後延。',
   },
   {
-    title: '開始依賴麻痺自己的東西',
+    title: '退回去',
     description:
-      '抽更多菸、喝更多酒、靠藥物、安眠或鎮定類的東西撐過去，短期像有用，但身體只會越來越失去主導權。',
+      '少見人、少表達、少參與，看起來安全，其實只是讓自己更孤立。',
   },
   {
-    title: '人會慢慢退開',
+    title: '偶爾爆掉',
     description:
-      '你可能越來越不想見人，對以前熱衷的事提不起勁，也不想解釋自己怎麼了，最後只剩下越來越安靜地退後。',
-  },
-  {
-    title: '行為會開始失控',
-    description:
-      '坐立不安、很難待在原地，甚至做出傷害自己或讓自己後悔的事。很多人不是故意失控，而是已經撐太久了。',
-  },
-]
-
-const whyItWorksPoints = [
-  {
-    title: '恐懼不是靠講道理消失',
-    description:
-      '職業格鬥選手不是靠意志力說服自己不要怕，而是一次一次進入「有壓力但可控」的情境，讓身體慢慢知道自己可以留在原地。',
-  },
-  {
-    title: '壓力要先被拆成可操作的東西',
-    description:
-      '呼吸、節奏、步伐、出手、回到姿勢，這些具體動作會把混亂變成你當下能抓住的東西，情緒就不再是唯一主導。',
-  },
-  {
-    title: '重新站起來也可以被練出來',
-    description:
-      '真正的改變不是從來不亂，而是亂了之後還能回來。當這件事被反覆練進身體裡，你的底氣就會開始長出來。',
+      '爆發後也許舒服一下，但回到現實，你還是會回到原本的慌、縮、忍。',
   },
 ]
 
@@ -162,20 +104,15 @@ function LockedSection({
   overlayTitle,
   overlayDescription,
   gateState,
-  onPrimaryAction,
 }: {
   children: ReactNode
   overlayTitle: string
   overlayDescription?: string
   gateState: GateState
-  onPrimaryAction: () => void
 }) {
   if (gateState.status === 'unlocked') {
     return <>{children}</>
   }
-
-  const primaryLabel =
-    gateState.status === 'not-friend' ? '加入官方帳號後解鎖' : '快速登入查看'
 
   const helperText =
     gateState.status === 'missing-config'
@@ -183,8 +120,8 @@ function LockedSection({
       : gateState.status === 'error'
         ? gateState.message || 'LIFF 驗證失敗，請稍後再試。'
         : gateState.status === 'not-friend'
-          ? '你已完成 LINE 登入，但還需要先加入官方帳號，才能解鎖會員內容。'
-          : overlayDescription || '快速完成 LINE Login 後，即可解鎖這個區塊的完整內容。'
+          ? '你已完成 LINE 登入，但還需要先加入官方帳號。可從頁面右上角完成解鎖。'
+          : `${overlayDescription || '完成 LINE Login 後，即可解鎖這個區塊的完整內容。'} 可從頁面右上角操作。`
 
   return (
     <div className="relative">
@@ -203,86 +140,16 @@ function LockedSection({
           <p className="mt-3 text-sm md:text-base text-mist/75 leading-relaxed">
             {helperText}
           </p>
-          <div className="mt-5 flex justify-center">
-            <Button size="lg" onClick={onPrimaryAction} data-cta="offers-unlock">
-              {primaryLabel}
-            </Button>
-          </div>
         </div>
       </div>
     </div>
   )
 }
 
-function OffersUnlockBridge({
-  onPrimaryAction,
-}: {
-  onPrimaryAction: () => void
-}) {
-  const items = [
-    '完整四次內容怎麼一步一步把你帶回來',
-    '這次由哪些帶領者陪你走進狀態',
-    '哪一館還有名額、哪一個時段最適合你',
-    '你現在該先試一次，還是直接做完整投入',
-  ]
-
-  return (
-    <SectionWrapper id="offers-unlock-bridge" padding="py-6 md:py-12">
-      <div className="relative max-w-5xl mx-auto overflow-hidden rounded-3xl border border-neon/15 bg-gradient-to-br from-neon/10 via-black/30 to-blaze/10 px-6 py-8 md:px-10 md:py-10">
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-0 right-0 h-36 w-36 rounded-full bg-neon/10 blur-[80px]" />
-          <div className="absolute bottom-0 left-0 h-40 w-40 rounded-full bg-blaze/10 blur-[90px]" />
-        </div>
-
-        <div className="relative">
-          <p className="text-xs md:text-sm font-heading tracking-[0.28em] text-neon/80 uppercase">
-            如果你讀到這裡
-          </p>
-          <h2 className="mt-3 text-2xl md:text-3xl font-heading font-bold text-pearl leading-tight">
-            代表你不是只想再忍一次，
-            <br />
-            你是真的想讓自己不一樣。
-          </h2>
-          <p className="mt-4 text-sm md:text-base text-mist/80 max-w-3xl leading-relaxed">
-            接下來解鎖的，不是冷冰冰的課表和價錢，而是你最需要知道的幾件事：
-            這四次內容怎麼把你帶出來、誰會陪你走、什麼時候能進場，以及你現在最適合怎麼開始。
-          </p>
-
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-            {items.map((item) => (
-              <div
-                key={item}
-                className="rounded-2xl border border-pearl/10 bg-black/20 px-4 py-4 text-sm md:text-base text-mist/85"
-              >
-                {item}
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-8 flex flex-col items-start gap-3 md:flex-row md:items-center md:justify-between">
-            <p className="text-sm text-mist/65">
-              不用填一堆資料，LINE Login 後就能直接看完整內容。
-            </p>
-            <Button size="lg" onClick={onPrimaryAction} data-cta="offers-bridge-unlock">
-              快速登入查看
-            </Button>
-          </div>
-        </div>
-      </div>
-    </SectionWrapper>
-  )
-}
-
-function OffersHero({
-  gateState,
-  onPrimaryAction,
-}: {
-  gateState: GateState
-  onPrimaryAction: () => void
-}) {
+function OffersHero({ gateState }: { gateState: GateState }) {
   const helperMessage = useMemo(() => {
     if (gateState.status === 'not-friend') {
-      return '你已完成 LINE 登入，下一步先加入官方帳號，才能查看完整會員內容。'
+      return '你已完成 LINE 登入，下一步可從頁面右上角加入官方帳號，解鎖完整會員內容。'
     }
     if (gateState.status === 'missing-config') {
       return 'LIFF 設定尚未完成，請先補上正式環境變數。'
@@ -293,15 +160,8 @@ function OffersHero({
     if (gateState.status === 'unlocked') {
       return `${gateState.profileName || '會員'}，你已完成解鎖，可以直接往下查看完整內容。`
     }
-    return offersHeroContent.description
+    return `${offersHeroContent.description} 想解鎖完整內容，可從頁面右上角進入。`
   }, [gateState])
-
-  const primaryLabel =
-    gateState.status === 'unlocked'
-      ? '查看完整內容'
-      : gateState.status === 'not-friend'
-        ? '加入官方帳號後解鎖'
-        : offersHeroContent.primaryCta
 
   return (
     <section
@@ -341,60 +201,8 @@ function OffersHero({
         >
           {helperMessage}
         </motion.p>
-
-        <motion.div
-          initial={{ opacity: 0, y: 15 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.45 }}
-          className="mt-8 md:mt-10 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4"
-        >
-          <Button size="lg" onClick={onPrimaryAction}>
-            {primaryLabel}
-          </Button>
-          <Button
-            variant="secondary"
-            size="lg"
-            onClick={() => scrollTo(gateState.status === 'unlocked' ? 'offers-pain' : 'offers-preview')}
-          >
-            {offersHeroContent.secondaryCta}
-          </Button>
-        </motion.div>
       </div>
     </section>
-  )
-}
-
-function OffersUnlockPreview() {
-  return (
-    <SectionWrapper id="offers-preview">
-      <SectionHeading
-        title="你會在這裡看到什麼"
-        subtitle="不是一堆價格和話術，而是把你的壓力怎麼累積、舊方法怎麼失效、以及這四次內容為什麼真的值得，完整講清楚。"
-      />
-
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-6 max-w-6xl mx-auto">
-        {unlockPreviewItems.map((item, i) => (
-          <motion.div
-            key={item.title}
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: i * 0.1 }}
-            className="rounded-2xl border border-pearl/10 bg-black/30 p-5 md:p-6"
-          >
-            <p className="text-xs font-heading tracking-[0.25em] text-neon/80 uppercase">
-              預覽
-            </p>
-            <h3 className="mt-3 text-lg font-heading font-semibold text-pearl">
-              {item.title}
-            </h3>
-            <p className="mt-2 text-sm text-mist/75 leading-relaxed">
-              {item.description}
-            </p>
-          </motion.div>
-        ))}
-      </div>
-    </SectionWrapper>
   )
 }
 
@@ -403,10 +211,10 @@ function OffersPainSection() {
     <SectionWrapper id="offers-pain">
       <SectionHeading
         title="你不是撐不住，你是已經撐太久了"
-        subtitle="每次遇到狀況都把委屈、壓力和害怕默默吞下去，久了出問題的通常不只情緒，連睡眠、身體、專注力和生活狀態都會一起被拖下去。"
+        subtitle="長期把委屈、壓力和害怕吞回去，最後被拖住的通常不只情緒，還有睡眠、身體、專注力和生活狀態。"
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-6 max-w-6xl mx-auto">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 max-w-5xl mx-auto">
         {pressurePainPoints.map((point, i) => (
           <motion.div
             key={point.title}
@@ -431,9 +239,7 @@ function OffersPainSection() {
 
       <div className="max-w-4xl mx-auto mt-8 md:mt-12 rounded-3xl border border-neon/15 bg-gradient-to-br from-neon/10 via-black/25 to-blaze/5 px-6 py-8 md:px-10 md:py-10 text-center">
         <p className="text-lg md:text-2xl font-heading font-semibold text-pearl leading-relaxed">
-          你想要的，不只是當下撐過去。
-          <br />
-          而是有一天面對壓力時，不再下意識低頭，而是真的能站穩、看清楚、把自己留在原地。
+          你要的不是再撐過一晚，而是壓力靠近時，能站穩、看清楚，把自己留在原地。
         </p>
       </div>
     </SectionWrapper>
@@ -445,10 +251,10 @@ function OffersOldFrameworkSection() {
     <SectionWrapper id="offers-old-framework">
       <SectionHeading
         title="以前的方法，為什麼沒有真的改變你"
-        subtitle="很多人不是沒試著處理，而是一直用錯方法。那些方式也許能暫時讓你不要那麼難受，但沒有一個真的在處理你面對壓力時整個人會亂掉的根本問題。"
+        subtitle="你不是沒努力，只是很多方法都只能暫時麻痺。真正要處理的，是壓力靠近時身體會亂、會縮、會失控。"
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-6 max-w-6xl mx-auto">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 max-w-5xl mx-auto">
         {oldFrameworkPoints.map((point, i) => (
           <motion.div
             key={point.title}
@@ -471,13 +277,7 @@ function OffersOldFrameworkSection() {
   )
 }
 
-function OffersCurriculum({
-  gateState,
-  onPrimaryAction,
-}: {
-  gateState: GateState
-  onPrimaryAction: () => void
-}) {
+function OffersCurriculum({ gateState }: { gateState: GateState }) {
   return (
     <SectionWrapper id="offers-curriculum">
       <SectionHeading
@@ -493,7 +293,6 @@ function OffersCurriculum({
         overlayTitle={offersCurriculumSectionContent.overlayTitle}
         overlayDescription={offersCurriculumSectionContent.overlayDescription}
         gateState={gateState}
-        onPrimaryAction={onPrimaryAction}
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 max-w-5xl mx-auto">
           {curriculumModules.map((module, i) => (
@@ -526,49 +325,11 @@ function OffersCurriculum({
   )
 }
 
-function OffersWhyItWorksSection() {
-  return (
-    <SectionWrapper id="offers-why-it-works">
-      <SectionHeading
-        title="為什麼這套邏輯，真的能改變一個人"
-        subtitle="因為職業格鬥選手一輩子都在做同一件事：把抽象的恐懼和壓力，轉成具體、可重複、可控制的身體反應。"
-      />
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 max-w-6xl mx-auto">
-        {whyItWorksPoints.map((point, i) => (
-          <motion.div
-            key={point.title}
-            initial={{ opacity: 0, y: 24 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: i * 0.1 }}
-            className="rounded-2xl border border-pearl/10 bg-black/30 p-5 md:p-6"
-          >
-            <h3 className="text-lg font-heading font-semibold text-pearl">
-              {point.title}
-            </h3>
-            <p className="mt-3 text-sm md:text-base text-mist/80 leading-relaxed">
-              {point.description}
-            </p>
-          </motion.div>
-        ))}
-      </div>
-
-      <p className="text-center text-base md:text-lg text-mist/80 max-w-4xl mx-auto mt-8 md:mt-12 leading-relaxed">
-        所以四次之後你帶走的，不只是一次很爽的釋放，而是一種更能留在原地的反應方式。
-        那些以前一下就把你壓住的情境，會開始沒有那麼容易把你整個人吞掉。
-      </p>
-    </SectionWrapper>
-  )
-}
-
 function OffersPlans({
   gateState,
-  onPrimaryAction,
   onCtaAction,
 }: {
   gateState: GateState
-  onPrimaryAction: () => void
   onCtaAction: (redirectUrl: string) => void
 }) {
   return (
@@ -580,12 +341,8 @@ function OffersPlans({
 
       <div className="max-w-4xl mx-auto -mt-4 mb-8 md:mb-12 rounded-2xl border border-pearl/10 bg-black/20 px-5 py-5 md:px-6 md:py-6">
         <p className="text-sm md:text-base text-mist/80 leading-relaxed">
-          如果你現在在判斷哪一個最值得：
-          想先親身確認這個體驗到底有沒有那麼特別，可以從「初次體驗一堂」開始；
-          想把第一次做得更完整、更有記憶點，可以選「初次體驗一堂＋拳套」；
-          想一次拿到最完整的爽感、價值感與改變感，最推薦「Signature 四次完整體驗」；
-          想把這份狀態真的延續回生活裡，適合「Signature 四次完整體驗＋專屬裝備」；
-          如果你希望先被好好接住、再進正式場次，就從「Private Onboarding」開始。
+          不知道怎麼選，先問自己兩件事：你只想先確認一次，還是完整走四次？
+          你想輕裝進場，還是把專屬拳套和儀式感一起帶走？
         </p>
       </div>
 
@@ -593,7 +350,6 @@ function OffersPlans({
         overlayTitle="登入後查看完整費用資訊"
         overlayDescription={offersPlanSectionContent.overlayDescription}
         gateState={gateState}
-        onPrimaryAction={onPrimaryAction}
       >
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6 max-w-6xl mx-auto items-start">
           {offersPlans.map((plan, i) => (
@@ -666,13 +422,7 @@ function OffersPlans({
   )
 }
 
-function OffersCoaches({
-  gateState,
-  onPrimaryAction,
-}: {
-  gateState: GateState
-  onPrimaryAction: () => void
-}) {
+function OffersCoaches({ gateState }: { gateState: GateState }) {
   return (
     <SectionWrapper id="offers-coaches">
       <SectionHeading
@@ -688,7 +438,6 @@ function OffersCoaches({
         overlayTitle="登入後查看完整教練資訊"
         overlayDescription={offersCoachSectionContent.overlayDescription}
         gateState={gateState}
-        onPrimaryAction={onPrimaryAction}
       >
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6 max-w-5xl mx-auto">
           {coaches.map((coach, i) => (
@@ -727,12 +476,8 @@ function OffersCoaches({
 
 function OffersSessions({
   gateState,
-  onPrimaryAction,
-  onCtaAction,
 }: {
   gateState: GateState
-  onPrimaryAction: () => void
-  onCtaAction: (redirectUrl: string) => void
 }) {
   return (
     <SectionWrapper id="offers-sessions">
@@ -749,7 +494,6 @@ function OffersSessions({
         overlayTitle="登入後查看完整活動場次"
         overlayDescription={offersSessionSectionContent.overlayDescription}
         gateState={gateState}
-        onPrimaryAction={onPrimaryAction}
       >
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 max-w-5xl mx-auto">
           {sessions.map((session, i) => {
@@ -781,21 +525,6 @@ function OffersSessions({
                   </p>
                   <p>{session.time}</p>
                 </div>
-
-                <Button
-                  variant={capacity.available ? 'ghost' : 'secondary'}
-                  className="w-full mt-auto"
-                  onClick={() =>
-                    onCtaAction(
-                      capacity.available ? session.lineUrl : siteConfig.lineUrl,
-                    )
-                  }
-                  data-cta={`offers-session-${session.id}`}
-                >
-                  {capacity.available
-                    ? offersSessionSectionContent.bookCtaLabel
-                    : '加入 LINE 等候通知'}
-                </Button>
               </motion.div>
             )
           })}
@@ -805,122 +534,6 @@ function OffersSessions({
       <p className="text-center text-xs md:text-sm text-mist/50 max-w-2xl mx-auto mt-6 md:mt-8">
         {offersSessionSectionContent.footnote}
       </p>
-    </SectionWrapper>
-  )
-}
-
-function OffersVenues({
-  gateState,
-  onPrimaryAction,
-  onCtaAction,
-}: {
-  gateState: GateState
-  onPrimaryAction: () => void
-  onCtaAction: (redirectUrl: string) => void
-}) {
-  return (
-    <SectionWrapper id="offers-venues">
-      <SectionHeading
-        title={offersVenueSectionContent.title}
-        subtitle={offersVenueSectionContent.subtitle}
-      />
-
-      <LockedSection
-        overlayTitle="登入後查看完整場館資訊"
-        gateState={gateState}
-        onPrimaryAction={onPrimaryAction}
-      >
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 max-w-5xl mx-auto">
-          {venues.map((venue, i) => (
-            <motion.div
-              key={venue.id}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: i * 0.1 }}
-              className="rounded-2xl border border-pearl/10 bg-black/30 p-5 md:p-6 flex flex-col gap-3"
-            >
-              <h3 className="text-base md:text-lg font-heading font-semibold text-pearl">
-                {venue.name}
-              </h3>
-              <div className="space-y-1.5 text-sm text-mist/80 leading-relaxed flex-1">
-                <p>{venue.address}</p>
-                <p className="text-mist/60">{venue.transit}</p>
-              </div>
-              <Button
-                variant="secondary"
-                className="w-full mt-1"
-                onClick={() => onCtaAction(venue.lineUrl)}
-                data-cta={`offers-venue-${venue.id}`}
-              >
-                {offersVenueSectionContent.ctaLabel}
-              </Button>
-            </motion.div>
-          ))}
-        </div>
-      </LockedSection>
-    </SectionWrapper>
-  )
-}
-
-function OffersFinalCta({
-  gateState,
-  onPrimaryAction,
-}: {
-  gateState: GateState
-  onPrimaryAction: () => void
-}) {
-  const primaryLabel =
-    gateState.status === 'not-friend'
-      ? '加入官方帳號後解鎖'
-      : gateState.status === 'unlocked'
-        ? '查看完整內容'
-        : offersFinalCtaContent.primaryCta
-
-  return (
-    <SectionWrapper id="offers-final" className="relative text-center">
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-neon/5 rounded-full blur-[120px] pointer-events-none" />
-
-      <div className="relative max-w-2xl mx-auto">
-        <motion.h2
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.7 }}
-          className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-heading font-bold leading-tight"
-        >
-          {offersFinalCtaContent.title}
-        </motion.h2>
-
-        <motion.p
-          initial={{ opacity: 0, y: 15 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          className="mt-3 md:mt-4 text-base sm:text-lg md:text-xl text-mist"
-        >
-          {offersFinalCtaContent.subtitle}
-        </motion.p>
-
-        <motion.div
-          initial={{ opacity: 0, y: 15 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6, delay: 0.4 }}
-          className="mt-6 md:mt-10 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4"
-        >
-          <Button size="lg" onClick={onPrimaryAction} data-cta="offers-final-primary">
-            {primaryLabel}
-          </Button>
-          <Button
-            variant="secondary"
-            size="lg"
-            onClick={() => scrollTo('offers-hero')}
-          >
-            {offersFinalCtaContent.secondaryCta}
-          </Button>
-        </motion.div>
-      </div>
     </SectionWrapper>
   )
 }
@@ -1067,39 +680,13 @@ export function OffersPage() {
     <div className="overflow-x-hidden w-full relative">
       <Header />
       <main>
-        <OffersHero gateState={gateState} onPrimaryAction={() => void handlePrimaryAction()} />
-        <OffersUnlockPreview />
+        <OffersHero gateState={gateState} />
         <OffersPainSection />
         <OffersOldFrameworkSection />
-        <OffersUnlockBridge onPrimaryAction={() => void handlePrimaryAction()} />
-        <OffersCurriculum
-          gateState={gateState}
-          onPrimaryAction={() => void handlePrimaryAction()}
-        />
-        <OffersWhyItWorksSection />
-        <OffersCoaches
-          gateState={gateState}
-          onPrimaryAction={() => void handlePrimaryAction()}
-        />
-        <OffersSessions
-          gateState={gateState}
-          onPrimaryAction={() => void handlePrimaryAction()}
-          onCtaAction={(url) => void handleCtaAction(url)}
-        />
-        <OffersPlans
-          gateState={gateState}
-          onPrimaryAction={() => void handlePrimaryAction()}
-          onCtaAction={(url) => void handleCtaAction(url)}
-        />
-        <OffersVenues
-          gateState={gateState}
-          onPrimaryAction={() => void handlePrimaryAction()}
-          onCtaAction={(url) => void handleCtaAction(url)}
-        />
-        <OffersFinalCta
-          gateState={gateState}
-          onPrimaryAction={() => void handlePrimaryAction()}
-        />
+        <OffersCurriculum gateState={gateState} />
+        <OffersPlans gateState={gateState} onCtaAction={(url) => void handleCtaAction(url)} />
+        <OffersSessions gateState={gateState} />
+        <OffersCoaches gateState={gateState} />
       </main>
       <Footer onVenueAction={(url) => void handleCtaAction(url)} />
     </div>
