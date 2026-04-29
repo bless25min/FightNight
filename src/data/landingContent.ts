@@ -283,6 +283,38 @@ export const offersPlanSectionContent = {
     '解鎖後可以比較每個入口的深度、儀式感，以及你會把什麼帶回生活裡。',
 }
 
+export const offersOutcomeSectionContent = {
+  title: '你最後買到的，其實是這個轉換',
+  subtitle:
+    '把平常只能吞下去的壓力，交給一個被設計過的場域處理。當身體真的經過一次，你會知道自己不是只能忍。',
+  formulaLabel: '你會經歷的轉換',
+  formulaInputs: ['壓力被看見', '身體被帶動', '情緒被打開', '反應被重建'],
+  formulaResult: '從吞下去，到站得住',
+  summaryCards: [
+    {
+      id: 'experience-layer',
+      label: '體驗層',
+      title: '拳套、節奏、沙包、群體，把你從腦袋拉回身體',
+      description:
+        '你不是坐著聽道理，而是在聲音與動作裡，把悶住的壓力打出來。那種專注和釋放，一般聚會很難給你。',
+    },
+    {
+      id: 'problem-layer',
+      label: '問題層',
+      title: '不是叫你勇敢，是讓身體重新相信自己承受得住',
+      description:
+        '壓力靠近時，人會先僵住、退開、討好。Fight Night 用可控張力讓你練習留在原地，感覺害怕，但不被害怕帶走。',
+    },
+    {
+      id: 'value-layer',
+      label: '收穫層',
+      title: '離開後留下的是一個身體證據：我不是只能忍',
+      description:
+        '下次遇到壓迫或混亂，你會多一個可回想的經驗：自己曾經跟上節奏、打出去、撐過去，然後回來。',
+    },
+  ],
+}
+
 export const offersPlans: TicketPlan[] = [
   {
     id: 'offers-session-pass',
@@ -298,7 +330,8 @@ export const offersPlans: TicketPlan[] = [
       '從暖場、節奏推進到高峰釋放，完整走過一次情緒曲線',
       '適合想先確認這是不是自己的壓力出口',
     ],
-    ctaLabel: '用 LINE 詢問 First Round',
+    checkoutUrl: siteConfig.lineUrl,
+    ctaLabel: '購買 First Round Pass',
     ctaVariant: 'secondary',
   },
   {
@@ -316,7 +349,8 @@ export const offersPlans: TicketPlan[] = [
       '第一次就使用自己的裝備，手感、投入感和記憶點更完整',
       '適合重視儀式感，也想把開始留下來的人',
     ],
-    ctaLabel: '用 LINE 詢問 First Round Gear',
+    checkoutUrl: siteConfig.lineUrl,
+    ctaLabel: '購買 First Round Gear Pass',
     ctaVariant: 'secondary',
   },
   {
@@ -335,7 +369,8 @@ export const offersPlans: TicketPlan[] = [
       '主推給不想只買新鮮感，而是想留下真正變化的人',
     ],
     highlight: true,
-    ctaLabel: '用 LINE 預留 Signature Four',
+    checkoutUrl: siteConfig.lineUrl,
+    ctaLabel: '購買 Signature Four Pass',
     ctaVariant: 'primary',
   },
   {
@@ -353,7 +388,8 @@ export const offersPlans: TicketPlan[] = [
       '讓儀式感、力量感和收藏感延續到日常',
       '所有方案中最完整，也最有長尾價值的版本',
     ],
-    ctaLabel: '用 LINE 詢問 Signature Gear',
+    checkoutUrl: siteConfig.lineUrl,
+    ctaLabel: '購買 Signature Gear Pass',
     ctaVariant: 'secondary',
   },
   {
@@ -370,7 +406,8 @@ export const offersPlans: TicketPlan[] = [
       '把怕尷尬、怕跟不上、怕太陌生先降下來',
       '適合想被更細緻照顧，再進入正式場次的人',
     ],
-    ctaLabel: '用 LINE 詢問 Private Onboarding',
+    checkoutUrl: siteConfig.lineUrl,
+    ctaLabel: '購買 Private Onboarding',
     ctaVariant: 'ghost',
   },
 ]

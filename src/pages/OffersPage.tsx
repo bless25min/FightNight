@@ -5,12 +5,12 @@ import {
   curriculumModules,
   offersCurriculumSectionContent,
   offersHeroContent,
+  offersOutcomeSectionContent,
   offersPlans,
   offersPlanSectionContent,
   offersSessionSectionContent,
   offersStatusCopy,
   sessions,
-  siteConfig,
 } from '../data/landingContent'
 import { loadLiffSdk } from '../lib/liff'
 import type { SessionCapacity } from '../types'
@@ -93,10 +93,6 @@ const oldFrameworkPoints = [
   },
 ]
 
-function scrollTo(id: string) {
-  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
-}
-
 function LockedSection({
   children,
   overlayTitle,
@@ -118,8 +114,8 @@ function LockedSection({
       : gateState.status === 'error'
         ? gateState.message || 'LIFF 驗證失敗，請稍後再試。'
         : gateState.status === 'not-friend'
-          ? '你已完成 LINE 登入，但還需要先加入官方帳號。可從頁面右上角完成解鎖。'
-          : `${overlayDescription || '完成 LINE Login 後，即可解鎖這個區塊的完整內容。'} 可從頁面右上角操作。`
+          ? '你已完成 LINE 登入，但還需要先加入官方帳號，才能解鎖完整內容。'
+          : overlayDescription || '完成 LINE Login 後，即可解鎖這個區塊的完整內容。'
 
   return (
     <div className="relative">
@@ -147,7 +143,7 @@ function LockedSection({
 function OffersHero({ gateState }: { gateState: GateState }) {
   const helperMessage = useMemo(() => {
     if (gateState.status === 'not-friend') {
-      return '你已完成 LINE 登入，下一步可從頁面右上角加入官方帳號，解鎖完整會員內容。'
+      return '你已完成 LINE 登入，下一步加入官方帳號後，就能解鎖完整會員內容。'
     }
     if (gateState.status === 'missing-config') {
       return 'LIFF 設定尚未完成，請先補上正式環境變數。'
@@ -158,7 +154,7 @@ function OffersHero({ gateState }: { gateState: GateState }) {
     if (gateState.status === 'unlocked') {
       return `${gateState.profileName || '會員'}，你已完成解鎖，可以直接往下查看完整內容。`
     }
-    return `${offersHeroContent.description} 想解鎖完整內容，可從頁面右上角進入。`
+    return offersHeroContent.description
   }, [gateState])
 
   return (
@@ -323,6 +319,65 @@ function OffersCurriculum({ gateState }: { gateState: GateState }) {
   )
 }
 
+function OffersOutcomeSummary() {
+  return (
+    <SectionWrapper id="offers-outcome-summary">
+      <SectionHeading
+        title={offersOutcomeSectionContent.title}
+        subtitle={offersOutcomeSectionContent.subtitle}
+      />
+
+      <div className="max-w-6xl mx-auto rounded-3xl border border-neon/15 bg-gradient-to-br from-neon/10 via-black/30 to-blaze/10 px-5 py-6 md:px-8 md:py-8">
+        <p className="text-center text-xs md:text-sm font-heading tracking-[0.28em] text-neon/85 uppercase">
+          {offersOutcomeSectionContent.formulaLabel}
+        </p>
+
+        <div className="mt-5 flex flex-col items-center justify-center gap-3 text-center md:flex-row md:flex-wrap">
+          {offersOutcomeSectionContent.formulaInputs.map((item, index) => (
+            <div key={item} className="flex items-center gap-3">
+              <div className="rounded-full border border-pearl/10 bg-black/25 px-4 py-2 text-sm md:text-base text-pearl">
+                {item}
+              </div>
+              {index < offersOutcomeSectionContent.formulaInputs.length - 1 ? (
+                <span className="text-neon/80 text-lg md:text-xl">+</span>
+              ) : (
+                <span className="text-neon/80 text-lg md:text-xl">=</span>
+              )}
+            </div>
+          ))}
+
+          <div className="rounded-full border border-neon/30 bg-neon/15 px-5 py-2 text-sm md:text-base font-heading text-pearl">
+            {offersOutcomeSectionContent.formulaResult}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 max-w-6xl mx-auto mt-6 md:mt-8">
+        {offersOutcomeSectionContent.summaryCards.map((card, i) => (
+          <motion.div
+            key={card.id}
+            initial={{ opacity: 0, y: 24 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: i * 0.1 }}
+            className="rounded-2xl border border-pearl/10 bg-black/30 p-5 md:p-6"
+          >
+            <p className="text-xs md:text-sm font-heading tracking-[0.22em] text-neon/80 uppercase">
+              {card.label}
+            </p>
+            <h3 className="mt-3 text-xl md:text-2xl font-heading font-bold text-pearl leading-tight">
+              {card.title}
+            </h3>
+            <p className="mt-3 text-sm md:text-base text-mist/80 leading-relaxed">
+              {card.description}
+            </p>
+          </motion.div>
+        ))}
+      </div>
+    </SectionWrapper>
+  )
+}
+
 function OffersPlans({
   gateState,
   onCtaAction,
@@ -403,7 +458,7 @@ function OffersPlans({
               <Button
                 variant={plan.ctaVariant}
                 className="w-full"
-                onClick={() => onCtaAction(siteConfig.lineUrl)}
+                onClick={() => onCtaAction(plan.checkoutUrl)}
                 data-cta={`offers-plan-${plan.id}`}
               >
                 {plan.ctaLabel}
@@ -539,42 +594,6 @@ export function OffersPage() {
     void runGateCheck()
   }, [runGateCheck])
 
-  const handlePrimaryAction = useCallback(async () => {
-    if (!liffId) {
-      setGateState({
-        status: 'missing-config',
-        message: '找不到 VITE_LINE_LIFF_ID，請先補上正式環境變數。',
-      })
-      return
-    }
-
-    try {
-      const liff = await loadLiffSdk()
-      await liff.init({
-        liffId,
-        withLoginOnExternalBrowser: false,
-      })
-
-      if (!liff.isLoggedIn()) {
-        liff.login({ redirectUri: window.location.href })
-        return
-      }
-
-      const friendship = await liff.getFriendship()
-      if (!friendship.friendFlag) {
-        await liff.requestFriendship()
-        await runGateCheck()
-        return
-      }
-
-      scrollTo('offers-pain')
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'LIFF 驗證失敗，請稍後再試。'
-      setGateState({ status: 'error', message })
-    }
-  }, [liffId, runGateCheck])
-
   const handleCtaAction = useCallback(
     async (redirectUrl: string) => {
       if (!liffId) {
@@ -614,14 +633,6 @@ export function OffersPage() {
     [liffId, runGateCheck],
   )
 
-  useEffect(() => {
-    const onHeaderAction = () => {
-      void handlePrimaryAction()
-    }
-    window.addEventListener('offers-auth-action', onHeaderAction)
-    return () => window.removeEventListener('offers-auth-action', onHeaderAction)
-  }, [handlePrimaryAction])
-
   return (
     <div className="overflow-x-hidden w-full relative">
       <Header />
@@ -630,6 +641,7 @@ export function OffersPage() {
         <OffersPainSection />
         <OffersOldFrameworkSection />
         <OffersCurriculum gateState={gateState} />
+        <OffersOutcomeSummary />
         <OffersPlans gateState={gateState} onCtaAction={(url) => void handleCtaAction(url)} />
         <OffersSessions gateState={gateState} />
       </main>

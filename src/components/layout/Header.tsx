@@ -20,7 +20,7 @@ export function Header() {
   }
 
   const ctaLabel = isOffersPage
-    ? '快速登入查看'
+    ? '查看方案'
     : '查看活動場次 / 費用資訊'
 
   return (
@@ -53,9 +53,7 @@ export function Header() {
         {isOffersPage ? (
           <Button
             size="sm"
-            onClick={() =>
-              window.dispatchEvent(new CustomEvent('offers-auth-action'))
-            }
+            onClick={() => scrollTo('offers-plans')}
             data-cta="header-cta"
           >
             {ctaLabel}

@@ -6,6 +6,7 @@ export type TicketPlan = {
   description: string
   price: string
   features: string[]
+  checkoutUrl: string
   highlight?: boolean
   badge?: string
   ctaLabel: string
