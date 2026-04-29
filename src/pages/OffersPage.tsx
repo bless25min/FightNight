@@ -150,11 +150,13 @@ function scrollTo(id: string) {
 function LockedSection({
   children,
   overlayTitle,
+  overlayDescription,
   gateState,
   onPrimaryAction,
 }: {
   children: ReactNode
   overlayTitle: string
+  overlayDescription?: string
   gateState: GateState
   onPrimaryAction: () => void
 }) {
@@ -172,7 +174,7 @@ function LockedSection({
         ? gateState.message || 'LIFF 驗證失敗，請稍後再試。'
         : gateState.status === 'not-friend'
           ? '你已完成 LINE 登入，但還需要先加入官方帳號，才能解鎖會員內容。'
-          : '快速完成 LINE Login 後，即可解鎖這個區塊的完整內容。'
+          : overlayDescription || '快速完成 LINE Login 後，即可解鎖這個區塊的完整內容。'
 
   return (
     <div className="relative">
@@ -199,6 +201,65 @@ function LockedSection({
         </div>
       </div>
     </div>
+  )
+}
+
+function OffersUnlockBridge({
+  onPrimaryAction,
+}: {
+  onPrimaryAction: () => void
+}) {
+  const items = [
+    '完整四堂系統怎麼一步一步把你帶回來',
+    '這次由哪些職業格鬥背景教練帶課',
+    '哪一館還有名額、哪一個時段最適合你',
+    '你現在該先試一次，還是直接進四堂',
+  ]
+
+  return (
+    <SectionWrapper id="offers-unlock-bridge" padding="py-6 md:py-12">
+      <div className="relative max-w-5xl mx-auto overflow-hidden rounded-3xl border border-neon/15 bg-gradient-to-br from-neon/10 via-black/30 to-blaze/10 px-6 py-8 md:px-10 md:py-10">
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-0 right-0 h-36 w-36 rounded-full bg-neon/10 blur-[80px]" />
+          <div className="absolute bottom-0 left-0 h-40 w-40 rounded-full bg-blaze/10 blur-[90px]" />
+        </div>
+
+        <div className="relative">
+          <p className="text-xs md:text-sm font-heading tracking-[0.28em] text-neon/80 uppercase">
+            如果你讀到這裡
+          </p>
+          <h2 className="mt-3 text-2xl md:text-3xl font-heading font-bold text-pearl leading-tight">
+            代表你不是只想再忍一次，
+            <br />
+            你是真的想讓自己不一樣。
+          </h2>
+          <p className="mt-4 text-sm md:text-base text-mist/80 max-w-3xl leading-relaxed">
+            接下來解鎖的，不是冷冰冰的課表和價錢，而是你最需要知道的幾件事：
+            這套系統怎麼把你帶出來、誰會帶你走、什麼時候能進場，以及你現在最適合怎麼開始。
+          </p>
+
+          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+            {items.map((item) => (
+              <div
+                key={item}
+                className="rounded-2xl border border-pearl/10 bg-black/20 px-4 py-4 text-sm md:text-base text-mist/85"
+              >
+                {item}
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-8 flex flex-col items-start gap-3 md:flex-row md:items-center md:justify-between">
+            <p className="text-sm text-mist/65">
+              不用填一堆資料，LINE Login 後就能直接看完整內容。
+            </p>
+            <Button size="lg" onClick={onPrimaryAction} data-cta="offers-bridge-unlock">
+              快速登入查看
+            </Button>
+          </div>
+        </div>
+      </div>
+    </SectionWrapper>
   )
 }
 
@@ -420,6 +481,7 @@ function OffersCurriculum({
 
       <LockedSection
         overlayTitle={offersCurriculumSectionContent.overlayTitle}
+        overlayDescription={offersCurriculumSectionContent.overlayDescription}
         gateState={gateState}
         onPrimaryAction={onPrimaryAction}
       >
@@ -504,12 +566,24 @@ function OffersPlans({
         subtitle={offersPlanSectionContent.subtitle}
       />
 
+      <div className="max-w-4xl mx-auto -mt-4 mb-8 md:mb-12 rounded-2xl border border-pearl/10 bg-black/20 px-5 py-5 md:px-6 md:py-6">
+        <p className="text-sm md:text-base text-mist/80 leading-relaxed">
+          如果你現在還在判斷怎麼開始：
+          想先確認品牌體驗，可以選「初次進場體驗」；
+          想和信任的人一起開始，可以選「雙人同行體驗」；
+          想真正把改變走完整，最推薦「Signature 四堂系統」；
+          想把這份力量感延續回生活，適合「Signature 四堂＋專屬裝備」；
+          如果你希望先被照顧好、再進團體，就從「Private Onboarding」開始。
+        </p>
+      </div>
+
       <LockedSection
         overlayTitle="登入後查看完整費用資訊"
+        overlayDescription={offersPlanSectionContent.overlayDescription}
         gateState={gateState}
         onPrimaryAction={onPrimaryAction}
       >
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8 max-w-5xl mx-auto items-start">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6 max-w-6xl mx-auto items-start">
           {offersPlans.map((plan, i) => (
             <motion.div
               key={plan.id}
@@ -535,6 +609,9 @@ function OffersPlans({
                 {plan.name}
               </h3>
               <p className="text-sm text-mist mb-3">{plan.subtitle}</p>
+              <p className="text-sm md:text-base text-neon/90 leading-relaxed mb-3">
+                {plan.teaserCopy}
+              </p>
               <p className="text-sm md:text-base text-pearl/85 leading-relaxed mb-5 md:mb-6">
                 {plan.description}
               </p>
@@ -597,6 +674,7 @@ function OffersCoaches({
 
       <LockedSection
         overlayTitle="登入後查看完整教練資訊"
+        overlayDescription={offersCoachSectionContent.overlayDescription}
         gateState={gateState}
         onPrimaryAction={onPrimaryAction}
       >
@@ -655,6 +733,7 @@ function OffersSessions({
 
       <LockedSection
         overlayTitle="登入後查看完整活動場次"
+        overlayDescription={offersSessionSectionContent.overlayDescription}
         gateState={gateState}
         onPrimaryAction={onPrimaryAction}
       >
@@ -933,6 +1012,7 @@ export function OffersPage() {
         <OffersUnlockPreview />
         <OffersPainSection />
         <OffersOldFrameworkSection />
+        <OffersUnlockBridge onPrimaryAction={() => void handlePrimaryAction()} />
         <OffersCurriculum
           gateState={gateState}
           onPrimaryAction={() => void handlePrimaryAction()}

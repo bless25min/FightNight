@@ -285,7 +285,7 @@ export const offersHeroContent = {
   title: '四堂課後，你不會再像以前那樣容易被壓住',
   subtitle: '從低頭吞下壓力，到重新掌握力量、看懂距離、穩穩站住自己',
   description:
-    '這不是一場讓你暫時忘記一切的體驗，而是一套把你從委屈、壓抑、害怕裡慢慢帶出來的四堂系統。',
+    '如果你已經受夠每次都把委屈、壓力和害怕吞回去，這套四堂系統，會帶你慢慢把自己找回來。',
   primaryCta: '快速登入查看',
   secondaryCta: '先看這套系統如何改變你',
 }
@@ -297,6 +297,8 @@ export const offersCurriculumSectionContent = {
   description:
     '先讓悶住的情緒有地方出去，再把出力、節奏、距離與反應練進身體裡。你不是靠想通變勇敢，而是透過重複練習，慢慢變成面對壓力時更穩、更敢直視、更不容易被壓住的人。',
   overlayTitle: '登入後查看完整四堂系統',
+  overlayDescription:
+    '解鎖後你會直接看到四堂課怎麼一步一步把你從壓抑，帶到力量、判斷與底氣。',
 }
 
 export const curriculumModules: CurriculumModule[] = [
@@ -332,62 +334,102 @@ export const curriculumModules: CurriculumModule[] = [
 
 export const offersPlanSectionContent = {
   title: '方案內容',
-  subtitle: '不是買一堂課，而是決定你想先試一次、直接投入四堂，還是把這次改變完整帶回生活。',
+  subtitle:
+    '這不是用最低門檻湊成的一堂體驗，而是依你現在想怎麼開始，提供不同層級的進場方式與完整度。',
   footnote:
-    '如果你期待的不只是當下舒服，而是真正感覺自己變得更穩、更有底氣，會更建議直接進入四堂方案。',
+    '如果你要的不只是來一次、舒服一下，而是真正感覺自己的狀態被重新整理過，最適合的選擇通常會是完整四堂系統。',
+  overlayDescription:
+    '解鎖後直接看懂每種選擇差在哪，判斷自己現在該先試一次、找朋友一起來，還是直接進四堂。',
 }
 
 export const offersPlans: TicketPlan[] = [
   {
     id: 'offers-session-pass',
-    name: '先試一次',
-    subtitle: '先感受這是不是你要的入口',
-    teaserCopy: '先讓自己進場，感受這套系統會不會打開你。',
-    description: '適合想先感受出力、節奏與壓力釋放的人。',
+    name: '初次進場體驗',
+    subtitle: '給想先確認感受的人',
+    teaserCopy: '先用一次進場，感受這個品牌的節奏、帶課方式與現場能量。',
+    description:
+      '適合第一次接觸 Fight Night，想先親身感受這套訓練風格與現場氛圍，再決定下一步的人。',
     price: 'NT$1,800',
     features: [
       '單次 Fight Night 進場資格',
-      '先感受節奏帶領與壓力出口',
       '拳套可租用或自備',
-      '適合還在觀望、想先確認感受的人',
+      '完整感受節奏帶領、出力設計與壓力釋放',
+      '適合作為認識品牌與訓練系統的第一步',
     ],
-    ctaLabel: '用 LINE 詢問單次體驗',
+    ctaLabel: '用 LINE 詢問初次體驗',
+    ctaVariant: 'secondary',
+  },
+  {
+    id: 'offers-duo-pass',
+    name: '雙人同行體驗',
+    subtitle: '給想和信任的人一起開始的你',
+    teaserCopy: '有些改變，一起走進來會更安心，也更容易真的跨出第一步。',
+    description:
+      '適合想找朋友、伴侶或姐妹一起進場的人。保留陪伴感，同時完整感受這套品牌體驗。',
+    price: 'NT$3,200',
+    features: [
+      '兩位 Fight Night 單次進場資格',
+      '一起感受節奏帶領、壓力出口與現場氛圍',
+      '彼此陪伴進場，降低第一次的不安感',
+      '適合想先一起體驗，再決定下一步的人',
+    ],
+    ctaLabel: '用 LINE 詢問雙人方案',
     ctaVariant: 'secondary',
   },
   {
     id: 'offers-transformation-pass',
-    name: '直接進四堂',
+    name: 'Signature 四堂系統',
     subtitle: '主推方案',
-    teaserCopy: '不是只來一次，而是讓你的狀態真的往前走。',
-    description: '給想真正改善壓力反應、建立力量感、判斷與底氣的人。',
+    teaserCopy: '不是只來一次，而是真正把這套改變走完整。',
+    description:
+      '給想真正改善壓力反應、建立力量感、距離判斷與底氣的人。這是最完整也最能感受到改變的版本。',
     price: 'NT$3,000',
     badge: '主推方案',
     features: [
       '四堂循序設計的完整訓練系統',
       '從壓力釋放到力量、距離與判斷的建立',
-      '女性新手也能跟上的節奏帶領與動作拆解',
-      '比單次體驗更容易感受到整體狀態改變',
+      '職業格鬥背景教練帶領的新手友善拆解',
+      '比單次體驗更能明顯感受到整體狀態改變',
     ],
     highlight: true,
-    ctaLabel: '用 LINE 預留四堂方案',
+    ctaLabel: '用 LINE 預留 Signature 四堂',
     ctaVariant: 'primary',
   },
   {
     id: 'offers-upgrade-pass',
-    name: '四堂＋專屬拳套',
+    name: 'Signature 四堂＋專屬裝備',
     subtitle: '完整投入版本',
-    teaserCopy: '把這份力量感，真正帶回你的生活裡。',
-    description: '給想把這次改變延續回日常的人。',
+    teaserCopy: '不只是把課上完，而是把這份力量感真正帶回你的生活裡。',
+    description:
+      '給想完整投入這次改變的人。除了四堂系統本身，也把專屬裝備與儀式感一併帶走。',
     price: 'NT$3,600',
-    badge: '附專屬拳套',
+    badge: '完整投入',
     features: [
-      '包含四堂系統方案完整內容',
+      '包含 Signature 四堂系統完整內容',
       '專屬拳套一副（帶走）',
-      '讓這次力量感與儀式感延續回日常',
-      '適合想更完整投入這次改變的人',
+      '讓這次力量感與訓練儀式感延續回日常',
+      '適合想更完整收藏這段改變的人',
     ],
-    ctaLabel: '用 LINE 詢問完整進場',
+    ctaLabel: '用 LINE 詢問完整投入方案',
     ctaVariant: 'secondary',
+  },
+  {
+    id: 'offers-private-intro',
+    name: 'Private Onboarding',
+    subtitle: '想先建立安全感，再進團體',
+    teaserCopy: '如果你想先用更安心、更被照顧的方式開始，這會是更適合你的入口。',
+    description:
+      '適合對團體節奏還有點顧慮，或希望先建立動作、出力與安全感，再進入正式團體系統的人。',
+    price: '私訊詢問',
+    features: [
+      '一對一或小班入門安排',
+      '先熟悉站姿、出力、節奏與安全感',
+      '降低第一次進入團體系統的壓力',
+      '適合想先被照顧好再正式進場的人',
+    ],
+    ctaLabel: '用 LINE 詢問 Private Onboarding',
+    ctaVariant: 'ghost',
   },
 ]
 
@@ -397,6 +439,8 @@ export const offersCoachSectionContent = {
     '重點不是頭銜好不好看，而是他們能不能把力量、距離、反應與安全感真的教到新手身上。',
   description:
     '這裡的專業，不是把你操爆，而是知道怎麼帶一個平常只會忍住、縮起來的人，重新學會站穩、出力、判斷，最後長出真正的底氣。',
+  overlayDescription:
+    '解鎖後直接看這次帶課教練是誰，以及他們怎麼把職業訓練拆成新手也能跟上的系統。',
 }
 
 export const coaches: Coach[] = [
@@ -430,6 +474,8 @@ export const offersSessionSectionContent = {
   ruleLine: '每月 1 個主題檔期 × 3 個場館同步開放',
   footnote: '各館名額與釋出狀態，以當月實際公告為準。',
   bookCtaLabel: '用 LINE 預留名額',
+  overlayDescription:
+    '解鎖後直接看哪一館還有名額，選一個你真的進得去的時間。',
 }
 
 export const sessions: Session[] = [
