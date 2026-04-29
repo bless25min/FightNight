@@ -40,6 +40,7 @@ export type Session = {
   time: string
   capacity: SessionCapacity
   lineUrl: string
+  coachIds: string[]
 }
 
 export type CurriculumModule = {

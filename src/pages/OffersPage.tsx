@@ -8,13 +8,13 @@ import {
   offersCurriculumSectionContent,
   offersFinalCtaContent,
   offersHeroContent,
+  offersPlans,
   offersPlanSectionContent,
   offersSessionSectionContent,
   offersStatusCopy,
   offersVenueSectionContent,
   sessions,
   siteConfig,
-  ticketPlans,
   venues,
 } from '../data/landingContent'
 import { loadLiffSdk } from '../lib/liff'
@@ -65,6 +65,67 @@ type GateState = {
   message?: string
   profileName?: string
 }
+
+type SelectedSession = (typeof sessions)[number] | null
+
+const unlockPreviewItems = [
+  {
+    title: '壓力為什麼總是讓你先低頭',
+    description:
+      '這一頁會先拆開你過去面對壓力、壓迫與負面情緒時，為什麼總是只能默默忍受。',
+  },
+  {
+    title: '四堂蛻變系統怎麼運作',
+    description:
+      '不是只學幾個動作，而是一步一步把釋放、力量、判斷與底氣帶回你身上。',
+  },
+  {
+    title: '為什麼它能真的改善',
+    description:
+      '你會看到這套設計如何讓恐懼感與壓力感不再那麼輕易把你壓住。',
+  },
+  {
+    title: '教練、場次與方案內容',
+    description:
+      '包含職業格鬥背景教練配置、可選場次，以及不同投入程度對應的參與方案。',
+  },
+]
+
+const pressurePainPoints = [
+  {
+    title: '當下的你',
+    description:
+      '面對強勢的人、權威的人、帶壓迫感的情境時，第一反應常常不是表達，而是先低頭、先忍住、先把自己縮小。',
+  },
+  {
+    title: '留下來的感受',
+    description:
+      '那些說不出口的委屈、憤怒、害怕和無力，最後都留在身體裡。表面看起來沒事，心裡其實累積了很多沒有出口的壓力。',
+  },
+  {
+    title: '你真正想要的',
+    description:
+      '不是再忍一次，也不是短暫忘記，而是希望自己有一天面對壓力時，真的能站穩、看清楚、不要再那麼容易被壓住。',
+  },
+]
+
+const whyItWorksPoints = [
+  {
+    title: '壓力反應不只在腦裡，也在身體裡',
+    description:
+      '當一個人長期習慣的是縮、僵、忍住，遇到情況時就會下意識先退。這不是你不夠勇敢，而是身體已經記住那種反應。',
+  },
+  {
+    title: '這套訓練先讓你把壓力釋放出來',
+    description:
+      '透過節奏、擊打、出力和帶動，把長期悶住的情緒從身體裡打開，先讓你不再只是靠忍耐撐過去。',
+  },
+  {
+    title: '再把釋放，慢慢變成力量、判斷與底氣',
+    description:
+      '當你反覆練習站穩、出力、看距離、做反應，身體就會慢慢學會另一種回應方式。恐懼感和壓力感，也就不再像以前那樣輕易把你壓住。',
+  },
+]
 
 function scrollTo(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
@@ -206,9 +267,7 @@ function OffersHero({
           <Button
             variant="secondary"
             size="lg"
-            onClick={() =>
-              scrollTo(gateState.status === 'unlocked' ? 'offers-curriculum' : 'offers-preview')
-            }
+            onClick={() => scrollTo(gateState.status === 'unlocked' ? 'offers-pain' : 'offers-preview')}
           >
             {offersHeroContent.secondaryCta}
           </Button>
@@ -219,34 +278,15 @@ function OffersHero({
 }
 
 function OffersUnlockPreview() {
-  const items = [
-    {
-      title: '四堂課完整訓練體系',
-      description: '了解這不是一次體驗，而是一套循序漸進的完整訓練設計。',
-    },
-    {
-      title: '活動場次',
-      description: '查看每月第一個星期五晚上 10 點的可報名狀態。',
-    },
-    {
-      title: '費用資訊',
-      description: '查看不同入場方式與對應費用資訊。',
-    },
-    {
-      title: '教練資訊',
-      description: '查看來自海外的職業綜合格鬥選手教練背景與本次課程重點。',
-    },
-  ]
-
   return (
     <SectionWrapper id="offers-preview">
       <SectionHeading
-        title="登入後會解鎖這些內容"
-        subtitle="先確認你要看的方向，再用 LINE Login 快速進入。"
+        title="登入後會解鎖什麼"
+        subtitle="這不是一般價目頁，而是一頁把你的壓力、改變路徑、教練專業與方案內容一次講清楚的成交頁。"
       />
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-6 max-w-6xl mx-auto">
-        {items.map((item, i) => (
+        {unlockPreviewItems.map((item, i) => (
           <motion.div
             key={item.title}
             initial={{ opacity: 0, y: 20 }}
@@ -266,6 +306,48 @@ function OffersUnlockPreview() {
             </p>
           </motion.div>
         ))}
+      </div>
+    </SectionWrapper>
+  )
+}
+
+function OffersPainSection() {
+  return (
+    <SectionWrapper id="offers-pain">
+      <SectionHeading
+        title="你不是沒有情緒，而是一直都只能低頭忍住"
+        subtitle="很多人面對壓力、壓迫、衝突與負面情緒時，第一反應不是表達，而是先縮起來。"
+      />
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 max-w-5xl mx-auto">
+        {pressurePainPoints.map((point, i) => (
+          <motion.div
+            key={point.title}
+            initial={{ opacity: 0, y: 24 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: i * 0.1 }}
+            className="rounded-2xl border border-pearl/10 bg-black/30 p-5 md:p-6"
+          >
+            <p className="text-xs font-heading tracking-[0.28em] text-neon/80 uppercase">
+              Point 0{i + 1}
+            </p>
+            <h3 className="mt-3 text-lg font-heading font-semibold text-pearl">
+              {point.title}
+            </h3>
+            <p className="mt-3 text-sm md:text-base text-mist/80 leading-relaxed">
+              {point.description}
+            </p>
+          </motion.div>
+        ))}
+      </div>
+
+      <div className="max-w-4xl mx-auto mt-8 md:mt-12 rounded-3xl border border-neon/15 bg-gradient-to-br from-neon/10 via-black/25 to-blaze/5 px-6 py-8 md:px-10 md:py-10 text-center">
+        <p className="text-lg md:text-2xl font-heading font-semibold text-pearl leading-relaxed">
+          你想要的，不只是發洩一次。
+          <br />
+          而是有一天面對壓力時，真的能更穩地看著它，不再那麼容易被它壓住。
+        </p>
       </div>
     </SectionWrapper>
   )
@@ -325,6 +407,42 @@ function OffersCurriculum({
   )
 }
 
+function OffersWhyItWorksSection() {
+  return (
+    <SectionWrapper id="offers-why-it-works">
+      <SectionHeading
+        title="為什麼這套訓練，能讓恐懼感與壓力感慢慢降下來"
+        subtitle="因為壓力反應不只存在情緒裡，也存在身體裡。當身體學會另一種回應方式，你整個人的狀態就會不同。"
+      />
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 max-w-6xl mx-auto">
+        {whyItWorksPoints.map((point, i) => (
+          <motion.div
+            key={point.title}
+            initial={{ opacity: 0, y: 24 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: i * 0.1 }}
+            className="rounded-2xl border border-pearl/10 bg-black/30 p-5 md:p-6"
+          >
+            <h3 className="text-lg font-heading font-semibold text-pearl">
+              {point.title}
+            </h3>
+            <p className="mt-3 text-sm md:text-base text-mist/80 leading-relaxed">
+              {point.description}
+            </p>
+          </motion.div>
+        ))}
+      </div>
+
+      <p className="text-center text-base md:text-lg text-mist/80 max-w-4xl mx-auto mt-8 md:mt-12 leading-relaxed">
+        所以四堂課後你帶走的，不只是流汗後的短暫輕鬆，而是更能掌握力量、看懂距離、
+        穩住反應，讓來自權威、壓迫與負面情緒的影響不再那麼輕易吞掉你。
+      </p>
+    </SectionWrapper>
+  )
+}
+
 function OffersPlans({
   gateState,
   onPrimaryAction,
@@ -345,7 +463,7 @@ function OffersPlans({
         onPrimaryAction={onPrimaryAction}
       >
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8 max-w-5xl mx-auto items-start">
-          {ticketPlans.map((plan, i) => (
+          {offersPlans.map((plan, i) => (
             <motion.div
               key={plan.id}
               initial={{ opacity: 0, y: 30 }}
@@ -415,10 +533,16 @@ function OffersPlans({
 function OffersCoaches({
   gateState,
   onPrimaryAction,
+  selectedSession,
 }: {
   gateState: GateState
   onPrimaryAction: () => void
+  selectedSession: SelectedSession
 }) {
+  const selectedCoaches = selectedSession
+    ? coaches.filter((coach) => selectedSession.coachIds.includes(coach.id))
+    : []
+
   return (
     <SectionWrapper id="offers-coaches">
       <SectionHeading
@@ -435,36 +559,69 @@ function OffersCoaches({
         gateState={gateState}
         onPrimaryAction={onPrimaryAction}
       >
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 max-w-5xl mx-auto">
-          {coaches.map((coach, i) => (
-            <motion.div
-              key={coach.id}
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: i * 0.1 }}
-              className="rounded-2xl border border-pearl/10 bg-black/30 p-5 md:p-6 flex flex-col gap-3"
-            >
-              <div className="aspect-square w-full rounded-xl bg-gradient-to-br from-pearl/5 to-pearl/0 border border-pearl/5 flex items-center justify-center text-mist/30 text-xs">
-                教練照片
-              </div>
+        {!selectedSession ? (
+          <div className="max-w-3xl mx-auto rounded-2xl border border-dashed border-pearl/15 bg-black/20 px-6 py-10 text-center">
+            <p className="text-xs md:text-sm font-heading tracking-[0.28em] text-neon/80 uppercase">
+              先選場次
+            </p>
+            <h3 className="mt-3 text-xl md:text-2xl font-heading font-semibold text-pearl">
+              先選一個場館場次
+            </h3>
+            <p className="mt-3 text-sm md:text-base text-mist/75 leading-relaxed">
+              上方選好你要去的館別與場次後，這裡才會顯示那一場對應的教練資訊與帶課配置。
+            </p>
+          </div>
+        ) : (
+          <div className="max-w-5xl mx-auto">
+            <div className="mb-6 md:mb-8 rounded-2xl border border-neon/20 bg-neon/5 px-5 py-4 md:px-6 md:py-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div>
-                <h3 className="text-lg font-heading font-semibold text-pearl">
-                  {coach.name}
+                <p className="text-xs font-heading tracking-[0.28em] text-neon/80 uppercase">
+                  已選場次
+                </p>
+                <h3 className="mt-2 text-lg md:text-xl font-heading font-semibold text-pearl">
+                  {selectedSession.venueName}
                 </h3>
-                <p className="text-sm text-mist/70 mt-0.5">{coach.title}</p>
+                <p className="mt-1 text-sm text-mist/75">
+                  {selectedSession.date} {selectedSession.weekday} · {selectedSession.time}
+                </p>
               </div>
-              <p className="text-sm text-mist leading-relaxed flex-1">
-                {coach.bio}
-              </p>
-              <div className="flex flex-wrap gap-1.5 mt-1">
-                {coach.tags.map((tag) => (
-                  <Badge key={tag}>{tag}</Badge>
-                ))}
-              </div>
-            </motion.div>
-          ))}
-        </div>
+              <Badge variant="highlight" className="self-start md:self-center">
+                已選擇這個場次
+              </Badge>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
+              {selectedCoaches.map((coach, i) => (
+                <motion.div
+                  key={coach.id}
+                  initial={{ opacity: 0, y: 24 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: i * 0.1 }}
+                  className="rounded-2xl border border-pearl/10 bg-black/30 p-5 md:p-6 flex flex-col gap-3"
+                >
+                  <div className="aspect-square w-full rounded-xl bg-gradient-to-br from-pearl/5 to-pearl/0 border border-pearl/5 flex items-center justify-center text-mist/30 text-xs">
+                    教練照片
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-heading font-semibold text-pearl">
+                      {coach.name}
+                    </h3>
+                    <p className="text-sm text-mist/70 mt-0.5">{coach.title}</p>
+                  </div>
+                  <p className="text-sm text-mist leading-relaxed flex-1">
+                    {coach.bio}
+                  </p>
+                  <div className="flex flex-wrap gap-1.5 mt-1">
+                    {coach.tags.map((tag) => (
+                      <Badge key={tag}>{tag}</Badge>
+                    ))}
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        )}
       </LockedSection>
     </SectionWrapper>
   )
@@ -473,9 +630,13 @@ function OffersCoaches({
 function OffersSessions({
   gateState,
   onPrimaryAction,
+  selectedSessionId,
+  onSelectSession,
 }: {
   gateState: GateState
   onPrimaryAction: () => void
+  selectedSessionId: string | null
+  onSelectSession: (sessionId: string) => void
 }) {
   return (
     <SectionWrapper id="offers-sessions">
@@ -488,6 +649,10 @@ function OffersSessions({
         {offersSessionSectionContent.ruleLine}
       </p>
 
+      <p className="text-center text-sm md:text-base text-mist/70 max-w-3xl mx-auto -mt-4 mb-8 md:mb-10">
+        先選一個你想去的場館場次，下面就會帶出這一場的教練資訊。
+      </p>
+
       <LockedSection
         overlayTitle="登入後查看完整活動場次"
         gateState={gateState}
@@ -496,6 +661,7 @@ function OffersSessions({
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 max-w-5xl mx-auto">
           {sessions.map((session, i) => {
             const capacity = capacityStyles[session.capacity]
+            const isSelected = selectedSessionId === session.id
             return (
               <motion.div
                 key={session.id}
@@ -503,7 +669,11 @@ function OffersSessions({
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: i * 0.1 }}
-                className="rounded-2xl border border-pearl/10 bg-black/30 p-5 md:p-6 flex flex-col gap-4"
+                className={`rounded-2xl p-5 md:p-6 flex flex-col gap-4 transition-all duration-300 ${
+                  isSelected
+                    ? 'border border-neon/40 bg-neon/5 shadow-[0_0_0_1px_rgba(82,255,168,0.18)]'
+                    : 'border border-pearl/10 bg-black/30'
+                }`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <h3 className="text-base md:text-lg font-heading font-semibold text-pearl leading-snug">
@@ -525,7 +695,16 @@ function OffersSessions({
                 </div>
 
                 <Button
-                  variant={capacity.available ? 'primary' : 'secondary'}
+                  variant={isSelected ? 'primary' : 'secondary'}
+                  className="w-full"
+                  onClick={() => onSelectSession(session.id)}
+                  data-cta={`offers-session-select-${session.id}`}
+                >
+                  {isSelected ? '已選擇這個場次' : '選這個場館場次'}
+                </Button>
+
+                <Button
+                  variant={capacity.available ? 'ghost' : 'secondary'}
                   className="w-full mt-auto"
                   href={capacity.available ? session.lineUrl : siteConfig.lineUrl}
                   data-cta={`offers-session-${session.id}`}
@@ -663,8 +842,13 @@ function OffersFinalCta({
 
 export function OffersPage() {
   const [gateState, setGateState] = useState<GateState>({ status: 'loading' })
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null)
 
   const liffId = import.meta.env.VITE_LINE_LIFF_ID
+  const selectedSession = useMemo(
+    () => sessions.find((session) => session.id === selectedSessionId) ?? null,
+    [selectedSessionId]
+  )
 
   const runGateCheck = useCallback(async () => {
     if (!liffId) {
@@ -744,7 +928,7 @@ export function OffersPage() {
         return
       }
 
-      scrollTo('offers-curriculum')
+      scrollTo('offers-pain')
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'LIFF 驗證失敗，請稍後再試。'
@@ -760,25 +944,35 @@ export function OffersPage() {
     return () => window.removeEventListener('offers-auth-action', onHeaderAction)
   }, [handlePrimaryAction])
 
+  const handleSelectSession = useCallback((sessionId: string) => {
+    setSelectedSessionId(sessionId)
+    window.setTimeout(() => scrollTo('offers-coaches'), 120)
+  }, [])
+
   return (
     <div className="overflow-x-hidden w-full relative">
       <Header />
       <main>
         <OffersHero gateState={gateState} onPrimaryAction={() => void handlePrimaryAction()} />
         <OffersUnlockPreview />
+        <OffersPainSection />
         <OffersCurriculum
           gateState={gateState}
           onPrimaryAction={() => void handlePrimaryAction()}
         />
-        <OffersPlans gateState={gateState} onPrimaryAction={() => void handlePrimaryAction()} />
-        <OffersCoaches
-          gateState={gateState}
-          onPrimaryAction={() => void handlePrimaryAction()}
-        />
+        <OffersWhyItWorksSection />
         <OffersSessions
           gateState={gateState}
           onPrimaryAction={() => void handlePrimaryAction()}
+          selectedSessionId={selectedSessionId}
+          onSelectSession={handleSelectSession}
         />
+        <OffersCoaches
+          gateState={gateState}
+          onPrimaryAction={() => void handlePrimaryAction()}
+          selectedSession={selectedSession}
+        />
+        <OffersPlans gateState={gateState} onPrimaryAction={() => void handlePrimaryAction()} />
         <OffersVenues gateState={gateState} onPrimaryAction={() => void handlePrimaryAction()} />
         <OffersFinalCta
           gateState={gateState}

@@ -282,87 +282,141 @@ export const ticketPlans: TicketPlan[] = [
 
 // ── /offers 頁面文案 ──────────────────────────────
 export const offersHeroContent = {
-  title: 'LINE 會員專屬內容',
-  subtitle: '四堂課完整訓練體系 / 活動場次 / 費用資訊',
+  title: '不是只來發洩，而是四堂課後換一個自己',
+  subtitle: '從壓力與壓迫裡低頭忍受，到重新掌握力量、判斷與底氣',
   description:
-    '快速完成 LINE Login，即可解鎖四堂課完整訓練體系、本月活動場次、費用資訊、海外職業綜合格鬥選手教練資訊與可報名名額。',
+    '完成 LINE Login 後，即可查看這套四堂蛻變系統怎麼運作、為什麼能改善壓力反應、有哪些場次與教練配置，以及適合你的參與方案。',
   primaryCta: '快速登入查看',
-  secondaryCta: '先看這次會解鎖什麼',
+  secondaryCta: '先看這套系統怎麼改變你',
 }
 
 export const offersCurriculumSectionContent = {
-  title: '不是硬撐四堂課，而是從零開始被好好帶進來',
+  title: '四堂蛻變系統，怎麼把壓力出口變成真正的底氣',
   subtitle:
-    '四堂課，從拳擊、踢拳到防身觀念，讓沒上過課的你也能安心學會基本動作。',
+    '不是學幾個動作，而是把釋放、力量、判斷與自信，一步一步帶回你身上。',
   description:
-    '如果你從來沒有上過拳擊或踢拳課，也不用擔心跟不上。這套課程本來就是為新手設計的，會從最基本的站姿、出力、移動開始，一步一步帶你熟悉拳擊、踢拳和實用防身觀念。每一堂課都有不同主題，不是反覆做一樣的事，而是讓你每次來，都能多學會一點，也更敢相信自己做得到。',
-  overlayTitle: '登入後查看完整四堂課內容',
+    '這套系統不是要你硬撐或逞強，而是先讓長期悶住的壓力有出口，再把出力、距離、節奏與反應反覆帶進身體裡。四堂課走完，你帶走的不只是流汗後的暫時輕鬆，而是更能掌握力量、看懂情況、穩住自己的狀態。',
+  overlayTitle: '登入後查看四堂蛻變系統',
 }
 
 export const curriculumModules: CurriculumModule[] = [
   {
     id: 'module-1',
     stage: 1,
-    title: '先把身體站穩，學會怎麼出拳',
+    title: '先讓壓力有出口，不再只是低頭忍住',
     description:
-      '從站姿、重心、移動和最基本的出拳開始，讓沒碰過的人也知道怎麼安全發力，不會一開始就手忙腳亂。',
+      '從呼吸、站姿、出力與節奏開始，把長期悶在身體裡的緊繃、壓力與負面情緒慢慢打開。',
   },
   {
     id: 'module-2',
     stage: 2,
-    title: '把拳擊動作串起來，不再只是亂揮',
+    title: '把釋放變成力量，找回自己的掌握感',
     description:
-      '慢慢練習直拳、勾拳、基本防禦和簡單組合，開始知道什麼時候出手、怎麼保護自己。',
+      '透過拳擊與踢拳基礎，學會怎麼站穩、怎麼出力、怎麼讓力量真的從自己身上長出來，而不是只剩下承受。',
   },
   {
     id: 'module-3',
     stage: 3,
-    title: '加入踢拳動作，學會距離和節奏',
+    title: '把力量變成判斷，不再一慌就亂',
     description:
-      '把前踢、膝擊和基礎腿法帶進來，讓你理解手腳怎麼一起配合，出動作時更穩也更有節奏。',
+      '把距離、節奏、防身觀念與反應帶進來，讓你面對靠近、壓迫與突發情況時，開始看得懂、穩得住。',
   },
   {
     id: 'module-4',
     stage: 4,
-    title: '把學過的整合起來，變成真的用得上的能力',
+    title: '把判斷變成底氣，帶走全新的狀態',
     description:
-      '把拳擊、踢拳和基礎防身觀念串在一起，讓你不只是上過課，而是真的知道自己遇到情況時可以怎麼反應。',
+      '最後把釋放、力量、距離與反應整合起來，讓你帶走的不只是體驗，而是一個更有氣勢、更不容易被壓住的自己。',
   },
 ]
 
 export const offersPlanSectionContent = {
-  title: '費用資訊',
-  subtitle: 'LINE Login 後查看完整入場方式、對應費用與四堂課參與方式。',
-  footnote: '登入後可查看完整內容，並依你想投入的訓練方式預留名額。',
+  title: '方案內容',
+  subtitle: '依你想先進場感受、直接投入完整四堂，或帶走更完整裝備與紀念，選擇適合你的版本。',
+  footnote: '如果你要的是明顯的狀態改變，會更推薦直接進入完整四堂系統。',
 }
+
+export const offersPlans: TicketPlan[] = [
+  {
+    id: 'offers-session-pass',
+    name: '單次進場體驗',
+    subtitle: '先感受 Fight Night 的出力與釋放',
+    teaserCopy: '先讓自己進場，感受這套系統的第一道出口。',
+    description: '適合想先感受節奏、釋放與現場氛圍的人。',
+    price: 'NT$1,800',
+    features: [
+      '單次 Fight Night 進場資格',
+      '拳套可租用或自備',
+      '在高能量帶領中先打開壓力出口',
+      '適合先確認自己喜不喜歡這套體驗',
+    ],
+    ctaLabel: '用 LINE 詢問單次體驗',
+    ctaVariant: 'secondary',
+  },
+  {
+    id: 'offers-transformation-pass',
+    name: '四堂蛻變系統',
+    subtitle: '主推方案',
+    teaserCopy: '不是只來一次，而是讓狀態真的往前走。',
+    description: '給想真正改善壓力反應、力量感與底氣的人。',
+    price: 'NT$3,000',
+    badge: '主推方案',
+    features: [
+      '四堂循序設計的完整訓練系統',
+      '從壓力釋放到力量、距離與判斷的建立',
+      '女性新手也能跟上的節奏帶領與動作拆解',
+      '比單次體驗更能感受到整體狀態改變',
+    ],
+    highlight: true,
+    ctaLabel: '用 LINE 預留四堂方案',
+    ctaVariant: 'primary',
+  },
+  {
+    id: 'offers-upgrade-pass',
+    name: '四堂蛻變系統＋專屬裝備',
+    subtitle: '完整進場版本',
+    teaserCopy: '把這段改變，真正帶回你的生活裡。',
+    description: '給想把這次力量感與新狀態延續回日常的人。',
+    price: 'NT$3,600',
+    badge: '附專屬拳套',
+    features: [
+      '包含四堂蛻變系統完整內容',
+      '專屬拳套一副（帶走）',
+      '把這次力量感與新狀態延續回日常',
+      '適合想更完整投入這次改變的你',
+    ],
+    ctaLabel: '用 LINE 詢問完整進場',
+    ctaVariant: 'secondary',
+  },
+]
 
 export const offersCoachSectionContent = {
   title: '教練資訊',
-  subtitle: 'LINE Login 後查看本次帶課教練與課程編排資訊。',
+  subtitle: '不是只看頭銜，而是看誰真的能把力量、距離與判斷教到新手身上。',
   description:
-    '從暖身、分組、節奏堆疊到情緒釋放，整套流程都不是即興，而是經過編排。除了活動帶動，也要讓使用者知道教練來自海外、具備職業綜合格鬥選手背景，帶的是一套從拳擊、踢拳到防身術的完整系統。',
+    '這裡的專業，不是把人操到極限，而是讓原本只會低頭忍受的人，透過有節奏的帶領、正確的出力與清楚的反應設計，慢慢長出穩定、底氣與判斷。',
 }
 
 export const coaches: Coach[] = [
   {
     id: 'coach-lead',
     name: 'Coach Ray',
-    title: '海外職業綜合格鬥選手 / 主帶教練',
-    bio: '來自海外的職業綜合格鬥選手，擅長把拳擊、踢拳與防身術拆解成初學者也能吸收的完整系統，同時維持高能量帶動與精準控場。',
+    title: '海外職業綜合格鬥選手 / 系統主帶教練',
+    bio: '擅長把原本只存在在職業訓練裡的力量、節奏與反應邏輯，拆成女性新手也能理解的步驟，讓人從壓力反應裡重新找回掌握感。',
     tags: ['綜合格鬥', '拳擊教學', '防身術', '安全控場'],
   },
   {
     id: 'coach-rhythm',
     name: 'Coach Aya',
-    title: '踢拳與節奏編排',
-    bio: '負責把踢拳動作節奏與團體帶動整合進課程裡，讓每一次上課都保有不同的刺激與學習重點。',
+    title: '踢拳節奏編排 / 身體流動訓練',
+    bio: '負責把節奏、移動與拳腳連結帶進課程，讓原本緊繃、卡住的身體，慢慢學會流動、出力與順暢反應。',
     tags: ['節奏編排', '團體帶動', '拳擊教學'],
   },
   {
     id: 'coach-safety',
     name: 'Coach Jin',
-    title: '防身術與安全控場',
-    bio: '負責現場分組、安全邊界與防身應用轉化，讓零基礎的人也能在不受傷的前提下穩定進入完整系統。',
+    title: '防身反應 / 安全控場',
+    bio: '把距離判斷、安全邊界與防身觀念轉成新手聽得懂的練習，幫助學員在壓力靠近時，不再只剩下慌張與退縮。',
     tags: ['安全控場', '防身術', '拳擊教學'],
   },
 ]
@@ -386,6 +440,7 @@ export const sessions: Session[] = [
     time: '22:00 - 23:30',
     capacity: '仍可報名',
     lineUrl: 'https://lin.ee/dTCkydS',
+    coachIds: ['coach-lead', 'coach-rhythm'],
   },
   {
     id: 'session-neihu',
@@ -396,6 +451,7 @@ export const sessions: Session[] = [
     time: '22:00 - 23:30',
     capacity: '名額緊張',
     lineUrl: 'https://lin.ee/baMDUpI',
+    coachIds: ['coach-lead', 'coach-safety'],
   },
   {
     id: 'session-taichung',
@@ -406,6 +462,7 @@ export const sessions: Session[] = [
     time: '22:00 - 23:30',
     capacity: '即將額滿',
     lineUrl: 'https://lin.ee/Hhi6BCP',
+    coachIds: ['coach-rhythm', 'coach-safety'],
   },
 ]
 
@@ -416,9 +473,9 @@ export const offersVenueSectionContent = {
 }
 
 export const offersFinalCtaContent = {
-  title: '準備好了，再解鎖完整內容。',
+  title: '準備好，不再只把一切吞下去。',
   subtitle:
-    '完成 LINE Login 後，就能查看四堂課完整訓練體系、活動場次、費用資訊與預留名額方式。',
+    '登入後查看四堂蛻變系統、場次、教練與方案，選一個讓自己真的改變的入口。',
   primaryCta: '快速登入查看',
   secondaryCta: '回到頁面上方',
 }
