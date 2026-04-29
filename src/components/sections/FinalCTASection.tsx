@@ -55,14 +55,6 @@ export function FinalCTASection() {
           >
             {finalCtaContent.primaryCta}
           </Button>
-          <Button
-            variant="secondary"
-            size="lg"
-            onClick={() => scrollTo('ticket')}
-            data-cta="final-duo"
-          >
-            {finalCtaContent.secondaryCta}
-          </Button>
         </motion.div>
 
         <motion.div

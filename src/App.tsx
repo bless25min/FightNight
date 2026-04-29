@@ -10,6 +10,7 @@ import { TicketSection } from './components/sections/TicketSection'
 import { IdentitySection } from './components/sections/IdentitySection'
 import { FAQSection } from './components/sections/FAQSection'
 import { FinalCTASection } from './components/sections/FinalCTASection'
+import { Footer } from './components/layout/Footer'
 import { useScrollProgress } from './hooks/useScrollProgress'
 
 function App() {
@@ -32,9 +33,7 @@ function App() {
         <FAQSection />
         <FinalCTASection />
       </main>
-      <footer className="py-8 text-center text-mist/50 text-xs border-t border-pearl/5">
-        <p>© {new Date().getFullYear()} UFCGYM TAIWAN. All rights reserved.</p>
-      </footer>
+      <Footer />
     </div>
   )
 }

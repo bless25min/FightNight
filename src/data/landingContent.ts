@@ -315,6 +315,39 @@ export const finalCtaContent = {
   title: '不是每個夜晚都值得出門。',
   subtitle: '但如果你最近真的需要一個出口，這一場，值得。',
   primaryCta: '選擇你的 Pass',
-  secondaryCta: '跟朋友一起進場',
   ghostCta: '先加 LINE 聊聊',
 }
+
+// ── 場館資訊 ──────────────────────────────────────
+export type Venue = {
+  id: string
+  name: string
+  address: string
+  transit: string
+  lineUrl: string
+}
+
+export const venues: Venue[] = [
+  {
+    id: 'venue-dunnan',
+    name: '台北 — 敦南旗艦館',
+    address: '台北市大安區安和路一段27號 B1',
+    transit: '捷運忠孝敦化站5號出口，步行2分鐘',
+    lineUrl: 'https://page.line.me/340uxvgb',
+  },
+  {
+    id: 'venue-neihu',
+    name: '台北 — 內科模範館',
+    address: '台北市內湖區洲子街55號1F',
+    transit: '捷運港墘站2號出口，步行1分鐘',
+    lineUrl: 'https://page.line.me/340uxvgb',
+  },
+  {
+    id: 'venue-taichung',
+    name: '台中 — 台中勤美旗艦館',
+    address: '台中市西區公益路68號12、13F',
+    transit:
+      '台中高鐵站免費接駁專車（往中國醫藥大學），至科博館站，步行5分鐘',
+    lineUrl: 'https://page.line.me/340uxvgb',
+  },
+]
