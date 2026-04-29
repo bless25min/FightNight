@@ -571,7 +571,8 @@ function OffersPlans({
       <div className="max-w-4xl mx-auto -mt-4 mb-8 md:mb-12 rounded-2xl border border-pearl/10 bg-black/20 px-5 py-5 md:px-6 md:py-6">
         <p className="text-sm md:text-base text-mist/80 leading-relaxed">
           如果你現在還在判斷怎麼開始：
-          想先確認品牌體驗，可以選「初次進場體驗」；
+          想先用最輕的方式試一次，可以選「初次體驗一堂」；
+          想第一次就把自己的拳套準備好，可以選「初次體驗一堂＋拳套」；
           想和信任的人一起開始，可以選「雙人同行體驗」；
           想真正把改變走完整，最推薦「Signature 四堂系統」；
           想把這份力量感延續回生活，適合「Signature 四堂＋專屬裝備」；

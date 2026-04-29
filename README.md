@@ -41,15 +41,18 @@ src/
 
 所有文字內容集中在 `src/data/landingContent.ts`，修改此檔即可更新頁面文案。
 
-## 票種設定
+## 方案設定
 
-在 `landingContent.ts` 中的 `ticketPlans` 陣列：
+首頁已不直接顯示方案；目前 `/offers` 頁的價格與方案文案集中在 `landingContent.ts` 的 `offersPlans` 陣列：
 
-| 票種 | 價格 |
+| 方案 | 價格 |
 |------|------|
-| Starter Pass | NT$1,800 |
-| Duo Pass | NT$3,000 |
-| Signature Pass | NT$3,600 |
+| 初次體驗一堂 | NT$1,800 |
+| 初次體驗一堂＋拳套 | NT$2,800 |
+| 雙人同行體驗 | NT$3,200 |
+| Signature 四堂系統 | NT$6,800 |
+| Signature 四堂＋專屬裝備 | NT$8,800 |
+| Private Onboarding | 私訊詢問 |
 
 ## CTA 串接
 

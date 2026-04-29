@@ -223,63 +223,6 @@ export const ticketSectionContent = {
   previewItems: ['四堂課訓練體系', '活動場次', '費用資訊', '教練資訊'],
 }
 
-export const ticketPlans: TicketPlan[] = [
-  {
-    id: 'starter-pass',
-    name: 'Starter Pass',
-    subtitle: '租用 / 自備拳套',
-    teaserCopy: '第一次進場，先用最輕的方式進來。',
-    description: '適合第一次進場，想先感受 Fight Night 的人。',
-    price: 'NT$1,800',
-    features: [
-      'Fight Night 入場資格',
-      '拳套可租用或自備',
-      '完整TRAIN DIFFERENT體驗',
-      'Pro Fighter 職業選手合照與簽名',
-    ],
-    ctaLabel: '用 LINE 預留 Starter Pass',
-    ctaVariant: 'secondary',
-  },
-  {
-    id: 'boutique-pass',
-    name: 'Boutique Pass',
-    subtitle: '單人附專屬拳套',
-    teaserCopy: '一個人來，也可以完整擁有自己的儀式感。',
-    description: '給想完整參與，也想把這次體驗帶回生活裡的人。',
-    price: 'NT$3,000',
-    badge: '附專屬拳套',
-    features: [
-      'Fight Night 入場資格',
-      '專屬拳套一副（帶走）',
-      '單人體驗紀念',
-      '完整TRAIN DIFFERENT體驗',
-      'Pro Fighter 職業選手合照與簽名',
-    ],
-    highlight: true,
-    ctaLabel: '用 LINE 預留 Boutique Pass',
-    ctaVariant: 'primary',
-  },
-  {
-    id: 'signature-pass',
-    name: 'Signature Pass',
-    subtitle: '個人',
-    teaserCopy: '給想把這一晚，變成自己身份的人。',
-    description: '給想用最完整的方式進場的人。',
-    price: 'NT$3,600',
-    badge: 'VIP體驗',
-    features: [
-      'Fight Night VIP 入場',
-      '限定色系拳套一副（帶走）',
-      '專屬VIP紀念品',
-      '完整TRAIN DIFFERENT體驗',
-      'Pro Fighter 職業選手合照與簽名',
-      'VIP專屬休息區',
-    ],
-    ctaLabel: '用 LINE 預留 Signature Pass',
-    ctaVariant: 'secondary',
-  },
-]
-
 // ── /offers 頁面文案 ──────────────────────────────
 export const offersHeroContent = {
   title: '四堂課後，你不會再像以前那樣容易被壓住',
@@ -335,44 +278,62 @@ export const curriculumModules: CurriculumModule[] = [
 export const offersPlanSectionContent = {
   title: '方案內容',
   subtitle:
-    '這不是用最低門檻湊成的一堂體驗，而是依你現在想怎麼開始，提供不同層級的進場方式與完整度。',
+    '不是每個人都要從同一個入口開始。你可以先試一堂、先把裝備準備好、找人一起來，或直接進入完整四堂系統。',
   footnote:
-    '如果你要的不只是來一次、舒服一下，而是真正感覺自己的狀態被重新整理過，最適合的選擇通常會是完整四堂系統。',
+    '如果你在意的不只是當下有沒有流汗，而是想把力量感、判斷感和底氣真正帶回生活裡，最值得投入的通常會是四堂系統。',
   overlayDescription:
-    '解鎖後直接看懂每種選擇差在哪，判斷自己現在該先試一次、找朋友一起來，還是直接進四堂。',
+    '解鎖後你可以直接比較每個入口的差別，判斷自己現在適合先試一次、先帶走裝備、找人同行，還是直接做完整投入。',
 }
 
 export const offersPlans: TicketPlan[] = [
   {
     id: 'offers-session-pass',
-    name: '初次進場體驗',
-    subtitle: '給想先確認感受的人',
-    teaserCopy: '先用一次進場，感受這個品牌的節奏、帶課方式與現場能量。',
+    name: '初次體驗一堂',
+    subtitle: '給想先感受再決定的人',
+    teaserCopy: '先用一堂課確認這個節奏、這個氛圍、這種出力方式是不是你要的入口。',
     description:
-      '適合第一次接觸 Fight Night，想先親身感受這套訓練風格與現場氛圍，再決定下一步的人。',
+      '適合第一次接觸 Fight Night，想先親身感受教練帶領、節奏推進與情緒釋放，再決定要不要往更完整的系統走的人。',
     price: 'NT$1,800',
     features: [
-      '單次 Fight Night 進場資格',
+      '單次 Fight Night 體驗資格',
       '拳套可租用或自備',
-      '完整感受節奏帶領、出力設計與壓力釋放',
-      '適合作為認識品牌與訓練系統的第一步',
+      '完整感受節奏帶領、出力設計與壓力出口',
+      '適合先確認自己會不會喜歡這種訓練狀態',
     ],
-    ctaLabel: '用 LINE 詢問初次體驗',
+    ctaLabel: '用 LINE 詢問初次一堂',
+    ctaVariant: 'secondary',
+  },
+  {
+    id: 'offers-session-glove-pass',
+    name: '初次體驗一堂＋拳套',
+    subtitle: '給想俐落開始的人',
+    teaserCopy: '如果你知道自己不想借公用裝備，這會是更完整也更有儀式感的第一步。',
+    description:
+      '適合第一次進場就想把裝備準備好的人。上完這一堂之後，拳套可以直接帶走，之後不管回訓、複習或再次進場都能接得上。',
+    price: 'NT$2,800',
+    badge: '附專屬拳套',
+    features: [
+      '單次 Fight Night 體驗資格',
+      '專屬拳套一副（帶走）',
+      '免去借用裝備，第一次進場更完整俐落',
+      '適合想把開始這件事做得更正式的人',
+    ],
+    ctaLabel: '用 LINE 詢問一堂＋拳套',
     ctaVariant: 'secondary',
   },
   {
     id: 'offers-duo-pass',
     name: '雙人同行體驗',
     subtitle: '給想和信任的人一起開始的你',
-    teaserCopy: '有些改變，一起走進來會更安心，也更容易真的跨出第一步。',
+    teaserCopy: '有些第一步，兩個人一起走進來，會比較放鬆，也比較真的成行。',
     description:
-      '適合想找朋友、伴侶或姐妹一起進場的人。保留陪伴感，同時完整感受這套品牌體驗。',
+      '適合想找朋友、伴侶或姐妹一起進場的人。你們可以在同一個節奏裡一起釋放、一起出力，也讓第一次嘗試少一點不安感。',
     price: 'NT$3,200',
     features: [
-      '兩位 Fight Night 單次進場資格',
+      '兩位 Fight Night 單次體驗資格',
       '一起感受節奏帶領、壓力出口與現場氛圍',
-      '彼此陪伴進場，降低第一次的不安感',
-      '適合想先一起體驗，再決定下一步的人',
+      '彼此陪伴進場，降低第一次的陌生感',
+      '適合想先一起體驗，再決定是否往下走的人',
     ],
     ctaLabel: '用 LINE 詢問雙人方案',
     ctaVariant: 'secondary',
@@ -381,10 +342,10 @@ export const offersPlans: TicketPlan[] = [
     id: 'offers-transformation-pass',
     name: 'Signature 四堂系統',
     subtitle: '主推方案',
-    teaserCopy: '不是只來一次，而是真正把這套改變走完整。',
+    teaserCopy: '不是只來一次就結束，而是把壓力釋放、力量、距離與判斷，完整走成一條線。',
     description:
-      '給想真正改善壓力反應、建立力量感、距離判斷與底氣的人。這是最完整也最能感受到改變的版本。',
-    price: 'NT$3,000',
+      '給想真正改善壓力反應、建立力量感、距離判斷與底氣的人。這是最推薦的版本，因為你帶走的不只是爽一次，而是整體狀態真的會開始不一樣。',
+    price: 'NT$3,800',
     badge: '主推方案',
     features: [
       '四堂循序設計的完整訓練系統',
@@ -400,16 +361,16 @@ export const offersPlans: TicketPlan[] = [
     id: 'offers-upgrade-pass',
     name: 'Signature 四堂＋專屬裝備',
     subtitle: '完整投入版本',
-    teaserCopy: '不只是把課上完，而是把這份力量感真正帶回你的生活裡。',
+    teaserCopy: '不只是把四堂上完，而是連同裝備、記憶和儀式感，一起把這次改變帶回生活。',
     description:
-      '給想完整投入這次改變的人。除了四堂系統本身，也把專屬裝備與儀式感一併帶走。',
-    price: 'NT$3,600',
+      '給已經知道自己不想只停在體驗的人。除了完整四堂系統，也把專屬裝備一起準備好，讓你在課後還能延續這次建立起來的力量感。',
+    price: 'NT$4,800',
     badge: '完整投入',
     features: [
       '包含 Signature 四堂系統完整內容',
       '專屬拳套一副（帶走）',
       '讓這次力量感與訓練儀式感延續回日常',
-      '適合想更完整收藏這段改變的人',
+      '適合想把這段改變真正留在生活裡的人',
     ],
     ctaLabel: '用 LINE 詢問完整投入方案',
     ctaVariant: 'secondary',
@@ -418,9 +379,9 @@ export const offersPlans: TicketPlan[] = [
     id: 'offers-private-intro',
     name: 'Private Onboarding',
     subtitle: '想先建立安全感，再進團體',
-    teaserCopy: '如果你想先用更安心、更被照顧的方式開始，這會是更適合你的入口。',
+    teaserCopy: '如果你想先被照顧好、先把動作與安全感建立起來，這會是更穩的開始方式。',
     description:
-      '適合對團體節奏還有點顧慮，或希望先建立動作、出力與安全感，再進入正式團體系統的人。',
+      '適合對團體節奏還有顧慮，或希望先建立動作、出力與安全感，再進入正式團體系統的人。先把不安降下來，再往下一步會更順。',
     price: '私訊詢問',
     features: [
       '一對一或小班入門安排',
@@ -446,21 +407,21 @@ export const offersCoachSectionContent = {
 export const coaches: Coach[] = [
   {
     id: 'coach-lead',
-    name: 'Coach Ray',
+    name: 'Coach Bruno Saint',
     title: '海外職業綜合格鬥選手 / 系統主帶教練',
     bio: '擅長把高壓對抗裡的力量、節奏與反應邏輯，拆成女性新手也能跟上的步驟，讓人從只是撐住，慢慢走到能掌握自己。',
     tags: ['綜合格鬥', '拳擊教學', '防身術', '安全控場'],
   },
   {
     id: 'coach-rhythm',
-    name: 'Coach Aya',
+    name: 'Coach BBB',
     title: '踢拳節奏編排 / 身體流動訓練',
     bio: '把節奏、移動與拳腳連結帶進課程，讓原本緊繃、卡住的身體開始流動，出力不再只是硬撐。',
     tags: ['節奏編排', '團體帶動', '拳擊教學'],
   },
   {
     id: 'coach-safety',
-    name: 'Coach Jin',
+    name: 'Coach CCC',
     title: '防身反應 / 安全控場',
     bio: '把距離判斷、安全邊界與防身觀念轉成新手聽得懂的練習，幫助學員在壓力靠近時，不再只剩慌張與退縮。',
     tags: ['安全控場', '防身術', '拳擊教學'],
@@ -561,7 +522,7 @@ export const faqItems: FAQItem[] = [
     id: 'faq-3',
     question: '拳套可以帶走嗎？',
     answer:
-      '依票種而定。Starter Pass 可租用或自備拳套；Boutique Pass 與 Signature Pass 都附專屬拳套，活動結束後可以直接帶走。',
+      '依方案而定。初次體驗一堂可租用或自備拳套；初次體驗一堂＋拳套與 Signature 四堂＋專屬裝備都附可帶走的專屬拳套。',
   },
   {
     id: 'faq-4',
@@ -573,7 +534,7 @@ export const faqItems: FAQItem[] = [
     id: 'faq-5',
     question: '可以跟朋友一起參加嗎？',
     answer:
-      '當然可以。你們可以各自選擇適合自己的 Pass 一起進場；如果想要附專屬拳套，可以選 Boutique Pass 或 Signature Pass。',
+      '當然可以。如果你們想一起用最輕鬆的方式開始，直接選雙人同行體驗最直覺；如果需求不同，也可以各自選適合自己的方案一起進場。',
   },
   {
     id: 'faq-6',
