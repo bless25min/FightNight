@@ -17,6 +17,8 @@ export type CoachTag =
   | '團體帶動'
   | '節奏編排'
   | '安全控場'
+  | '綜合格鬥'
+  | '防身術'
 
 export type Coach = {
   id: string
@@ -38,6 +40,13 @@ export type Session = {
   time: string
   capacity: SessionCapacity
   lineUrl: string
+}
+
+export type CurriculumModule = {
+  id: string
+  stage: number
+  title: string
+  description: string
 }
 
 export type FormulaItem = {

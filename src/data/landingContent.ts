@@ -8,6 +8,7 @@ import type {
   FAQItem,
   Coach,
   Session,
+  CurriculumModule,
 } from '../types'
 
 // ── 全域設定 ──────────────────────────────────────
@@ -213,13 +214,13 @@ export const ticketSectionContent = {
   title: '查看活動場次 / 費用資訊',
   subtitle: '首頁不直接顯示價格與方案。進入頁面後，再用 LINE Login 解鎖完整內容。',
   description:
-    '你會看到 LINE 會員專屬內容入口。快速登入後，可查看活動場次、費用資訊、教練資訊與可報名名額。',
+    '你會看到 LINE 會員專屬內容入口。快速登入後，可查看四堂課完整訓練體系、活動場次、費用資訊、教練資訊與可報名名額。',
   footnote:
-    '想先確認時間、地點與費用，再決定要不要進場，這就是你該點的地方。',
+    '想先確認這是不是一套你想認真投入的訓練系統，再決定要不要進場，這就是你該點的地方。',
   unifiedCtaLabel: '查看活動場次 / 費用資訊',
   teaserHint: 'LINE 會員專屬內容',
   previewTitle: '這個頁面會解鎖什麼？',
-  previewItems: ['活動場次', '費用資訊', '教練資訊', '可報名名額'],
+  previewItems: ['四堂課訓練體系', '活動場次', '費用資訊', '教練資訊'],
 }
 
 export const ticketPlans: TicketPlan[] = [
@@ -282,47 +283,87 @@ export const ticketPlans: TicketPlan[] = [
 // ── /offers 頁面文案 ──────────────────────────────
 export const offersHeroContent = {
   title: 'LINE 會員專屬內容',
-  subtitle: '活動場次 / 費用資訊',
+  subtitle: '四堂課完整訓練體系 / 活動場次 / 費用資訊',
   description:
-    '快速完成 LINE Login，即可解鎖本月活動場次、費用資訊、教練資訊與可報名名額。',
+    '快速完成 LINE Login，即可解鎖四堂課完整訓練體系、本月活動場次、費用資訊、海外職業綜合格鬥選手教練資訊與可報名名額。',
   primaryCta: '快速登入查看',
   secondaryCta: '先看這次會解鎖什麼',
 }
 
+export const offersCurriculumSectionContent = {
+  title: '這不是一次活動，是一套完整訓練體系',
+  subtitle:
+    '四堂課，從拳擊、踢拳到防身術，帶你進入完整的一套系統教學。',
+  description:
+    '這不是來一次就結束的情緒體驗，而是一套被設計好的訓練系統。教練來自海外，是職業綜合格鬥選手。你會在四堂課裡，循序建立拳擊、踢拳與防身術的核心概念與動作基礎，而且每一次課程都不是重複帶過，而是不同的體驗與學習。',
+  overlayTitle: '登入後查看完整四堂課內容',
+}
+
+export const curriculumModules: CurriculumModule[] = [
+  {
+    id: 'module-1',
+    stage: 1,
+    title: '站姿、步伐、出拳基礎',
+    description:
+      '先建立最基本的站姿、移動方式與拳擊出拳邏輯，讓身體知道怎麼穩、怎麼發力。',
+  },
+  {
+    id: 'module-2',
+    stage: 2,
+    title: '拳擊基礎組合與防禦',
+    description:
+      '把直拳、勾拳、閃躲與基本防禦串起來，開始進入節奏與回應。',
+  },
+  {
+    id: 'module-3',
+    stage: 3,
+    title: '踢拳腿法與距離感',
+    description:
+      '加入前踢、鞭腿、膝擊等踢拳基礎，建立上肢與下肢的整合與距離控制。',
+  },
+  {
+    id: 'module-4',
+    stage: 4,
+    title: '完整組合與防身應用',
+    description:
+      '把拳擊、踢拳與防身應用整合成完整訓練節奏，讓你真正進入一套完整系統。',
+  },
+]
+
 export const offersPlanSectionContent = {
   title: '費用資訊',
-  subtitle: 'LINE Login 後查看完整入場方式與對應費用。',
-  footnote: '登入後可查看完整內容，並依你要的進場方式預留名額。',
+  subtitle: 'LINE Login 後查看完整入場方式、對應費用與四堂課參與方式。',
+  footnote: '登入後可查看完整內容，並依你想投入的訓練方式預留名額。',
 }
 
 export const offersCoachSectionContent = {
   title: '教練資訊',
   subtitle: 'LINE Login 後查看本次帶課教練與課程編排資訊。',
   description:
-    '從暖身、分組、節奏堆疊到情緒釋放，整套流程都不是即興，而是經過編排。登入後可查看本次教練資訊與帶課重點。',
+    '從暖身、分組、節奏堆疊到情緒釋放，整套流程都不是即興，而是經過編排。除了活動帶動，也要讓使用者知道教練來自海外、具備職業綜合格鬥選手背景，帶的是一套從拳擊、踢拳到防身術的完整系統。',
 }
 
 export const coaches: Coach[] = [
   {
     id: 'coach-lead',
     name: 'Coach Ray',
-    title: '主帶教練',
-    bio: '十年以上拳擊與團體節奏帶動經驗，專注於把高能量現場帶到精準控制的安全邊界內。',
-    tags: ['拳擊教學', '團體帶動', '節奏編排', '安全控場'],
+    title: '海外職業綜合格鬥選手 / 主帶教練',
+    bio: '來自海外的職業綜合格鬥選手，擅長把拳擊、踢拳與防身術拆解成初學者也能吸收的完整系統，同時維持高能量帶動與精準控場。',
+    tags: ['綜合格鬥', '拳擊教學', '防身術', '安全控場'],
   },
   {
     id: 'coach-rhythm',
-    name: 'Coach Mia',
-    title: '節奏編排',
-    bio: '把每一場 Fight Night 的節奏堆疊曲線設計到精準秒數，讓情緒波形被安全地推上去。',
-    tags: ['節奏編排', '團體帶動'],
+    name: 'Coach Aya',
+    title: '踢拳與節奏編排',
+    bio: '負責把踢拳動作節奏與團體帶動整合進課程裡，讓每一次上課都保有不同的刺激與學習重點。',
+    tags: ['節奏編排', '團體帶動', '拳擊教學'],
   },
   {
     id: 'coach-safety',
     name: 'Coach Jin',
-    title: '安全控場',
-    bio: '負責現場分組與安全邊界，讓零基礎的人也能在不受傷的前提下被完全帶進去。',
-    tags: ['安全控場', '拳擊教學'],
+    title: '防身術與安全控場',
+    bio: '負責現場分組、安全邊界與防身應用轉化，讓零基礎的人也能在不受傷的前提下穩定進入完整系統。',
+    tags: ['安全控場', '防身術', '拳擊教學'],
   },
 ]
 
@@ -376,13 +417,14 @@ export const offersVenueSectionContent = {
 
 export const offersFinalCtaContent = {
   title: '準備好了，再解鎖完整內容。',
-  subtitle: '完成 LINE Login 後，就能查看活動場次、費用資訊與預留名額方式。',
+  subtitle:
+    '完成 LINE Login 後，就能查看四堂課完整訓練體系、活動場次、費用資訊與預留名額方式。',
   primaryCta: '快速登入查看',
   secondaryCta: '回到頁面上方',
 }
 
 export const offersStatusCopy = {
-  notLoggedIn: 'LINE Login 後解鎖活動場次、費用資訊與可報名名額。',
+  notLoggedIn: 'LINE Login 後解鎖四堂課訓練體系、活動場次、費用資訊與可報名名額。',
   noSession: '本月名額已滿。先加入 LINE，下一次開放時會優先通知你。',
   almostFull: '這個場館名額不多了，想進場就不要再等等。',
   awaitingRelease: '本月場次即將開放，先加入 LINE，我們會先通知你。',

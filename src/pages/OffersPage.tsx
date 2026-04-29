@@ -2,7 +2,9 @@ import { motion } from 'framer-motion'
 import type { ReactNode } from 'react'
 import {
   coaches,
+  curriculumModules,
   offersCoachSectionContent,
+  offersCurriculumSectionContent,
   offersFinalCtaContent,
   offersHeroContent,
   offersPlanSectionContent,
@@ -151,6 +153,10 @@ function OffersHero() {
 function OffersUnlockPreview() {
   const items = [
     {
+      title: '四堂課完整訓練體系',
+      description: '了解這不是一次體驗，而是一套循序漸進的完整訓練設計。',
+    },
+    {
       title: '活動場次',
       description: '查看每月第一個星期五晚上 10 點的可報名狀態。',
     },
@@ -160,7 +166,7 @@ function OffersUnlockPreview() {
     },
     {
       title: '教練資訊',
-      description: '查看本次帶課教練與活動編排重點。',
+      description: '查看來自海外的職業綜合格鬥選手教練背景與本次課程重點。',
     },
   ]
 
@@ -171,7 +177,7 @@ function OffersUnlockPreview() {
         subtitle="先確認你要看的方向，再用 LINE Login 快速進入。"
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 max-w-5xl mx-auto">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-6 max-w-6xl mx-auto">
         {items.map((item, i) => (
           <motion.div
             key={item.title}
@@ -193,6 +199,50 @@ function OffersUnlockPreview() {
           </motion.div>
         ))}
       </div>
+    </SectionWrapper>
+  )
+}
+
+function OffersCurriculum() {
+  return (
+    <SectionWrapper id="offers-curriculum">
+      <SectionHeading
+        title={offersCurriculumSectionContent.title}
+        subtitle={offersCurriculumSectionContent.subtitle}
+      />
+
+      <p className="text-center text-base md:text-lg text-mist/80 max-w-3xl mx-auto -mt-2 mb-8 md:mb-12 leading-relaxed">
+        {offersCurriculumSectionContent.description}
+      </p>
+
+      <LockedSection overlayTitle={offersCurriculumSectionContent.overlayTitle}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 max-w-5xl mx-auto">
+          {curriculumModules.map((module, i) => (
+            <motion.div
+              key={module.id}
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: i * 0.1 }}
+              className="rounded-2xl border border-pearl/10 bg-black/30 p-5 md:p-6 flex gap-4"
+            >
+              <div className="shrink-0 h-12 w-12 rounded-2xl bg-gradient-to-br from-blaze/20 to-neon/20 border border-pearl/10 flex items-center justify-center">
+                <span className="text-lg font-heading font-bold text-pearl">
+                  {module.stage}
+                </span>
+              </div>
+              <div>
+                <h3 className="text-lg font-heading font-semibold text-pearl">
+                  {module.title}
+                </h3>
+                <p className="mt-2 text-sm text-mist/80 leading-relaxed">
+                  {module.description}
+                </p>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </LockedSection>
     </SectionWrapper>
   )
 }
@@ -491,6 +541,7 @@ export function OffersPage() {
       <main>
         <OffersHero />
         <OffersUnlockPreview />
+        <OffersCurriculum />
         <OffersPlans />
         <OffersCoaches />
         <OffersSessions />
