@@ -375,12 +375,6 @@ export const offersPlans: TicketPlan[] = [
   },
 ]
 
-export const offersProofSectionContent = {
-  title: '看現場，不用看履歷',
-  subtitle:
-    '訓練、課程帶領、現場指導與活動合照，比一串頭銜更快建立信任。',
-}
-
 export const offersSessionSectionContent = {
   title: '下一場，你要在哪裡進場',
   subtitle:

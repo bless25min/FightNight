@@ -7,17 +7,11 @@ import {
   offersHeroContent,
   offersPlans,
   offersPlanSectionContent,
-  offersProofSectionContent,
   offersSessionSectionContent,
   offersStatusCopy,
   sessions,
   siteConfig,
 } from '../data/landingContent'
-import proofLeadPoster from '../assets/landing/flow-step-1.png'
-import proofTrainingPoster from '../assets/landing/flow-step-2.png'
-import proofIntensityPoster from '../assets/landing/flow-step-3.png'
-import proofReleasePoster from '../assets/landing/flow-step-4.png'
-import proofAfterglowPoster from '../assets/landing/flow-step-5.png'
 import { loadLiffSdk } from '../lib/liff'
 import type { SessionCapacity } from '../types'
 import { Footer } from '../components/layout/Footer'
@@ -95,40 +89,7 @@ const oldFrameworkPoints = [
   {
     title: '等到爆掉，才知道自己已經滿了',
     description:
-      '爆發不是釋放，是系統過載。真正需要的不是下一次忍更久，而是學會在壓力中穩住。',
-  },
-]
-
-const proofMoments = [
-  {
-    id: 'guided-entry',
-    image: proofLeadPoster,
-    title: '有人在旁邊把你帶進狀態',
-    caption: '新手不需要自己摸索，現場會有人看節奏、看動作、看安全感。',
-  },
-  {
-    id: 'training-room',
-    image: proofTrainingPoster,
-    title: '不是亂打，是被編排過的進場',
-    caption: '分組、沙包、節奏和距離感，都會被安排在可控的範圍裡。',
-  },
-  {
-    id: 'group-push',
-    image: proofIntensityPoster,
-    title: '群體會把你推到平常到不了的位置',
-    caption: '你不是一個人在撐，現場的聲音、節奏和人會一起把你推進去。',
-  },
-  {
-    id: 'release',
-    image: proofReleasePoster,
-    title: '真正釋放時，世界會變得很安靜',
-    caption: '注意力被收回身體，只剩下呼吸、拳套、沙包和那一下。',
-  },
-  {
-    id: 'afterglow',
-    image: proofAfterglowPoster,
-    title: '結束後留下的，不只是汗',
-    caption: '你會記得自己完成了一件平常不會做的事，也記得那群一起進場的人。',
+      '是系統過載導致爆發，但那不是釋放。真正需要的不是下一次忍更久，而是學會轉化壓力。',
   },
 ]
 
@@ -247,8 +208,8 @@ function OffersPainSection() {
   return (
     <SectionWrapper id="offers-pain">
       <SectionHeading
-        title="你不是不夠強，是太久沒有出口"
-        subtitle="真正消耗人的不是一次衝突，而是每一次都把委屈、壓力和害怕收回身體裡，假裝自己還可以。"
+        title="能堅持到現在足夠了，需要的不只是一個出口"
+        subtitle="真正消耗人的是每一次都把委屈、壓力和害怕收回身體裡，卻假裝自己還可以。"
       />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 max-w-5xl mx-auto">
@@ -455,39 +416,6 @@ function OffersPlans({
       <p className="text-center text-sm md:text-base text-mist/60 max-w-2xl mx-auto mt-8 md:mt-12">
         {offersPlanSectionContent.footnote}
       </p>
-    </SectionWrapper>
-  )
-}
-
-function OffersProofGallery() {
-  return (
-    <SectionWrapper id="offers-proof">
-      <SectionHeading
-        title={offersProofSectionContent.title}
-        subtitle={offersProofSectionContent.subtitle}
-      />
-
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-5 max-w-6xl mx-auto">
-        {proofMoments.map((moment, i) => (
-          <motion.div
-            key={moment.id}
-            initial={{ opacity: 0, y: 24 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: i * 0.1 }}
-            className={`group overflow-hidden rounded-2xl md:rounded-[1.75rem] border border-pearl/10 bg-black/40 shadow-[0_24px_70px_rgba(0,0,0,0.35)] ${
-              i === 0 ? 'md:col-span-2 xl:col-span-2' : ''
-            }`}
-          >
-            <img
-              src={moment.image}
-              alt={`${moment.title}｜${moment.caption}`}
-              loading="lazy"
-              className="h-full min-h-[260px] w-full object-cover transition-transform duration-700 group-hover:scale-105"
-            />
-          </motion.div>
-        ))}
-      </div>
     </SectionWrapper>
   )
 }
@@ -702,7 +630,6 @@ export function OffersPage() {
         <OffersPainSection />
         <OffersOldFrameworkSection />
         <OffersCurriculum gateState={gateState} />
-        <OffersProofGallery />
         <OffersPlans gateState={gateState} onCtaAction={(url) => void handleCtaAction(url)} />
         <OffersSessions gateState={gateState} />
       </main>
