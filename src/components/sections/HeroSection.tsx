@@ -28,12 +28,12 @@ export function HeroSection() {
       </div>
 
       {/* 主要內容 */}
-      <div className="relative z-10 max-w-6xl mx-auto px-5 sm:px-8">
+      <div className="relative z-10 max-w-6xl mx-auto px-3 sm:px-8 py-20 sm:py-0">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.4 }}
-          className="mx-auto overflow-hidden rounded-[2rem] border border-pearl/10 bg-black/40 shadow-[0_30px_80px_rgba(0,0,0,0.45)]"
+          className="mx-auto overflow-hidden rounded-2xl md:rounded-[2rem] border border-pearl/10 bg-black/40 shadow-[0_30px_80px_rgba(0,0,0,0.45)]"
         >
           <img
             src={heroPoster}
@@ -58,7 +58,7 @@ export function HeroSection() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 1.0 }}
-          className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4"
+          className="mt-5 sm:mt-8 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4"
         >
           <Button
             size="lg"

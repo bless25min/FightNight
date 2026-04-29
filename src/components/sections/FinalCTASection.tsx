@@ -23,7 +23,7 @@ export function FinalCTASection() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.7 }}
-          className="text-3xl md:text-4xl lg:text-5xl font-heading font-bold"
+          className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-heading font-bold"
         >
           {finalCtaContent.title}
         </motion.h2>
@@ -33,7 +33,7 @@ export function FinalCTASection() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="mt-4 text-lg md:text-xl text-mist"
+          className="mt-3 md:mt-4 text-base sm:text-lg md:text-xl text-mist"
         >
           {finalCtaContent.subtitle}
         </motion.p>
@@ -43,7 +43,7 @@ export function FinalCTASection() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6, delay: 0.4 }}
-          className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4"
+          className="mt-6 md:mt-10 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4"
         >
           <Button
             size="lg"

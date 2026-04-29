@@ -22,7 +22,7 @@ export function OldFrameworkBreakSection() {
         subtitle={oldFrameworkContent.subtitle}
       />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6 max-w-4xl mx-auto">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-6 max-w-4xl mx-auto">
         {frameworkCards.map((card, i) => (
           <motion.div
             key={card.id}
@@ -30,7 +30,7 @@ export function OldFrameworkBreakSection() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: i * 0.1 }}
-            className="overflow-hidden rounded-[1.75rem] border border-pearl/10 bg-black/40 shadow-[0_20px_60px_rgba(0,0,0,0.3)] transition-transform duration-300 hover:-translate-y-1"
+            className="overflow-hidden rounded-2xl md:rounded-[1.75rem] border border-pearl/10 bg-black/40 shadow-[0_20px_60px_rgba(0,0,0,0.3)] transition-transform duration-300 hover:-translate-y-1"
           >
             <img
               src={frameworkImageMap[card.id]}

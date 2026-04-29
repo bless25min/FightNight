@@ -21,7 +21,7 @@ export function FAQSection() {
         subtitle="先回答你心裡那些「可是...」"
       />
 
-      <div className="max-w-2xl mx-auto glass rounded-2xl p-4 md:p-6">
+      <div className="max-w-2xl mx-auto glass rounded-2xl p-3 md:p-6">
         {faqItems.map((item) => (
           <Accordion
             key={item.id}

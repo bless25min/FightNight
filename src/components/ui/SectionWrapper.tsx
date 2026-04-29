@@ -14,7 +14,7 @@ export function SectionWrapper({
   children,
   className = '',
   fullWidth = false,
-  padding = 'py-20 md:py-28',
+  padding = 'py-10 md:py-28',
 }: Props) {
   return (
     <motion.section
@@ -24,7 +24,7 @@ export function SectionWrapper({
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: '-80px' }}
       transition={{ duration: 0.7, ease: 'easeOut' }}
-      className={`${padding} ${fullWidth ? '' : 'max-w-6xl mx-auto px-5 sm:px-8'} ${className}`}
+      className={`${padding} ${fullWidth ? '' : 'max-w-6xl mx-auto px-3 sm:px-8'} ${className}`}
     >
       {children}
     </motion.section>

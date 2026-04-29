@@ -16,13 +16,13 @@ export function SectionHeading({
   const alignClass = align === 'center' ? 'text-center' : 'text-left'
 
   return (
-    <div className={`mb-12 md:mb-16 ${alignClass} ${className}`}>
+    <div className={`mb-7 md:mb-16 ${alignClass} ${className}`}>
       <motion.h2
         initial={{ opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
         transition={{ duration: 0.6 }}
-        className="text-3xl md:text-4xl lg:text-5xl font-heading font-bold tracking-tight"
+        className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-heading font-bold tracking-tight"
       >
         {title}
       </motion.h2>
@@ -33,7 +33,7 @@ export function SectionHeading({
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6, delay: 0.15 }}
-          className="mt-4 text-lg md:text-xl text-mist max-w-2xl mx-auto"
+          className="mt-3 md:mt-4 text-base sm:text-lg md:text-xl text-mist max-w-2xl mx-auto"
         >
           {subtitle}
         </motion.p>
@@ -44,7 +44,7 @@ export function SectionHeading({
         whileInView={{ scaleX: 1 }}
         viewport={{ once: true }}
         transition={{ duration: 0.6, delay: 0.3 }}
-        className={`section-divider mt-6 ${align === 'left' ? 'mx-0' : ''}`}
+        className={`section-divider mt-4 md:mt-6 ${align === 'left' ? 'mx-0' : ''}`}
       />
     </div>
   )

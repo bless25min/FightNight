@@ -32,7 +32,7 @@ export function TicketSection() {
           subtitle={ticketSectionContent.subtitle}
         />
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 max-w-5xl mx-auto items-start">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8 max-w-5xl mx-auto items-start">
           {ticketPlans.map((plan, i) => (
             <motion.div
               key={plan.id}
@@ -41,7 +41,7 @@ export function TicketSection() {
               viewport={{ once: true }}
               transition={{ duration: 0.6, delay: i * 0.15 }}
               data-ticket={plan.id}
-              className={`relative rounded-2xl p-6 md:p-8 border transition-all duration-300 ${
+              className={`relative rounded-2xl p-5 md:p-8 border transition-all duration-300 ${
                 plan.highlight
                   ? 'glass border-neon/40 glow-neon md:scale-105'
                   : 'glass border-pearl/10 hover:border-pearl/20'
@@ -57,20 +57,20 @@ export function TicketSection() {
               )}
 
               {/* 票種名稱 */}
-              <h3 className="text-2xl font-heading font-bold mt-2 mb-1">
+              <h3 className="text-2xl font-heading font-bold mt-1 md:mt-2 mb-1">
                 {plan.name}
               </h3>
-              <p className="text-sm text-mist mb-6">{plan.subtitle}</p>
+              <p className="text-sm text-mist mb-4 md:mb-6">{plan.subtitle}</p>
 
               {/* 價格 */}
-              <div className="mb-6">
+              <div className="mb-4 md:mb-6">
                 <span className="text-3xl md:text-4xl font-heading font-black text-pearl">
                   {plan.price}
                 </span>
               </div>
 
               {/* 功能列表 */}
-              <ul className="space-y-3 mb-8">
+              <ul className="space-y-2 md:space-y-3 mb-6 md:mb-8">
                 {plan.features.map((f) => (
                   <li
                     key={f}

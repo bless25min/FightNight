@@ -13,7 +13,7 @@ export function IdentitySection() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.7 }}
-          className="text-3xl md:text-5xl font-heading font-bold leading-tight"
+          className="text-2xl sm:text-3xl md:text-5xl font-heading font-bold leading-tight"
         >
           {identityContent.title}
         </motion.h2>
@@ -23,7 +23,7 @@ export function IdentitySection() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="mt-4 text-2xl md:text-3xl font-heading font-semibold text-gradient"
+          className="mt-3 md:mt-4 text-xl sm:text-2xl md:text-3xl font-heading font-semibold text-gradient"
         >
           {identityContent.subtitle}
         </motion.p>
@@ -33,7 +33,7 @@ export function IdentitySection() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6, delay: 0.4 }}
-          className="mt-8 text-lg text-mist leading-relaxed"
+          className="mt-5 md:mt-8 text-base sm:text-lg text-mist leading-relaxed"
         >
           {identityContent.description}
         </motion.p>
