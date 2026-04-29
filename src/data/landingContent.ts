@@ -23,7 +23,7 @@ export const siteConfig = {
 export const heroContent = {
   title: '今晚，一起進入狀態。',
   subtitle: '這是一張讓你脫離日常的入場券。',
-  primaryCta: '立即搶位',
+  primaryCta: '查看活動場次 / 費用資訊',
   secondaryCta: '這一晚會發生什麼',
   tags: ['🥊 拳套入場', '👥 集體同步', '🔥 壓力釋放'],
 }
@@ -210,13 +210,16 @@ export const audiencePoints: AudiencePoint[] = [
 
 // ── 票種區（首頁 teaser + 登入後完整資訊共用資料） ─────
 export const ticketSectionContent = {
-  title: '選你的入場方式',
-  subtitle: '方案還在，但價格、名額與場次，只開放給準備進場的人看。',
-  description: 'LINE 登入後可查看完整方案、教練資訊、可報名場次與即時名額。',
-  footnote: '不是每個人都需要先知道價格。先看你是不是準備好進場。',
-  unifiedCtaLabel: 'LINE 登入查看方案與報價',
-  maskedPrice: 'NT$ ••••',
-  teaserHint: '登入後查看完整內容',
+  title: '查看活動場次 / 費用資訊',
+  subtitle: '首頁不直接顯示價格與方案。進入頁面後，再用 LINE Login 解鎖完整內容。',
+  description:
+    '你會看到 LINE 會員專屬內容入口。快速登入後，可查看活動場次、費用資訊、教練資訊與可報名名額。',
+  footnote:
+    '想先確認時間、地點與費用，再決定要不要進場，這就是你該點的地方。',
+  unifiedCtaLabel: '查看活動場次 / 費用資訊',
+  teaserHint: 'LINE 會員專屬內容',
+  previewTitle: '這個頁面會解鎖什麼？',
+  previewItems: ['活動場次', '費用資訊', '教練資訊', '可報名名額'],
 }
 
 export const ticketPlans: TicketPlan[] = [
@@ -278,25 +281,25 @@ export const ticketPlans: TicketPlan[] = [
 
 // ── /offers 頁面文案 ──────────────────────────────
 export const offersHeroContent = {
-  title: '你已進入 Fight Night 入場資訊',
-  subtitle: '這裡有完整方案、報價、教練與本月可報名場次。',
+  title: 'LINE 會員專屬內容',
+  subtitle: '活動場次 / 費用資訊',
   description:
-    '每月只開一晚。第一個星期五，晚上 10:00。三館同步開放，額滿就等下個月。',
-  primaryCta: '查看本月仍有名額的場次',
-  secondaryCta: '往下看完整方案',
+    '快速完成 LINE Login，即可解鎖本月活動場次、費用資訊、教練資訊與可報名名額。',
+  primaryCta: '快速登入查看',
+  secondaryCta: '先看這次會解鎖什麼',
 }
 
 export const offersPlanSectionContent = {
-  title: '方案與報價',
-  subtitle: '選你要怎麼進場。差別不只是票價，而是你想用什麼方式記住這一晚。',
-  footnote: '票種會影響你怎麼進場，但不影響你會不會被帶進去。',
+  title: '費用資訊',
+  subtitle: 'LINE Login 後查看完整入場方式與對應費用。',
+  footnote: '登入後可查看完整內容，並依你要的進場方式預留名額。',
 }
 
 export const offersCoachSectionContent = {
-  title: '今晚帶你進場的教練',
-  subtitle: '不是帶你做完一堂課，而是把你安全地帶進那個會上癮的狀態。',
+  title: '教練資訊',
+  subtitle: 'LINE Login 後查看本次帶課教練與課程編排資訊。',
   description:
-    '從暖身、分組、節奏堆疊到情緒釋放，整套流程都不是即興，而是經過編排。高能量帶動，但控制精準；讓每一個人都能在安全邊界內，被帶進去。',
+    '從暖身、分組、節奏堆疊到情緒釋放，整套流程都不是即興，而是經過編排。登入後可查看本次教練資訊與帶課重點。',
 }
 
 export const coaches: Coach[] = [
@@ -324,9 +327,9 @@ export const coaches: Coach[] = [
 ]
 
 export const offersSessionSectionContent = {
-  title: '本月仍有名額的場次',
+  title: '活動場次',
   subtitle:
-    '每月只開一晚。第一個星期五，晚上 10:00。三個場館同步開放，名額滿了就等下個月。',
+    '每月只開一晚。第一個星期五，晚上 10:00。登入後查看三館同步開放的可報名狀態。',
   ruleLine: '1 個場次 × 3 個場館地點',
   footnote: '名額狀態依各館實際釋出為準。',
   bookCtaLabel: '用 LINE 預留名額',
@@ -366,20 +369,20 @@ export const sessions: Session[] = [
 ]
 
 export const offersVenueSectionContent = {
-  title: '你要在哪裡進場？',
-  subtitle: '選一個你最容易出現的地方，剩下的交給我們。',
+  title: '場館地點',
+  subtitle: '登入後查看各館入口、地點與對應資訊。',
   ctaLabel: '加入這個場館的 LINE',
 }
 
 export const offersFinalCtaContent = {
-  title: '如果你已經看到這裡，就差最後一步。',
-  subtitle: '選方案、選場館、預留名額。剩下的，交給這一晚把你帶進去。',
-  primaryCta: '用 LINE 預留我的名額',
-  secondaryCta: '回到方案與報價',
+  title: '準備好了，再解鎖完整內容。',
+  subtitle: '完成 LINE Login 後，就能查看活動場次、費用資訊與預留名額方式。',
+  primaryCta: '快速登入查看',
+  secondaryCta: '回到頁面上方',
 }
 
 export const offersStatusCopy = {
-  notLoggedIn: 'LINE 登入後查看完整方案、報價與可報名場次。',
+  notLoggedIn: 'LINE Login 後解鎖活動場次、費用資訊與可報名名額。',
   noSession: '本月名額已滿。先加入 LINE，下一次開放時會優先通知你。',
   almostFull: '這個場館名額不多了，想進場就不要再等等。',
   awaitingRelease: '本月場次即將開放，先加入 LINE，我們會先通知你。',
@@ -436,9 +439,9 @@ export const faqItems: FAQItem[] = [
 // ── Final CTA ─────────────────────────────────────
 export const finalCtaContent = {
   title: '不是每個夜晚都值得出門。',
-  subtitle: '但如果你最近真的需要一個出口，這一場，值得。',
-  primaryCta: '選擇你的 Pass',
-  ghostCta: '先加 LINE 聊聊',
+  subtitle: '先看活動場次與費用資訊，再決定這一場是不是你要的入口。',
+  primaryCta: '查看活動場次 / 費用資訊',
+  ghostCta: '先加 LINE 取得通知',
 }
 
 // ── 場館資訊 ──────────────────────────────────────

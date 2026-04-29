@@ -19,8 +19,10 @@ export function Header() {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
   }
 
-  const ctaLabel = isOffersPage ? '查看可報名場次' : '立即搶位'
-  const ctaTarget = isOffersPage ? 'offers-sessions' : 'ticket'
+  const ctaLabel = isOffersPage
+    ? '快速登入查看'
+    : '查看活動場次 / 費用資訊'
+  const ctaTarget = 'ticket'
 
   return (
     <motion.header
@@ -49,13 +51,19 @@ export function Header() {
           />
         </a>
 
-        <Button
-          size="sm"
-          onClick={() => scrollTo(ctaTarget)}
-          data-cta="header-cta"
-        >
-          {ctaLabel}
-        </Button>
+        {isOffersPage ? (
+          <Button size="sm" href={siteConfig.lineUrl} data-cta="header-cta">
+            {ctaLabel}
+          </Button>
+        ) : (
+          <Button
+            size="sm"
+            onClick={() => scrollTo(ctaTarget)}
+            data-cta="header-cta"
+          >
+            {ctaLabel}
+          </Button>
+        )}
       </div>
     </motion.header>
   )

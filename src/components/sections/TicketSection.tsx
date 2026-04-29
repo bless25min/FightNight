@@ -1,15 +1,10 @@
 import { motion, useInView } from 'framer-motion'
-import { useRef, useEffect } from 'react'
-import {
-  ticketPlans,
-  ticketSectionContent,
-  siteConfig,
-} from '../../data/landingContent'
-import { SectionWrapper } from '../ui/SectionWrapper'
-import { SectionHeading } from '../ui/SectionHeading'
-import { Button } from '../ui/Button'
-import { Badge } from '../ui/Badge'
+import { useEffect, useRef } from 'react'
+import { ticketSectionContent, siteConfig } from '../../data/landingContent'
 import { useTracking } from '../../hooks/useTracking'
+import { Button } from '../ui/Button'
+import { SectionHeading } from '../ui/SectionHeading'
+import { SectionWrapper } from '../ui/SectionWrapper'
 
 export function TicketSection() {
   const { trackTicketView, trackTicketCta } = useTracking()
@@ -22,7 +17,7 @@ export function TicketSection() {
       tracked.current = true
       trackTicketView()
     }
-  }, [isInView])
+  }, [isInView, trackTicketView])
 
   return (
     <SectionWrapper id="ticket">
@@ -36,92 +31,57 @@ export function TicketSection() {
           {ticketSectionContent.description}
         </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8 max-w-5xl mx-auto items-start">
-          {ticketPlans.map((plan, i) => (
-            <motion.div
-              key={plan.id}
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: i * 0.15 }}
-              data-ticket={plan.id}
-              className={`relative rounded-2xl p-5 md:p-8 border transition-all duration-300 overflow-hidden ${
-                plan.highlight
-                  ? 'glass border-neon/40 glow-neon md:scale-105'
-                  : 'glass border-pearl/10 hover:border-pearl/20'
-              }`}
-            >
-              {plan.badge && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
-                  <Badge variant={plan.highlight ? 'highlight' : 'gold'}>
-                    {plan.badge}
-                  </Badge>
-                </div>
-              )}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="relative max-w-4xl mx-auto overflow-hidden rounded-3xl border border-pearl/10 glass p-6 md:p-10"
+        >
+          <div className="absolute inset-0 pointer-events-none">
+            <div className="absolute top-0 right-0 h-48 w-48 rounded-full bg-neon/10 blur-[90px]" />
+            <div className="absolute bottom-0 left-0 h-56 w-56 rounded-full bg-blaze/10 blur-[110px]" />
+          </div>
 
-              <h3 className="text-2xl font-heading font-bold mt-1 md:mt-2 mb-1">
-                {plan.name}
-              </h3>
-              <p className="text-sm text-mist mb-3">{plan.subtitle}</p>
+          <div className="relative">
+            <p className="text-center text-xs md:text-sm font-heading tracking-[0.3em] text-neon/80 uppercase">
+              {ticketSectionContent.teaserHint}
+            </p>
 
-              <p className="text-sm md:text-base text-pearl/85 leading-relaxed mb-5 md:mb-6 min-h-[3rem]">
-                {plan.teaserCopy}
-              </p>
+            <h3 className="mt-4 text-center text-2xl md:text-3xl font-heading font-bold text-pearl">
+              {ticketSectionContent.previewTitle}
+            </h3>
 
-              {/* 遮罩價格 */}
-              <div className="mb-4 md:mb-5 relative">
-                <span
-                  className="text-3xl md:text-4xl font-heading font-black text-pearl/40 select-none tracking-widest"
-                  aria-hidden
+            <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+              {ticketSectionContent.previewItems.map((item, i) => (
+                <div
+                  key={item}
+                  className={`rounded-2xl border border-pearl/10 bg-black/20 px-4 py-5 text-center ${
+                    i % 2 === 0 ? 'md:translate-y-2' : ''
+                  }`}
                 >
-                  {ticketSectionContent.maskedPrice}
-                </span>
-                <span className="sr-only">價格將於 LINE 登入後顯示</span>
-              </div>
+                  <div className="text-sm md:text-base font-heading font-semibold text-pearl">
+                    {item}
+                  </div>
+                  <div className="mt-2 text-xs text-mist/60">
+                    LINE Login 後解鎖
+                  </div>
+                </div>
+              ))}
+            </div>
 
-              {/* features 局部露出（前兩項清楚，剩下用霧面遮罩） */}
-              <div className="relative mb-5 md:mb-6">
-                <ul className="space-y-2 md:space-y-3">
-                  {plan.features.slice(0, 2).map((f) => (
-                    <li
-                      key={f}
-                      className="flex items-start gap-2 text-sm text-mist"
-                    >
-                      <span className="text-neon mt-0.5 flex-shrink-0">✓</span>
-                      {f}
-                    </li>
-                  ))}
-                  {plan.features.slice(2).map((f) => (
-                    <li
-                      key={f}
-                      className="flex items-start gap-2 text-sm text-mist/40 blur-[3px] select-none"
-                      aria-hidden
-                    >
-                      <span className="text-neon/40 mt-0.5 flex-shrink-0">✓</span>
-                      {f}
-                    </li>
-                  ))}
-                </ul>
-                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-obsidian/80 to-transparent" />
-              </div>
-
-              <p className="text-xs text-mist/50 mb-3 text-center">
-                {ticketSectionContent.teaserHint}
-              </p>
-
+            <div className="mt-8 flex justify-center">
               <Button
-                variant={plan.ctaVariant}
-                className="w-full"
-                onClick={() => trackTicketCta(plan.id)}
+                size="lg"
+                onClick={() => trackTicketCta('offers-entry')}
                 href={siteConfig.offersUrl}
-                data-cta={`ticket-${plan.id}`}
-                data-ticket={plan.id}
+                data-cta="ticket-offers-entry"
               >
                 {ticketSectionContent.unifiedCtaLabel}
               </Button>
-            </motion.div>
-          ))}
-        </div>
+            </div>
+          </div>
+        </motion.div>
 
         <p className="text-center text-sm md:text-base text-mist/60 max-w-2xl mx-auto mt-8 md:mt-12">
           {ticketSectionContent.footnote}
