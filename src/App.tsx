@@ -6,7 +6,6 @@ import { OldFrameworkBreakSection } from './components/sections/OldFrameworkBrea
 import { NewModelSection } from './components/sections/NewModelSection'
 import { FormulaSection } from './components/sections/FormulaSection'
 import { ExperienceFlowSection } from './components/sections/ExperienceFlowSection'
-import { AudienceFitSection } from './components/sections/AudienceFitSection'
 import { TicketSection } from './components/sections/TicketSection'
 import { IdentitySection } from './components/sections/IdentitySection'
 import { FAQSection } from './components/sections/FAQSection'
@@ -27,7 +26,6 @@ function HomePage() {
         <NewModelSection />
         <FormulaSection />
         <ExperienceFlowSection />
-        <AudienceFitSection />
         <TicketSection />
         <IdentitySection />
         <FAQSection />

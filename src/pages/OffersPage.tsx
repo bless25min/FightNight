@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import {
   coaches,
@@ -9,12 +10,14 @@ import {
   offersHeroContent,
   offersPlanSectionContent,
   offersSessionSectionContent,
+  offersStatusCopy,
   offersVenueSectionContent,
   sessions,
   siteConfig,
   ticketPlans,
   venues,
 } from '../data/landingContent'
+import { loadLiffSdk } from '../lib/liff'
 import type { SessionCapacity } from '../types'
 import { Footer } from '../components/layout/Footer'
 import { Header } from '../components/layout/Header'
@@ -49,6 +52,20 @@ const capacityStyles: Record<
   },
 }
 
+type GateStatus =
+  | 'loading'
+  | 'missing-config'
+  | 'logged-out'
+  | 'not-friend'
+  | 'unlocked'
+  | 'error'
+
+type GateState = {
+  status: GateStatus
+  message?: string
+  profileName?: string
+}
+
 function scrollTo(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
 }
@@ -56,10 +73,30 @@ function scrollTo(id: string) {
 function LockedSection({
   children,
   overlayTitle,
+  gateState,
+  onPrimaryAction,
 }: {
   children: ReactNode
   overlayTitle: string
+  gateState: GateState
+  onPrimaryAction: () => void
 }) {
+  if (gateState.status === 'unlocked') {
+    return <>{children}</>
+  }
+
+  const primaryLabel =
+    gateState.status === 'not-friend' ? '加入官方帳號後解鎖' : '快速登入查看'
+
+  const helperText =
+    gateState.status === 'missing-config'
+      ? '尚未設定 LIFF ID，請先補上環境變數。'
+      : gateState.status === 'error'
+        ? gateState.message || 'LIFF 驗證失敗，請稍後再試。'
+        : gateState.status === 'not-friend'
+          ? '你已完成 LINE 登入，但還需要先加入官方帳號，才能解鎖會員內容。'
+          : '快速完成 LINE Login 後，即可解鎖這個區塊的完整內容。'
+
   return (
     <div className="relative">
       <div className="pointer-events-none select-none blur-[6px] opacity-35">
@@ -75,11 +112,11 @@ function LockedSection({
             {overlayTitle}
           </h3>
           <p className="mt-3 text-sm md:text-base text-mist/75 leading-relaxed">
-            快速完成 LINE Login 後，即可解鎖這個區塊的完整內容。
+            {helperText}
           </p>
           <div className="mt-5 flex justify-center">
-            <Button size="lg" href={siteConfig.lineUrl} data-cta="offers-unlock">
-              {offersHeroContent.primaryCta}
+            <Button size="lg" onClick={onPrimaryAction} data-cta="offers-unlock">
+              {primaryLabel}
             </Button>
           </div>
         </div>
@@ -88,7 +125,36 @@ function LockedSection({
   )
 }
 
-function OffersHero() {
+function OffersHero({
+  gateState,
+  onPrimaryAction,
+}: {
+  gateState: GateState
+  onPrimaryAction: () => void
+}) {
+  const helperMessage = useMemo(() => {
+    if (gateState.status === 'not-friend') {
+      return '你已完成 LINE 登入，下一步先加入官方帳號，才能查看完整會員內容。'
+    }
+    if (gateState.status === 'missing-config') {
+      return 'LIFF 設定尚未完成，請先補上正式環境變數。'
+    }
+    if (gateState.status === 'error') {
+      return gateState.message || 'LIFF 驗證失敗，請稍後再試。'
+    }
+    if (gateState.status === 'unlocked') {
+      return `${gateState.profileName || '會員'}，你已完成解鎖，可以直接往下查看完整內容。`
+    }
+    return offersHeroContent.description
+  }, [gateState])
+
+  const primaryLabel =
+    gateState.status === 'unlocked'
+      ? '查看完整內容'
+      : gateState.status === 'not-friend'
+        ? '加入官方帳號後解鎖'
+        : offersHeroContent.primaryCta
+
   return (
     <section
       id="offers-hero"
@@ -125,7 +191,7 @@ function OffersHero() {
           transition={{ duration: 0.6, delay: 0.3 }}
           className="mt-4 md:mt-6 text-sm md:text-base text-mist/70 max-w-2xl mx-auto"
         >
-          {offersHeroContent.description}
+          {helperMessage}
         </motion.p>
 
         <motion.div
@@ -134,13 +200,15 @@ function OffersHero() {
           transition={{ duration: 0.6, delay: 0.45 }}
           className="mt-8 md:mt-10 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4"
         >
-          <Button size="lg" href={siteConfig.lineUrl}>
-            {offersHeroContent.primaryCta}
+          <Button size="lg" onClick={onPrimaryAction}>
+            {primaryLabel}
           </Button>
           <Button
             variant="secondary"
             size="lg"
-            onClick={() => scrollTo('offers-preview')}
+            onClick={() =>
+              scrollTo(gateState.status === 'unlocked' ? 'offers-curriculum' : 'offers-preview')
+            }
           >
             {offersHeroContent.secondaryCta}
           </Button>
@@ -203,7 +271,13 @@ function OffersUnlockPreview() {
   )
 }
 
-function OffersCurriculum() {
+function OffersCurriculum({
+  gateState,
+  onPrimaryAction,
+}: {
+  gateState: GateState
+  onPrimaryAction: () => void
+}) {
   return (
     <SectionWrapper id="offers-curriculum">
       <SectionHeading
@@ -215,7 +289,11 @@ function OffersCurriculum() {
         {offersCurriculumSectionContent.description}
       </p>
 
-      <LockedSection overlayTitle={offersCurriculumSectionContent.overlayTitle}>
+      <LockedSection
+        overlayTitle={offersCurriculumSectionContent.overlayTitle}
+        gateState={gateState}
+        onPrimaryAction={onPrimaryAction}
+      >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 max-w-5xl mx-auto">
           {curriculumModules.map((module, i) => (
             <motion.div
@@ -247,7 +325,13 @@ function OffersCurriculum() {
   )
 }
 
-function OffersPlans() {
+function OffersPlans({
+  gateState,
+  onPrimaryAction,
+}: {
+  gateState: GateState
+  onPrimaryAction: () => void
+}) {
   return (
     <SectionWrapper id="offers-plans">
       <SectionHeading
@@ -255,7 +339,11 @@ function OffersPlans() {
         subtitle={offersPlanSectionContent.subtitle}
       />
 
-      <LockedSection overlayTitle="登入後查看完整費用資訊">
+      <LockedSection
+        overlayTitle="登入後查看完整費用資訊"
+        gateState={gateState}
+        onPrimaryAction={onPrimaryAction}
+      >
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8 max-w-5xl mx-auto items-start">
           {ticketPlans.map((plan, i) => (
             <motion.div
@@ -324,7 +412,13 @@ function OffersPlans() {
   )
 }
 
-function OffersCoaches() {
+function OffersCoaches({
+  gateState,
+  onPrimaryAction,
+}: {
+  gateState: GateState
+  onPrimaryAction: () => void
+}) {
   return (
     <SectionWrapper id="offers-coaches">
       <SectionHeading
@@ -336,7 +430,11 @@ function OffersCoaches() {
         {offersCoachSectionContent.description}
       </p>
 
-      <LockedSection overlayTitle="登入後查看完整教練資訊">
+      <LockedSection
+        overlayTitle="登入後查看完整教練資訊"
+        gateState={gateState}
+        onPrimaryAction={onPrimaryAction}
+      >
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 max-w-5xl mx-auto">
           {coaches.map((coach, i) => (
             <motion.div
@@ -372,7 +470,13 @@ function OffersCoaches() {
   )
 }
 
-function OffersSessions() {
+function OffersSessions({
+  gateState,
+  onPrimaryAction,
+}: {
+  gateState: GateState
+  onPrimaryAction: () => void
+}) {
   return (
     <SectionWrapper id="offers-sessions">
       <SectionHeading
@@ -384,7 +488,11 @@ function OffersSessions() {
         {offersSessionSectionContent.ruleLine}
       </p>
 
-      <LockedSection overlayTitle="登入後查看完整活動場次">
+      <LockedSection
+        overlayTitle="登入後查看完整活動場次"
+        gateState={gateState}
+        onPrimaryAction={onPrimaryAction}
+      >
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 max-w-5xl mx-auto">
           {sessions.map((session, i) => {
             const capacity = capacityStyles[session.capacity]
@@ -439,7 +547,13 @@ function OffersSessions() {
   )
 }
 
-function OffersVenues() {
+function OffersVenues({
+  gateState,
+  onPrimaryAction,
+}: {
+  gateState: GateState
+  onPrimaryAction: () => void
+}) {
   return (
     <SectionWrapper id="offers-venues">
       <SectionHeading
@@ -447,7 +561,11 @@ function OffersVenues() {
         subtitle={offersVenueSectionContent.subtitle}
       />
 
-      <LockedSection overlayTitle="登入後查看完整場館資訊">
+      <LockedSection
+        overlayTitle="登入後查看完整場館資訊"
+        gateState={gateState}
+        onPrimaryAction={onPrimaryAction}
+      >
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 max-w-5xl mx-auto">
           {venues.map((venue, i) => (
             <motion.div
@@ -481,7 +599,20 @@ function OffersVenues() {
   )
 }
 
-function OffersFinalCta() {
+function OffersFinalCta({
+  gateState,
+  onPrimaryAction,
+}: {
+  gateState: GateState
+  onPrimaryAction: () => void
+}) {
+  const primaryLabel =
+    gateState.status === 'not-friend'
+      ? '加入官方帳號後解鎖'
+      : gateState.status === 'unlocked'
+        ? '查看完整內容'
+        : offersFinalCtaContent.primaryCta
+
   return (
     <SectionWrapper id="offers-final" className="relative text-center">
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-neon/5 rounded-full blur-[120px] pointer-events-none" />
@@ -514,12 +645,8 @@ function OffersFinalCta() {
           transition={{ duration: 0.6, delay: 0.4 }}
           className="mt-6 md:mt-10 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4"
         >
-          <Button
-            size="lg"
-            href={siteConfig.lineUrl}
-            data-cta="offers-final-primary"
-          >
-            {offersFinalCtaContent.primaryCta}
+          <Button size="lg" onClick={onPrimaryAction} data-cta="offers-final-primary">
+            {primaryLabel}
           </Button>
           <Button
             variant="secondary"
@@ -535,18 +662,128 @@ function OffersFinalCta() {
 }
 
 export function OffersPage() {
+  const [gateState, setGateState] = useState<GateState>({ status: 'loading' })
+
+  const liffId = import.meta.env.VITE_LINE_LIFF_ID
+
+  const runGateCheck = useCallback(async () => {
+    if (!liffId) {
+      setGateState({
+        status: 'missing-config',
+        message: '找不到 VITE_LINE_LIFF_ID，請先補上正式環境變數。',
+      })
+      return
+    }
+
+    try {
+      const liff = await loadLiffSdk()
+      await liff.init({
+        liffId,
+        withLoginOnExternalBrowser: false,
+      })
+
+      if (!liff.isLoggedIn()) {
+        setGateState({ status: 'logged-out' })
+        return
+      }
+
+      const [profile, friendship] = await Promise.all([
+        liff.getProfile(),
+        liff.getFriendship(),
+      ])
+
+      if (friendship.friendFlag) {
+        setGateState({
+          status: 'unlocked',
+          profileName: profile.displayName,
+        })
+        return
+      }
+
+      setGateState({
+        status: 'not-friend',
+        profileName: profile.displayName,
+        message: offersStatusCopy.notLoggedIn,
+      })
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'LIFF 驗證失敗，請稍後再試。'
+      setGateState({ status: 'error', message })
+    }
+  }, [liffId])
+
+  useEffect(() => {
+    void runGateCheck()
+  }, [runGateCheck])
+
+  const handlePrimaryAction = useCallback(async () => {
+    if (!liffId) {
+      setGateState({
+        status: 'missing-config',
+        message: '找不到 VITE_LINE_LIFF_ID，請先補上正式環境變數。',
+      })
+      return
+    }
+
+    try {
+      const liff = await loadLiffSdk()
+      await liff.init({
+        liffId,
+        withLoginOnExternalBrowser: false,
+      })
+
+      if (!liff.isLoggedIn()) {
+        liff.login({ redirectUri: window.location.href })
+        return
+      }
+
+      const friendship = await liff.getFriendship()
+      if (!friendship.friendFlag) {
+        await liff.requestFriendship()
+        await runGateCheck()
+        return
+      }
+
+      scrollTo('offers-curriculum')
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'LIFF 驗證失敗，請稍後再試。'
+      setGateState({ status: 'error', message })
+    }
+  }, [liffId, runGateCheck])
+
+  useEffect(() => {
+    const onHeaderAction = () => {
+      void handlePrimaryAction()
+    }
+    window.addEventListener('offers-auth-action', onHeaderAction)
+    return () => window.removeEventListener('offers-auth-action', onHeaderAction)
+  }, [handlePrimaryAction])
+
   return (
     <div className="overflow-x-hidden w-full relative">
       <Header />
       <main>
-        <OffersHero />
+        <OffersHero gateState={gateState} onPrimaryAction={() => void handlePrimaryAction()} />
         <OffersUnlockPreview />
-        <OffersCurriculum />
-        <OffersPlans />
-        <OffersCoaches />
-        <OffersSessions />
-        <OffersVenues />
-        <OffersFinalCta />
+        <OffersCurriculum
+          gateState={gateState}
+          onPrimaryAction={() => void handlePrimaryAction()}
+        />
+        <OffersPlans gateState={gateState} onPrimaryAction={() => void handlePrimaryAction()} />
+        <OffersCoaches
+          gateState={gateState}
+          onPrimaryAction={() => void handlePrimaryAction()}
+        />
+        <OffersSessions
+          gateState={gateState}
+          onPrimaryAction={() => void handlePrimaryAction()}
+        />
+        <OffersVenues gateState={gateState} onPrimaryAction={() => void handlePrimaryAction()} />
+        <OffersFinalCta
+          gateState={gateState}
+          onPrimaryAction={() => void handlePrimaryAction()}
+        />
       </main>
       <Footer />
     </div>

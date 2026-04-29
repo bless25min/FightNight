@@ -52,7 +52,13 @@ export function Header() {
         </a>
 
         {isOffersPage ? (
-          <Button size="sm" href={siteConfig.lineUrl} data-cta="header-cta">
+          <Button
+            size="sm"
+            onClick={() =>
+              window.dispatchEvent(new CustomEvent('offers-auth-action'))
+            }
+            data-cta="header-cta"
+          >
             {ctaLabel}
           </Button>
         ) : (
