@@ -70,22 +70,22 @@ const unlockPreviewItems = [
   {
     title: '你為什麼總是先縮起來',
     description:
-      '拆開你過去面對壓力、壓迫與負面情緒時，為什麼總是只能默默忍受。',
+      '不是你太脆弱，而是你已經習慣先把自己縮小，讓事情趕快過去。',
   },
   {
     title: '以前的方法為什麼沒改變你',
     description:
-      '不是你不夠努力，而是很多方法只能讓你撐過去，卻沒有真的改變你面對壓力時的反應。',
+      '你不是沒試過，只是很多方法只能讓你暫時撐過去，沒有真的把你帶出來。',
   },
   {
     title: '四堂系統怎麼讓你變穩',
     description:
-      '你會看到這套設計如何從釋放開始，一步一步走到力量、判斷與底氣。',
+      '從把壓力打開開始，到真正長出力量、判斷與底氣，這裡會把整條路說清楚。',
   },
   {
     title: '教練、場次與方案內容',
     description:
-      '包含職業格鬥背景教練配置、可選場次，以及不同投入程度對應的參與方案。',
+      '你也會看到由誰帶你走這段改變、什麼時候進場，以及現在最適合你的選擇。',
   },
 ]
 
@@ -297,8 +297,8 @@ function OffersUnlockPreview() {
   return (
     <SectionWrapper id="offers-preview">
       <SectionHeading
-        title="這頁會回答什麼"
-        subtitle="這不是一般價目頁，而是一頁把你的壓力從哪裡來、為什麼以前的方法沒用、以及這套系統如何讓你真正往前走，一次講清楚的成交頁。"
+        title="你會在這裡看到什麼"
+        subtitle="不是一堆課表和價錢，而是把你為什麼總是忍住、這套系統怎麼讓你走出來，完整講清楚。"
       />
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-6 max-w-6xl mx-auto">
@@ -362,7 +362,7 @@ function OffersPainSection() {
         <p className="text-lg md:text-2xl font-heading font-semibold text-pearl leading-relaxed">
           你想要的，不只是發洩一次。
           <br />
-          而是有一天面對壓力時，真的能站穩、看清楚，不再那麼容易被它壓住。
+          而是有一天面對壓力時，不再下意識低頭，而是真的能站穩、看清楚、把自己留在原地。
         </p>
       </div>
     </SectionWrapper>
@@ -374,7 +374,7 @@ function OffersOldFrameworkSection() {
     <SectionWrapper id="offers-old-framework">
       <SectionHeading
         title="以前的方法，為什麼沒有真的改變你"
-        subtitle="因為多數方法只是幫你撐過去，不是在改變你面對壓力時的身體反應。"
+        subtitle="因為多數方法只是幫你先不要那麼難受，不是真的在改變你面對壓力時的身體反應。"
       />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 max-w-5xl mx-auto">
@@ -459,7 +459,7 @@ function OffersWhyItWorksSection() {
     <SectionWrapper id="offers-why-it-works">
       <SectionHeading
         title="為什麼這套訓練，能讓恐懼感與壓力感慢慢降下來"
-        subtitle="因為壓力反應不只存在情緒裡，也存在身體裡。當身體學會另一種回應方式，你整個人的狀態就會不同。"
+        subtitle="因為壓力反應不只存在情緒裡，也存在身體裡。當身體學會另一種回應方式，你整個人就會慢慢不一樣。"
       />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 max-w-6xl mx-auto">
@@ -484,7 +484,7 @@ function OffersWhyItWorksSection() {
 
       <p className="text-center text-base md:text-lg text-mist/80 max-w-4xl mx-auto mt-8 md:mt-12 leading-relaxed">
         所以四堂課後你帶走的，不只是流汗後的短暫輕鬆，而是更能掌握力量、看懂距離、
-        穩住反應。來自權威、壓迫與負面情緒的影響，不會再像以前那樣輕易把你整個人吞掉。
+        穩住反應。那些以前一下就把你壓住的情境，會開始沒有那麼容易把你整個人吞掉。
       </p>
     </SectionWrapper>
   )

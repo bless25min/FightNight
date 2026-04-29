@@ -22,7 +22,6 @@ export function Header() {
   const ctaLabel = isOffersPage
     ? '快速登入查看'
     : '查看活動場次 / 費用資訊'
-  const ctaTarget = 'ticket'
 
   return (
     <motion.header
@@ -64,7 +63,7 @@ export function Header() {
         ) : (
           <Button
             size="sm"
-            onClick={() => scrollTo(ctaTarget)}
+            href={siteConfig.offersUrl}
             data-cta="header-cta"
           >
             {ctaLabel}

@@ -285,7 +285,7 @@ export const offersHeroContent = {
   title: '四堂課後，你不會再像以前那樣容易被壓住',
   subtitle: '從低頭吞下壓力，到重新掌握力量、看懂距離、穩穩站住自己',
   description:
-    '完成 LINE Login 後，即可查看這套四堂系統如何運作、為什麼它能改善壓力反應、由哪些職業格鬥背景教練帶領，以及你現在最適合從哪個方案進場。',
+    '這不是一場讓你暫時忘記一切的體驗，而是一套把你從委屈、壓抑、害怕裡慢慢帶出來的四堂系統。',
   primaryCta: '快速登入查看',
   secondaryCta: '先看這套系統如何改變你',
 }
@@ -477,7 +477,7 @@ export const offersVenueSectionContent = {
 export const offersFinalCtaContent = {
   title: '下一次面對壓力時，你想繼續忍住，還是想更穩地站住？',
   subtitle:
-    '登入後查看四堂系統、教練、場次與方案，選一個讓自己真正往前走的入口。',
+    '把這次，不再只是忍住的機會留給自己。登入後查看四堂系統、教練、場次與方案。',
   primaryCta: '快速登入查看',
   secondaryCta: '回到頁面上方',
 }

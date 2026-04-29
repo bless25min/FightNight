@@ -7,10 +7,6 @@ import { useTracking } from '../../hooks/useTracking'
 export function FinalCTASection() {
   const { trackHeroCta, trackLineCta } = useTracking()
 
-  const scrollTo = (id: string) => {
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
-  }
-
   return (
     <SectionWrapper id="final-cta" className="relative text-center">
       {/* 背景光暈 */}
@@ -47,10 +43,8 @@ export function FinalCTASection() {
         >
           <Button
             size="lg"
-            onClick={() => {
-              trackHeroCta()
-              scrollTo('ticket')
-            }}
+            href={siteConfig.offersUrl}
+            onClick={() => trackHeroCta()}
             data-cta="final-primary"
           >
             {finalCtaContent.primaryCta}
