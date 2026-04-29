@@ -6,6 +6,8 @@ import type {
   AudiencePoint,
   TicketPlan,
   FAQItem,
+  Coach,
+  Session,
 } from '../types'
 
 // ── 全域設定 ──────────────────────────────────────
@@ -14,6 +16,7 @@ export const siteConfig = {
   eventName: 'Fight Night',
   lineUrl: 'https://page.line.me/340uxvgb',
   ticketUrl: '#ticket',
+  offersUrl: '/offers',
 }
 
 // ── Hero ─────────────────────────────────────────
@@ -205,17 +208,24 @@ export const audiencePoints: AudiencePoint[] = [
   { id: 'aud-6', text: '覺得最近需要一個出口，什麼形式都好', icon: '🔓' },
 ]
 
-// ── 票種區 ────────────────────────────────────────
+// ── 票種區（首頁 teaser + 登入後完整資訊共用資料） ─────
 export const ticketSectionContent = {
-  title: '選擇你的入場方式',
-  subtitle: '不叫方案，叫 Pass。因為這不是報名，是入場。',
+  title: '選你的入場方式',
+  subtitle: '方案還在，但價格、名額與場次，只開放給準備進場的人看。',
+  description: 'LINE 登入後可查看完整方案、教練資訊、可報名場次與即時名額。',
+  footnote: '不是每個人都需要先知道價格。先看你是不是準備好進場。',
+  unifiedCtaLabel: 'LINE 登入查看方案與報價',
+  maskedPrice: 'NT$ ••••',
+  teaserHint: '登入後查看完整內容',
 }
 
 export const ticketPlans: TicketPlan[] = [
   {
     id: 'starter-pass',
     name: 'Starter Pass',
-    subtitle: '租用/自備拳套',
+    subtitle: '租用 / 自備拳套',
+    teaserCopy: '第一次進場，先用最輕的方式進來。',
+    description: '適合第一次進場，想先感受 Fight Night 的人。',
     price: 'NT$1,800',
     features: [
       'Fight Night 入場資格',
@@ -223,13 +233,15 @@ export const ticketPlans: TicketPlan[] = [
       '完整TRAIN DIFFERENT體驗',
       'Pro Fighter 職業選手合照與簽名',
     ],
-    ctaLabel: '選擇 Starter',
+    ctaLabel: '用 LINE 預留 Starter Pass',
     ctaVariant: 'secondary',
   },
   {
     id: 'boutique-pass',
     name: 'Boutique Pass',
     subtitle: '單人附專屬拳套',
+    teaserCopy: '一個人來，也可以完整擁有自己的儀式感。',
+    description: '給想完整參與，也想把這次體驗帶回生活裡的人。',
     price: 'NT$3,000',
     badge: '附專屬拳套',
     features: [
@@ -240,13 +252,15 @@ export const ticketPlans: TicketPlan[] = [
       'Pro Fighter 職業選手合照與簽名',
     ],
     highlight: true,
-    ctaLabel: '選擇 Boutique',
+    ctaLabel: '用 LINE 預留 Boutique Pass',
     ctaVariant: 'primary',
   },
   {
     id: 'signature-pass',
     name: 'Signature Pass',
     subtitle: '個人',
+    teaserCopy: '給想把這一晚，變成自己身份的人。',
+    description: '給想用最完整的方式進場的人。',
     price: 'NT$3,600',
     badge: 'VIP體驗',
     features: [
@@ -257,10 +271,119 @@ export const ticketPlans: TicketPlan[] = [
       'Pro Fighter 職業選手合照與簽名',
       'VIP專屬休息區',
     ],
-    ctaLabel: '選擇 Signature',
+    ctaLabel: '用 LINE 預留 Signature Pass',
     ctaVariant: 'secondary',
   },
 ]
+
+// ── /offers 頁面文案 ──────────────────────────────
+export const offersHeroContent = {
+  title: '你已進入 Fight Night 入場資訊',
+  subtitle: '這裡有完整方案、報價、教練與本月可報名場次。',
+  description:
+    '每月只開一晚。第一個星期五，晚上 10:00。三館同步開放，額滿就等下個月。',
+  primaryCta: '查看本月仍有名額的場次',
+  secondaryCta: '往下看完整方案',
+}
+
+export const offersPlanSectionContent = {
+  title: '方案與報價',
+  subtitle: '選你要怎麼進場。差別不只是票價，而是你想用什麼方式記住這一晚。',
+  footnote: '票種會影響你怎麼進場，但不影響你會不會被帶進去。',
+}
+
+export const offersCoachSectionContent = {
+  title: '今晚帶你進場的教練',
+  subtitle: '不是帶你做完一堂課，而是把你安全地帶進那個會上癮的狀態。',
+  description:
+    '從暖身、分組、節奏堆疊到情緒釋放，整套流程都不是即興，而是經過編排。高能量帶動，但控制精準；讓每一個人都能在安全邊界內，被帶進去。',
+}
+
+export const coaches: Coach[] = [
+  {
+    id: 'coach-lead',
+    name: 'Coach Ray',
+    title: '主帶教練',
+    bio: '十年以上拳擊與團體節奏帶動經驗，專注於把高能量現場帶到精準控制的安全邊界內。',
+    tags: ['拳擊教學', '團體帶動', '節奏編排', '安全控場'],
+  },
+  {
+    id: 'coach-rhythm',
+    name: 'Coach Mia',
+    title: '節奏編排',
+    bio: '把每一場 Fight Night 的節奏堆疊曲線設計到精準秒數，讓情緒波形被安全地推上去。',
+    tags: ['節奏編排', '團體帶動'],
+  },
+  {
+    id: 'coach-safety',
+    name: 'Coach Jin',
+    title: '安全控場',
+    bio: '負責現場分組與安全邊界，讓零基礎的人也能在不受傷的前提下被完全帶進去。',
+    tags: ['安全控場', '拳擊教學'],
+  },
+]
+
+export const offersSessionSectionContent = {
+  title: '本月仍有名額的場次',
+  subtitle:
+    '每月只開一晚。第一個星期五，晚上 10:00。三個場館同步開放，名額滿了就等下個月。',
+  ruleLine: '1 個場次 × 3 個場館地點',
+  footnote: '名額狀態依各館實際釋出為準。',
+  bookCtaLabel: '用 LINE 預留名額',
+}
+
+export const sessions: Session[] = [
+  {
+    id: 'session-dunnan',
+    venueId: 'venue-dunnan',
+    venueName: '台北 — 敦南旗艦館',
+    date: '2026 年 5 月 1 日',
+    weekday: 'Fri',
+    time: '22:00 - 23:30',
+    capacity: '仍可報名',
+    lineUrl: 'https://lin.ee/dTCkydS',
+  },
+  {
+    id: 'session-neihu',
+    venueId: 'venue-neihu',
+    venueName: '台北 — 內科模範館',
+    date: '2026 年 5 月 1 日',
+    weekday: 'Fri',
+    time: '22:00 - 23:30',
+    capacity: '名額緊張',
+    lineUrl: 'https://lin.ee/baMDUpI',
+  },
+  {
+    id: 'session-taichung',
+    venueId: 'venue-taichung',
+    venueName: '台中 — 台中勤美旗艦館',
+    date: '2026 年 5 月 1 日',
+    weekday: 'Fri',
+    time: '22:00 - 23:30',
+    capacity: '即將額滿',
+    lineUrl: 'https://lin.ee/Hhi6BCP',
+  },
+]
+
+export const offersVenueSectionContent = {
+  title: '你要在哪裡進場？',
+  subtitle: '選一個你最容易出現的地方，剩下的交給我們。',
+  ctaLabel: '加入這個場館的 LINE',
+}
+
+export const offersFinalCtaContent = {
+  title: '如果你已經看到這裡，就差最後一步。',
+  subtitle: '選方案、選場館、預留名額。剩下的，交給這一晚把你帶進去。',
+  primaryCta: '用 LINE 預留我的名額',
+  secondaryCta: '回到方案與報價',
+}
+
+export const offersStatusCopy = {
+  notLoggedIn: 'LINE 登入後查看完整方案、報價與可報名場次。',
+  noSession: '本月名額已滿。先加入 LINE，下一次開放時會優先通知你。',
+  almostFull: '這個場館名額不多了，想進場就不要再等等。',
+  awaitingRelease: '本月場次即將開放，先加入 LINE，我們會先通知你。',
+}
 
 // ── 群體身份區 ────────────────────────────────────
 export const identityContent = {

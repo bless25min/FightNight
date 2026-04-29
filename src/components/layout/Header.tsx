@@ -6,6 +6,8 @@ import logo from '../../assets/ufcgymtaiwan_logo.svg'
 
 export function Header() {
   const [scrolled, setScrolled] = useState(false)
+  const isOffersPage =
+    typeof window !== 'undefined' && window.location.pathname.startsWith('/offers')
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 50)
@@ -17,6 +19,9 @@ export function Header() {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
   }
 
+  const ctaLabel = isOffersPage ? '查看可報名場次' : '立即搶位'
+  const ctaTarget = isOffersPage ? 'offers-sessions' : 'ticket'
+
   return (
     <motion.header
       initial={{ y: -100 }}
@@ -27,12 +32,13 @@ export function Header() {
       }`}
     >
       <div className="max-w-6xl mx-auto px-3 sm:px-8 flex items-center justify-between">
-        {/* Logo */}
         <a
-          href="#hero"
+          href={isOffersPage ? '/' : '#hero'}
           onClick={(e) => {
-            e.preventDefault()
-            scrollTo('hero')
+            if (!isOffersPage) {
+              e.preventDefault()
+              scrollTo('hero')
+            }
           }}
           className="flex items-center"
         >
@@ -43,13 +49,12 @@ export function Header() {
           />
         </a>
 
-        {/* CTA */}
         <Button
           size="sm"
-          onClick={() => scrollTo('ticket')}
+          onClick={() => scrollTo(ctaTarget)}
           data-cta="header-cta"
         >
-          立即搶位
+          {ctaLabel}
         </Button>
       </div>
     </motion.header>

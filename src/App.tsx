@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Header } from './components/layout/Header'
 import { HeroSection } from './components/sections/HeroSection'
 import { PainSection } from './components/sections/PainSection'
@@ -11,12 +12,11 @@ import { IdentitySection } from './components/sections/IdentitySection'
 import { FAQSection } from './components/sections/FAQSection'
 import { FinalCTASection } from './components/sections/FinalCTASection'
 import { Footer } from './components/layout/Footer'
+import { OffersPage } from './pages/OffersPage'
 import { useScrollProgress } from './hooks/useScrollProgress'
 
-function App() {
-  // 滾動深度追蹤
+function HomePage() {
   useScrollProgress()
-
   return (
     <div className="overflow-x-hidden w-full relative">
       <Header />
@@ -36,6 +36,24 @@ function App() {
       <Footer />
     </div>
   )
+}
+
+function App() {
+  const [pathname, setPathname] = useState(() =>
+    typeof window !== 'undefined' ? window.location.pathname : '/',
+  )
+
+  useEffect(() => {
+    const onPop = () => setPathname(window.location.pathname)
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [])
+
+  if (pathname.startsWith('/offers')) {
+    return <OffersPage />
+  }
+
+  return <HomePage />
 }
 
 export default App

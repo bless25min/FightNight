@@ -2,12 +2,42 @@ export type TicketPlan = {
   id: string
   name: string
   subtitle: string
+  teaserCopy: string
+  description: string
   price: string
   features: string[]
   highlight?: boolean
   badge?: string
   ctaLabel: string
   ctaVariant: 'primary' | 'secondary' | 'ghost'
+}
+
+export type CoachTag =
+  | '拳擊教學'
+  | '團體帶動'
+  | '節奏編排'
+  | '安全控場'
+
+export type Coach = {
+  id: string
+  name: string
+  title: string
+  bio: string
+  tags: CoachTag[]
+  photo?: string
+}
+
+export type SessionCapacity = '仍可報名' | '名額緊張' | '即將額滿' | '本月已額滿'
+
+export type Session = {
+  id: string
+  venueId: string
+  venueName: string
+  date: string
+  weekday: string
+  time: string
+  capacity: SessionCapacity
+  lineUrl: string
 }
 
 export type FormulaItem = {
