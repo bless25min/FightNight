@@ -68,78 +68,88 @@ type GateState = {
 
 const unlockPreviewItems = [
   {
-    title: '你為什麼總是先縮起來',
+    title: '壓力為什麼會一路累積',
     description:
-      '不是你太脆弱，而是你已經習慣先把自己縮小，讓事情趕快過去。',
+      '你不是太脆弱，而是每次都把委屈、壓力和害怕吞回去，久了身體和情緒都會開始抗議。',
   },
   {
-    title: '以前的方法為什麼沒改變你',
+    title: '你現在都怎麼撐過去',
     description:
-      '你不是沒試過，只是很多方法只能讓你暫時撐過去，沒有真的把你帶出來。',
+      '食慾亂掉、睡不好、躲人、靠酒精或別的東西麻痺自己，很多方法都只是暫時撐過去。',
   },
   {
-    title: '四次內容怎麼讓你變穩',
+    title: '職業選手怎麼把恐懼變可控',
     description:
-      '從把壓力打開開始，到真正長出力量、判斷與底氣，這裡會把整條路說清楚。',
+      '職業格鬥選手不是靠天生勇敢，而是把恐懼、壓力、打擊和重新站起來，練成身體習慣。',
   },
   {
-    title: '教練、場次與方案內容',
+    title: '什麼方案最值得你',
     description:
-      '你也會看到由誰帶你走這段改變、什麼時候進場，以及現在最適合你的選擇。',
+      '你也會看到由誰帶你走、什麼時候進場，以及每一種方案到底值在哪裡。',
   },
 ]
 
 const pressurePainPoints = [
   {
-    title: '當下，你總是先忍住',
+    title: '遇到狀況時，你總是先吞下去',
     description:
-      '面對強勢的人、權威的人、帶壓迫感的情境時，第一反應常常不是表達，而是先低頭、先忍住、先把自己縮小。',
+      '面對強勢的人、帶壓迫感的場面，第一反應常常不是表達，而是先低頭、先忍住、先讓事情趕快過去。',
   },
   {
-    title: '事後，那些情緒沒有真的離開',
+    title: '久了，身體會先開始抗議',
     description:
-      '那些說不出口的委屈、憤怒、害怕和無力，最後都留在身體裡。表面看起來沒事，心裡其實累積了很多沒有出口的壓力。',
+      '很多人壓力長期累積後，會開始睡不好、心悸、胸悶、頭痛，甚至整個人一直處在很緊、很累、很難真正放鬆的狀態。',
   },
   {
-    title: '你真正想要的，不只是當下舒服',
+    title: '情緒也會慢慢失去彈性',
     description:
-      '不是再忍一次，也不是短暫忘記，而是希望自己有一天面對壓力時，真的能站穩、看清楚、不要再那麼容易被壓住。',
+      '你可能會反覆想起不舒服的事、變得更容易煩躁、注意力很難集中，甚至對很多人和事慢慢失去感覺。',
+  },
+  {
+    title: '生活會開始越縮越小',
+    description:
+      '你會避開某些情境、不想見人、對原本喜歡的事情失去興趣，最後不是事情變少了，而是你能活得自在的空間變小了。',
   },
 ]
 
 const oldFrameworkPoints = [
   {
-    title: '忍住',
+    title: '習慣開始失衡',
     description:
-      '大多數時候，你只能先把情緒壓回去，讓當下趕快過去。事情結束了，但壓力反應沒有真的離開。',
+      '有些人會突然吃很多，有些人會完全沒胃口。看起來只是狀態不好，其實是壓力已經開始改變你的日常。',
   },
   {
-    title: '轉移',
+    title: '開始依賴麻痺自己的東西',
     description:
-      '滑手機、工作、睡覺、吃東西、讓自己忙起來，都能暫時不去感覺，但那只是把不舒服往後延。',
+      '抽更多菸、喝更多酒、靠藥物、安眠或鎮定類的東西撐過去，短期像有用，但身體只會越來越失去主導權。',
   },
   {
-    title: '短暫發洩',
+    title: '人會慢慢退開',
     description:
-      '偶爾爆掉一次也許會舒服一點，但回到現實，面對壓力時，你還是會很快回到原本退縮、慌張或僵住的模式。',
+      '你可能越來越不想見人，對以前熱衷的事提不起勁，也不想解釋自己怎麼了，最後只剩下越來越安靜地退後。',
+  },
+  {
+    title: '行為會開始失控',
+    description:
+      '坐立不安、很難待在原地，甚至做出傷害自己或讓自己後悔的事。很多人不是故意失控，而是已經撐太久了。',
   },
 ]
 
 const whyItWorksPoints = [
   {
-    title: '壓力反應不只在腦裡，也在身體裡',
+    title: '恐懼不是靠講道理消失',
     description:
-      '當一個人長期習慣的是縮、僵、忍住，遇到情況時就會下意識先退。這不是你不夠勇敢，而是身體已經記住那種反應。',
+      '職業格鬥選手不是靠意志力說服自己不要怕，而是一次一次進入「有壓力但可控」的情境，讓身體慢慢知道自己可以留在原地。',
   },
   {
-    title: '這套安排先讓你把壓力釋放出來',
+    title: '壓力要先被拆成可操作的東西',
     description:
-      '透過節奏、擊打、帶動和集體同步，把長期悶住的情緒從身體裡打開，先讓你不再只是靠忍耐撐過去。',
+      '呼吸、節奏、步伐、出手、回到姿勢，這些具體動作會把混亂變成你當下能抓住的東西，情緒就不再是唯一主導。',
   },
   {
-    title: '再把釋放，慢慢變成力量、判斷與底氣',
+    title: '重新站起來也可以被練出來',
     description:
-      '當你一再感受站穩、打開自己、看懂距離與做出反應，身體就會慢慢熟悉另一種回應方式。恐懼感和壓力感，也就不再像以前那樣輕易把你壓住。',
+      '真正的改變不是從來不亂，而是亂了之後還能回來。當這件事被反覆練進身體裡，你的底氣就會開始長出來。',
   },
 ]
 
@@ -213,7 +223,7 @@ function OffersUnlockBridge({
     '完整四次內容怎麼一步一步把你帶回來',
     '這次由哪些帶領者陪你走進狀態',
     '哪一館還有名額、哪一個時段最適合你',
-    '你現在該先試一次，還是直接進四堂',
+    '你現在該先試一次，還是直接做完整投入',
   ]
 
   return (
@@ -359,7 +369,7 @@ function OffersUnlockPreview() {
     <SectionWrapper id="offers-preview">
       <SectionHeading
         title="你會在這裡看到什麼"
-        subtitle="不是一堆課表和價錢，而是把你為什麼總是忍住、這四次內容怎麼讓你走出來，完整講清楚。"
+        subtitle="不是一堆價格和話術，而是把你的壓力怎麼累積、舊方法怎麼失效、以及這四次內容為什麼真的值得，完整講清楚。"
       />
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-6 max-w-6xl mx-auto">
@@ -392,11 +402,11 @@ function OffersPainSection() {
   return (
     <SectionWrapper id="offers-pain">
       <SectionHeading
-        title="你不是沒有情緒，而是一直都只能低頭忍住"
-        subtitle="很多人面對壓力、壓迫、衝突與負面情緒時，第一反應不是表達，而是先縮起來。久了，連自己都忘了什麼叫真正站穩。"
+        title="你不是撐不住，你是已經撐太久了"
+        subtitle="每次遇到狀況都把委屈、壓力和害怕默默吞下去，久了出問題的通常不只情緒，連睡眠、身體、專注力和生活狀態都會一起被拖下去。"
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 max-w-5xl mx-auto">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-6 max-w-6xl mx-auto">
         {pressurePainPoints.map((point, i) => (
           <motion.div
             key={point.title}
@@ -421,7 +431,7 @@ function OffersPainSection() {
 
       <div className="max-w-4xl mx-auto mt-8 md:mt-12 rounded-3xl border border-neon/15 bg-gradient-to-br from-neon/10 via-black/25 to-blaze/5 px-6 py-8 md:px-10 md:py-10 text-center">
         <p className="text-lg md:text-2xl font-heading font-semibold text-pearl leading-relaxed">
-          你想要的，不只是發洩一次。
+          你想要的，不只是當下撐過去。
           <br />
           而是有一天面對壓力時，不再下意識低頭，而是真的能站穩、看清楚、把自己留在原地。
         </p>
@@ -435,10 +445,10 @@ function OffersOldFrameworkSection() {
     <SectionWrapper id="offers-old-framework">
       <SectionHeading
         title="以前的方法，為什麼沒有真的改變你"
-        subtitle="因為多數方法只是幫你先不要那麼難受，不是真的在改變你面對壓力時的身體反應。"
+        subtitle="很多人不是沒試著處理，而是一直用錯方法。那些方式也許能暫時讓你不要那麼難受，但沒有一個真的在處理你面對壓力時整個人會亂掉的根本問題。"
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 max-w-5xl mx-auto">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-6 max-w-6xl mx-auto">
         {oldFrameworkPoints.map((point, i) => (
           <motion.div
             key={point.title}
@@ -520,8 +530,8 @@ function OffersWhyItWorksSection() {
   return (
     <SectionWrapper id="offers-why-it-works">
       <SectionHeading
-        title="為什麼這套安排，能讓恐懼感與壓力感慢慢降下來"
-        subtitle="因為壓力反應不只存在情緒裡，也存在身體裡。當身體學會另一種回應方式，你整個人就會慢慢不一樣。"
+        title="為什麼這套邏輯，真的能改變一個人"
+        subtitle="因為職業格鬥選手一輩子都在做同一件事：把抽象的恐懼和壓力，轉成具體、可重複、可控制的身體反應。"
       />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 max-w-6xl mx-auto">
@@ -545,8 +555,8 @@ function OffersWhyItWorksSection() {
       </div>
 
       <p className="text-center text-base md:text-lg text-mist/80 max-w-4xl mx-auto mt-8 md:mt-12 leading-relaxed">
-        所以四次之後你帶走的，不只是流汗後的短暫輕鬆，而是更能掌握力量、看懂距離、
-        穩住反應。那些以前一下就把你壓住的情境，會開始沒有那麼容易把你整個人吞掉。
+        所以四次之後你帶走的，不只是一次很爽的釋放，而是一種更能留在原地的反應方式。
+        那些以前一下就把你壓住的情境，會開始沒有那麼容易把你整個人吞掉。
       </p>
     </SectionWrapper>
   )
