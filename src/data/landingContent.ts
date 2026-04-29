@@ -224,7 +224,7 @@ export const ticketSectionContent = {
 
 // ── /offers 頁面文案 ──────────────────────────────
 export const offersHeroContent = {
-  title: '這不是發洩，是把被壓回去的自己打開',
+  title: '現在，把平時被壓住的自己打開',
   subtitle: '四次進場，從吞下去、忍住、退讓，走到壓力靠近時仍然站得住',
   description:
     '你不是來上一堂拳擊課。你是進入一個被設計過的釋放場域：有人帶節奏，有群體把你推進狀態，有拳套讓你把說不出口的東西交給身體。',
@@ -235,7 +235,7 @@ export const offersHeroContent = {
 export const offersCurriculumSectionContent = {
   title: '職業格鬥選手的專業，是在壓力裡仍能反應',
   subtitle:
-    '他們一輩子都在面對恐懼、壓力、打擊和重新站起來。這種能力不是勵志口號，而是格鬥場上最稀缺、也最無可取代的專業。',
+    '他們一輩子都在訓練如何應對恐懼、壓力、打擊和重新站起來。',
   description:
     'Fight Night 借用的不是比賽的殘酷，而是那套處理可控壓力的底層邏輯：把抽象恐懼變成呼吸、距離、節奏、防禦和下一個動作。當壓力有了動作，人就不再只剩下僵住、退開或忍住。',
   overlayTitle: '登入後查看完整四次安排',

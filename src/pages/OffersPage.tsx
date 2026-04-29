@@ -237,7 +237,7 @@ function OffersPainSection() {
 
       <div className="max-w-4xl mx-auto mt-8 md:mt-12 rounded-3xl border border-neon/15 bg-gradient-to-br from-neon/10 via-black/25 to-blaze/5 px-6 py-8 md:px-10 md:py-10 text-center">
         <p className="text-lg md:text-2xl font-heading font-semibold text-pearl leading-relaxed">
-          Fight Night 要處理的不是情緒表面，而是那個壓力一靠近就先退讓、先麻木、先失去自己的反應。
+          Fight Night 要處理的是那個壓力一靠近就先退讓、先麻木、先失去自己的反應。
         </p>
       </div>
     </SectionWrapper>
