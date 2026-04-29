@@ -225,151 +225,151 @@ export const ticketSectionContent = {
 
 // ── /offers 頁面文案 ──────────────────────────────
 export const offersHeroContent = {
-  title: '四次之後，你不會再像以前那樣容易被壓住',
-  subtitle: '從每次都默默吞下去，到面對壓力時更穩、更清楚、更站得住',
+  title: '這不是發洩，是把被壓回去的自己打開',
+  subtitle: '四次進場，從吞下去、忍住、退讓，走到壓力靠近時仍然站得住',
   description:
-    '如果你已經受夠每次都把委屈、壓力和害怕吞回去，這四次內容會把壓力從身體裡打開，再慢慢變成更穩的反應。',
+    '你不是來上一堂拳擊課。你是進入一個被設計過的釋放場域：有人帶節奏，有群體把你推進狀態，有拳套讓你把說不出口的東西交給身體。',
   primaryCta: '快速登入查看',
   secondaryCta: '先看這四次內容如何改變你',
 }
 
 export const offersCurriculumSectionContent = {
-  title: '核心邏輯：把恐懼變成可控',
+  title: '職業格鬥選手的專業，是在壓力裡仍能反應',
   subtitle:
-    '職業格鬥選手不是靠不害怕，而是把恐懼、壓力、打擊和重新站起來，變成身體熟悉的反應。',
+    '他們一輩子都在面對恐懼、壓力、打擊和重新站起來。這種能力不是勵志口號，而是格鬥場上最稀缺、也最無可取代的專業。',
   description:
-    '當呼吸、節奏、距離和反應變得具體，人就比較不會被抽象的壓力整個吞掉。這也是 Fight Night 四次內容的設計核心。',
+    'Fight Night 借用的不是比賽的殘酷，而是那套處理可控壓力的底層邏輯：把抽象恐懼變成呼吸、距離、節奏、防禦和下一個動作。當壓力有了動作，人就不再只剩下僵住、退開或忍住。',
   overlayTitle: '登入後查看完整四次安排',
   overlayDescription:
-    '解鎖後你會直接看到這四次安排，怎麼一步一步把恐懼、壓力、打擊與重新站起來，變成你帶得走的能力。',
+    '解鎖後你會看到四次進場如何把恐懼、壓力、打擊與重新站起來，轉成你帶得走的身體記憶。',
 }
 
 export const curriculumModules: CurriculumModule[] = [
   {
     id: 'module-1',
     stage: 1,
-    title: '面對恐懼',
+    title: '恐懼靠近時，不再先退',
     description:
-      '在安全但有壓力的情境裡，練習不要立刻退開，讓身體知道自己可以留在原地。',
+      '在安全邊界內感受壓迫、聲音、節奏和靠近感，讓身體重新學會：我可以緊張，但我不用消失。',
   },
   {
     id: 'module-2',
     stage: 2,
-    title: '管理壓力',
+    title: '壓力升高時，抓回節奏',
     description:
-      '把注意力放回呼吸、節奏和當下動作，讓混亂變成可以一步一步處理的東西。',
+      '把注意力從腦內災難拉回呼吸、重心與節拍。當身體有節奏，情緒就不會完全接管你。',
   },
   {
     id: 'module-3',
     stage: 3,
-    title: '面對打擊',
+    title: '被打亂時，回到結構',
     description:
-      '被打亂、被逼近、失去節奏時，先回到呼吸和姿勢，讓自己不要被當下吞掉。',
+      '現場會讓你感受失序，再把你帶回姿勢、距離和反應。你會知道自己不是一亂就完了。',
   },
   {
     id: 'module-4',
     stage: 4,
-    title: '重新站起來',
+    title: '倒下之後，知道自己回得來',
     description:
-      '真正的底氣不是沒倒過，而是知道自己回得來。這會變成一種「我撐得住」的信任感。',
+      '真正的底氣不是永遠優雅，而是狼狽過後還能重新站起來。這會留下很深的自我信任。',
   },
 ]
 
 export const offersPlanSectionContent = {
-  title: '選你的進場方式',
-  subtitle: '先試一次、帶走拳套，或完整走四次。',
+  title: '選一個你真的會記住的入口',
+  subtitle: '不是買堂數，是選擇你要把這個夜晚帶到多深。',
   footnote:
-    '這不是單純買一晚很爽，而是買一次釋放、一段記憶，和一個比較穩的自己。',
+    '高價值感來自三件事：被帶進狀態、被安全接住，以及離開後仍然記得自己有多能站住。',
   overlayDescription:
-    '解鎖後可以比較每個入口的完整度、收穫感，以及你會把什麼帶回生活裡。',
+    '解鎖後可以比較每個入口的深度、儀式感，以及你會把什麼帶回生活裡。',
 }
 
 export const offersPlans: TicketPlan[] = [
   {
     id: 'offers-session-pass',
-    name: '初次體驗一堂',
-    subtitle: '先試一次，但不是只試表面',
-    teaserCopy: '用一個晚上確認，Fight Night 是不是你要的壓力出口。',
+    name: 'First Round｜初次進場',
+    subtitle: '先讓身體確認一次',
+    teaserCopy: '一晚就夠你知道，這不是又一個週末活動。',
     description:
-      '適合第一次接觸的人。先感受現場帶領、集體同步和情緒釋放，再決定要不要往完整四次走。',
+      '適合第一次靠近 Fight Night 的人。你會進入完整場域，跟著節奏、拳套、聲音和群體，把平常壓在身體裡的東西真正打開一次。',
     price: 'NT$1,800',
     features: [
       '單次 Fight Night 完整進場資格',
       '拳套可租用或自備',
-      '完整感受暖場、節奏推進與情緒釋放',
-      '適合把好奇變成一次真正有感的確認',
+      '從暖場、節奏推進到高峰釋放，完整走過一次情緒曲線',
+      '適合想先確認這是不是自己的壓力出口',
     ],
-    ctaLabel: '用 LINE 詢問初次一堂',
+    ctaLabel: '用 LINE 詢問 First Round',
     ctaVariant: 'secondary',
   },
   {
     id: 'offers-session-glove-pass',
-    name: '初次體驗一堂＋拳套',
-    subtitle: '把第一次做得更完整',
-    teaserCopy: '第一次就有自己的拳套，開始感和儀式感都更完整。',
+    name: 'First Round Gear｜初次進場＋專屬拳套',
+    subtitle: '把第一次變成一個開始',
+    teaserCopy: '不是加購裝備，是替這個夜晚留下重量。',
     description:
-      '適合不想把第一次做得太隨便的人。當晚結束後，不只留下記憶，也留下能帶走的裝備。',
+      '適合你已經不想只是來看看。自己的拳套會讓進場更有儀式感，也讓結束後的狀態不只停在現場。',
     price: 'NT$2,800',
     badge: '附專屬拳套',
     features: [
-      '包含初次體驗一堂的完整進場內容',
-      '附品牌專屬拳套一副（帶走）',
-      '自己的裝備與手感，讓進場更有狀態',
-      '適合想把第一次留下來的人',
+      '包含 First Round 完整進場內容',
+      '附品牌專屬拳套一副，活動後帶走',
+      '第一次就使用自己的裝備，手感、投入感和記憶點更完整',
+      '適合重視儀式感，也想把開始留下來的人',
     ],
-    ctaLabel: '用 LINE 詢問一堂＋拳套',
+    ctaLabel: '用 LINE 詢問 First Round Gear',
     ctaVariant: 'secondary',
   },
   {
     id: 'offers-transformation-pass',
-    name: 'Signature 四次完整體驗',
-    subtitle: '最值得的主推版本',
-    teaserCopy: '不是四次門票，而是一段從釋放走到穩定的完整安排。',
+    name: 'Signature Four｜四次完整進場',
+    subtitle: '主推：真正走完整套設計',
+    teaserCopy: '如果你要的不只是釋放一次，選這個。',
     description:
-      '給不想只爽一次，而是想把反應慢慢帶穩的人。每一次都會堆疊，讓你從釋放走到更有底氣。',
+      '四次不是把同一晚重複四遍，而是逐步把壓力出口、身體節奏、面對打擊和重新站起來串成一段完整經驗。這是最能看見 Fight Night 價值的版本。',
     price: 'NT$3,800',
     badge: '主推方案',
     features: [
-      '四次循序設計，不是重複同一晚',
-      '從壓力出口，走到力量感、距離感與反應感',
-      '把一次性的爽，慢慢變成更穩的身體記憶',
-      '最能同時滿足爽感、價值感與改變感',
+      '四次循序進場，從釋放、穩定到建立底氣',
+      '每次都累積不同的身體記憶，不只是重複流汗',
+      '適合想把壓力出口變成可回到生活裡的力量感',
+      '主推給不想只買新鮮感，而是想留下真正變化的人',
     ],
     highlight: true,
-    ctaLabel: '用 LINE 預留 Signature 四次',
+    ctaLabel: '用 LINE 預留 Signature Four',
     ctaVariant: 'primary',
   },
   {
     id: 'offers-upgrade-pass',
-    name: 'Signature 四次完整體驗＋專屬裝備',
-    subtitle: '把改變帶回生活的版本',
-    teaserCopy: '完整四次，加上一副能把狀態帶回生活的專屬拳套。',
+    name: 'Signature Gear｜四次完整進場＋專屬拳套',
+    subtitle: '把完整體驗帶回生活',
+    teaserCopy: '四次進場，加上一副屬於你的拳套。',
     description:
-      '給想完整投入的人。除了四次內容，也把專屬裝備帶走，讓這份力量感不只停在現場。',
+      '給已經決定完整投入的人。你買的不是紀念品，而是一個能被看見、被拿起、把那段狀態召回來的物件。',
     price: 'NT$4,800',
     badge: '完整投入',
     features: [
-      '包含 Signature 四次完整體驗的全部內容',
-      '專屬拳套一副（帶走）',
-      '讓力量感與儀式感延續到日常',
-      '最完整、也最容易留下長尾價值的版本',
+      '包含 Signature Four 全部四次完整內容',
+      '附品牌專屬拳套一副，活動後帶走',
+      '讓儀式感、力量感和收藏感延續到日常',
+      '所有方案中最完整，也最有長尾價值的版本',
     ],
-    ctaLabel: '用 LINE 詢問完整投入方案',
+    ctaLabel: '用 LINE 詢問 Signature Gear',
     ctaVariant: 'secondary',
   },
   {
     id: 'offers-private-intro',
-    name: 'Private Onboarding',
-    subtitle: '先被好好接住，再進場',
-    teaserCopy: '先熟悉節奏和安全感，再進正式場次。',
+    name: 'Private Onboarding｜私人預備進場',
+    subtitle: '給想先被接住的人',
+    teaserCopy: '不是降低強度，是先把安全感建立起來。',
     description:
-      '適合對群體節奏有顧慮的人。先把陌生感降下來，正式進場時才更能享受。',
+      '適合對群體節奏、身體互動或陌生場域有顧慮的人。先用更細緻的方式熟悉節奏與邊界，正式進場時才不用把注意力浪費在緊張上。',
     price: '私訊詢問',
     features: [
-      '一對一或小班式的安心入門安排',
-      '先熟悉場域、節奏與互動方式',
-      '降低怕尷尬、怕跟不上、怕太陌生的壓力',
-      '適合想先建立安全感，再完整進場的人',
+      '一對一或小班式預備體驗',
+      '先熟悉場域、節奏、互動方式與安全邊界',
+      '把怕尷尬、怕跟不上、怕太陌生先降下來',
+      '適合想被更細緻照顧，再進入正式場次的人',
     ],
     ctaLabel: '用 LINE 詢問 Private Onboarding',
     ctaVariant: 'ghost',
@@ -377,13 +377,13 @@ export const offersPlans: TicketPlan[] = [
 ]
 
 export const offersCoachSectionContent = {
-  title: '帶領與現場專業',
+  title: '不是教你硬撐，是有人把你帶進狀態',
   subtitle:
-    '這不是自己硬撐的體驗。現場會有人把節奏、安全感和狀態帶起來。',
+    '有張力的體驗，最珍貴的不是刺激，而是有人知道什麼時候推進、什麼時候收住。',
   description:
-    '帶領者的價值，是讓第一次來的人也能跟得上、放得開，並且知道自己是被照顧著進入狀態。',
+    '帶領者的專業，是把格鬥的壓力、音樂的節奏和新手的安全感放在同一個現場裡。你不用自己理解一切，你只要被帶著走進去。',
   overlayDescription:
-    '解鎖後直接看這次由誰帶你進場，以及他們怎麼把現場節奏、情緒與安全感照顧好。',
+    '解鎖後直接看這次由誰帶你進場，以及他們怎麼把壓力、節奏與安全感照顧好。',
 }
 
 export const coaches: Coach[] = [
@@ -391,34 +391,34 @@ export const coaches: Coach[] = [
     id: 'coach-lead',
     name: 'Coach Bruno Saint',
     title: '海外職業選手背景 / 現場主帶人',
-    bio: '把高壓對抗裡的力量、節奏與反應感，轉成新手也能安心進入的現場帶領。',
+    bio: '把職業對抗裡的壓力管理、距離感與節奏判斷，轉成一般人也能進入的現場體驗。他負責讓這一晚有重量，也有安全邊界。',
     tags: ['綜合格鬥', '節奏編排', '團體帶動', '安全控場'],
   },
   {
     id: 'coach-rhythm',
     name: 'Coach BBB',
     title: '節奏編排 / 身體流動帶領',
-    bio: '負責節奏、移動與身體流動，讓緊繃的身體慢慢打開。',
+    bio: '把節拍、移動與集體同步拉到前台，讓身體從緊繃變成流動，從旁觀變成真的進入狀態。',
     tags: ['節奏編排', '團體帶動', '拳擊教學'],
   },
   {
     id: 'coach-safety',
     name: 'Coach CCC',
     title: '安全感照顧 / 現場節奏支持',
-    bio: '負責現場安全感與節奏支持，讓你不用一邊緊張一邊猜自己該怎麼做。',
+    bio: '負責新手安全感、距離邊界與現場節奏支持，讓第一次來的人不需要猜，也不會被丟進混亂裡。',
     tags: ['安全控場', '防身術', '團體帶動'],
   },
 ]
 
 export const offersSessionSectionContent = {
-  title: '活動場次',
+  title: '下一場，你要在哪裡進場',
   subtitle:
-    '選一個你真的進得去的時間，先讓自己走進場。',
-  ruleLine: '每月 1 個主題檔期 × 3 個場館同步開放',
+    '選一個你願意真正出現的夜晚。剩下的，交給現場把你帶進去。',
+  ruleLine: '每月 1 個主題檔期 × 3 個場館限量開放',
   footnote: '各館名額與釋出狀態，以當月實際公告為準。',
   bookCtaLabel: '用 LINE 預留名額',
   overlayDescription:
-    '解鎖後直接看哪一館還有名額，選一個你真的進得去的時間。',
+    '解鎖後直接看哪一館還有名額，選一個你願意真的出現的夜晚。',
 }
 
 export const sessions: Session[] = [
@@ -490,7 +490,7 @@ export const faqItems: FAQItem[] = [
     id: 'faq-3',
     question: '拳套可以帶走嗎？',
     answer:
-      '依方案而定。初次體驗一堂可租用或自備拳套；初次體驗一堂＋拳套與 Signature 四次完整體驗＋專屬裝備都附可帶走的專屬拳套。',
+      '依方案而定。First Round 可租用或自備拳套；First Round Gear 與 Signature Gear 都附可帶走的專屬拳套。',
   },
   {
     id: 'faq-4',

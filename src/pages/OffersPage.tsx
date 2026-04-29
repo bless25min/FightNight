@@ -61,37 +61,37 @@ type GateState = {
 
 const pressurePainPoints = [
   {
-    title: '遇到狀況，先吞下去',
+    title: '你明明不想退，身體卻先縮了',
     description:
-      '面對壓迫或衝突時，你習慣先低頭、先忍住，讓事情趕快過去。',
+      '有些場面一靠近，你就先笑、先忍、先把話吞回去。不是你沒脾氣，是身體已經學會先求安全。',
   },
   {
-    title: '久了，身體開始抗議',
+    title: '壓力沒有消失，只是換地方住',
     description:
-      '睡不好、胸悶、頭痛、心悸，整個人一直很緊，很難真正放鬆。',
+      '它會住進睡眠、胸口、肩頸、心跳和脾氣裡。白天看起來正常，晚上卻很難真正放下。',
   },
   {
-    title: '生活變得越來越小',
+    title: '你開始避開一切會讓你失控的東西',
     description:
-      '你開始躲開人和情境，對原本喜歡的事沒感覺，自在的空間越縮越小。',
+      '不想碰衝突、不想見人、不想解釋。生活看似安靜，其實你的自由正在一點一點縮小。',
   },
 ]
 
 const oldFrameworkPoints = [
   {
-    title: '麻痺自己',
+    title: '把自己麻掉',
     description:
-      '滑手機、喝酒、暴食或讓自己忙到沒時間感覺，只是把壓力往後延。',
+      '滑手機、喝酒、暴食、把行程塞滿，都能暫時關掉感覺，但隔天壓力還在。',
   },
   {
-    title: '退回去',
+    title: '把世界關小',
     description:
-      '少見人、少表達、少參與，看起來安全，其實只是讓自己更孤立。',
+      '少說、少見、少參與，短期像保護自己，長期會讓你更孤單、更不敢出手。',
   },
   {
-    title: '偶爾爆掉',
+    title: '等到爆掉，才知道自己已經滿了',
     description:
-      '爆發後也許舒服一下，但回到現實，你還是會回到原本的慌、縮、忍。',
+      '爆發不是釋放，是系統過載。真正需要的不是下一次忍更久，而是學會在壓力中穩住。',
   },
 ]
 
@@ -210,8 +210,8 @@ function OffersPainSection() {
   return (
     <SectionWrapper id="offers-pain">
       <SectionHeading
-        title="你不是撐不住，你是已經撐太久了"
-        subtitle="長期把委屈、壓力和害怕吞回去，最後被拖住的通常不只情緒，還有睡眠、身體、專注力和生活狀態。"
+        title="你不是不夠強，是太久沒有出口"
+        subtitle="真正消耗人的不是一次衝突，而是每一次都把委屈、壓力和害怕收回身體裡，假裝自己還可以。"
       />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 max-w-5xl mx-auto">
@@ -239,7 +239,7 @@ function OffersPainSection() {
 
       <div className="max-w-4xl mx-auto mt-8 md:mt-12 rounded-3xl border border-neon/15 bg-gradient-to-br from-neon/10 via-black/25 to-blaze/5 px-6 py-8 md:px-10 md:py-10 text-center">
         <p className="text-lg md:text-2xl font-heading font-semibold text-pearl leading-relaxed">
-          你要的不是再撐過一晚，而是壓力靠近時，能站穩、看清楚，把自己留在原地。
+          Fight Night 要處理的不是情緒表面，而是那個壓力一靠近就先退讓、先麻木、先失去自己的反應。
         </p>
       </div>
     </SectionWrapper>
@@ -250,8 +250,8 @@ function OffersOldFrameworkSection() {
   return (
     <SectionWrapper id="offers-old-framework">
       <SectionHeading
-        title="以前的方法，為什麼沒有真的改變你"
-        subtitle="你不是沒努力，只是很多方法都只能暫時麻痺。真正要處理的，是壓力靠近時身體會亂、會縮、會失控。"
+        title="舊方法只能讓你暫時沒感覺"
+        subtitle="你可以逃開、麻痺、轉移注意，但只要身體還是把壓力判定成威脅，下一次你還是會回到同一個反應。"
       />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 max-w-5xl mx-auto">
@@ -341,8 +341,8 @@ function OffersPlans({
 
       <div className="max-w-4xl mx-auto -mt-4 mb-8 md:mb-12 rounded-2xl border border-pearl/10 bg-black/20 px-5 py-5 md:px-6 md:py-6">
         <p className="text-sm md:text-base text-mist/80 leading-relaxed">
-          不知道怎麼選，先問自己兩件事：你只想先確認一次，還是完整走四次？
-          你想輕裝進場，還是把專屬拳套和儀式感一起帶走？
+          如果你只想驗證一次，選 First Round。若你已經知道這會成為你的出口，直接選 Signature。
+          拳套方案買的不是裝備，而是把那晚的狀態帶回生活。
         </p>
       </div>
 
