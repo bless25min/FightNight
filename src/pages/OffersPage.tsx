@@ -2,18 +2,22 @@ import { motion } from 'framer-motion'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import {
-  coaches,
   curriculumModules,
-  offersCoachSectionContent,
   offersCurriculumSectionContent,
   offersHeroContent,
   offersPlans,
   offersPlanSectionContent,
+  offersProofSectionContent,
   offersSessionSectionContent,
   offersStatusCopy,
   sessions,
   siteConfig,
 } from '../data/landingContent'
+import proofLeadPoster from '../assets/landing/flow-step-1.png'
+import proofTrainingPoster from '../assets/landing/flow-step-2.png'
+import proofIntensityPoster from '../assets/landing/flow-step-3.png'
+import proofReleasePoster from '../assets/landing/flow-step-4.png'
+import proofAfterglowPoster from '../assets/landing/flow-step-5.png'
 import { loadLiffSdk } from '../lib/liff'
 import type { SessionCapacity } from '../types'
 import { Footer } from '../components/layout/Footer'
@@ -92,6 +96,39 @@ const oldFrameworkPoints = [
     title: '等到爆掉，才知道自己已經滿了',
     description:
       '爆發不是釋放，是系統過載。真正需要的不是下一次忍更久，而是學會在壓力中穩住。',
+  },
+]
+
+const proofMoments = [
+  {
+    id: 'guided-entry',
+    image: proofLeadPoster,
+    title: '有人在旁邊把你帶進狀態',
+    caption: '新手不需要自己摸索，現場會有人看節奏、看動作、看安全感。',
+  },
+  {
+    id: 'training-room',
+    image: proofTrainingPoster,
+    title: '不是亂打，是被編排過的進場',
+    caption: '分組、沙包、節奏和距離感，都會被安排在可控的範圍裡。',
+  },
+  {
+    id: 'group-push',
+    image: proofIntensityPoster,
+    title: '群體會把你推到平常到不了的位置',
+    caption: '你不是一個人在撐，現場的聲音、節奏和人會一起把你推進去。',
+  },
+  {
+    id: 'release',
+    image: proofReleasePoster,
+    title: '真正釋放時，世界會變得很安靜',
+    caption: '注意力被收回身體，只剩下呼吸、拳套、沙包和那一下。',
+  },
+  {
+    id: 'afterglow',
+    image: proofAfterglowPoster,
+    title: '結束後留下的，不只是汗',
+    caption: '你會記得自己完成了一件平常不會做的事，也記得那群一起進場的人。',
   },
 ]
 
@@ -422,54 +459,35 @@ function OffersPlans({
   )
 }
 
-function OffersCoaches({ gateState }: { gateState: GateState }) {
+function OffersProofGallery() {
   return (
-    <SectionWrapper id="offers-coaches">
+    <SectionWrapper id="offers-proof">
       <SectionHeading
-        title={offersCoachSectionContent.title}
-        subtitle={offersCoachSectionContent.subtitle}
+        title={offersProofSectionContent.title}
+        subtitle={offersProofSectionContent.subtitle}
       />
 
-      <p className="text-center text-base md:text-lg text-mist/80 max-w-3xl mx-auto -mt-2 mb-8 md:mb-12 leading-relaxed">
-        {offersCoachSectionContent.description}
-      </p>
-
-      <LockedSection
-        overlayTitle="登入後查看完整教練資訊"
-        overlayDescription={offersCoachSectionContent.overlayDescription}
-        gateState={gateState}
-      >
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6 max-w-5xl mx-auto">
-          {coaches.map((coach, i) => (
-            <motion.div
-              key={coach.id}
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: i * 0.1 }}
-              className="rounded-2xl border border-pearl/10 bg-black/30 p-5 md:p-6 flex flex-col gap-3"
-            >
-              <div className="aspect-square w-full rounded-xl bg-gradient-to-br from-pearl/5 to-pearl/0 border border-pearl/5 flex items-center justify-center text-mist/30 text-xs">
-                教練照片
-              </div>
-              <div>
-                <h3 className="text-lg font-heading font-semibold text-pearl">
-                  {coach.name}
-                </h3>
-                <p className="text-sm text-mist/70 mt-0.5">{coach.title}</p>
-              </div>
-              <p className="text-sm text-mist leading-relaxed flex-1">
-                {coach.bio}
-              </p>
-              <div className="flex flex-wrap gap-1.5 mt-1">
-                {coach.tags.map((tag) => (
-                  <Badge key={tag}>{tag}</Badge>
-                ))}
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      </LockedSection>
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-5 max-w-6xl mx-auto">
+        {proofMoments.map((moment, i) => (
+          <motion.div
+            key={moment.id}
+            initial={{ opacity: 0, y: 24 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: i * 0.1 }}
+            className={`group overflow-hidden rounded-2xl md:rounded-[1.75rem] border border-pearl/10 bg-black/40 shadow-[0_24px_70px_rgba(0,0,0,0.35)] ${
+              i === 0 ? 'md:col-span-2 xl:col-span-2' : ''
+            }`}
+          >
+            <img
+              src={moment.image}
+              alt={`${moment.title}｜${moment.caption}`}
+              loading="lazy"
+              className="h-full min-h-[260px] w-full object-cover transition-transform duration-700 group-hover:scale-105"
+            />
+          </motion.div>
+        ))}
+      </div>
     </SectionWrapper>
   )
 }
@@ -684,9 +702,9 @@ export function OffersPage() {
         <OffersPainSection />
         <OffersOldFrameworkSection />
         <OffersCurriculum gateState={gateState} />
+        <OffersProofGallery />
         <OffersPlans gateState={gateState} onCtaAction={(url) => void handleCtaAction(url)} />
         <OffersSessions gateState={gateState} />
-        <OffersCoaches gateState={gateState} />
       </main>
       <Footer onVenueAction={(url) => void handleCtaAction(url)} />
     </div>

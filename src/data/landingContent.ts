@@ -6,7 +6,6 @@ import type {
   AudiencePoint,
   TicketPlan,
   FAQItem,
-  Coach,
   Session,
   CurriculumModule,
 } from '../types'
@@ -376,39 +375,11 @@ export const offersPlans: TicketPlan[] = [
   },
 ]
 
-export const offersCoachSectionContent = {
-  title: '不是教你硬撐，是有人把你帶進狀態',
+export const offersProofSectionContent = {
+  title: '看現場，不用看履歷',
   subtitle:
-    '有張力的體驗，最珍貴的不是刺激，而是有人知道什麼時候推進、什麼時候收住。',
-  description:
-    '帶領者的專業，是把格鬥的壓力、音樂的節奏和新手的安全感放在同一個現場裡。你不用自己理解一切，你只要被帶著走進去。',
-  overlayDescription:
-    '解鎖後直接看這次由誰帶你進場，以及他們怎麼把壓力、節奏與安全感照顧好。',
+    '訓練、課程帶領、現場指導與活動合照，比一串頭銜更快建立信任。',
 }
-
-export const coaches: Coach[] = [
-  {
-    id: 'coach-lead',
-    name: 'Coach Bruno Saint',
-    title: '海外職業選手背景 / 現場主帶人',
-    bio: '把職業對抗裡的壓力管理、距離感與節奏判斷，轉成一般人也能進入的現場體驗。他負責讓這一晚有重量，也有安全邊界。',
-    tags: ['綜合格鬥', '節奏編排', '團體帶動', '安全控場'],
-  },
-  {
-    id: 'coach-rhythm',
-    name: 'Coach BBB',
-    title: '節奏編排 / 身體流動帶領',
-    bio: '把節拍、移動與集體同步拉到前台，讓身體從緊繃變成流動，從旁觀變成真的進入狀態。',
-    tags: ['節奏編排', '團體帶動', '拳擊教學'],
-  },
-  {
-    id: 'coach-safety',
-    name: 'Coach CCC',
-    title: '安全感照顧 / 現場節奏支持',
-    bio: '負責新手安全感、距離邊界與現場節奏支持，讓第一次來的人不需要猜，也不會被丟進混亂裡。',
-    tags: ['安全控場', '防身術', '團體帶動'],
-  },
-]
 
 export const offersSessionSectionContent = {
   title: '下一場，你要在哪裡進場',
