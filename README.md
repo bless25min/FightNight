@@ -49,9 +49,8 @@ src/
 |------|------|
 | 初次體驗一堂 | NT$1,800 |
 | 初次體驗一堂＋拳套 | NT$2,800 |
-| 雙人同行體驗 | NT$3,200 |
-| Signature 四堂系統 | NT$6,800 |
-| Signature 四堂＋專屬裝備 | NT$8,800 |
+| Signature 四堂系統 | NT$3,800 |
+| Signature 四堂＋專屬裝備 | NT$4,800 |
 | Private Onboarding | 私訊詢問 |
 
 ## CTA 串接

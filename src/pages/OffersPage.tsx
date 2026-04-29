@@ -78,7 +78,7 @@ const unlockPreviewItems = [
       '你不是沒試過，只是很多方法只能讓你暫時撐過去，沒有真的把你帶出來。',
   },
   {
-    title: '四堂系統怎麼讓你變穩',
+    title: '四次內容怎麼讓你變穩',
     description:
       '從把壓力打開開始，到真正長出力量、判斷與底氣，這裡會把整條路說清楚。',
   },
@@ -132,14 +132,14 @@ const whyItWorksPoints = [
       '當一個人長期習慣的是縮、僵、忍住，遇到情況時就會下意識先退。這不是你不夠勇敢，而是身體已經記住那種反應。',
   },
   {
-    title: '這套訓練先讓你把壓力釋放出來',
+    title: '這套安排先讓你把壓力釋放出來',
     description:
-      '透過節奏、擊打、出力和帶動，把長期悶住的情緒從身體裡打開，先讓你不再只是靠忍耐撐過去。',
+      '透過節奏、擊打、帶動和集體同步，把長期悶住的情緒從身體裡打開，先讓你不再只是靠忍耐撐過去。',
   },
   {
     title: '再把釋放，慢慢變成力量、判斷與底氣',
     description:
-      '當你反覆練習站穩、出力、看距離、做反應，身體就會慢慢學會另一種回應方式。恐懼感和壓力感，也就不再像以前那樣輕易把你壓住。',
+      '當你一再感受站穩、打開自己、看懂距離與做出反應，身體就會慢慢熟悉另一種回應方式。恐懼感和壓力感，也就不再像以前那樣輕易把你壓住。',
   },
 ]
 
@@ -210,8 +210,8 @@ function OffersUnlockBridge({
   onPrimaryAction: () => void
 }) {
   const items = [
-    '完整四堂系統怎麼一步一步把你帶回來',
-    '這次由哪些職業格鬥背景教練帶課',
+    '完整四次內容怎麼一步一步把你帶回來',
+    '這次由哪些帶領者陪你走進狀態',
     '哪一館還有名額、哪一個時段最適合你',
     '你現在該先試一次，還是直接進四堂',
   ]
@@ -235,7 +235,7 @@ function OffersUnlockBridge({
           </h2>
           <p className="mt-4 text-sm md:text-base text-mist/80 max-w-3xl leading-relaxed">
             接下來解鎖的，不是冷冰冰的課表和價錢，而是你最需要知道的幾件事：
-            這套系統怎麼把你帶出來、誰會帶你走、什麼時候能進場，以及你現在最適合怎麼開始。
+            這四次內容怎麼把你帶出來、誰會陪你走、什麼時候能進場，以及你現在最適合怎麼開始。
           </p>
 
           <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
@@ -359,7 +359,7 @@ function OffersUnlockPreview() {
     <SectionWrapper id="offers-preview">
       <SectionHeading
         title="你會在這裡看到什麼"
-        subtitle="不是一堆課表和價錢，而是把你為什麼總是忍住、這套系統怎麼讓你走出來，完整講清楚。"
+        subtitle="不是一堆課表和價錢，而是把你為什麼總是忍住、這四次內容怎麼讓你走出來，完整講清楚。"
       />
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-6 max-w-6xl mx-auto">
@@ -520,7 +520,7 @@ function OffersWhyItWorksSection() {
   return (
     <SectionWrapper id="offers-why-it-works">
       <SectionHeading
-        title="為什麼這套訓練，能讓恐懼感與壓力感慢慢降下來"
+        title="為什麼這套安排，能讓恐懼感與壓力感慢慢降下來"
         subtitle="因為壓力反應不只存在情緒裡，也存在身體裡。當身體學會另一種回應方式，你整個人就會慢慢不一樣。"
       />
 
@@ -545,7 +545,7 @@ function OffersWhyItWorksSection() {
       </div>
 
       <p className="text-center text-base md:text-lg text-mist/80 max-w-4xl mx-auto mt-8 md:mt-12 leading-relaxed">
-        所以四堂課後你帶走的，不只是流汗後的短暫輕鬆，而是更能掌握力量、看懂距離、
+        所以四次之後你帶走的，不只是流汗後的短暫輕鬆，而是更能掌握力量、看懂距離、
         穩住反應。那些以前一下就把你壓住的情境，會開始沒有那麼容易把你整個人吞掉。
       </p>
     </SectionWrapper>
@@ -570,13 +570,12 @@ function OffersPlans({
 
       <div className="max-w-4xl mx-auto -mt-4 mb-8 md:mb-12 rounded-2xl border border-pearl/10 bg-black/20 px-5 py-5 md:px-6 md:py-6">
         <p className="text-sm md:text-base text-mist/80 leading-relaxed">
-          如果你現在還在判斷怎麼開始：
-          想先用最輕的方式試一次，可以選「初次體驗一堂」；
-          想第一次就把自己的拳套準備好，可以選「初次體驗一堂＋拳套」；
-          想和信任的人一起開始，可以選「雙人同行體驗」；
-          想真正把改變走完整，最推薦「Signature 四堂系統」；
-          想把這份力量感延續回生活，適合「Signature 四堂＋專屬裝備」；
-          如果你希望先被照顧好、再進團體，就從「Private Onboarding」開始。
+          如果你現在在判斷哪一個最值得：
+          想先親身確認這個體驗到底有沒有那麼特別，可以從「初次體驗一堂」開始；
+          想把第一次做得更完整、更有記憶點，可以選「初次體驗一堂＋拳套」；
+          想一次拿到最完整的爽感、價值感與改變感，最推薦「Signature 四次完整體驗」；
+          想把這份狀態真的延續回生活裡，適合「Signature 四次完整體驗＋專屬裝備」；
+          如果你希望先被好好接住、再進正式場次，就從「Private Onboarding」開始。
         </p>
       </div>
 
