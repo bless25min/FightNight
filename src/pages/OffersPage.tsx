@@ -1,6 +1,16 @@
 import { motion } from 'framer-motion'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
+import bootcampOriginPoster from '../assets/offers/bootcamp-origin-poster.png'
+import bootcampModule1Poster from '../assets/offers/bootcamp-module-1-poster.png'
+import bootcampModule2Poster from '../assets/offers/bootcamp-module-2-poster.png'
+import bootcampModule3Poster from '../assets/offers/bootcamp-module-3-poster.png'
+import bootcampModule4Poster from '../assets/offers/bootcamp-module-4-poster.png'
+import bootcampModule5Poster from '../assets/offers/bootcamp-module-5-poster.png'
+import bootcampModule6Poster from '../assets/offers/bootcamp-module-6-poster.png'
+import offersHeroPoster from '../assets/offers/offers-hero-octagon-poster.png'
+import offersPlansTransitionPoster from '../assets/offers/offers-plans-transition-poster.png'
+import offersSystemOverviewPoster from '../assets/offers/offers-system-overview-poster.png'
 import {
   curriculumModules,
   offersCurriculumSectionContent,
@@ -55,6 +65,44 @@ type GateState = {
   status: GateStatus
   message?: string
   profileName?: string
+}
+
+const curriculumPosterMap: Record<string, string> = {
+  'module-1': bootcampModule1Poster,
+  'module-2': bootcampModule2Poster,
+  'module-3': bootcampModule3Poster,
+  'module-4': bootcampModule4Poster,
+  'module-5': bootcampModule5Poster,
+  'module-6': bootcampModule6Poster,
+}
+
+function PosterFigure({
+  src,
+  alt,
+  children,
+  className = '',
+  delay = 0,
+  loading = 'lazy',
+}: {
+  src: string
+  alt: string
+  children: ReactNode
+  className?: string
+  delay?: number
+  loading?: 'lazy' | 'eager'
+}) {
+  return (
+    <motion.figure
+      initial={{ opacity: 0, y: 24 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.7, delay }}
+      className={`overflow-hidden rounded-2xl md:rounded-[2rem] border border-pearl/10 bg-black/40 shadow-[0_30px_80px_rgba(0,0,0,0.35)] ${className}`}
+    >
+      <img src={src} alt={alt} className="w-full h-auto" loading={loading} />
+      <figcaption className="sr-only">{children}</figcaption>
+    </motion.figure>
+  )
 }
 
 function LockedSection({
@@ -143,36 +191,44 @@ function OffersHero({ gateState }: { gateState: GateState }) {
     >
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute inset-0 bg-gradient-to-b from-abyss via-obsidian to-abyss" />
-        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-neon/5 rounded-full blur-[120px]" />
+      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-neon/5 rounded-full blur-[120px]" />
       </div>
 
-      <div className="relative max-w-4xl mx-auto px-3 sm:px-8 text-center">
+      <div className="relative z-10 w-full max-w-6xl mx-auto px-3 sm:px-8">
         <motion.h1
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="text-3xl sm:text-4xl md:text-5xl font-heading font-bold leading-tight"
+          className="sr-only"
         >
           {offersHeroContent.title}
         </motion.h1>
 
-        <motion.p
-          initial={{ opacity: 0, y: 15 }}
+        <motion.figure
+          initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.15 }}
-          className="mt-3 md:mt-4 text-lg md:text-xl text-mist max-w-2xl mx-auto"
+          transition={{ duration: 0.8, delay: 0.2 }}
+          className="mx-auto overflow-hidden rounded-2xl md:rounded-[2rem] border border-pearl/10 bg-black/40 shadow-[0_30px_80px_rgba(0,0,0,0.45)]"
         >
-          {offersHeroContent.subtitle}
-        </motion.p>
+          <img
+            src={offersHeroPoster}
+            alt={`${offersHeroContent.title} ${offersHeroContent.subtitle}`}
+            className="w-full h-auto"
+            loading="eager"
+          />
+          <figcaption className="sr-only">
+            <p>{offersHeroContent.subtitle}</p>
+            <p>{offersHeroContent.description}</p>
+          </figcaption>
+        </motion.figure>
 
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.6, delay: 0.3 }}
-          className="mt-4 md:mt-6 text-sm md:text-base text-mist/70 max-w-2xl mx-auto"
-        >
-          {helperMessage}
-        </motion.p>
+        {['missing-config', 'not-friend', 'error'].includes(
+          gateState.status,
+        ) && (
+          <p className="mt-4 text-center text-sm md:text-base text-mist/70 max-w-2xl mx-auto">
+            {helperMessage}
+          </p>
+        )}
       </div>
     </section>
   )
@@ -181,40 +237,32 @@ function OffersHero({ gateState }: { gateState: GateState }) {
 function OffersCurriculum() {
   return (
     <SectionWrapper id="offers-curriculum">
-      <SectionHeading
-        title={offersCurriculumSectionContent.title}
-        subtitle={offersCurriculumSectionContent.subtitle}
-      />
+      <div className="max-w-6xl mx-auto space-y-4 md:space-y-6">
+        <PosterFigure
+          src={bootcampOriginPoster}
+          alt={`${offersCurriculumSectionContent.title} ${offersCurriculumSectionContent.subtitle}`}
+        >
+          <h2>{offersCurriculumSectionContent.title}</h2>
+          <p>{offersCurriculumSectionContent.subtitle}</p>
+          <p>{offersCurriculumSectionContent.description}</p>
+        </PosterFigure>
 
-      <p className="text-center text-base md:text-lg text-mist/80 max-w-3xl mx-auto -mt-2 mb-8 md:mb-12 leading-relaxed">
-        {offersCurriculumSectionContent.description}
-      </p>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 max-w-5xl mx-auto">
-        {curriculumModules.map((module, i) => (
-          <motion.div
-            key={module.id}
-            initial={{ opacity: 0, y: 24 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: i * 0.1 }}
-            className="rounded-2xl border border-pearl/10 bg-black/30 p-5 md:p-6 flex gap-4"
-          >
-            <div className="shrink-0 h-12 w-12 rounded-2xl bg-gradient-to-br from-blaze/20 to-neon/20 border border-pearl/10 flex items-center justify-center">
-              <span className="text-lg font-heading font-bold text-pearl">
-                {module.stage}
-              </span>
-            </div>
-            <div>
-              <h3 className="text-lg font-heading font-semibold text-pearl">
-                {module.title}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+          {curriculumModules.map((module, i) => (
+            <PosterFigure
+              key={module.id}
+              src={curriculumPosterMap[module.id]}
+              alt={`${module.title} ${module.description}`}
+              delay={i * 0.08}
+              className="md:rounded-[1.75rem] shadow-[0_24px_60px_rgba(0,0,0,0.3)]"
+            >
+              <h3>
+                {module.stage}. {module.title}
               </h3>
-              <p className="mt-2 text-sm text-mist/80 leading-relaxed">
-                {module.description}
-              </p>
-            </div>
-          </motion.div>
-        ))}
+              <p>{module.description}</p>
+            </PosterFigure>
+          ))}
+        </div>
       </div>
     </SectionWrapper>
   )
@@ -223,10 +271,15 @@ function OffersCurriculum() {
 function OffersOutcomeSummary() {
   return (
     <SectionWrapper id="offers-outcome-summary">
-      <SectionHeading
-        title={offersOutcomeSectionContent.title}
-        subtitle={offersOutcomeSectionContent.subtitle}
-      />
+      <div className="max-w-6xl mx-auto mb-6 md:mb-8">
+        <PosterFigure
+          src={offersSystemOverviewPoster}
+          alt={`${offersOutcomeSectionContent.title} ${offersOutcomeSectionContent.subtitle}`}
+        >
+          <h2>{offersOutcomeSectionContent.title}</h2>
+          <p>{offersOutcomeSectionContent.subtitle}</p>
+        </PosterFigure>
+      </div>
 
       <div className="max-w-6xl mx-auto rounded-3xl border border-neon/15 bg-gradient-to-br from-neon/10 via-black/30 to-blaze/10 px-5 py-6 md:px-8 md:py-8">
         <p className="text-center text-xs md:text-sm font-heading tracking-[0.28em] text-neon/85 uppercase">
@@ -290,16 +343,17 @@ function OffersPlans({
 }) {
   return (
     <SectionWrapper id="offers-plans">
-      <SectionHeading
-        title={offersPlanSectionContent.title}
-        subtitle={offersPlanSectionContent.subtitle}
-      />
-
-      <div className="max-w-4xl mx-auto -mt-4 mb-8 md:mb-12 rounded-2xl border border-pearl/10 bg-black/20 px-5 py-5 md:px-6 md:py-6">
-        <p className="text-sm md:text-base text-mist/80 leading-relaxed">
-          如果你想先驗證入口，First Round 讓你完整進場一次。若你想看到刺激如何變成壓力適應、防身反應與自信成長，Boot Camp 會讓你蛻變。
-          Gear 不是紀念品，而是把這份進場感和身體記憶帶回生活。
-        </p>
+      <div className="max-w-6xl mx-auto mb-8 md:mb-12">
+        <PosterFigure
+          src={offersPlansTransitionPoster}
+          alt={`${offersPlanSectionContent.title} ${offersPlanSectionContent.subtitle}`}
+        >
+          <h2>{offersPlanSectionContent.title}</h2>
+          <p>{offersPlanSectionContent.subtitle}</p>
+          <p>
+            如果你想先驗證入口，First Round 讓你完整進場一次。若你想看到刺激如何變成壓力適應、防身反應與自信成長，Boot Camp 會讓你蛻變。
+          </p>
+        </PosterFigure>
       </div>
 
       <LockedSection

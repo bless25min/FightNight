@@ -253,14 +253,14 @@ export const curriculumModules: CurriculumModule[] = [
     stage: 2,
     title: '讓刺激變得有意義',
     description:
-      '刺激如果只停在當下，很快就散掉。課程的編排會把亢奮、出拳、呼吸和釋放串起來，讓那份爽感變成身體記得的經驗。',
+      '刺激如果只停在當下，很快就散掉。課程的編排會把技術與經驗串起來，讓那份刺激變成身體反射的記憶。',
   },
   {
     id: 'module-3',
     stage: 3,
     title: '物理性適應恐懼與壓迫',
     description:
-      '在安全邊界內感受聲音、靠近感、速度與壓迫，讓身體學會：我可以緊張，但不需要消失；我可以害怕，但還能回到呼吸。',
+      '在安全邊界內感受聲音、靠近感、速度與壓迫，讓身心都學會如何面對恐懼與應對壓力。',
   },
   {
     id: 'module-4',
@@ -274,14 +274,14 @@ export const curriculumModules: CurriculumModule[] = [
     stage: 5,
     title: '內心層面的自信成長',
     description:
-      '自信是身體完成過一件事之後留下的證據。當真的完成Boot Camp，會發現自己變得更堅定、更從容。',
+      '自信是身體完成過一件事之後留下的證據。完成Boot Camp後，會發現自己變得更堅定。',
   },
   {
     id: 'module-6',
     stage: 6,
     title: '克服壓力與焦慮的身體記憶',
     description:
-      '壓力常常讓人僵住、退開或想逃。Boot Camp會反覆把你帶回呼吸、節奏和下一個動作，讓壓力不再只停在腦袋裡打轉。',
+      '從容是內心習慣流程化應對壓力的結果。完成Boot Camp後，壓力不再像過去那樣影響你。',
   },
 ]
 
