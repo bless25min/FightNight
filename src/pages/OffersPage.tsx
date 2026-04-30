@@ -98,11 +98,13 @@ function LockedSection({
   overlayTitle,
   overlayDescription,
   gateState,
+  onGateAction,
 }: {
   children: ReactNode
   overlayTitle: string
   overlayDescription?: string
   gateState: GateState
+  onGateAction: () => void
 }) {
   if (gateState.status === 'unlocked') {
     return <>{children}</>
@@ -116,6 +118,13 @@ function LockedSection({
         : gateState.status === 'not-friend'
           ? '你已完成 LINE 登入，但還需要先加入官方帳號，才能解鎖完整內容。'
           : overlayDescription || '完成 LINE Login 後，即可解鎖這個區塊的完整內容。'
+
+  const actionLabel =
+    gateState.status === 'logged-out'
+      ? 'LINE Login 查看完整內容'
+      : gateState.status === 'not-friend'
+        ? '加入官方帳號後解鎖'
+        : null
 
   return (
     <div className="relative">
@@ -134,6 +143,16 @@ function LockedSection({
           <p className="mt-3 text-sm md:text-base text-mist/75 leading-relaxed">
             {helperText}
           </p>
+          {actionLabel && (
+            <Button
+              size="lg"
+              className="mt-5"
+              onClick={onGateAction}
+              data-cta="offers-gate-action"
+            >
+              {actionLabel}
+            </Button>
+          )}
         </div>
       </div>
     </div>
@@ -271,7 +290,13 @@ function OffersOldFrameworkSection() {
   )
 }
 
-function OffersCurriculum({ gateState }: { gateState: GateState }) {
+function OffersCurriculum({
+  gateState,
+  onGateAction,
+}: {
+  gateState: GateState
+  onGateAction: () => void
+}) {
   return (
     <SectionWrapper id="offers-curriculum">
       <SectionHeading
@@ -287,6 +312,7 @@ function OffersCurriculum({ gateState }: { gateState: GateState }) {
         overlayTitle={offersCurriculumSectionContent.overlayTitle}
         overlayDescription={offersCurriculumSectionContent.overlayDescription}
         gateState={gateState}
+        onGateAction={onGateAction}
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 max-w-5xl mx-auto">
           {curriculumModules.map((module, i) => (
@@ -380,9 +406,11 @@ function OffersOutcomeSummary() {
 
 function OffersPlans({
   gateState,
+  onGateAction,
   onCtaAction,
 }: {
   gateState: GateState
+  onGateAction: () => void
   onCtaAction: (redirectUrl: string) => void
 }) {
   return (
@@ -403,6 +431,7 @@ function OffersPlans({
         overlayTitle="登入後查看完整費用資訊"
         overlayDescription={offersPlanSectionContent.overlayDescription}
         gateState={gateState}
+        onGateAction={onGateAction}
       >
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6 max-w-6xl mx-auto items-start">
           {offersPlans.map((plan, i) => (
@@ -477,8 +506,10 @@ function OffersPlans({
 
 function OffersSessions({
   gateState,
+  onGateAction,
 }: {
   gateState: GateState
+  onGateAction: () => void
 }) {
   return (
     <SectionWrapper id="offers-sessions">
@@ -495,6 +526,7 @@ function OffersSessions({
         overlayTitle="登入後查看完整活動場次"
         overlayDescription={offersSessionSectionContent.overlayDescription}
         gateState={gateState}
+        onGateAction={onGateAction}
       >
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 max-w-5xl mx-auto">
           {sessions.map((session, i) => {
@@ -594,6 +626,40 @@ export function OffersPage() {
     void runGateCheck()
   }, [runGateCheck])
 
+  const handleGateAction = useCallback(async () => {
+    if (!liffId) {
+      setGateState({
+        status: 'missing-config',
+        message: '找不到 VITE_LINE_LIFF_ID，請先補上正式環境變數。',
+      })
+      return
+    }
+
+    try {
+      const liff = await loadLiffSdk()
+      await liff.init({
+        liffId,
+        withLoginOnExternalBrowser: false,
+      })
+
+      if (!liff.isLoggedIn()) {
+        liff.login({ redirectUri: window.location.href })
+        return
+      }
+
+      const friendship = await liff.getFriendship()
+      if (!friendship.friendFlag) {
+        await liff.requestFriendship()
+      }
+
+      await runGateCheck()
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'LIFF 驗證失敗，請稍後再試。'
+      setGateState({ status: 'error', message })
+    }
+  }, [liffId, runGateCheck])
+
   const handleCtaAction = useCallback(
     async (redirectUrl: string) => {
       if (!liffId) {
@@ -640,10 +706,20 @@ export function OffersPage() {
         <OffersHero gateState={gateState} />
         <OffersPainSection />
         <OffersOldFrameworkSection />
-        <OffersCurriculum gateState={gateState} />
+        <OffersCurriculum
+          gateState={gateState}
+          onGateAction={() => void handleGateAction()}
+        />
         <OffersOutcomeSummary />
-        <OffersPlans gateState={gateState} onCtaAction={(url) => void handleCtaAction(url)} />
-        <OffersSessions gateState={gateState} />
+        <OffersPlans
+          gateState={gateState}
+          onGateAction={() => void handleGateAction()}
+          onCtaAction={(url) => void handleCtaAction(url)}
+        />
+        <OffersSessions
+          gateState={gateState}
+          onGateAction={() => void handleGateAction()}
+        />
       </main>
       <Footer onVenueAction={(url) => void handleCtaAction(url)} />
     </div>
