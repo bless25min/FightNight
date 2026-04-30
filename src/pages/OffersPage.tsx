@@ -10,7 +10,6 @@ import bootcampModule5Poster from '../assets/offers/bootcamp-module-5-poster.png
 import bootcampModule6Poster from '../assets/offers/bootcamp-module-6-poster.png'
 import offersHeroPoster from '../assets/offers/offers-hero-octagon-poster.png'
 import offersPlansTransitionPoster from '../assets/offers/offers-plans-transition-poster.png'
-import offersSystemOverviewPoster from '../assets/offers/offers-system-overview-poster.png'
 import {
   curriculumModules,
   offersCurriculumSectionContent,
@@ -273,7 +272,7 @@ function OffersOutcomeSummary() {
     <SectionWrapper id="offers-outcome-summary">
       <div className="max-w-6xl mx-auto mb-6 md:mb-8">
         <PosterFigure
-          src={offersSystemOverviewPoster}
+          src={offersPlansTransitionPoster}
           alt={`${offersOutcomeSectionContent.title} ${offersOutcomeSectionContent.subtitle}`}
         >
           <h2>{offersOutcomeSectionContent.title}</h2>
