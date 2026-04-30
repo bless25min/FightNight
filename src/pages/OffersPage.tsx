@@ -271,73 +271,56 @@ function OffersOutcomeSummary() {
   const inputs = offersOutcomeSectionContent.formulaInputs
   return (
     <SectionWrapper id="offers-outcome-summary">
-      <div className="max-w-6xl mx-auto mb-6 md:mb-8">
-        <PosterFigure
-          src={offersPlansTransitionPoster}
-          alt={`${offersOutcomeSectionContent.title} ${offersOutcomeSectionContent.subtitle}`}
-        >
-          <h2>{offersOutcomeSectionContent.title}</h2>
-          <p>{offersOutcomeSectionContent.subtitle}</p>
-        </PosterFigure>
-      </div>
-
-      <div className="relative max-w-6xl mx-auto overflow-hidden rounded-3xl border border-neon/15 bg-gradient-to-br from-neon/10 via-black/35 to-blaze/10 px-5 py-8 md:px-10 md:py-12">
+      <div className="relative max-w-4xl mx-auto overflow-hidden rounded-3xl border border-neon/15 bg-gradient-to-br from-neon/10 via-black/35 to-blaze/10 px-5 py-7 md:px-10 md:py-10">
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute -top-10 right-10 h-40 w-40 rounded-full bg-neon/15 blur-[110px]" />
           <div className="absolute -bottom-10 left-10 h-44 w-44 rounded-full bg-blaze/15 blur-[120px]" />
         </div>
 
         <div className="relative">
-          <div className="flex items-center justify-center gap-3">
-            <span className="h-px w-8 bg-neon/40" />
-            <p className="text-center text-xs md:text-sm font-heading tracking-[0.32em] text-neon/85 uppercase">
-              {offersOutcomeSectionContent.formulaLabel}
-            </p>
-            <span className="h-px w-8 bg-neon/40" />
-          </div>
+          <p className="text-center text-xs md:text-sm font-heading tracking-[0.32em] text-neon/85 uppercase">
+            {offersOutcomeSectionContent.formulaLabel}
+          </p>
 
-          <div className="mt-8 grid gap-3 md:gap-4 md:grid-cols-4">
+          <div className="mt-6 md:mt-8 flex flex-col items-stretch gap-2 md:flex-row md:items-center md:justify-center md:flex-wrap md:gap-3">
             {inputs.map((item, index) => (
-              <motion.div
-                key={item}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.4, delay: index * 0.08 }}
-                className="relative rounded-2xl border border-pearl/10 bg-black/35 px-4 py-5 md:px-5 md:py-6 text-left"
-              >
-                <p className="text-[10px] md:text-xs font-heading tracking-[0.3em] text-neon/70 uppercase">
-                  Stage 0{index + 1}
-                </p>
-                <h4 className="mt-2 text-lg md:text-xl font-heading font-semibold text-pearl leading-tight">
+              <div key={item} className="contents md:flex md:items-center md:gap-3">
+                <motion.div
+                  initial={{ opacity: 0, y: 12 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.35, delay: index * 0.06 }}
+                  className="rounded-full border border-pearl/15 bg-black/35 px-5 py-2.5 text-center text-sm md:text-base font-heading text-pearl"
+                >
                   {item}
-                </h4>
+                </motion.div>
                 {index < inputs.length - 1 && (
                   <span
                     aria-hidden
-                    className="hidden md:block absolute top-1/2 -right-3 -translate-y-1/2 text-neon/70 text-lg"
+                    className="self-center text-neon/80 text-base md:text-lg font-heading"
                   >
                     +
                   </span>
                 )}
-              </motion.div>
+              </div>
             ))}
-          </div>
 
-          <div className="mt-8 flex flex-col items-center gap-4">
-            <div className="flex items-center gap-3 text-neon/80">
-              <span className="h-px w-12 bg-neon/40" />
-              <span className="text-xs md:text-sm font-heading tracking-[0.3em] uppercase">
-                Outcome
-              </span>
-              <span className="h-px w-12 bg-neon/40" />
-            </div>
+            <span
+              aria-hidden
+              className="self-center text-neon/80 text-base md:text-lg font-heading"
+            >
+              =
+            </span>
 
-            <div className="rounded-2xl border border-neon/35 bg-neon/15 px-5 py-4 md:px-8 md:py-5 text-center max-w-3xl">
-              <p className="text-base md:text-xl font-heading font-semibold text-pearl leading-snug">
-                {offersOutcomeSectionContent.formulaResult}
-              </p>
-            </div>
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.35, delay: inputs.length * 0.06 }}
+              className="rounded-full border border-neon/40 bg-neon/15 px-5 py-2.5 text-center text-sm md:text-base font-heading font-semibold text-pearl leading-snug"
+            >
+              {offersOutcomeSectionContent.formulaResult}
+            </motion.div>
           </div>
         </div>
       </div>
