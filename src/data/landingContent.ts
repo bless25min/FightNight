@@ -224,93 +224,102 @@ export const ticketSectionContent = {
 
 // ── /offers 頁面文案 ──────────────────────────────
 export const offersHeroContent = {
-  title: '你會被這種夜晚吸引，不只是因為它很嗨',
-  subtitle: '熱鬧、低音、人群和拳套，先抓住的是好奇心；真正被叫醒的，是那個太久沒有出口的自己。',
+  title: '全球頂尖的運動娛樂體驗，只是開始',
+  subtitle: 'FIGHT NIGHT只是開始，完成BOOT CAMP才會真正的讓你蛻變。',
   description:
-    '從首頁進來，你可能只是想看看這到底有多刺激。那就是入口。這一頁要說的，是 Fight Night 怎麼把那份想逃離日常、想重新有感覺的衝動，接成一個安全、強烈、值得的體驗。',
+    '刺激、音樂、人群、拳套和沙包，是入口。讓壓力被排空，讓刺激變得有意義，讓身體逐步適應恐懼、壓迫、距離和反應，最後把自信與穩定帶回生活。',
   primaryCta: '快速登入查看',
-  secondaryCta: '先看這趟體驗旅程如何改變你',
+  secondaryCta: '先看完整系統',
 }
 
 export const offersCurriculumSectionContent = {
-  title: '為什麼是格鬥，因為它最懂人被壓力逼近的那一刻',
+  title: 'BOOT CAMP 如何運作？',
   subtitle:
-    '職業格鬥選手一輩子都在處理恐懼、壓力、打擊和重新站起來。這是把混亂變成反應的專業。',
+    '一次進場讓你感受到刺激與釋放；但隨著課程的進度，能把刺激推進成身體能力、心理底氣和可帶走的改變。',
   description:
-    'Fight Night 借用的是那套處理可控壓力的底層邏輯：把抽象的怕、悶、累、麻木，轉成呼吸、距離、節奏、防禦和下一個動作。壓力一旦有了出口，人就不再只剩下僵住、退開或忍住。',
-  overlayTitle: '登入後查看完整安排',
-  overlayDescription:
-    '解鎖後你會看到四次進場如何把恐懼、壓力、打擊與重新站起來，轉成你帶得走的身體記憶。',
+    'BOOT CAMP 借用的是格鬥選手面對壓力的底層邏輯：把恐懼、壓迫、距離、打擊和反應，轉成身體可以練習的動作。你會開始知道，原來壓力靠近時，自己可以站得住、看得見，也做得出下一步。',
 }
 
 export const curriculumModules: CurriculumModule[] = [
   {
     id: 'module-1',
     stage: 1,
-    title: '恐懼靠近時，不再先退',
+    title: '更多體驗與刺激',
     description:
-      '在安全邊界內感受壓迫、聲音、節奏和靠近感，讓身體重新學會：我可以緊張，但我不用消失。',
+      '每一次都是不同的體驗，讓音樂、節奏、沙包、回合與群體能量逐次加深。你不只知道它很嗨，還會知道自己怎麼進入狀態。',
   },
   {
     id: 'module-2',
     stage: 2,
-    title: '壓力升高時，抓回節奏',
+    title: '讓刺激變得有意義',
     description:
-      '把注意力從腦內災難拉回呼吸、重心與節拍。當身體有節奏，情緒就不會完全接管你。',
+      '刺激如果只停在當下，很快就散掉。課程的編排會把亢奮、出拳、呼吸和釋放串起來，讓那份爽感變成身體記得的經驗。',
   },
   {
     id: 'module-3',
     stage: 3,
-    title: '被打亂時，回到結構',
+    title: '物理性適應恐懼與壓迫',
     description:
-      '現場會讓你感受失序，再把你帶回姿勢、距離和反應。你會知道自己不是一亂就完了。',
+      '在安全邊界內感受聲音、靠近感、速度與壓迫，讓身體學會：我可以緊張，但不需要消失；我可以害怕，但還能回到呼吸。',
   },
   {
     id: 'module-4',
     stage: 4,
-    title: '倒下之後，知道自己回得來',
+    title: '物理性的防身技巧',
     description:
-      '真正的底氣不是永遠優雅，而是狼狽過後還能重新站起來。這會留下很深的自我信任。',
+      '你會開始理解距離、站姿、防禦、閃躲和掙脫反應。這不是紙上談兵，而是身體真的練過一遍。',
+  },
+  {
+    id: 'module-5',
+    stage: 5,
+    title: '內心層面的自信成長',
+    description:
+      '自信是身體完成過一件事之後留下的證據。當真的完成Boot Camp，會發現自己變得更堅定、更從容。',
+  },
+  {
+    id: 'module-6',
+    stage: 6,
+    title: '克服壓力與焦慮的身體記憶',
+    description:
+      '壓力常常讓人僵住、退開或想逃。Boot Camp會反覆把你帶回呼吸、節奏和下一個動作，讓壓力不再只停在腦袋裡打轉。',
   },
 ]
 
 export const offersPlanSectionContent = {
   title: '選一個你真的會記住的入口',
-  subtitle: '不是買堂數，是選擇你要把這個夜晚帶到多深。',
+  subtitle: '選擇你要把這個體驗從夜晚帶到多深的旅程。',
   footnote:
-    '高價值感來自三件事：被帶進狀態、被安全接住，以及離開後仍然記得自己有多能站住。',
-  overlayDescription:
-    '解鎖後可以比較每個入口的深度、儀式感，以及你會把什麼帶回生活裡。',
+    '被帶進狀態、被安全接住，以及離開後身體仍在應對壓力有記憶。',
 }
 
 export const offersOutcomeSectionContent = {
-  title: '最後，你買到的不是一張票，是一個把你接回來的過程',
+  title: '不只是很嗨的夜晚。',
   subtitle:
-    '你帶著想熱鬧、想刺激、想逃離日常的衝動進來。真正被承接的，是底下那個太久沒有出口、太久沒有被好好處理的壓力。',
-  formulaLabel: 'Fight Night 承接的路徑',
-  formulaInputs: ['缺口被看見', '壓力被帶出來', '身體進入狀態', '情緒有地方落下'],
-  formulaResult: '從空掉，到重新有感覺',
+    'FIGHT NIGHT是讓人期待的入口，但真正價值來自一套從感官刺激到身心變化的完整結構。',
+  formulaLabel: 'Boot Camp完整系統的結構',
+  formulaInputs: ['刺激進場', '壓力排空', '身體適應', '心理成長'],
+  formulaResult: '把一晚的爽，變成帶得走的能力',
   summaryCards: [
     {
       id: 'experience-layer',
-      label: '體驗層',
-      title: '先讓你真的進場，再讓那份刺激有意義',
+      label: '入口',
+      title: '刺激與排空壓力',
       description:
-        '音樂、拳套、沙包和人群會先把你拉進現場。你不用先解釋自己怎麼了，身體會比腦袋更快進入狀態。',
+        '首頁看到的運動娛樂體驗，是第一層價值。它讓身體進場，讓壓力有地方出去，也讓你真正感覺自己活過來。',
     },
     {
       id: 'problem-layer',
-      label: '問題層',
-      title: '你追求刺激，其實是在找一個能承受你的場',
+      label: '方法',
+      title: '恐懼、壓迫與防身反應',
       description:
-        '有些壓力不是聊天就能說完，也不是休息就會消失。它需要被打出來、喊出來、流出來，才不會一直卡在身體裡。',
+        'Boot Camp把刺激推進到格鬥底層：距離、呼吸、站姿、防禦、反應。這些是身體真的能學會的東西。',
     },
     {
       id: 'value-layer',
-      label: '收穫層',
-      title: '離開後留下的不是疲憊，是重新有感覺',
+      label: '帶走',
+      title: '自信、穩定與壓力耐受',
       description:
-        '你會記得自己不是只能麻掉、忍住或假裝沒事。你被帶進狀態，也把那股悶住的東西交出去了一部分。',
+        '當身體經歷過壓迫、出拳、穩住與回來，內心會留下新的證據：我能面對，我能反應，我能承受。',
     },
   ],
 }
@@ -355,11 +364,11 @@ export const offersPlans: TicketPlan[] = [
   },
   {
     id: 'offers-transformation-pass',
-    name: 'Signature Four｜四次完整進場',
+    name: 'Boot Camp｜四次完整旅程',
     subtitle: '主推：真正走完整套設計',
-    teaserCopy: '如果你要的不只是釋放一次，選這個。',
+    teaserCopy: '如果你要看到完整系統，選這個。',
     description:
-      '四次不是把同一晚重複四遍，而是逐步把壓力出口、身體節奏、面對打擊和重新站起來串成一段完整經驗。這是最能看見 Fight Night 價值的版本。',
+      '四次不同的系統化課程編排，把刺激、壓力排空、恐懼適應、防身反應、自信成長和焦慮耐受串成一段完整經驗。這是最完整體驗的版本。',
     price: 'NT$3,800',
     badge: '主推方案',
     features: [
@@ -375,11 +384,11 @@ export const offersPlans: TicketPlan[] = [
   },
   {
     id: 'offers-upgrade-pass',
-    name: 'Signature Gear｜四次完整進場＋專屬拳套',
+    name: 'Boot Camp Gear｜四次完整旅程＋專屬拳套',
     subtitle: '把完整體驗帶回生活',
-    teaserCopy: '四次進場，加上一副屬於你的拳套。',
+    teaserCopy: '四次旅程，加上一副屬於你的拳套。',
     description:
-      '給已經決定完整投入的人。你買的不是紀念品，而是一個能被看見、被拿起、把那段狀態召回來的物件。',
+      '給已經決定完整投入的人。你買的不是紀念品，而是一個能被看見、被拿起、把那段狀態找回來的物件。',
     price: 'NT$4,800',
     badge: '完整投入',
     features: [
@@ -419,8 +428,6 @@ export const offersSessionSectionContent = {
   ruleLine: '每月 1 個主題檔期 × 3 個場館限量開放',
   footnote: '各館名額與釋出狀態，以當月實際公告為準。',
   bookCtaLabel: '用 LINE 預留名額',
-  overlayDescription:
-    '解鎖後直接看哪一館還有名額，選一個你真的想出現的夜晚。',
 }
 
 export const sessions: Session[] = [

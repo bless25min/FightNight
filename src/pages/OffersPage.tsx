@@ -59,50 +59,48 @@ type GateState = {
 
 const pressurePainPoints = [
   {
-    title: '先被熱鬧吸引，沒有錯',
+    title: '第一層，是刺激與排空壓力',
     description:
-      '想聽很重的音樂、想跟一群人一起動、想讓今晚不要又只是滑手機過掉。這不是膚淺，而是身體在提醒你：你需要被喚醒。',
+      '首頁讓你看到的熱鬧、低音、人群和拳套，是入口。它先把你拉進現場，讓身體醒過來，也讓壓力有地方出去。',
   },
   {
-    title: '真正累的不是身體，是一直忍住',
+    title: '第二層，是讓刺激變得有意義',
     description:
-      '委屈、壓力和害怕吞久了，人會變得麻木、易怒、睡不好，明明很累，卻又停不下來。熱鬧和刺激，像是在替那一團卡住的東西找出口。',
+      '一晚很嗨只是開始。完整四次進場會把亢奮、呼吸、出拳、釋放和穩定串起來，讓體驗不只是爽過就散。',
   },
   {
-    title: '你要的不是更吵，是重新回到自己身上',
+    title: '第三層，是身體與內心的改變',
     description:
-      '真正吸引人的不是現場有多嗨，而是那個瞬間你終於不再飄著。注意力、情緒和身體都回來，只剩下呼吸、拳套和眼前那一下。',
+      '你會開始適應恐懼與壓迫，理解防身反應，也在一次次進場裡累積自信、壓力耐受與面對焦慮的身體記憶。',
   },
 ]
 
 const oldFrameworkPoints = [
   {
-    title: '熱鬧可以遮住空掉的感覺',
+    title: '抽象幻想會讓人想像，系統會讓人相信',
     description:
-      '吃飯、唱歌、喝酒、聚會都能讓你暫時不想太多。但如果結束後又回到空、悶、累，那只是短暫蓋住，不是真的被處理。',
+      '首頁負責創造期待，方案頁負責把期待落地。你需要看到的不只是氣氛，而是這套體驗怎麼一步一步成立。',
   },
   {
-    title: '運動可以讓你累，卻不一定讓你釋放',
+    title: '刺激是入口，結構才是價值',
     description:
-      '你可以流汗、可以痠、可以完成任務。但如果情緒還是卡在身體裡，那只是消耗體力，不是讓壓力有地方出去。',
+      '真正值得買的，不是更多聲音、更大強度，而是刺激後面有節奏、有邊界、有方法，能把人安全帶進去再帶回來。',
   },
   {
-    title: '新鮮感可以點燃一次，但很難接住你',
+    title: '證據在身體，不只在文案',
     description:
-      '你真正需要的不是又一個第一次，而是一個能讓你反覆回來、反覆把自己打開的場。',
+      '當你真的感受壓迫、出拳、防禦、穩住、回到呼吸，那些關於自信與抗壓的描述，才會變成你自己的經驗。',
   },
 ]
 
 function LockedSection({
   children,
-  overlayTitle,
-  overlayDescription,
+  title,
   gateState,
   onGateAction,
 }: {
   children: ReactNode
-  overlayTitle: string
-  overlayDescription?: string
+  title: string
   gateState: GateState
   onGateAction: () => void
 }) {
@@ -117,7 +115,7 @@ function LockedSection({
         ? gateState.message || 'LIFF 驗證失敗，請稍後再試。'
         : gateState.status === 'not-friend'
           ? '你已完成 LINE 登入，但還需要先加入官方帳號，才能解鎖完整內容。'
-          : overlayDescription || '完成 LINE Login 後，即可解鎖這個區塊的完整內容。'
+          : '完成 LINE Login 後，即可解鎖這個區塊的完整內容。'
 
   const actionLabel =
     gateState.status === 'logged-out'
@@ -138,7 +136,7 @@ function LockedSection({
             LINE 會員專屬內容
           </p>
           <h3 className="mt-3 text-xl md:text-2xl font-heading font-bold text-pearl">
-            {overlayTitle}
+            {title}
           </h3>
           <p className="mt-3 text-sm md:text-base text-mist/75 leading-relaxed">
             {helperText}
@@ -223,8 +221,8 @@ function OffersPainSection() {
   return (
     <SectionWrapper id="offers-pain">
       <SectionHeading
-        title="那個想找刺激的自己，其實很誠實"
-        subtitle="首頁讓你看到一個很嗨的夜晚。方案頁要承接的是那個更安靜的理由：你可能不是只想玩，而是太久沒有把壓力真正放下。"
+        title="首頁看到的是入口，方案頁要講完整系統"
+        subtitle="全球頂尖的運動娛樂體驗先讓人想進場；真正讓方案成立的，是刺激之後還有壓力釋放、身體適應、防身反應與心理成長。"
       />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 max-w-5xl mx-auto">
@@ -238,7 +236,7 @@ function OffersPainSection() {
             className="rounded-2xl border border-pearl/10 bg-black/30 p-5 md:p-6"
           >
             <p className="text-xs font-heading tracking-[0.28em] text-neon/80 uppercase">
-              線索 0{i + 1}
+              系統 0{i + 1}
             </p>
             <h3 className="mt-3 text-lg font-heading font-semibold text-pearl">
               {point.title}
@@ -252,7 +250,7 @@ function OffersPainSection() {
 
       <div className="max-w-4xl mx-auto mt-8 md:mt-12 rounded-3xl border border-neon/15 bg-gradient-to-br from-neon/10 via-black/25 to-blaze/5 px-6 py-8 md:px-10 md:py-10 text-center">
         <p className="text-lg md:text-2xl font-heading font-semibold text-pearl leading-relaxed">
-          Fight Night 接住的，就是那個一直想逃離日常、想找刺激、想重新有感覺的自己。不是把你推去硬撐，而是給你一個安全、強烈、有人帶著走的出口。
+          所以 Fight Night 不是只賣一晚的興奮感，而是把興奮感變成一套你能感受、能練習、能帶走的身心系統。
         </p>
       </div>
     </SectionWrapper>
@@ -263,8 +261,8 @@ function OffersOldFrameworkSection() {
   return (
     <SectionWrapper id="offers-old-framework">
       <SectionHeading
-        title="很多活動能讓你暫時逃開，但不一定能讓你回來"
-        subtitle="Fight Night 的價值，不是比誰更吵、更累、更刺激，而是把熱鬧變成出口，把刺激變成釋放，把一晚的亢奮變成你重新回到自己身上的感覺。"
+        title="為什麼這不只是活動，而是值得買的方案"
+        subtitle="方案頁要回答的不是好不好玩，而是它如何把抽象的期待，變成可以被理解、被驗證、被帶走的價值。"
       />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 max-w-5xl mx-auto">
@@ -409,14 +407,13 @@ function OffersPlans({
 
       <div className="max-w-4xl mx-auto -mt-4 mb-8 md:mb-12 rounded-2xl border border-pearl/10 bg-black/20 px-5 py-5 md:px-6 md:py-6">
         <p className="text-sm md:text-base text-mist/80 leading-relaxed">
-          如果你只是被這個夜晚吸引，First Round 讓你安全進場。若你已經知道自己需要一個穩定出口，Signature 會把四次節奏接起來。
-          Gear 不是紀念品，而是把這份進場感帶走。
+          如果你想先驗證入口，First Round 讓你完整進場一次。若你想看到刺激如何變成壓力適應、防身反應與自信成長，Signature Four 會把四次系統完整接起來。
+          Gear 不是紀念品，而是把這份進場感和身體記憶帶回生活。
         </p>
       </div>
 
       <LockedSection
-        overlayTitle="登入後查看完整費用資訊"
-        overlayDescription={offersPlanSectionContent.overlayDescription}
+        title="登入後查看完整費用資訊"
         gateState={gateState}
         onGateAction={onGateAction}
       >
