@@ -71,7 +71,7 @@ const pressurePainPoints = [
   {
     title: '你要的不是更吵，是重新回到自己身上',
     description:
-      '真正吸引人的不是現場有多嗨，而是某個瞬間你終於不再飄著。注意力、情緒和身體都回來，只剩下呼吸、拳套和眼前那一下。',
+      '真正吸引人的不是現場有多嗨，而是那個瞬間你終於不再飄著。注意力、情緒和身體都回來，只剩下呼吸、拳套和眼前那一下。',
   },
 ]
 
@@ -89,28 +89,7 @@ const oldFrameworkPoints = [
   {
     title: '新鮮感可以點燃一次，但很難接住你',
     description:
-      '你真正需要的不是又一個第一次，而是一個能把你帶進去、讓你交出去、再把你安全帶回來的場。',
-  },
-]
-
-const bridgeLayers = [
-  {
-    label: '第一層',
-    title: '先讓看不見的壓力有形狀',
-    description:
-      '很多情緒說不清楚，但身體知道。肩膀緊、胸口悶、睡不好、一直煩，這些都需要一個比聊天更直接的出口。',
-  },
-  {
-    label: '第二層',
-    title: '再給它一個安全的去處',
-    description:
-      '拳套和沙包的價值在這裡出現：不是為了打人，也不是為了逞強，而是讓壓力可以被打出去，卻不傷害任何人。',
-  },
-  {
-    label: '第三層',
-    title: '最後用節奏把你帶回來',
-    description:
-      '音樂、人群、回合和現場引導，會讓你不是亂衝，而是在強烈裡被接住。這就是刺激和價值真正接上的地方。',
+      '你真正需要的不是又一個第一次，而是一個能讓你反覆回來、反覆把自己打開的場。',
   },
 ]
 
@@ -311,53 +290,7 @@ function OffersOldFrameworkSection() {
   )
 }
 
-function OffersBridgeSection() {
-  return (
-    <SectionWrapper id="offers-bridge">
-      <SectionHeading
-        title="所以不是突然談格鬥，而是壓力本來就在身體裡"
-        subtitle="如果問題只是在腦袋裡，想通就夠了。但很多人的壓力是卡在身體裡，所以 Fight Night 要用拳套、沙包、節奏和人群，把那份卡住變成能被釋放、能被帶回來的過程。"
-      />
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 max-w-5xl mx-auto">
-        {bridgeLayers.map((layer, i) => (
-          <motion.div
-            key={layer.title}
-            initial={{ opacity: 0, y: 24 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: i * 0.1 }}
-            className="rounded-2xl border border-neon/15 bg-gradient-to-br from-neon/10 via-black/30 to-blaze/5 p-5 md:p-6"
-          >
-            <p className="text-xs font-heading tracking-[0.26em] text-neon/85 uppercase">
-              {layer.label}
-            </p>
-            <h3 className="mt-3 text-xl font-heading font-semibold text-pearl leading-tight">
-              {layer.title}
-            </h3>
-            <p className="mt-3 text-sm md:text-base text-mist/80 leading-relaxed">
-              {layer.description}
-            </p>
-          </motion.div>
-        ))}
-      </div>
-
-      <div className="max-w-4xl mx-auto mt-8 md:mt-12 rounded-3xl border border-pearl/10 bg-black/25 px-6 py-7 md:px-10 md:py-8 text-center">
-        <p className="text-base md:text-xl font-heading font-semibold text-pearl leading-relaxed">
-          到這裡，格鬥才自然出場：它不是課程的硬派包裝，而是把壓力變成動作、把刺激變成釋放、再把你安全帶回來的方法。
-        </p>
-      </div>
-    </SectionWrapper>
-  )
-}
-
-function OffersCurriculum({
-  gateState,
-  onGateAction,
-}: {
-  gateState: GateState
-  onGateAction: () => void
-}) {
+function OffersCurriculum() {
   return (
     <SectionWrapper id="offers-curriculum">
       <SectionHeading
@@ -369,39 +302,32 @@ function OffersCurriculum({
         {offersCurriculumSectionContent.description}
       </p>
 
-      <LockedSection
-        overlayTitle={offersCurriculumSectionContent.overlayTitle}
-        overlayDescription={offersCurriculumSectionContent.overlayDescription}
-        gateState={gateState}
-        onGateAction={onGateAction}
-      >
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 max-w-5xl mx-auto">
-          {curriculumModules.map((module, i) => (
-            <motion.div
-              key={module.id}
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: i * 0.1 }}
-              className="rounded-2xl border border-pearl/10 bg-black/30 p-5 md:p-6 flex gap-4"
-            >
-              <div className="shrink-0 h-12 w-12 rounded-2xl bg-gradient-to-br from-blaze/20 to-neon/20 border border-pearl/10 flex items-center justify-center">
-                <span className="text-lg font-heading font-bold text-pearl">
-                  {module.stage}
-                </span>
-              </div>
-              <div>
-                <h3 className="text-lg font-heading font-semibold text-pearl">
-                  {module.title}
-                </h3>
-                <p className="mt-2 text-sm text-mist/80 leading-relaxed">
-                  {module.description}
-                </p>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      </LockedSection>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 max-w-5xl mx-auto">
+        {curriculumModules.map((module, i) => (
+          <motion.div
+            key={module.id}
+            initial={{ opacity: 0, y: 24 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: i * 0.1 }}
+            className="rounded-2xl border border-pearl/10 bg-black/30 p-5 md:p-6 flex gap-4"
+          >
+            <div className="shrink-0 h-12 w-12 rounded-2xl bg-gradient-to-br from-blaze/20 to-neon/20 border border-pearl/10 flex items-center justify-center">
+              <span className="text-lg font-heading font-bold text-pearl">
+                {module.stage}
+              </span>
+            </div>
+            <div>
+              <h3 className="text-lg font-heading font-semibold text-pearl">
+                {module.title}
+              </h3>
+              <p className="mt-2 text-sm text-mist/80 leading-relaxed">
+                {module.description}
+              </p>
+            </div>
+          </motion.div>
+        ))}
+      </div>
     </SectionWrapper>
   )
 }
@@ -565,13 +491,7 @@ function OffersPlans({
   )
 }
 
-function OffersSessions({
-  gateState,
-  onGateAction,
-}: {
-  gateState: GateState
-  onGateAction: () => void
-}) {
+function OffersSessions() {
   return (
     <SectionWrapper id="offers-sessions">
       <SectionHeading
@@ -583,47 +503,40 @@ function OffersSessions({
         {offersSessionSectionContent.ruleLine}
       </p>
 
-      <LockedSection
-        overlayTitle="登入後查看完整活動場次"
-        overlayDescription={offersSessionSectionContent.overlayDescription}
-        gateState={gateState}
-        onGateAction={onGateAction}
-      >
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 max-w-5xl mx-auto">
-          {sessions.map((session, i) => {
-            const capacity = capacityStyles[session.capacity]
-            return (
-              <motion.div
-                key={session.id}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: i * 0.1 }}
-                className="rounded-2xl border border-pearl/10 bg-black/30 p-5 md:p-6 flex flex-col gap-4"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <h3 className="text-base md:text-lg font-heading font-semibold text-pearl leading-snug">
-                    {session.venueName}
-                  </h3>
-                  <span
-                    className={`shrink-0 inline-flex items-center px-2.5 py-1 rounded-full text-xs font-heading font-medium border ${capacity.className}`}
-                  >
-                    {capacity.label}
-                  </span>
-                </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 max-w-5xl mx-auto">
+        {sessions.map((session, i) => {
+          const capacity = capacityStyles[session.capacity]
+          return (
+            <motion.div
+              key={session.id}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: i * 0.1 }}
+              className="rounded-2xl border border-pearl/10 bg-black/30 p-5 md:p-6 flex flex-col gap-4"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <h3 className="text-base md:text-lg font-heading font-semibold text-pearl leading-snug">
+                  {session.venueName}
+                </h3>
+                <span
+                  className={`shrink-0 inline-flex items-center px-2.5 py-1 rounded-full text-xs font-heading font-medium border ${capacity.className}`}
+                >
+                  {capacity.label}
+                </span>
+              </div>
 
-                <div className="space-y-1 text-sm text-mist">
-                  <p className="text-pearl/90 font-heading">
-                    {session.date}{' '}
-                    <span className="text-mist/60">{session.weekday}</span>
-                  </p>
-                  <p>{session.time}</p>
-                </div>
-              </motion.div>
-            )
-          })}
-        </div>
-      </LockedSection>
+              <div className="space-y-1 text-sm text-mist">
+                <p className="text-pearl/90 font-heading">
+                  {session.date}{' '}
+                  <span className="text-mist/60">{session.weekday}</span>
+                </p>
+                <p>{session.time}</p>
+              </div>
+            </motion.div>
+          )
+        })}
+      </div>
 
       <p className="text-center text-xs md:text-sm text-mist/50 max-w-2xl mx-auto mt-6 md:mt-8">
         {offersSessionSectionContent.footnote}
@@ -767,21 +680,14 @@ export function OffersPage() {
         <OffersHero gateState={gateState} />
         <OffersPainSection />
         <OffersOldFrameworkSection />
-        <OffersBridgeSection />
-        <OffersCurriculum
-          gateState={gateState}
-          onGateAction={() => void handleGateAction()}
-        />
+        <OffersCurriculum />
         <OffersOutcomeSummary />
         <OffersPlans
           gateState={gateState}
           onGateAction={() => void handleGateAction()}
           onCtaAction={(url) => void handleCtaAction(url)}
         />
-        <OffersSessions
-          gateState={gateState}
-          onGateAction={() => void handleGateAction()}
-        />
+        <OffersSessions />
       </main>
       <Footer onVenueAction={(url) => void handleCtaAction(url)} />
     </div>
