@@ -235,9 +235,9 @@ export const offersHeroContent = {
 export const offersCurriculumSectionContent = {
   title: 'Boot Camp 如何運作？',
   subtitle:
-    'Fight Night讓你感受到刺激與釋放；但隨著課程的進度，能把刺激推進成身體能力、心理底氣和可帶走的改變。',
+    '職業格鬥選手終其一生都在練習：如何面對恐懼、承受壓力、處理打擊，以及重新站起來的能力。',
   description:
-    'Boot Camp 借用的是格鬥選手面對壓力的底層邏輯：把恐懼、壓迫、距離、打擊和反應，轉成身體可以練習的動作。你會開始知道，原來壓力靠近時，自己可以站得住、看得見，也做得出下一步。',
+    'Fight Night 先讓你感受到刺激與釋放；Boot Camp 則借用格鬥選手面對壓力的底層邏輯，把恐懼、壓迫、距離、打擊和反應，轉成身體可以理解的動作。你會開始知道，原來壓力靠近時，自己可以站得住、看得見，也做得出下一步。',
 }
 
 export const curriculumModules: CurriculumModule[] = [
