@@ -59,37 +59,37 @@ type GateState = {
 
 const pressurePainPoints = [
   {
-    title: '你想要的是一個真的進得去的狀態',
+    title: '先被熱鬧吸引，沒有錯',
     description:
-      '不是再看一場表演，也不是再報一個普通活動，而是讓身體真的被帶動，情緒真的有出口。',
+      '想聽很重的音樂、想跟一群人一起動、想讓今晚不要又只是滑手機過掉。這不是膚淺，而是身體在提醒你：你需要被喚醒。',
   },
   {
-    title: '你也想知道，這股亢奮能不能留下來',
+    title: '真正累的不是身體，是一直忍住',
     description:
-      '首頁看到的是一晚的高點，方案頁要回答的是：那份專注、釋放和力量感，怎麼變成一段完整體驗。',
+      '委屈、壓力和害怕吞久了，人會變得麻木、易怒、睡不好，明明很累，卻又停不下來。熱鬧和刺激，像是在替那一團卡住的東西找出口。',
   },
   {
-    title: '真正有價值的，不只是當下很嗨',
+    title: '你要的不是更吵，是重新回到自己身上',
     description:
-      '爽感只是入口。更重要的是你離開時，會覺得自己做了一件平常不會做、但很需要做的事。',
+      '真正吸引人的不是現場有多嗨，而是某個瞬間你終於不再飄著。注意力、情緒和身體都回來，只剩下呼吸、拳套和眼前那一下。',
   },
 ]
 
 const oldFrameworkPoints = [
   {
-    title: '只是熱鬧，不一定有出口',
+    title: '熱鬧可以遮住空掉的感覺',
     description:
-      '吃飯、唱歌、喝酒、聚會都可以很開心，但很多時候只是轉移注意，結束後狀態很快就散掉。',
+      '吃飯、唱歌、喝酒、聚會都能讓你暫時不想太多。但如果結束後又回到空、悶、累，那只是短暫蓋住，不是真的被處理。',
   },
   {
-    title: '只是運動，不一定進得去',
+    title: '運動可以讓你累，卻不一定讓你釋放',
     description:
-      '一般訓練可以流汗、可以累，但不一定會讓你忘記時間，不一定會讓你真的進入情緒高點。',
+      '你可以流汗、可以痠、可以完成任務。但如果情緒還是卡在身體裡，那只是消耗體力，不是讓壓力有地方出去。',
   },
   {
-    title: '只是新鮮，不一定會想再回來',
+    title: '新鮮感可以點燃一次，但很難接住你',
     description:
-      '很多體驗第一次有趣，第二次就淡了。Fight Night 要做的是讓你不只好奇，而是真的想再進場。',
+      '你真正需要的不是又一個第一次，而是一個能把你帶進去、讓你交出去、再把你安全帶回來的場。',
   },
 ]
 
@@ -223,8 +223,8 @@ function OffersPainSection() {
   return (
     <SectionWrapper id="offers-pain">
       <SectionHeading
-        title="你不是只是在看價格，你是在判斷這值不值得"
-        subtitle="如果首頁讓你好奇，這裡要回答的就是：這個體驗到底能給你什麼，為什麼不是又一個一次性活動。"
+        title="那個想找刺激的自己，其實很誠實"
+        subtitle="首頁讓你看到一個很嗨的夜晚。方案頁要承接的是那個更安靜的理由：你可能不是只想玩，而是太久沒有把壓力真正放下。"
       />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 max-w-5xl mx-auto">
@@ -238,7 +238,7 @@ function OffersPainSection() {
             className="rounded-2xl border border-pearl/10 bg-black/30 p-5 md:p-6"
           >
             <p className="text-xs font-heading tracking-[0.28em] text-neon/80 uppercase">
-              確認 0{i + 1}
+              線索 0{i + 1}
             </p>
             <h3 className="mt-3 text-lg font-heading font-semibold text-pearl">
               {point.title}
@@ -252,7 +252,7 @@ function OffersPainSection() {
 
       <div className="max-w-4xl mx-auto mt-8 md:mt-12 rounded-3xl border border-neon/15 bg-gradient-to-br from-neon/10 via-black/25 to-blaze/5 px-6 py-8 md:px-10 md:py-10 text-center">
         <p className="text-lg md:text-2xl font-heading font-semibold text-pearl leading-relaxed">
-          所以方案頁不該只是一張價目表，而是讓你看懂：你買的不是堂數，是一次被帶進狀態的設計。
+          Fight Night 接住的，就是那個一直想逃離日常、想找刺激、想重新有感覺的自己。不是把你推去硬撐，而是給你一個安全、強烈、有人帶著走的出口。
         </p>
       </div>
     </SectionWrapper>
@@ -263,8 +263,8 @@ function OffersOldFrameworkSection() {
   return (
     <SectionWrapper id="offers-old-framework">
       <SectionHeading
-        title="問題不是你沒活動可以去，而是很少活動真的進得去"
-        subtitle="Fight Night 的價值，不是比誰更累、更刺激，而是把節奏、群體、拳套和情緒推進，組成一個會讓人進入狀態的場。"
+        title="很多活動能讓你暫時逃開，但不一定能讓你回來"
+        subtitle="Fight Night 的價值，不是比誰更吵、更累、更刺激，而是把熱鬧變成出口，把刺激變成釋放，把一晚的亢奮變成你重新回到自己身上的感覺。"
       />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 max-w-5xl mx-auto">
@@ -422,8 +422,8 @@ function OffersPlans({
 
       <div className="max-w-4xl mx-auto -mt-4 mb-8 md:mb-12 rounded-2xl border border-pearl/10 bg-black/20 px-5 py-5 md:px-6 md:py-6">
         <p className="text-sm md:text-base text-mist/80 leading-relaxed">
-          如果你只想驗證一次，選 First Round。若你已經知道這會成為你的出口，直接選 Signature。
-          拳套方案買的不是裝備，而是把那晚的狀態帶回生活。
+          如果你只是被這個夜晚吸引，First Round 讓你安全進場。若你已經知道自己需要一個穩定出口，Signature 會把四次節奏接起來。
+          Gear 不是紀念品，而是把這份進場感帶走。
         </p>
       </div>
 
