@@ -298,7 +298,7 @@ export const offersOutcomeSectionContent = {
     'Fight Night是讓人期待的入口，但真正價值來自一套從感官刺激到身心變化的完整結構。',
   formulaLabel: 'Boot Camp完整系統的結構',
   formulaInputs: ['刺激進場', '壓力排空', '身體適應', '心理成長'],
-  formulaResult: '把一晚的爽，變成帶得走的能力',
+  formulaResult: '從釋放壓力的痛快，變成帶得走的能力',
   summaryCards: [
     {
       id: 'experience-layer',
@@ -422,10 +422,10 @@ export const offersPlans: TicketPlan[] = [
 ]
 
 export const offersSessionSectionContent = {
-  title: '下一場，選一個讓自己鬆開的夜晚',
+  title: '選一個讓自己鬆開的夜晚',
   subtitle:
     '選一個願意留給自己的夜晚。到了現場，剩下交給我們。',
-  ruleLine: '每月 1 個主題檔期 × 3 個場館限量開放',
+  ruleLine: '每月 1 個梯次 × 3 個場館限量開放',
   footnote: '各館名額與釋出狀態，以當月實際公告為準。',
   bookCtaLabel: '用 LINE 預留名額',
 }
@@ -435,7 +435,7 @@ export const sessions: Session[] = [
     id: 'session-dunnan',
     venueId: 'venue-dunnan',
     venueName: '台北 — 敦南旗艦館',
-    date: '2026 年 5 月 1 日',
+    date: '2026 年 X 月 X 日',
     weekday: 'Fri',
     time: '22:00 - 23:30',
     capacity: '仍可報名',
@@ -446,7 +446,7 @@ export const sessions: Session[] = [
     id: 'session-neihu',
     venueId: 'venue-neihu',
     venueName: '台北 — 內科模範館',
-    date: '2026 年 5 月 1 日',
+    date: '2026 年 X 月 X 日',
     weekday: 'Fri',
     time: '22:00 - 23:30',
     capacity: '名額緊張',
@@ -457,7 +457,7 @@ export const sessions: Session[] = [
     id: 'session-taichung',
     venueId: 'venue-taichung',
     venueName: '台中 — 台中勤美旗艦館',
-    date: '2026 年 5 月 1 日',
+    date: '2026 年 X 月 X 日',
     weekday: 'Fri',
     time: '22:00 - 23:30',
     capacity: '即將額滿',
