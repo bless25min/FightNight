@@ -59,37 +59,37 @@ type GateState = {
 
 const pressurePainPoints = [
   {
-    title: '你明明不想退，身體卻先縮了',
+    title: '你想要的是一個真的進得去的狀態',
     description:
-      '有些場面一靠近，你就先笑、先忍、先把話吞回去。不是你沒脾氣，是身體已經學會先求安全。',
+      '不是再看一場表演，也不是再報一個普通活動，而是讓身體真的被帶動，情緒真的有出口。',
   },
   {
-    title: '壓力沒有消失，只是換地方住',
+    title: '你也想知道，這股亢奮能不能留下來',
     description:
-      '它會住進睡眠、胸口、肩頸、心跳和脾氣裡。白天看起來正常，晚上卻很難真正放下。',
+      '首頁看到的是一晚的高點，方案頁要回答的是：那份專注、釋放和力量感，怎麼變成一段完整體驗。',
   },
   {
-    title: '你開始避開一切會讓你失控的東西',
+    title: '真正有價值的，不只是當下很嗨',
     description:
-      '不想碰衝突、不想見人、不想解釋。生活看似安靜，其實你的自由正在一點一點縮小。',
+      '爽感只是入口。更重要的是你離開時，會覺得自己做了一件平常不會做、但很需要做的事。',
   },
 ]
 
 const oldFrameworkPoints = [
   {
-    title: '把自己麻掉',
+    title: '只是熱鬧，不一定有出口',
     description:
-      '滑手機、喝酒、暴食、把行程塞滿，都能暫時關掉感覺，但隔天壓力還在。',
+      '吃飯、唱歌、喝酒、聚會都可以很開心，但很多時候只是轉移注意，結束後狀態很快就散掉。',
   },
   {
-    title: '把世界關小',
+    title: '只是運動，不一定進得去',
     description:
-      '少說、少見、少參與，短期像保護自己，長期會讓你更孤單、更不敢出手。',
+      '一般訓練可以流汗、可以累，但不一定會讓你忘記時間，不一定會讓你真的進入情緒高點。',
   },
   {
-    title: '等到爆掉，才知道自己已經滿了',
+    title: '只是新鮮，不一定會想再回來',
     description:
-      '是系統過載導致爆發，但那不是釋放。真正需要的不是下一次忍更久，而是學會轉化壓力。',
+      '很多體驗第一次有趣，第二次就淡了。Fight Night 要做的是讓你不只好奇，而是真的想再進場。',
   },
 ]
 
@@ -223,8 +223,8 @@ function OffersPainSection() {
   return (
     <SectionWrapper id="offers-pain">
       <SectionHeading
-        title="能堅持到現在足夠了，需要的不只是一個出口"
-        subtitle="真正消耗人的是每一次都把委屈、壓力和害怕收回身體裡，卻假裝自己還可以。"
+        title="你不是只是在看價格，你是在判斷這值不值得"
+        subtitle="如果首頁讓你好奇，這裡要回答的就是：這個體驗到底能給你什麼，為什麼不是又一個一次性活動。"
       />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 max-w-5xl mx-auto">
@@ -238,7 +238,7 @@ function OffersPainSection() {
             className="rounded-2xl border border-pearl/10 bg-black/30 p-5 md:p-6"
           >
             <p className="text-xs font-heading tracking-[0.28em] text-neon/80 uppercase">
-              痛點 0{i + 1}
+              確認 0{i + 1}
             </p>
             <h3 className="mt-3 text-lg font-heading font-semibold text-pearl">
               {point.title}
@@ -252,7 +252,7 @@ function OffersPainSection() {
 
       <div className="max-w-4xl mx-auto mt-8 md:mt-12 rounded-3xl border border-neon/15 bg-gradient-to-br from-neon/10 via-black/25 to-blaze/5 px-6 py-8 md:px-10 md:py-10 text-center">
         <p className="text-lg md:text-2xl font-heading font-semibold text-pearl leading-relaxed">
-          Fight Night 要處理的是那個壓力一靠近就先退讓、先麻木、先失去自己的反應。
+          所以方案頁不該只是一張價目表，而是讓你看懂：你買的不是堂數，是一次被帶進狀態的設計。
         </p>
       </div>
     </SectionWrapper>
@@ -263,8 +263,8 @@ function OffersOldFrameworkSection() {
   return (
     <SectionWrapper id="offers-old-framework">
       <SectionHeading
-        title="舊方法只能讓你暫時沒感覺"
-        subtitle="你可以逃開、麻痺、轉移注意，但只要身體還是把壓力判定成威脅，下一次你還是會回到同一個反應。"
+        title="問題不是你沒活動可以去，而是很少活動真的進得去"
+        subtitle="Fight Night 的價值，不是比誰更累、更刺激，而是把節奏、群體、拳套和情緒推進，組成一個會讓人進入狀態的場。"
       />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 max-w-5xl mx-auto">
