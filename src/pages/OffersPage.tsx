@@ -132,9 +132,6 @@ function OffersHero({ gateState }: { gateState: GateState }) {
     if (gateState.status === 'error') {
       return gateState.message || 'LIFF 驗證失敗，請稍後再試。'
     }
-    if (gateState.status === 'unlocked') {
-      return `${gateState.profileName || '會員'}，你已完成解鎖，可以直接往下查看完整內容。`
-    }
     return offersHeroContent.description
   }, [gateState])
 
