@@ -299,29 +299,6 @@ export const offersOutcomeSectionContent = {
   formulaLabel: 'Boot Camp完整系統的結構',
   formulaInputs: ['刺激進場', '壓力排空', '身體適應', '心理成長'],
   formulaResult: '從釋放壓力的痛快，變成帶得走的能力',
-  summaryCards: [
-    {
-      id: 'experience-layer',
-      label: '入口',
-      title: '刺激與排空壓力',
-      description:
-        '首頁看到的運動娛樂體驗，是第一層價值。它讓身體進場，讓壓力有地方出去，也讓你真正感覺自己活過來。',
-    },
-    {
-      id: 'problem-layer',
-      label: '方法',
-      title: '恐懼、壓迫與防身反應',
-      description:
-        'Boot Camp把刺激推進到格鬥底層：距離、呼吸、站姿、防禦、反應。這些是身體真的能學會的東西。',
-    },
-    {
-      id: 'value-layer',
-      label: '帶走',
-      title: '自信、穩定與壓力耐受',
-      description:
-        '當身體經歷過壓迫、出拳、穩住與回來，內心會留下新的證據：我能面對，我能反應，我能承受。',
-    },
-  ],
 }
 
 export const offersPlans: TicketPlan[] = [

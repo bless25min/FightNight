@@ -186,7 +186,7 @@ function OffersHero({ gateState }: { gateState: GateState }) {
     <section
       id="offers-hero"
       data-section="offers-hero"
-      className="relative pt-28 pb-12 md:pt-36 md:pb-20 overflow-hidden"
+      className="relative pt-20 pb-2 md:pt-36 md:pb-20 overflow-hidden"
     >
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute inset-0 bg-gradient-to-b from-abyss via-obsidian to-abyss" />
@@ -207,7 +207,7 @@ function OffersHero({ gateState }: { gateState: GateState }) {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.2 }}
-          className="mx-auto overflow-hidden rounded-2xl md:rounded-[2rem] border border-pearl/10 bg-black/40 shadow-[0_30px_80px_rgba(0,0,0,0.45)]"
+          className="mx-auto overflow-hidden rounded-2xl md:rounded-[2rem] border border-pearl/10 bg-black/40 shadow-[0_20px_60px_rgba(0,0,0,0.4)] md:shadow-[0_30px_80px_rgba(0,0,0,0.45)]"
         >
           <img
             src={offersHeroPoster}
@@ -235,7 +235,7 @@ function OffersHero({ gateState }: { gateState: GateState }) {
 
 function OffersCurriculum() {
   return (
-    <SectionWrapper id="offers-curriculum">
+    <SectionWrapper id="offers-curriculum" padding="pt-4 pb-10 md:py-28">
       <div className="max-w-6xl mx-auto space-y-4 md:space-y-6">
         <PosterFigure
           src={bootcampOriginPoster}
@@ -268,6 +268,7 @@ function OffersCurriculum() {
 }
 
 function OffersOutcomeSummary() {
+  const inputs = offersOutcomeSectionContent.formulaInputs
   return (
     <SectionWrapper id="offers-outcome-summary">
       <div className="max-w-6xl mx-auto mb-6 md:mb-8">
@@ -280,52 +281,65 @@ function OffersOutcomeSummary() {
         </PosterFigure>
       </div>
 
-      <div className="max-w-6xl mx-auto rounded-3xl border border-neon/15 bg-gradient-to-br from-neon/10 via-black/30 to-blaze/10 px-5 py-6 md:px-8 md:py-8">
-        <p className="text-center text-xs md:text-sm font-heading tracking-[0.28em] text-neon/85 uppercase">
-          {offersOutcomeSectionContent.formulaLabel}
-        </p>
+      <div className="relative max-w-6xl mx-auto overflow-hidden rounded-3xl border border-neon/15 bg-gradient-to-br from-neon/10 via-black/35 to-blaze/10 px-5 py-8 md:px-10 md:py-12">
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute -top-10 right-10 h-40 w-40 rounded-full bg-neon/15 blur-[110px]" />
+          <div className="absolute -bottom-10 left-10 h-44 w-44 rounded-full bg-blaze/15 blur-[120px]" />
+        </div>
 
-        <div className="mt-5 flex flex-col items-center justify-center gap-3 text-center md:flex-row md:flex-wrap">
-          {offersOutcomeSectionContent.formulaInputs.map((item, index) => (
-            <div key={item} className="flex items-center gap-3">
-              <div className="rounded-full border border-pearl/10 bg-black/25 px-4 py-2 text-sm md:text-base text-pearl">
-                {item}
-              </div>
-              {index < offersOutcomeSectionContent.formulaInputs.length - 1 ? (
-                <span className="text-neon/80 text-lg md:text-xl">+</span>
-              ) : (
-                <span className="text-neon/80 text-lg md:text-xl">=</span>
-              )}
+        <div className="relative">
+          <div className="flex items-center justify-center gap-3">
+            <span className="h-px w-8 bg-neon/40" />
+            <p className="text-center text-xs md:text-sm font-heading tracking-[0.32em] text-neon/85 uppercase">
+              {offersOutcomeSectionContent.formulaLabel}
+            </p>
+            <span className="h-px w-8 bg-neon/40" />
+          </div>
+
+          <div className="mt-8 grid gap-3 md:gap-4 md:grid-cols-4">
+            {inputs.map((item, index) => (
+              <motion.div
+                key={item}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.4, delay: index * 0.08 }}
+                className="relative rounded-2xl border border-pearl/10 bg-black/35 px-4 py-5 md:px-5 md:py-6 text-left"
+              >
+                <p className="text-[10px] md:text-xs font-heading tracking-[0.3em] text-neon/70 uppercase">
+                  Stage 0{index + 1}
+                </p>
+                <h4 className="mt-2 text-lg md:text-xl font-heading font-semibold text-pearl leading-tight">
+                  {item}
+                </h4>
+                {index < inputs.length - 1 && (
+                  <span
+                    aria-hidden
+                    className="hidden md:block absolute top-1/2 -right-3 -translate-y-1/2 text-neon/70 text-lg"
+                  >
+                    +
+                  </span>
+                )}
+              </motion.div>
+            ))}
+          </div>
+
+          <div className="mt-8 flex flex-col items-center gap-4">
+            <div className="flex items-center gap-3 text-neon/80">
+              <span className="h-px w-12 bg-neon/40" />
+              <span className="text-xs md:text-sm font-heading tracking-[0.3em] uppercase">
+                Outcome
+              </span>
+              <span className="h-px w-12 bg-neon/40" />
             </div>
-          ))}
 
-          <div className="rounded-full border border-neon/30 bg-neon/15 px-5 py-2 text-sm md:text-base font-heading text-pearl">
-            {offersOutcomeSectionContent.formulaResult}
+            <div className="rounded-2xl border border-neon/35 bg-neon/15 px-5 py-4 md:px-8 md:py-5 text-center max-w-3xl">
+              <p className="text-base md:text-xl font-heading font-semibold text-pearl leading-snug">
+                {offersOutcomeSectionContent.formulaResult}
+              </p>
+            </div>
           </div>
         </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 max-w-6xl mx-auto mt-6 md:mt-8">
-        {offersOutcomeSectionContent.summaryCards.map((card, i) => (
-          <motion.div
-            key={card.id}
-            initial={{ opacity: 0, y: 24 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: i * 0.1 }}
-            className="rounded-2xl border border-pearl/10 bg-black/30 p-5 md:p-6"
-          >
-            <p className="text-xs md:text-sm font-heading tracking-[0.22em] text-neon/80 uppercase">
-              {card.label}
-            </p>
-            <h3 className="mt-3 text-xl md:text-2xl font-heading font-bold text-pearl leading-tight">
-              {card.title}
-            </h3>
-            <p className="mt-3 text-sm md:text-base text-mist/80 leading-relaxed">
-              {card.description}
-            </p>
-          </motion.div>
-        ))}
       </div>
     </SectionWrapper>
   )
