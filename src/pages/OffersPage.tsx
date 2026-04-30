@@ -57,42 +57,6 @@ type GateState = {
   profileName?: string
 }
 
-const pressurePainPoints = [
-  {
-    title: '第一層，是刺激與排空壓力',
-    description:
-      '首頁讓你看到的熱鬧、低音、人群和拳套，是入口。它先把你拉進現場，讓身體醒過來，也讓壓力有地方出去。',
-  },
-  {
-    title: '第二層，是讓刺激變得有意義',
-    description:
-      '一晚很嗨只是開始。完整四次進場會把亢奮、呼吸、出拳、釋放和穩定串起來，讓體驗不只是爽過就散。',
-  },
-  {
-    title: '第三層，是身體與內心的改變',
-    description:
-      '你會開始適應恐懼與壓迫，理解防身反應，也在一次次進場裡累積自信、壓力耐受與面對焦慮的身體記憶。',
-  },
-]
-
-const oldFrameworkPoints = [
-  {
-    title: '抽象幻想會讓人想像，系統會讓人相信',
-    description:
-      '首頁負責創造期待，方案頁負責把期待落地。你需要看到的不只是氣氛，而是這套體驗怎麼一步一步成立。',
-  },
-  {
-    title: '刺激是入口，結構才是價值',
-    description:
-      '真正值得買的，不是更多聲音、更大強度，而是刺激後面有節奏、有邊界、有方法，能把人安全帶進去再帶回來。',
-  },
-  {
-    title: '證據在身體，不只在文案',
-    description:
-      '當你真的感受壓迫、出拳、防禦、穩住、回到呼吸，那些關於自信與抗壓的描述，才會變成你自己的經驗。',
-  },
-]
-
 function LockedSection({
   children,
   title,
@@ -217,77 +181,6 @@ function OffersHero({ gateState }: { gateState: GateState }) {
   )
 }
 
-function OffersPainSection() {
-  return (
-    <SectionWrapper id="offers-pain">
-      <SectionHeading
-        title="首頁看到的是入口，方案頁要講完整系統"
-        subtitle="全球頂尖的運動娛樂體驗先讓人想進場；真正讓方案成立的，是刺激之後還有壓力釋放、身體適應、防身反應與心理成長。"
-      />
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 max-w-5xl mx-auto">
-        {pressurePainPoints.map((point, i) => (
-          <motion.div
-            key={point.title}
-            initial={{ opacity: 0, y: 24 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: i * 0.1 }}
-            className="rounded-2xl border border-pearl/10 bg-black/30 p-5 md:p-6"
-          >
-            <p className="text-xs font-heading tracking-[0.28em] text-neon/80 uppercase">
-              系統 0{i + 1}
-            </p>
-            <h3 className="mt-3 text-lg font-heading font-semibold text-pearl">
-              {point.title}
-            </h3>
-            <p className="mt-3 text-sm md:text-base text-mist/80 leading-relaxed">
-              {point.description}
-            </p>
-          </motion.div>
-        ))}
-      </div>
-
-      <div className="max-w-4xl mx-auto mt-8 md:mt-12 rounded-3xl border border-neon/15 bg-gradient-to-br from-neon/10 via-black/25 to-blaze/5 px-6 py-8 md:px-10 md:py-10 text-center">
-        <p className="text-lg md:text-2xl font-heading font-semibold text-pearl leading-relaxed">
-          所以 Fight Night 不是只賣一晚的興奮感，而是把興奮感變成一套你能感受、能練習、能帶走的身心系統。
-        </p>
-      </div>
-    </SectionWrapper>
-  )
-}
-
-function OffersOldFrameworkSection() {
-  return (
-    <SectionWrapper id="offers-old-framework">
-      <SectionHeading
-        title="為什麼這不只是活動，而是值得買的方案"
-        subtitle="方案頁要回答的不是好不好玩，而是它如何把抽象的期待，變成可以被理解、被驗證、被帶走的價值。"
-      />
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 max-w-5xl mx-auto">
-        {oldFrameworkPoints.map((point, i) => (
-          <motion.div
-            key={point.title}
-            initial={{ opacity: 0, y: 24 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: i * 0.1 }}
-            className="rounded-2xl border border-pearl/10 bg-black/30 p-5 md:p-6"
-          >
-            <h3 className="text-lg font-heading font-semibold text-pearl">
-              {point.title}
-            </h3>
-            <p className="mt-3 text-sm md:text-base text-mist/80 leading-relaxed">
-              {point.description}
-            </p>
-          </motion.div>
-        ))}
-      </div>
-    </SectionWrapper>
-  )
-}
-
 function OffersCurriculum() {
   return (
     <SectionWrapper id="offers-curriculum">
@@ -407,7 +300,7 @@ function OffersPlans({
 
       <div className="max-w-4xl mx-auto -mt-4 mb-8 md:mb-12 rounded-2xl border border-pearl/10 bg-black/20 px-5 py-5 md:px-6 md:py-6">
         <p className="text-sm md:text-base text-mist/80 leading-relaxed">
-          如果你想先驗證入口，First Round 讓你完整進場一次。若你想看到刺激如何變成壓力適應、防身反應與自信成長，Signature Four 會把四次系統完整接起來。
+          如果你想先驗證入口，First Round 讓你完整進場一次。若你想看到刺激如何變成壓力適應、防身反應與自信成長，Boot Camp 會讓你蛻變。
           Gear 不是紀念品，而是把這份進場感和身體記憶帶回生活。
         </p>
       </div>
@@ -675,8 +568,6 @@ export function OffersPage() {
       <Header />
       <main>
         <OffersHero gateState={gateState} />
-        <OffersPainSection />
-        <OffersOldFrameworkSection />
         <OffersCurriculum />
         <OffersOutcomeSummary />
         <OffersPlans

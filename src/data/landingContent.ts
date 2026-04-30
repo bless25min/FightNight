@@ -225,7 +225,7 @@ export const ticketSectionContent = {
 // ── /offers 頁面文案 ──────────────────────────────
 export const offersHeroContent = {
   title: '全球頂尖的運動娛樂體驗，只是開始',
-  subtitle: 'FIGHT NIGHT只是開始，完成BOOT CAMP才會真正的讓你蛻變。',
+  subtitle: 'Fight Night只是開始，完成Boot Camp才會真正的讓你蛻變。',
   description:
     '刺激、音樂、人群、拳套和沙包，是入口。讓壓力被排空，讓刺激變得有意義，讓身體逐步適應恐懼、壓迫、距離和反應，最後把自信與穩定帶回生活。',
   primaryCta: '快速登入查看',
@@ -233,11 +233,11 @@ export const offersHeroContent = {
 }
 
 export const offersCurriculumSectionContent = {
-  title: 'BOOT CAMP 如何運作？',
+  title: 'Boot Camp 如何運作？',
   subtitle:
-    '一次進場讓你感受到刺激與釋放；但隨著課程的進度，能把刺激推進成身體能力、心理底氣和可帶走的改變。',
+    'Fight Night讓你感受到刺激與釋放；但隨著課程的進度，能把刺激推進成身體能力、心理底氣和可帶走的改變。',
   description:
-    'BOOT CAMP 借用的是格鬥選手面對壓力的底層邏輯：把恐懼、壓迫、距離、打擊和反應，轉成身體可以練習的動作。你會開始知道，原來壓力靠近時，自己可以站得住、看得見，也做得出下一步。',
+    'Boot Camp 借用的是格鬥選手面對壓力的底層邏輯：把恐懼、壓迫、距離、打擊和反應，轉成身體可以練習的動作。你會開始知道，原來壓力靠近時，自己可以站得住、看得見，也做得出下一步。',
 }
 
 export const curriculumModules: CurriculumModule[] = [
@@ -295,7 +295,7 @@ export const offersPlanSectionContent = {
 export const offersOutcomeSectionContent = {
   title: '不只是很嗨的夜晚。',
   subtitle:
-    'FIGHT NIGHT是讓人期待的入口，但真正價值來自一套從感官刺激到身心變化的完整結構。',
+    'Fight Night是讓人期待的入口，但真正價值來自一套從感官刺激到身心變化的完整結構。',
   formulaLabel: 'Boot Camp完整系統的結構',
   formulaInputs: ['刺激進場', '壓力排空', '身體適應', '心理成長'],
   formulaResult: '把一晚的爽，變成帶得走的能力',
