@@ -23,7 +23,7 @@ export const siteConfig = {
 export const heroContent = {
   title: '今晚，一起進入狀態。',
   subtitle: '這是一張讓你脫離日常的入場券。',
-  primaryCta: '查看活動場次 / 費用資訊',
+  primaryCta: '購買 Fight Night Pass',
   secondaryCta: '這一晚會發生什麼',
   tags: ['🥊 拳套入場', '👥 集體同步', '🔥 壓力釋放'],
 }
@@ -210,24 +210,42 @@ export const audiencePoints: AudiencePoint[] = [
 
 // ── 票種區（首頁 teaser + 登入後完整資訊共用資料） ─────
 export const ticketSectionContent = {
-  title: '查看活動場次 / 費用資訊',
-  subtitle: '首頁不直接顯示價格與方案。進入頁面後，再用 LINE Login 解鎖完整內容。',
+  title: 'Fight Night Pass',
+  subtitle:
+    '不用成為會員，不用有拳擊基礎。先進場一次，體驗一個不一樣的週五晚上。',
   description:
-    '你會看到 LINE 會員專屬內容入口。快速登入後，可查看四次完整內容、活動場次、費用資訊、帶領者資訊與可報名名額。',
-  footnote:
-    '想先確認這是不是一個你想認真參與的完整體驗，再決定要不要進場，這就是你該點的地方。',
-  unifiedCtaLabel: '查看活動場次 / 費用資訊',
-  teaserHint: 'LINE 會員專屬內容',
-  previewTitle: '這個頁面會解鎖什麼？',
-  previewItems: ['四次完整內容', '活動場次', '費用資訊', '帶領者資訊'],
+    '如果你只想先進場一次，這張 pass 就是最直接的入口。先完成 LINE 會員驗證，再查看完整權益、場次狀態與購買方式。',
+  unifiedCtaLabel: '購買 Fight Night Pass',
+  previewItems: ['完整方案權益', '活動場次狀態', '預留名額方式'],
+}
+
+export const fightNightPassPlan: TicketPlan = {
+  id: 'fight-night-pass-980',
+  name: 'Fight Night Pass',
+  subtitle: '單場入場，一晚進入狀態',
+  teaserCopy: 'NT$980，先讓身體確認這是不是你的壓力出口。',
+  description:
+    '適合想先體驗一次 Fight Night 的人。你會跟著音樂、拳套、沙包與全場節奏進入完整夜場體驗，把日常裡卡住的壓力直接打開。',
+  price: 'NT$980',
+  badge: '首頁限定',
+  features: [
+    '單次 Fight Night 入場資格',
+    '完整夜場節奏體驗與教練帶動',
+    '適合零基礎、第一次進場與朋友同行',
+    '完成 LINE Login 並加入好友後查看可報名名額',
+  ],
+  highlight: true,
+  checkoutUrl: siteConfig.lineUrl,
+  ctaLabel: '購買 Fight Night Pass',
+  ctaVariant: 'primary',
 }
 
 // ── /offers 頁面文案 ──────────────────────────────
 export const offersHeroContent = {
-  title: '全球頂尖的運動娛樂體驗，只是開始',
-  subtitle: 'Fight Night只是開始，完成Boot Camp才會真正的讓你蛻變。',
+  title: 'Fight Night + Boot Camp 完整方案',
+  subtitle: 'Fight Night 是入口，Boot Camp 讓刺激變成真的身體記憶。',
   description:
-    '刺激、音樂、人群、拳套和沙包，是入口。讓壓力被排空，讓刺激變得有意義，讓身體逐步適應恐懼、壓迫、距離和反應，最後把自信與穩定帶回生活。',
+    '這裡販售首頁 NT$980 以外的完整方案。從單次進場、專屬拳套，到四次 Boot Camp 系統旅程，完整方案內容需完成 LINE Login 並加入好友後解鎖。',
   primaryCta: '快速登入查看',
   secondaryCta: '先看完整系統',
 }
@@ -286,10 +304,10 @@ export const curriculumModules: CurriculumModule[] = [
 ]
 
 export const offersPlanSectionContent = {
-  title: '選一個你真的會記住的入口',
-  subtitle: '選擇你要把這個體驗從夜晚帶到多深的旅程。',
+  title: 'Fight Night + Boot Camp 方案',
+  subtitle: '這裡販售首頁 NT$980 以外的全部方案。登入加好友後查看完整內容。',
   footnote:
-    '被帶進狀態、被安全接住，以及離開後身體仍在應對壓力有記憶。',
+    '首頁的 NT$980 Fight Night Pass 不會出現在這裡；這一頁只保留更完整的 Fight Night + Boot Camp 選項。',
 }
 
 export const offersOutcomeSectionContent = {
@@ -501,8 +519,8 @@ export const faqItems: FAQItem[] = [
 // ── Final CTA ─────────────────────────────────────
 export const finalCtaContent = {
   title: '不是每個夜晚都值得出門。',
-  subtitle: '先看活動場次與費用資訊，再決定這一場是不是你要的入口。',
-  primaryCta: '查看活動場次 / 費用資訊',
+  subtitle: '先用 NT$980 Fight Night Pass 進場一次，再決定要不要走完整旅程。',
+  primaryCta: '購買 Fight Night Pass',
   ghostCta: '先加 LINE 取得通知',
 }
 

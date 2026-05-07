@@ -1,13 +1,22 @@
 import { motion, useInView } from 'framer-motion'
 import { useEffect, useRef } from 'react'
-import { ticketSectionContent, siteConfig } from '../../data/landingContent'
+import {
+  fightNightPassPlan,
+  ticketSectionContent,
+  siteConfig,
+} from '../../data/landingContent'
+import { useLiffGate } from '../../hooks/useLiffGate'
 import { useTracking } from '../../hooks/useTracking'
 import { Button } from '../ui/Button'
+import { LockedContent } from '../ui/LockedContent'
+import { PlanCard } from '../ui/PlanCard'
 import { SectionHeading } from '../ui/SectionHeading'
 import { SectionWrapper } from '../ui/SectionWrapper'
 
 export function TicketSection() {
   const { trackTicketView, trackTicketCta } = useTracking()
+  const { gateState, requestGateAccess, openWhenUnlocked, liffUrl } =
+    useLiffGate()
   const ref = useRef<HTMLDivElement>(null)
   const isInView = useInView(ref, { once: true })
   const tracked = useRef(false)
@@ -44,48 +53,41 @@ export function TicketSection() {
           </div>
 
           <div className="relative">
-            <p className="text-center text-xs md:text-sm font-heading tracking-[0.3em] text-neon/80 uppercase">
-              {ticketSectionContent.teaserHint}
-            </p>
-
-            <h3 className="mt-4 text-center text-2xl md:text-3xl font-heading font-bold text-pearl">
-              {ticketSectionContent.previewTitle}
-            </h3>
-
-            <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-              {ticketSectionContent.previewItems.map((item, i) => (
-                <div
-                  key={item}
-                  className={`rounded-2xl border border-pearl/10 bg-black/20 px-4 py-5 text-center ${
-                    i % 2 === 0 ? 'md:translate-y-2' : ''
-                  }`}
-                >
-                  <div className="text-sm md:text-base font-heading font-semibold text-pearl">
-                    {item}
-                  </div>
-                  <div className="mt-2 text-xs text-mist/60">
-                    LINE Login 後解鎖
+            <LockedContent
+              gateState={gateState}
+              title="登入後查看完整費用資訊"
+              liffUrl={liffUrl}
+              onGateAction={() => void requestGateAccess()}
+            >
+              <div>
+                <div>
+                  <div className="mx-auto max-w-xl">
+                    <PlanCard
+                      plan={fightNightPassPlan}
+                    onCtaAction={(url, planId) => {
+                      trackTicketCta(planId)
+                      void openWhenUnlocked(url)
+                      }}
+                    />
                   </div>
                 </div>
-              ))}
-            </div>
+              </div>
+            </LockedContent>
 
-            <div className="mt-8 flex justify-center">
-              <Button
-                size="lg"
-                onClick={() => trackTicketCta('offers-entry')}
-                href={siteConfig.offersUrl}
-                data-cta="ticket-offers-entry"
-              >
-                {ticketSectionContent.unifiedCtaLabel}
-              </Button>
-            </div>
+            {gateState.status === 'unlocked' && (
+              <div className="mt-6 flex justify-center">
+                <Button
+                  variant="ghost"
+                  href={siteConfig.offersUrl}
+                  data-cta="ticket-offers-entry"
+                >
+                  查看 Fight Night + Boot Camp 方案
+                </Button>
+              </div>
+            )}
           </div>
         </motion.div>
 
-        <p className="text-center text-sm md:text-base text-mist/60 max-w-2xl mx-auto mt-8 md:mt-12">
-          {ticketSectionContent.footnote}
-        </p>
       </div>
     </SectionWrapper>
   )

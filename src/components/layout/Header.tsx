@@ -20,8 +20,10 @@ export function Header() {
   }
 
   const ctaLabel = isOffersPage
-    ? '查看方案'
-    : '查看活動場次 / 費用資訊'
+    ? '查看進階方案'
+    : '購買 Fight Night Pass'
+  const ctaTargetId = isOffersPage ? 'offers-plans' : 'ticket'
+  const ctaHref = `#${ctaTargetId}`
 
   return (
     <motion.header
@@ -53,7 +55,8 @@ export function Header() {
         {isOffersPage ? (
           <Button
             size="sm"
-            onClick={() => scrollTo('offers-plans')}
+            href={ctaHref}
+            onClick={() => scrollTo(ctaTargetId)}
             data-cta="header-cta"
           >
             {ctaLabel}
@@ -61,7 +64,8 @@ export function Header() {
         ) : (
           <Button
             size="sm"
-            href={siteConfig.offersUrl}
+            href={ctaHref}
+            onClick={() => scrollTo(ctaTargetId)}
             data-cta="header-cta"
           >
             {ctaLabel}

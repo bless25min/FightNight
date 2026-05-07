@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import type { ReactNode } from 'react'
 import bootcampOriginPoster from '../assets/offers/bootcamp-origin-poster.png'
 import bootcampModule1Poster from '../assets/offers/bootcamp-module-1-poster.png'
@@ -18,15 +18,22 @@ import {
   offersPlans,
   offersPlanSectionContent,
   offersSessionSectionContent,
-  offersStatusCopy,
   sessions,
 } from '../data/landingContent'
-import { loadLiffSdk } from '../lib/liff'
+import type { LiffGateState } from '../hooks/useLiffGate'
+import { useLiffGate } from '../hooks/useLiffGate'
 import type { SessionCapacity } from '../types'
 import { Footer } from '../components/layout/Footer'
 import { Header } from '../components/layout/Header'
-import { Badge } from '../components/ui/Badge'
-import { Button } from '../components/ui/Button'
+import { ExperienceFlowSection } from '../components/sections/ExperienceFlowSection'
+import { FormulaSection } from '../components/sections/FormulaSection'
+import { IdentitySection } from '../components/sections/IdentitySection'
+import { NewModelSection } from '../components/sections/NewModelSection'
+import { OldFrameworkBreakSection } from '../components/sections/OldFrameworkBreakSection'
+import { PainSection } from '../components/sections/PainSection'
+import { FAQSection } from '../components/sections/FAQSection'
+import { LockedContent } from '../components/ui/LockedContent'
+import { PlanCard } from '../components/ui/PlanCard'
 import { SectionHeading } from '../components/ui/SectionHeading'
 import { SectionWrapper } from '../components/ui/SectionWrapper'
 
@@ -50,20 +57,6 @@ const capacityStyles: Record<
     label: '本月已額滿',
     className: 'bg-pearl/10 text-mist/60 border-pearl/10',
   },
-}
-
-type GateStatus =
-  | 'loading'
-  | 'missing-config'
-  | 'logged-out'
-  | 'not-friend'
-  | 'unlocked'
-  | 'error'
-
-type GateState = {
-  status: GateStatus
-  message?: string
-  profileName?: string
 }
 
 const curriculumPosterMap: Record<string, string> = {
@@ -104,71 +97,7 @@ function PosterFigure({
   )
 }
 
-function LockedSection({
-  children,
-  title,
-  gateState,
-  onGateAction,
-}: {
-  children: ReactNode
-  title: string
-  gateState: GateState
-  onGateAction: () => void
-}) {
-  if (gateState.status === 'unlocked') {
-    return <>{children}</>
-  }
-
-  const helperText =
-    gateState.status === 'missing-config'
-      ? '尚未設定 LIFF ID，請先補上環境變數。'
-      : gateState.status === 'error'
-        ? gateState.message || 'LIFF 驗證失敗，請稍後再試。'
-        : gateState.status === 'not-friend'
-          ? '你已完成 LINE 登入，但還需要先加入官方帳號，才能解鎖完整內容。'
-          : '完成 LINE Login 後，即可解鎖這個區塊的完整內容。'
-
-  const actionLabel =
-    gateState.status === 'logged-out'
-      ? 'LINE Login 查看完整內容'
-      : gateState.status === 'not-friend'
-        ? '加入官方帳號後解鎖'
-        : null
-
-  return (
-    <div className="relative">
-      <div className="pointer-events-none select-none blur-[6px] opacity-35">
-        {children}
-      </div>
-
-      <div className="absolute inset-0 flex items-center justify-center px-4">
-        <div className="max-w-md rounded-3xl border border-pearl/10 bg-obsidian/90 px-6 py-7 text-center shadow-[0_30px_80px_rgba(0,0,0,0.45)]">
-          <p className="text-xs md:text-sm font-heading tracking-[0.3em] text-neon/80 uppercase">
-            LINE 會員專屬內容
-          </p>
-          <h3 className="mt-3 text-xl md:text-2xl font-heading font-bold text-pearl">
-            {title}
-          </h3>
-          <p className="mt-3 text-sm md:text-base text-mist/75 leading-relaxed">
-            {helperText}
-          </p>
-          {actionLabel && (
-            <Button
-              size="lg"
-              className="mt-5"
-              onClick={onGateAction}
-              data-cta="offers-gate-action"
-            >
-              {actionLabel}
-            </Button>
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function OffersHero({ gateState }: { gateState: GateState }) {
+function OffersHero({ gateState }: { gateState: LiffGateState }) {
   const helperMessage = useMemo(() => {
     if (gateState.status === 'not-friend') {
       return '你已完成 LINE 登入，下一步加入官方帳號後，就能解鎖完整會員內容。'
@@ -332,10 +261,12 @@ function OffersPlans({
   gateState,
   onGateAction,
   onCtaAction,
+  liffUrl,
 }: {
-  gateState: GateState
+  gateState: LiffGateState
   onGateAction: () => void
-  onCtaAction: (redirectUrl: string) => void
+  onCtaAction: (redirectUrl: string, planId: string) => void
+  liffUrl?: string
 }) {
   return (
     <SectionWrapper id="offers-plans">
@@ -352,74 +283,23 @@ function OffersPlans({
         </PosterFigure>
       </div>
 
-      <LockedSection
+      <LockedContent
         title="登入後查看完整費用資訊"
         gateState={gateState}
+        liffUrl={liffUrl}
         onGateAction={onGateAction}
       >
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6 max-w-6xl mx-auto items-start">
           {offersPlans.map((plan, i) => (
-            <motion.div
+            <PlanCard
               key={plan.id}
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: i * 0.12 }}
-              className={`relative rounded-2xl p-5 md:p-8 border transition-all duration-300 ${
-                plan.highlight
-                  ? 'glass border-neon/40 glow-neon md:scale-105'
-                  : 'glass border-pearl/10 hover:border-pearl/20'
-              }`}
-            >
-              {plan.badge && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <Badge variant={plan.highlight ? 'highlight' : 'gold'}>
-                    {plan.badge}
-                  </Badge>
-                </div>
-              )}
-
-              <h3 className="text-2xl font-heading font-bold mt-1 md:mt-2 mb-1">
-                {plan.name}
-              </h3>
-              <p className="text-sm text-mist mb-3">{plan.subtitle}</p>
-              <p className="text-sm md:text-base text-neon/90 leading-relaxed mb-3">
-                {plan.teaserCopy}
-              </p>
-              <p className="text-sm md:text-base text-pearl/85 leading-relaxed mb-5 md:mb-6">
-                {plan.description}
-              </p>
-
-              <div className="mb-5 md:mb-6">
-                <span className="text-3xl md:text-4xl font-heading font-black text-pearl">
-                  {plan.price}
-                </span>
-              </div>
-
-              <ul className="space-y-2 md:space-y-3 mb-6 md:mb-8">
-                {plan.features.map((feature) => (
-                  <li
-                    key={feature}
-                    className="flex items-start gap-2 text-sm text-mist"
-                  >
-                    <span className="text-neon mt-0.5 flex-shrink-0">•</span>
-                    {feature}
-                  </li>
-                ))}
-              </ul>
-
-              <Button
-                variant={plan.ctaVariant}
-                className="w-full"
-                onClick={() => onCtaAction(plan.checkoutUrl)}
-                data-cta={`offers-plan-${plan.id}`}
-              >
-                {plan.ctaLabel}
-              </Button>
-            </motion.div>
+              plan={plan}
+              index={i}
+              onCtaAction={onCtaAction}
+            />
           ))}
         </div>
-      </LockedSection>
+      </LockedContent>
 
       <p className="text-center text-sm md:text-base text-mist/60 max-w-2xl mx-auto mt-8 md:mt-12">
         {offersPlanSectionContent.footnote}
@@ -483,148 +363,32 @@ function OffersSessions() {
 }
 
 export function OffersPage() {
-  const [gateState, setGateState] = useState<GateState>({ status: 'loading' })
-
-  const liffId = import.meta.env.VITE_LINE_LIFF_ID
-
-  const runGateCheck = useCallback(async () => {
-    if (!liffId) {
-      setGateState({
-        status: 'missing-config',
-        message: '找不到 VITE_LINE_LIFF_ID，請先補上正式環境變數。',
-      })
-      return
-    }
-
-    try {
-      const liff = await loadLiffSdk()
-      await liff.init({
-        liffId,
-        withLoginOnExternalBrowser: false,
-      })
-
-      if (!liff.isLoggedIn()) {
-        setGateState({ status: 'logged-out' })
-        return
-      }
-
-      const [profile, friendship] = await Promise.all([
-        liff.getProfile(),
-        liff.getFriendship(),
-      ])
-
-      if (friendship.friendFlag) {
-        setGateState({
-          status: 'unlocked',
-          profileName: profile.displayName,
-        })
-        return
-      }
-
-      setGateState({
-        status: 'not-friend',
-        profileName: profile.displayName,
-        message: offersStatusCopy.notLoggedIn,
-      })
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'LIFF 驗證失敗，請稍後再試。'
-      setGateState({ status: 'error', message })
-    }
-  }, [liffId])
-
-  useEffect(() => {
-    void runGateCheck()
-  }, [runGateCheck])
-
-  const handleGateAction = useCallback(async () => {
-    if (!liffId) {
-      setGateState({
-        status: 'missing-config',
-        message: '找不到 VITE_LINE_LIFF_ID，請先補上正式環境變數。',
-      })
-      return
-    }
-
-    try {
-      const liff = await loadLiffSdk()
-      await liff.init({
-        liffId,
-        withLoginOnExternalBrowser: false,
-      })
-
-      if (!liff.isLoggedIn()) {
-        liff.login({ redirectUri: window.location.href })
-        return
-      }
-
-      const friendship = await liff.getFriendship()
-      if (!friendship.friendFlag) {
-        await liff.requestFriendship()
-      }
-
-      await runGateCheck()
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'LIFF 驗證失敗，請稍後再試。'
-      setGateState({ status: 'error', message })
-    }
-  }, [liffId, runGateCheck])
-
-  const handleCtaAction = useCallback(
-    async (redirectUrl: string) => {
-      if (!liffId) {
-        setGateState({
-          status: 'missing-config',
-          message: '找不到 VITE_LINE_LIFF_ID，請先補上正式環境變數。',
-        })
-        return
-      }
-
-      try {
-        const liff = await loadLiffSdk()
-        await liff.init({
-          liffId,
-          withLoginOnExternalBrowser: false,
-        })
-
-        if (!liff.isLoggedIn()) {
-          liff.login({ redirectUri: window.location.href })
-          return
-        }
-
-        const friendship = await liff.getFriendship()
-        if (!friendship.friendFlag) {
-          await liff.requestFriendship()
-          await runGateCheck()
-          return
-        }
-
-        window.open(redirectUrl, '_blank', 'noopener,noreferrer')
-      } catch (error) {
-        const message =
-          error instanceof Error ? error.message : 'LIFF 驗證失敗，請稍後再試。'
-        setGateState({ status: 'error', message })
-      }
-    },
-    [liffId, runGateCheck],
-  )
+  const { gateState, requestGateAccess, openWhenUnlocked, liffUrl } =
+    useLiffGate()
 
   return (
     <div className="overflow-x-hidden w-full relative">
       <Header />
       <main>
         <OffersHero gateState={gateState} />
+        <PainSection />
+        <OldFrameworkBreakSection />
+        <NewModelSection />
+        <FormulaSection />
+        <ExperienceFlowSection />
+        <IdentitySection />
         <OffersCurriculum />
         <OffersOutcomeSummary />
         <OffersPlans
           gateState={gateState}
-          onGateAction={() => void handleGateAction()}
-          onCtaAction={(url) => void handleCtaAction(url)}
+          onGateAction={() => void requestGateAccess()}
+          onCtaAction={(url) => void openWhenUnlocked(url)}
+          liffUrl={liffUrl}
         />
         <OffersSessions />
+        <FAQSection />
       </main>
-      <Footer onVenueAction={(url) => void handleCtaAction(url)} />
+      <Footer onVenueAction={(url) => void openWhenUnlocked(url)} />
     </div>
   )
 }

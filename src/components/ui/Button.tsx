@@ -9,6 +9,8 @@ type Props = {
   size?: 'sm' | 'md' | 'lg'
   onClick?: () => void
   href?: string
+  target?: string
+  rel?: string
   className?: string
   'data-cta'?: string
   'data-ticket'?: string
@@ -34,6 +36,8 @@ export function Button({
   size = 'md',
   onClick,
   href,
+  target,
+  rel,
   className = '',
   ...props
 }: Props) {
@@ -43,8 +47,8 @@ export function Button({
     return (
       <motion.a
         href={href}
-        target={href.startsWith('http') ? '_blank' : undefined}
-        rel={href.startsWith('http') ? 'noopener noreferrer' : undefined}
+        target={target ?? (href.startsWith('http') ? '_blank' : undefined)}
+        rel={rel ?? (href.startsWith('http') ? 'noopener noreferrer' : undefined)}
         whileHover={{ scale: 1.03 }}
         whileTap={{ scale: 0.97 }}
         className={classes}

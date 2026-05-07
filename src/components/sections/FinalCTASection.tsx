@@ -43,7 +43,7 @@ export function FinalCTASection() {
         >
           <Button
             size="lg"
-            href={siteConfig.offersUrl}
+            href={siteConfig.ticketUrl}
             onClick={() => trackHeroCta()}
             data-cta="final-primary"
           >

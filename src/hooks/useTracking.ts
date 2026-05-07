@@ -1,8 +1,9 @@
 // 事件追蹤 hook — 預留 GA4 / Meta Pixel / LINE Tag 接口
+import type { TrackingParams } from '../lib/analytics'
 
 type TrackingEvent = {
   event: string
-  params?: Record<string, string | number | boolean>
+  params?: TrackingParams
 }
 
 export function useTracking() {
@@ -13,14 +14,10 @@ export function useTracking() {
     }
 
     // GA4
-    if (typeof window !== 'undefined' && 'gtag' in window) {
-      ;(window as any).gtag('event', event, params)
-    }
+    window.gtag?.('event', event, params)
 
     // Meta Pixel
-    if (typeof window !== 'undefined' && 'fbq' in window) {
-      ;(window as any).fbq('trackCustom', event, params)
-    }
+    window.fbq?.('trackCustom', event, params)
   }
 
   const trackHeroCta = () => track({ event: 'hero_cta_click' })
