@@ -325,9 +325,9 @@ export const bootCampFaqItems: FAQItem[] = [
   },
   {
     id: 'bootcamp-faq-4',
-    question: '拳擊 Boot Camp 和泰拳 Boot Camp 怎麼選？',
+    question: '拳擊 Boot Camp 和泰拳／踢拳 Boot Camp 怎麼選？',
     answer:
-      '兩條路徑都在學 Fighter 的壓力應對。常把壓力往裡收、需要界線感，選拳擊。悶太久、想用全身打開狀態，選泰拳。',
+      '兩條路徑都在學 Fighter 的壓力應對。常把壓力往裡收、需要界線感，選拳擊。悶太久、想用全身打開狀態，選泰拳／踢拳。',
   },
   {
     id: 'bootcamp-faq-5',
@@ -410,14 +410,14 @@ export const bootCampRouteContent: Record<
     ],
   },
   MUAY_THAI: {
-    label: '泰拳 Boot Camp',
-    shortLabel: '泰拳',
+    label: '泰拳／踢拳 Boot Camp',
+    shortLabel: '泰拳／踢拳',
     badge: '全身釋放',
     hint: '全身釋放、爆發感、重新點燃',
     fighterLesson: '高強度壓力裡，把慌亂轉成全身行動。',
     headline: '適合想把悶住的能量打開的人。',
     summary:
-      '泰拳路徑更強烈、更全身。用踢、膝、重心轉換把情緒和壓力從身體裡帶出來，重新感覺自己被點燃。',
+      '泰拳／踢拳路徑更強烈、更全身。用踢、膝、重心轉換把情緒和壓力從身體裡帶出來，重新感覺自己被點燃。',
     bestFor: '適合覺得自己太久沒有被點燃、想要更強烈流汗與釋放的人。',
     skills: ['全身釋放', '爆發感', '情緒出口', '重新點燃'],
     weekPlan: [
@@ -487,20 +487,20 @@ export const offersPlans: TicketPlan[] = [
   },
   {
     id: 'offers-bootcamp-muaythai-2',
-    name: '泰拳 Boot Camp｜兩堂入門',
+    name: '泰拳／踢拳 Boot Camp｜兩堂入門',
     subtitle: '全身釋放壓力的 Fighter 路徑',
-    teaserCopy: '用泰拳風格的強度，學 Fighter 在壓迫中把慌亂轉成行動。',
+    teaserCopy: '用泰拳／踢拳風格的強度，學 Fighter 在壓迫中把慌亂轉成行動。',
     description:
       '適合覺得自己悶太久、壓力塞在身體裡、需要更強烈出口的人。兩堂課先讓你用全身進入狀態，重新感覺自己還有能量。',
     price: 'NT$1,800',
     features: [
       '向 Fighter 學習高強度壓力應對',
-      '用泰拳風格釋放卡住的壓力',
+      '用泰拳／踢拳風格釋放卡住的壓力',
       '練習把慌亂轉成全身行動',
       '每堂線上小班預留 6 席',
     ],
     checkoutUrl: siteConfig.lineUrl,
-    ctaLabel: '選泰拳兩堂場次',
+    ctaLabel: '選泰拳／踢拳兩堂場次',
     ctaVariant: 'secondary',
   },
   {
@@ -525,11 +525,11 @@ export const offersPlans: TicketPlan[] = [
   },
   {
     id: 'offers-bootcamp-muaythai-4',
-    name: '泰拳 Boot Camp｜四堂養成',
+    name: '泰拳／踢拳 Boot Camp｜四堂養成',
     subtitle: '主推：全身釋放壓力',
     teaserCopy: '保留接下來四週同一個時間，學 Fighter 把壓迫轉成全身行動。',
     description:
-      '適合想要更強烈轉換的人。四堂課不是追求泰拳技術，而是透過更全身性的主題風格，向 Fighter 學習在高強度壓力裡不僵住、不退縮、重新被點燃。',
+      '適合想要更強烈轉換的人。四堂課不是追求泰拳或踢拳技術，而是透過更全身性的主題風格，向 Fighter 學習在高強度壓力裡不僵住、不退縮、重新被點燃。',
     price: 'NT$3,800',
     badge: '全身路徑',
     features: [
@@ -539,7 +539,7 @@ export const offersPlans: TicketPlan[] = [
       '每堂線上小班預留 6 席',
     ],
     checkoutUrl: siteConfig.lineUrl,
-    ctaLabel: '選泰拳四堂場次',
+    ctaLabel: '選泰拳／踢拳四堂場次',
     ctaVariant: 'secondary',
   },
   {

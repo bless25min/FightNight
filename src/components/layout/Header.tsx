@@ -24,12 +24,12 @@ export function Header() {
   }
 
   const ctaLabel = isBootCampPage
-    ? '查看可購買梯次'
+    ? '選路徑與梯次'
     : isOffersPage
       ? '選 Boot Camp 場次'
       : '選日期購買'
   const ctaTargetId = isBootCampPage
-    ? 'boot-camp-booking'
+    ? 'boot-camp-routes'
     : isOffersPage
       ? 'offers-plans'
       : 'ticket'

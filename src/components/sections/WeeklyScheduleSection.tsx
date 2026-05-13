@@ -27,6 +27,22 @@ const BOOT_CAMP_ROUTE_ORDER: Array<BootCampRoute | null> = [
   'MUAY_THAI',
 ]
 
+const bootCampPackageMeta: Record<
+  2 | 4,
+  { label: string; price: string; description: string }
+> = {
+  2: {
+    label: '兩堂',
+    price: 'NT$1,800',
+    description: '先確認這條路徑是不是你的出口',
+  },
+  4: {
+    label: '四堂',
+    price: 'NT$3,800',
+    description: '保留四週，讓節奏開始留下',
+  },
+}
+
 const categoryMeta: Record<
   CourseCategory,
   {
@@ -118,7 +134,7 @@ function sortByVenueThenName(a: WeeklyCourse, b: WeeklyCourse) {
 }
 
 function getBootCampRoute(course: WeeklyCourse): BootCampRoute | null {
-  if (course.name.includes('泰拳')) return 'MUAY_THAI'
+  if (course.name.includes('泰拳') || course.name.includes('踢拳')) return 'MUAY_THAI'
   if (course.name.includes('拳擊')) return 'BOXING'
   return null
 }
@@ -205,6 +221,7 @@ type Props = {
   title?: string
   subtitle?: string
   embedded?: boolean
+  bookingMode?: 'standard' | 'bootcamp'
   className?: string
 }
 
@@ -221,6 +238,7 @@ export function WeeklyScheduleSection({
   title = weeklyScheduleSectionContent.title,
   subtitle = weeklyScheduleSectionContent.subtitle,
   embedded = false,
+  bookingMode = 'standard',
   className = '',
 }: Props = {}) {
   const fallbackCategory = categories[0] ?? 'FIGHT_NIGHT'
@@ -246,6 +264,13 @@ export function WeeklyScheduleSection({
   }, [onBootCampRouteChange])
   const scrollerRef = useRef<HTMLDivElement>(null)
   const [activeVenueId, setActiveVenueId] = useState<string | null>(null)
+  const [activeDateIso, setActiveDateIso] = useState<string | null>(null)
+  const [selectedBooking, setSelectedBooking] = useState<{
+    courseId: string
+    packageSize: 2 | 4
+  } | null>(null)
+  const isBootCampBookingMode =
+    bookingMode === 'bootcamp' && activeCategory === 'BOOT_CAMP'
 
   const scrollSchedule = (direction: -1 | 1) => {
     const el = scrollerRef.current
@@ -333,11 +358,40 @@ export function WeeklyScheduleSection({
       .filter((option) => option.count > 0)
   }, [upcomingCourses])
 
-  const displayCourses = useMemo(() => {
-    return upcomingCourses
-      .filter((c) => !activeVenueId || c.venueId === activeVenueId)
-      .slice(0, SCHEDULE_DISPLAY_LIMIT)
+  const venueFilteredCourses = useMemo(() => {
+    return upcomingCourses.filter((c) => !activeVenueId || c.venueId === activeVenueId)
   }, [activeVenueId, upcomingCourses])
+
+  const dateOptions = useMemo(() => {
+    const dates = new Map<string, { date: string; weekday: string; count: number }>()
+
+    for (const course of venueFilteredCourses) {
+      const existing = dates.get(course.date)
+      if (existing) {
+        existing.count += 1
+        continue
+      }
+
+      dates.set(course.date, {
+        date: course.date,
+        weekday: course.weekday || getWeekdayLabel(course.date),
+        count: 1,
+      })
+    }
+
+    return Array.from(dates.values()).sort((a, b) =>
+      a.date < b.date ? -1 : a.date > b.date ? 1 : 0,
+    )
+  }, [venueFilteredCourses])
+
+  const displayCourses = useMemo(() => {
+    const dateFilteredCourses =
+      isBootCampBookingMode && activeDateIso
+        ? venueFilteredCourses.filter((course) => course.date === activeDateIso)
+        : venueFilteredCourses
+
+    return dateFilteredCourses.slice(0, SCHEDULE_DISPLAY_LIMIT)
+  }, [activeDateIso, isBootCampBookingMode, venueFilteredCourses])
 
   const availabilitySessionIds = useMemo(() => {
     return displayCourses.flatMap((course) => {
@@ -387,6 +441,30 @@ export function WeeklyScheduleSection({
   }, [activeVenueId, venueOptions])
 
   useEffect(() => {
+    if (!isBootCampBookingMode) {
+      if (activeDateIso) setActiveDateIso(null)
+      return
+    }
+
+    if (dateOptions.length === 0) {
+      if (activeDateIso) setActiveDateIso(null)
+      return
+    }
+
+    const stillAvailable = dateOptions.some(
+      (option) => option.date === activeDateIso,
+    )
+
+    if (!activeDateIso || !stillAvailable) {
+      setActiveDateIso(dateOptions[0].date)
+    }
+  }, [activeDateIso, dateOptions, isBootCampBookingMode])
+
+  useEffect(() => {
+    setSelectedBooking(null)
+  }, [activeCategory, activeBootCampRoute, activeVenueId, activeDateIso])
+
+  useEffect(() => {
     if (!activeBootCampRoute) return
     const stillAvailable = routeOptions.some(
       (option) => option.route === activeBootCampRoute,
@@ -397,11 +475,13 @@ export function WeeklyScheduleSection({
   const meta = categoryMeta[activeCategory]
   const planSummary = planSummaryByCategory[activeCategory]
   const purchaseSteps =
-    activeCategory === 'BOOT_CAMP'
+    isBootCampBookingMode
+      ? ['1 選路徑', '2 選場館日期', '3 確認堂數']
+      : activeCategory === 'BOOT_CAMP'
       ? ['1 選路徑', '2 選梯次', '3 保留位置']
       : ['1 選場館', '2 選日期', '3 保留位置']
   const earliest = displayCourses[0]
-  const earliestLabel = earliest
+  const earliestLabel = earliest && !isBootCampBookingMode
     ? `最早可購買 ${formatShortDate(earliest.date)} 週${earliest.weekday} ${earliest.startTime}`
     : null
 
@@ -410,6 +490,7 @@ export function WeeklyScheduleSection({
       <SectionHeading
         title={title}
         subtitle={subtitle}
+        align={isBootCampBookingMode ? 'left' : 'center'}
         className={embedded ? 'mb-5 md:mb-7' : ''}
       />
 
@@ -442,7 +523,11 @@ export function WeeklyScheduleSection({
         </div>
       )}
 
-      <p className="text-center text-sm md:text-base text-mist/75 max-w-2xl mx-auto mb-2 md:mb-3 leading-snug">
+      <p
+        className={`text-sm md:text-base text-mist/75 max-w-2xl mb-2 md:mb-3 leading-snug ${
+          isBootCampBookingMode ? 'text-left' : 'text-center mx-auto'
+        }`}
+      >
         {meta.lead}
       </p>
 
@@ -475,12 +560,20 @@ export function WeeklyScheduleSection({
               </p>
             </div>
 
-            <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-4">
+            <div
+              className={`mt-3 gap-2 ${
+                isBootCampBookingMode
+                  ? '-mx-1 flex snap-x overflow-x-auto px-1 pb-1'
+                  : 'grid grid-cols-1 md:grid-cols-4'
+              }`}
+            >
               <button
                 type="button"
                 aria-pressed={activeVenueId === null}
                 onClick={() => setActiveVenueId(null)}
                 className={`rounded-xl border px-3.5 py-3 text-left transition-colors ${
+                  isBootCampBookingMode ? 'min-w-[8.5rem] snap-start' : ''
+                } ${
                   activeVenueId === null
                     ? 'border-neon/50 bg-neon/15'
                     : 'border-pearl/10 bg-black/25 hover:border-pearl/25'
@@ -501,6 +594,8 @@ export function WeeklyScheduleSection({
                   aria-pressed={activeVenueId === venue.id}
                   onClick={() => setActiveVenueId(venue.id)}
                   className={`rounded-xl border px-3.5 py-3 text-left transition-colors ${
+                    isBootCampBookingMode ? 'min-w-[9.5rem] snap-start' : ''
+                  } ${
                     activeVenueId === venue.id
                       ? 'border-neon/50 bg-neon/15'
                       : 'border-pearl/10 bg-black/25 hover:border-pearl/25'
@@ -514,6 +609,47 @@ export function WeeklyScheduleSection({
                   </p>
                 </button>
               ))}
+            </div>
+          </div>
+        )}
+
+        {isBootCampBookingMode && dateOptions.length > 0 && (
+          <div className="mb-5 rounded-2xl border border-pearl/10 bg-black/25 p-4 md:p-5">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs md:text-sm font-heading tracking-[0.22em] text-neon/80 uppercase">
+                2 選第一堂日期
+              </p>
+              <p className="text-xs text-mist/55">
+                會自動帶入後續週次
+              </p>
+            </div>
+
+            <div className="-mx-1 mt-3 flex snap-x gap-2 overflow-x-auto px-1 pb-1">
+              {dateOptions.map((option) => {
+                const active = option.date === activeDateIso
+                const relativeLabel = getRelativeDayLabel(option.date, todayIso)
+
+                return (
+                  <button
+                    key={option.date}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => setActiveDateIso(option.date)}
+                    className={`min-w-[5.75rem] snap-start rounded-xl border px-3 py-3 text-left transition-colors ${
+                      active
+                        ? 'border-neon/50 bg-neon/15'
+                        : 'border-pearl/10 bg-black/25 hover:border-pearl/25'
+                    }`}
+                  >
+                    <p className="font-heading text-base font-black text-pearl tabular-nums">
+                      {formatShortDate(option.date)}
+                    </p>
+                    <p className="mt-1 text-xs text-mist/70">
+                      {relativeLabel ?? `週${option.weekday}`} · {option.count} 場
+                    </p>
+                  </button>
+                )
+              })}
             </div>
           </div>
         )}
@@ -636,6 +772,198 @@ export function WeeklyScheduleSection({
                   packageSize: 4,
                   seriesDates: bootCampSeries4.map((session) => session.date),
                 })
+
+                if (isBootCampBookingMode) {
+                  const selectedPackageSize =
+                    selectedBooking?.courseId === c.id
+                      ? selectedBooking.packageSize
+                      : null
+                  const selectedSeries =
+                    selectedPackageSize === 2 ? bootCampSeries2 : bootCampSeries4
+                  const selectedPackageAvailability =
+                    selectedPackageSize === 2
+                      ? bootCamp2Availability
+                      : bootCamp4Availability
+                  const selectedBookingUrl =
+                    selectedPackageSize === 2 ? bookingUrl2 : bookingUrl4
+
+                  return (
+                    <motion.article
+                      key={c.id}
+                      aria-label={`${sessionTitle}，${formatShortDate(c.date)} 週${c.weekday} ${c.startTime}–${c.endTime}，${c.venueName}`}
+                      data-schedule-card
+                      initial={{ opacity: 0, y: 16 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ duration: 0.4, delay: i * 0.04 }}
+                      className="group flex shrink-0 basis-[88vw] snap-start flex-col gap-4 rounded-2xl border border-pearl/15 bg-black/40 p-5 transition-colors hover:border-pearl/30 hover:bg-black/45 sm:basis-[24rem] md:basis-[25rem] md:p-6"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="font-heading text-xs uppercase tracking-[0.22em] text-neon/75">
+                            第一堂
+                          </p>
+                          <p className="mt-1 font-heading text-3xl font-black text-pearl tabular-nums">
+                            {c.startTime}
+                          </p>
+                          <p className="text-sm text-mist/72 tabular-nums">
+                            {formatShortDate(c.date)} 週{c.weekday} · {c.startTime}–{c.endTime}
+                          </p>
+                        </div>
+                        <span className={`shrink-0 rounded-md border px-2 py-1 text-xs font-heading tracking-wide ${meta.badgeClass}`}>
+                          {venueShortLookup[c.venueId] ?? c.venueName}
+                        </span>
+                      </div>
+
+                      <div className="rounded-xl border border-pearl/10 bg-black/25 p-4">
+                        <div className="flex flex-wrap items-center gap-2">
+                          {routeContent && (
+                            <span className="rounded-full border border-neon/20 bg-neon/10 px-2.5 py-1 text-[11px] font-heading tracking-wide text-neon/90">
+                              {routeContent.shortLabel}
+                            </span>
+                          )}
+                          <span
+                            className={`rounded-full border px-2.5 py-1 text-[11px] font-heading tracking-wide ${remainingBadgeClass}`}
+                          >
+                            {getRemainingLabel(displayAvailability.remaining)}
+                          </span>
+                          <span className="rounded-full border border-pearl/10 bg-pearl/5 px-2.5 py-1 text-[11px] font-heading tracking-wide text-mist/70">
+                            每堂 6 席
+                          </span>
+                        </div>
+
+                        <h3 className="mt-3 font-heading text-xl font-black leading-tight text-pearl">
+                          {c.name}
+                        </h3>
+                        <p className="mt-1 text-sm text-mist/58">
+                          {venueLandmarks[c.venueId] ?? c.venueName}
+                        </p>
+
+                        <div className="mt-4 rounded-xl border border-pearl/10 bg-black/25 p-3">
+                          <p className="text-[10px] font-heading uppercase tracking-[0.22em] text-mist/55">
+                            當堂教練
+                          </p>
+                          <p className="mt-1 font-heading text-lg font-black text-pearl">
+                            {c.coach}
+                          </p>
+                          <p className="mt-1 text-xs leading-relaxed text-mist/62">
+                            你保留的是這一梯的位置，教練以實際排定場次為準。
+                          </p>
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="mb-2 flex items-center justify-between gap-2">
+                          <p className="text-xs font-heading uppercase tracking-[0.22em] text-neon/75">
+                            選擇保留堂數
+                          </p>
+                          <p className="text-xs text-mist/55">
+                            先選堂數再確認日期
+                          </p>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2">
+                          {([2, 4] as const).map((packageSize) => {
+                            const packageMeta = bootCampPackageMeta[packageSize]
+                            const availability =
+                              packageSize === 2
+                                ? bootCamp2Availability
+                                : bootCamp4Availability
+                            const active = selectedPackageSize === packageSize
+                            const soldOut = availability.remaining <= 0
+
+                            return (
+                              <button
+                                key={packageSize}
+                                type="button"
+                                disabled={soldOut}
+                                onClick={() =>
+                                  setSelectedBooking({
+                                    courseId: c.id,
+                                    packageSize,
+                                  })
+                                }
+                                className={`rounded-xl border p-3 text-left transition-colors ${
+                                  active
+                                    ? 'border-neon/55 bg-neon/15'
+                                    : 'border-pearl/10 bg-black/25 hover:border-pearl/25'
+                                } ${
+                                  soldOut ? 'cursor-not-allowed opacity-45' : ''
+                                }`}
+                              >
+                                <p className="font-heading text-lg font-black text-pearl">
+                                  {packageMeta.label}
+                                </p>
+                                <p className="mt-1 font-heading text-sm font-bold text-neon">
+                                  {packageMeta.price}
+                                </p>
+                                <p className="mt-1 text-xs leading-snug text-mist/62">
+                                  {soldOut
+                                    ? '已售完'
+                                    : `可保留 ${availability.remaining} 席`}
+                                </p>
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
+
+                      {selectedPackageSize ? (
+                        <div className="rounded-2xl border border-neon/20 bg-neon/10 p-4">
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="text-xs font-heading uppercase tracking-[0.22em] text-neon/75">
+                                確認保留日期
+                              </p>
+                              <p className="mt-1 font-heading text-lg font-black text-pearl">
+                                {bootCampPackageMeta[selectedPackageSize].label} · 同館同時段
+                              </p>
+                            </div>
+                            <p className="font-heading text-base font-black text-neon">
+                              {bootCampPackageMeta[selectedPackageSize].price}
+                            </p>
+                          </div>
+
+                          <div className="mt-3 space-y-1.5">
+                            {selectedSeries.map((session, index) => (
+                              <div
+                                key={session.id}
+                                className="flex items-center justify-between gap-3 rounded-lg bg-black/25 px-3 py-2 text-sm"
+                              >
+                                <span className="font-heading text-mist/55">
+                                  第 {index + 1} 堂
+                                </span>
+                                <span className="font-heading text-pearl tabular-nums">
+                                  {formatShortDate(session.date)} 週{session.weekday} {session.startTime}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+
+                          {selectedPackageAvailability.remaining > 0 ? (
+                            <Button
+                              href={selectedBookingUrl ?? undefined}
+                              variant="primary"
+                              className="mt-4 w-full"
+                              data-cta={`schedule-${c.id}-bootcamp-${selectedPackageSize}`}
+                            >
+                              購買這個位置 · 剩 {selectedPackageAvailability.remaining} 席
+                            </Button>
+                          ) : (
+                            <DisabledCta className="mt-4">
+                              這組日期已售完
+                            </DisabledCta>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="rounded-xl border border-pearl/10 bg-black/20 px-4 py-3 text-sm leading-relaxed text-mist/60">
+                          點選兩堂或四堂後，會展開實際保留的後續日期。
+                        </p>
+                      )}
+                    </motion.article>
+                  )
+                }
+
                 return (
                   <motion.article
                     key={c.id}
