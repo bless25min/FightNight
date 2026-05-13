@@ -1,42 +1,97 @@
 import { motion } from 'framer-motion'
+import { useMemo, useState } from 'react'
+import { venues } from '../../data/landingContent'
 import {
   weeklyCourses,
   weeklyScheduleSectionContent,
-} from '../../data/landingContent'
+} from '../../data/weeklySchedule'
 import type { CourseCategory, WeeklyCourse } from '../../types'
 import { SectionHeading } from '../ui/SectionHeading'
 import { SectionWrapper } from '../ui/SectionWrapper'
 
+const CATEGORY_ORDER: CourseCategory[] = ['FIGHT_NIGHT', 'BOOT_CAMP']
+
 const categoryMeta: Record<
   CourseCategory,
-  { label: string; badgeClass: string; lead: string }
+  {
+    label: string
+    tabActiveClass: string
+    badgeClass: string
+    lead: string
+  }
 > = {
   FIGHT_NIGHT: {
     label: 'FIGHT NIGHT',
+    tabActiveClass: 'bg-blaze text-abyss border-blaze',
     badgeClass: 'border-blaze/40 bg-blaze/15 text-blaze',
-    lead: '節奏與體能驅動。跟著音樂與教練吶喊進入狀態，零基礎也跟得上。',
+    lead: '節奏與體能驅動。第一次進場、想跟著音樂與教練吶喊進入狀態的人，從這裡開始。',
   },
   BOOT_CAMP: {
     label: 'BOOT CAMP',
+    tabActiveClass: 'bg-neon text-abyss border-neon',
     badgeClass: 'border-neon/40 bg-neon/15 text-neon',
-    lead: '技術與格鬥邏輯。把刺激轉成身體反射，讓壓力來的時候你站得住。',
+    lead: '技術與格鬥邏輯。想把刺激變成可以記住的身體反射、進入完整系統訓練的人。',
   },
 }
 
-function sortByDateTime(a: WeeklyCourse, b: WeeklyCourse) {
-  if (a.date !== b.date) return a.date < b.date ? -1 : 1
-  return a.startTime < b.startTime ? -1 : 1
+function venueShortName(fullName: string) {
+  const idx = fullName.indexOf('—')
+  return idx >= 0 ? fullName.slice(idx + 1).trim() : fullName
 }
 
-const CATEGORY_ORDER: CourseCategory[] = ['FIGHT_NIGHT', 'BOOT_CAMP']
+function sortByVenueThenName(a: WeeklyCourse, b: WeeklyCourse) {
+  if (a.venueId !== b.venueId) return a.venueId < b.venueId ? -1 : 1
+  return a.name < b.name ? -1 : a.name > b.name ? 1 : 0
+}
+
+function sortByTime(a: WeeklyCourse, b: WeeklyCourse) {
+  if (a.startTime !== b.startTime) return a.startTime < b.startTime ? -1 : 1
+  return sortByVenueThenName(a, b)
+}
+
+type DateGroup = {
+  date: string
+  weekday: string
+  items: WeeklyCourse[]
+}
+
+function groupByDate(courses: WeeklyCourse[]): DateGroup[] {
+  const map = new Map<string, DateGroup>()
+  for (const c of courses) {
+    if (!map.has(c.date)) {
+      map.set(c.date, { date: c.date, weekday: c.weekday, items: [] })
+    }
+    map.get(c.date)!.items.push(c)
+  }
+  const groups = Array.from(map.values())
+  groups.sort((a, b) => (a.date < b.date ? -1 : 1))
+  for (const g of groups) g.items.sort(sortByTime)
+  return groups
+}
+
+function formatShortDate(iso: string) {
+  const parts = iso.split('-')
+  if (parts.length !== 3) return iso
+  return `${Number(parts[1])}/${Number(parts[2])}`
+}
+
+const venueShortLookup = (() => {
+  const map: Record<string, string> = {}
+  for (const v of venues) map[v.id] = venueShortName(v.name)
+  return map
+})()
 
 export function WeeklyScheduleSection() {
-  const groups = CATEGORY_ORDER.map((category) => ({
-    category,
-    items: weeklyCourses
-      .filter((c) => c.category === category)
-      .sort(sortByDateTime),
-  })).filter((g) => g.items.length > 0)
+  const [activeCategory, setActiveCategory] =
+    useState<CourseCategory>('FIGHT_NIGHT')
+
+  const activeCourses = useMemo(
+    () => weeklyCourses.filter((c) => c.category === activeCategory),
+    [activeCategory],
+  )
+  const dateGroups = useMemo(() => groupByDate(activeCourses), [activeCourses])
+
+  const meta = categoryMeta[activeCategory]
 
   return (
     <SectionWrapper id="weekly-schedule">
@@ -45,66 +100,96 @@ export function WeeklyScheduleSection() {
         subtitle={weeklyScheduleSectionContent.subtitle}
       />
 
-      <div className="space-y-10 md:space-y-14 max-w-5xl mx-auto">
-        {groups.map(({ category, items }) => {
-          const meta = categoryMeta[category]
+      {/* Category tabs */}
+      <div
+        role="tablist"
+        aria-label="選擇課程方向"
+        className="flex flex-wrap justify-center gap-2 md:gap-3 mb-4 md:mb-6"
+      >
+        {CATEGORY_ORDER.map((cat) => {
+          const active = cat === activeCategory
+          const m = categoryMeta[cat]
           return (
-            <div key={category}>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 gap-2 mb-5 md:mb-7">
-                <span
-                  className={`self-start inline-flex items-center px-3 py-1 rounded-full text-xs md:text-sm font-heading font-semibold tracking-[0.2em] border ${meta.badgeClass}`}
-                >
-                  {meta.label}
-                </span>
-                <p className="text-sm md:text-base text-mist/75 leading-snug">
-                  {meta.lead}
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-                {items.map((c, i) => (
-                  <motion.article
-                    key={c.id}
-                    initial={{ opacity: 0, y: 16 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.45, delay: i * 0.06 }}
-                    className="rounded-2xl border border-pearl/10 bg-black/30 p-5 md:p-6 flex flex-col gap-3"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <h3 className="text-base md:text-lg font-heading font-semibold text-pearl leading-snug">
-                          {c.name}
-                        </h3>
-                        <p className="text-xs md:text-sm text-mist/60 font-heading tracking-wide truncate">
-                          {c.nameEn}
-                        </p>
-                      </div>
-                      <span className="shrink-0 inline-flex items-center px-2 py-0.5 rounded-md text-xs md:text-sm font-heading text-pearl/80 border border-pearl/15 bg-pearl/5">
-                        週{c.weekday}
-                      </span>
-                    </div>
-
-                    <div className="space-y-0.5 text-sm text-mist">
-                      <p className="text-pearl/90 font-heading">
-                        {c.date}{' '}
-                        <span className="text-mist/60">
-                          · {c.startTime} – {c.endTime}
-                        </span>
-                      </p>
-                      <p className="text-xs md:text-sm text-mist/60">
-                        {c.venueName} · {c.coach}
-                      </p>
-                    </div>
-                  </motion.article>
-                ))}
-              </div>
-            </div>
+            <button
+              key={cat}
+              role="tab"
+              type="button"
+              aria-selected={active}
+              onClick={() => setActiveCategory(cat)}
+              className={`px-5 py-2.5 rounded-full text-sm md:text-base font-heading font-semibold tracking-[0.15em] transition-colors border ${
+                active
+                  ? m.tabActiveClass
+                  : 'bg-black/30 text-mist border-pearl/15 hover:border-pearl/35 hover:text-pearl'
+              }`}
+            >
+              {m.label}
+            </button>
           )
         })}
       </div>
 
-      <p className="text-center text-xs md:text-sm text-mist/50 max-w-2xl mx-auto mt-8 md:mt-12">
+      <p className="text-center text-sm md:text-base text-mist/75 max-w-2xl mx-auto mb-7 md:mb-10 leading-snug">
+        {meta.lead}
+      </p>
+
+      {/* Date groups */}
+      <div className="max-w-5xl mx-auto space-y-7 md:space-y-10">
+        {dateGroups.length === 0 ? (
+          <p className="text-center text-sm text-mist/60">
+            這個方向近期沒有開課，先用 LINE 加入會員，下一輪開放會優先通知你。
+          </p>
+        ) : (
+          dateGroups.map((g, gIdx) => (
+            <motion.div
+              key={`${activeCategory}-${g.date}`}
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.4, delay: gIdx * 0.04 }}
+            >
+              <div className="flex items-baseline gap-3 mb-3 md:mb-4 border-b border-pearl/10 pb-2">
+                <h3 className="text-lg md:text-xl font-heading font-bold text-pearl">
+                  週{g.weekday}
+                </h3>
+                <span className="text-sm md:text-base text-mist/60 font-heading tabular-nums">
+                  {formatShortDate(g.date)}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3">
+                {g.items.map((c) => (
+                  <article
+                    key={c.id}
+                    className="rounded-xl border border-pearl/10 bg-black/30 px-4 py-3 md:px-5 md:py-4 flex flex-col gap-1.5"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-sm md:text-base font-heading text-pearl tabular-nums">
+                        {c.startTime}–{c.endTime}
+                      </span>
+                      <span
+                        className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded-md text-[10px] md:text-xs font-heading font-medium tracking-wide border ${meta.badgeClass}`}
+                      >
+                        {venueShortLookup[c.venueId] ?? c.venueName}
+                      </span>
+                    </div>
+                    <p className="text-sm md:text-base text-pearl font-medium leading-snug">
+                      {c.name}
+                    </p>
+                    <p className="text-xs md:text-sm text-mist/55 font-heading tracking-wide">
+                      {c.nameEn}
+                    </p>
+                    <p className="text-xs md:text-sm text-mist/60">
+                      {c.coach}
+                    </p>
+                  </article>
+                ))}
+              </div>
+            </motion.div>
+          ))
+        )}
+      </div>
+
+      <p className="text-center text-xs md:text-sm text-mist/50 max-w-2xl mx-auto mt-10 md:mt-14">
         {weeklyScheduleSectionContent.footnote}
       </p>
     </SectionWrapper>

@@ -1,8 +1,8 @@
 import type { WeeklyCourse } from '../types'
 
 export const weeklyScheduleSectionContent = {
-  title: '近期實際開課',
-  subtitle: '選一個你會去的場館，看看接下來幾天可以直接走進場上的課。',
+  title: '近期可報名的場次',
+  subtitle: '選一個你想試的方向，看看接下來幾天哪些場次可以走進場。',
   footnote: '完整課表與名額狀態以 UFC GYM 線上隨時購官方公告為準。',
 }
 
