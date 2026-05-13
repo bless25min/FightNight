@@ -14,10 +14,12 @@ export function buildCourseBookingUrl(course: WeeklyCourse): string | null {
 }
 
 export const SCHEDULE_DISPLAY_LIMIT = 9
+export const ONLINE_SALES_SEAT_LIMIT = 6
+export const ONLINE_BOOKING_START_OFFSET_DAYS = 8
 
 export const weeklyScheduleSectionContent = {
-  title: '下一個可上的場次',
-  subtitle: '依方向推薦近期可選場次。點下去先預留這一場。',
+  title: '目前可預訂的課程',
+  subtitle: '選一個你能到場的時間。每堂線上名額採小班上限，保留教練照顧品質。',
   footnote: '完整課表與名額狀態以 UFC GYM 線上隨時購官方公告為準。',
 }
 

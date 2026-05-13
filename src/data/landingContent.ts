@@ -307,13 +307,13 @@ export const bootCampFaqItems: FAQItem[] = [
     id: 'bootcamp-faq-1',
     question: 'Boot Camp 和 Fight Night 差在哪？',
     answer:
-      'Fight Night 是單次進場的拳擊節奏體驗，適合先確認自己喜不喜歡這種狀態。Boot Camp 則是四次系統旅程，會把拳擊、踢拳、防身概念與壓力適應整理成更完整的訓練。',
+      'Fight Night 是單次進場的拳擊節奏體驗，適合先確認自己喜不喜歡這種狀態。Boot Camp 則是選定一條技能路徑，連續兩週或四週固定跟課，讓動作真的累積成身體反應。',
   },
   {
     id: 'bootcamp-faq-2',
     question: '四堂課會不會只是重複上同一套？',
     answer:
-      '不會。Boot Camp 的價值不只是多來幾次，而是每一次都有不同重點：從進入狀態、身體適應、距離與防禦，到把壓力反應轉成更穩定的身體記憶。',
+      '會重複同一條路徑，但不是無意義重複。連續跟課的價值在於讓站姿、出拳、距離、防守與回復節奏一次比一次更穩，從「知道怎麼做」變成「身體做得出來」。',
   },
   {
     id: 'bootcamp-faq-3',
@@ -325,14 +325,14 @@ export const bootCampFaqItems: FAQItem[] = [
     id: 'bootcamp-faq-4',
     question: '四堂 Boot Camp 是連續四週嗎？缺席怎麼辦？',
     answer:
-      'Boot Camp 會依當月場次規劃安排，報名後專員會與您確認當月梯次、上課節奏、課程安排。',
+      'Boot Camp 原則上會以同一課程入口、同一時段連續兩週或四週安排。報名後專員會與您確認當月梯次、上課節奏與課程安排。',
   },
 ]
 
 export const offersPlanSectionContent = {
-  title: 'Boot Camp 方案',
-  subtitle: '從 Boot Camp 兩堂入門，到四堂完整旅程，登入加好友後查看完整內容。',
-  footnote: '完整內容、活動場次與名額狀態，以實際公告為準。',
+  title: '選擇 Boot Camp 路徑',
+  subtitle: '不是任選課程拼盤，而是選一個入口，連續兩週或四週固定跟課。',
+  footnote: '每堂線上小班預留 6 席，完整梯次與可預訂時段以實際公告為準。',
 }
 
 export const offersOutcomeSectionContent = {
@@ -346,10 +346,10 @@ export const offersOutcomeSectionContent = {
 
 // Plan ID → 對應的課表 category。沒列在這裡的 plan 不會出現「查看近期場次」連結
 export const planScheduleCategoryMap: Record<string, CourseCategory> = {
-  'offers-bootcamp-2': 'BOOT_CAMP',
-  'offers-bootcamp-2-gear': 'BOOT_CAMP',
-  'offers-bootcamp-4': 'BOOT_CAMP',
-  'offers-bootcamp-4-gear': 'BOOT_CAMP',
+  'offers-bootcamp-boxing-2': 'BOOT_CAMP',
+  'offers-bootcamp-muaythai-2': 'BOOT_CAMP',
+  'offers-bootcamp-boxing-4': 'BOOT_CAMP',
+  'offers-bootcamp-muaythai-4': 'BOOT_CAMP',
 }
 
 // 課表卡上「可用方案」摘要：每個 category 顯示入門價
@@ -363,87 +363,86 @@ export const planSummaryByCategory: Record<
     price: 'NT$980 / 堂',
   },
   BOOT_CAMP: {
-    label: 'Boot Camp 兩堂',
+    label: 'Boot Camp 路徑',
     price: 'NT$1,800 起',
-    hint: '或四堂 NT$3,800',
+    hint: '兩週/四週固定跟課',
   },
 }
 
 export const offersPlans: TicketPlan[] = [
   {
-    id: 'offers-bootcamp-2',
-    name: 'Boot Camp 兩堂｜入門套票',
-    subtitle: '兩堂試系統訓練',
-    teaserCopy: '兩堂讓身體開始記住一件事。',
+    id: 'offers-bootcamp-boxing-2',
+    name: '拳擊 Boot Camp｜兩週入門',
+    subtitle: '基礎拳擊入口',
+    teaserCopy: '連續兩週，把站姿、出拳與回防變成身體開始記得的反應。',
     description:
-      '兩堂 Boot Camp 課程（技術與格鬥邏輯）。適合先試結構化訓練，再決定要不要走完整四堂。',
+      '適合想從拳擊開始的人。選定基礎拳擊或拳擊技巧時段，連續兩週跟課，先建立出拳節奏、距離感與基本防守。',
     price: 'NT$1,800',
     features: [
-      '兩堂 Boot Camp 入場資格',
-      '可從泰拳、拳擊、踢拳、MMA、BJJ 中任選兩堂',
-      '從技術到格鬥邏輯，循序進場',
-      '想完整體驗請選四堂方案',
+      '拳擊路徑連續兩週',
+      '固定課程入口與固定上課節奏',
+      '練習站姿、直拳、組合拳與回防',
+      '每堂線上小班預留 6 席',
     ],
     checkoutUrl: siteConfig.lineUrl,
-    ctaLabel: '購買 Boot Camp 兩堂',
+    ctaLabel: '選擇拳擊兩週',
     ctaVariant: 'secondary',
   },
   {
-    id: 'offers-bootcamp-2-gear',
-    name: 'Boot Camp 兩堂 ＋ 專屬拳套',
-    subtitle: '兩堂 + 一副自己的拳套',
-    teaserCopy: '兩堂加上一副屬於你的拳套。',
+    id: 'offers-bootcamp-muaythai-2',
+    name: '泰拳 Boot Camp｜兩週入門',
+    subtitle: '基礎泰拳入口',
+    teaserCopy: '連續兩週，讓拳、膝、踢與身體節奏開始連在一起。',
     description:
-      '兩堂 Boot Camp，附品牌專屬拳套一副。讓第一次的投入留下一個帶得走的物件。',
-    price: 'NT$2,800',
-    badge: '附專屬拳套',
+      '適合想要更全身性釋放的人。選定基礎泰拳或泰拳技巧時段，連續兩週跟課，建立攻擊節奏、重心轉換與距離感。',
+    price: 'NT$1,800',
     features: [
-      '包含 Boot Camp 兩堂內容',
-      '附品牌專屬拳套一副，活動後帶走',
-      '從第一堂開始用自己的拳套，手感更穩定',
-      '比單純兩堂多 NT$1,000 = 一副拳套',
+      '泰拳路徑連續兩週',
+      '固定課程入口與固定上課節奏',
+      '練習拳、踢、膝與重心轉換',
+      '每堂線上小班預留 6 席',
     ],
     checkoutUrl: siteConfig.lineUrl,
-    ctaLabel: '購買 Boot Camp 兩堂 ＋ 拳套',
+    ctaLabel: '選擇泰拳兩週',
     ctaVariant: 'secondary',
   },
   {
-    id: 'offers-bootcamp-4',
-    name: 'Boot Camp 四堂｜完整旅程',
-    subtitle: '主推：走完完整系統',
-    teaserCopy: '看到刺激如何變成身體反射。',
+    id: 'offers-bootcamp-boxing-4',
+    name: '拳擊 Boot Camp｜四週養成',
+    subtitle: '主推：拳擊技能路徑',
+    teaserCopy: '四週固定跟課，讓拳擊不只是一晚刺激，而是能帶走的身體反應。',
     description:
-      '四堂 Boot Camp 系統訓練，循序累積技術、壓力適應、防身反應與自信。這是最完整體驗的版本。',
+      '適合想真正學到東西的人。四週沿著同一條拳擊路徑累積，從出拳、移動、回防到面對壓力時的穩定反應。',
     price: 'NT$3,800',
-    badge: '主推方案',
+    badge: '主推路徑',
     features: [
-      '四堂 Boot Camp 入場資格',
-      '可任意組合泰拳、拳擊、踢拳、MMA、BJJ',
-      '循序累積：從釋放、穩定到建立底氣',
-      '主推給想留下真正變化，不只新鮮感的人',
+      '拳擊路徑連續四週',
+      '同一入口逐週累積，不用每次重新開始',
+      '建立出拳、移動、防守與壓力下反應',
+      '每堂線上小班預留 6 席',
     ],
     highlight: true,
     checkoutUrl: siteConfig.lineUrl,
-    ctaLabel: '購買 Boot Camp 四堂',
+    ctaLabel: '選擇拳擊四週',
     ctaVariant: 'primary',
   },
   {
-    id: 'offers-bootcamp-4-gear',
-    name: 'Boot Camp 四堂 ＋ 專屬拳套',
-    subtitle: '完整四堂 + 一副自己的拳套',
-    teaserCopy: '四堂完整旅程，加上一副屬於你的拳套。',
+    id: 'offers-bootcamp-muaythai-4',
+    name: '泰拳 Boot Camp｜四週養成',
+    subtitle: '主推：全身節奏路徑',
+    teaserCopy: '四週固定跟課，把泰拳的節奏、力量與距離感真的練進身體。',
     description:
-      '四堂 Boot Camp 完整系統，附品牌專屬拳套。所有方案中最完整、最有長尾價值的版本。',
-    price: 'NT$4,800',
-    badge: '完整投入',
+      '適合想用全身進入狀態的人。四週沿著同一條泰拳路徑累積，讓拳、踢、膝、重心與攻防節奏逐漸連起來。',
+    price: 'NT$3,800',
+    badge: '全身路徑',
     features: [
-      '包含 Boot Camp 四堂全部內容',
-      '附品牌專屬拳套一副，活動後帶走',
-      '從第一堂開始用自己的拳套，建立完整身體記憶',
-      '所有方案中最完整，也最有長尾價值的版本',
+      '泰拳路徑連續四週',
+      '同一入口逐週累積，不用每次重新開始',
+      '建立拳、踢、膝、重心與距離反應',
+      '每堂線上小班預留 6 席',
     ],
     checkoutUrl: siteConfig.lineUrl,
-    ctaLabel: '購買 Boot Camp 四堂 ＋ 拳套',
+    ctaLabel: '選擇泰拳四週',
     ctaVariant: 'secondary',
   },
   {
@@ -523,7 +522,7 @@ export const faqItems: FAQItem[] = [
     id: 'faq-7',
     question: '場次日期和名額是真的嗎？',
     answer:
-      '每月場次與名額會依場館、教練與當月開放狀態調整。頁面上的名額提示是報名前判斷用，最終可報名狀態以當月確認與官方回覆為準。',
+      '頁面會顯示目前可預訂的課程。每堂課線上小班預留 6 席，用來維持教練照顧品質；最終可預訂狀態以當月確認與官方回覆為準。',
   },
   {
     id: 'faq-8',

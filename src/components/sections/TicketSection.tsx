@@ -95,7 +95,7 @@ export function TicketSection() {
                     categories={['FIGHT_NIGHT']}
                     showCategoryTabs={false}
                     showVenueFilter
-                    title="本週可報名 Fight Night"
+                    title="目前可預訂的 Fight Night"
                     subtitle="先選你方便到場的館別，再挑一堂可以進場的時間。"
                     embedded
                   />

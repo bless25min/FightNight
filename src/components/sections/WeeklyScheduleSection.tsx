@@ -6,6 +6,8 @@ import {
 } from '../../data/landingContent'
 import {
   buildCourseBookingUrl,
+  ONLINE_BOOKING_START_OFFSET_DAYS,
+  ONLINE_SALES_SEAT_LIMIT,
   SCHEDULE_DISPLAY_LIMIT,
   weeklyCourses,
   weeklyScheduleSectionContent,
@@ -50,6 +52,15 @@ function getTodayLocal(): string {
   return `${y}-${m}-${day}`
 }
 
+function addDays(iso: string, days: number): string {
+  const d = new Date(`${iso}T00:00:00`)
+  d.setDate(d.getDate() + days)
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
 function venueShortName(fullName: string) {
   const idx = fullName.indexOf('—')
   return idx >= 0 ? fullName.slice(idx + 1).trim() : fullName
@@ -58,6 +69,20 @@ function venueShortName(fullName: string) {
 function sortByVenueThenName(a: WeeklyCourse, b: WeeklyCourse) {
   if (a.venueId !== b.venueId) return a.venueId < b.venueId ? -1 : 1
   return a.name < b.name ? -1 : a.name > b.name ? 1 : 0
+}
+
+function isBootCampEntryCourse(course: WeeklyCourse) {
+  if (course.category !== 'BOOT_CAMP') return true
+  return (
+    course.name.includes('拳擊') ||
+    course.name.includes('泰拳')
+  )
+}
+
+function getBootCampRouteLabel(course: WeeklyCourse) {
+  if (course.name.includes('泰拳')) return '泰拳 Boot Camp'
+  if (course.name.includes('拳擊')) return '拳擊 Boot Camp'
+  return 'Boot Camp'
 }
 
 function formatShortDate(iso: string) {
@@ -139,17 +164,26 @@ export function WeeklyScheduleSection({
   }
 
   const todayIso = useMemo(() => getTodayLocal(), [])
+  const bookableFromIso = useMemo(
+    () => addDays(todayIso, ONLINE_BOOKING_START_OFFSET_DAYS),
+    [todayIso],
+  )
 
   const upcomingCourses = useMemo(() => {
     return weeklyCourses
-      .filter((c) => c.category === activeCategory && c.date >= todayIso)
+      .filter(
+        (c) =>
+          c.category === activeCategory &&
+          c.date >= bookableFromIso &&
+          isBootCampEntryCourse(c),
+      )
       .sort((a, b) => {
         if (a.date !== b.date) return a.date < b.date ? -1 : 1
         if (a.startTime !== b.startTime)
           return a.startTime < b.startTime ? -1 : 1
         return sortByVenueThenName(a, b)
       })
-  }, [activeCategory, todayIso])
+  }, [activeCategory, bookableFromIso])
 
   const venueOptions = useMemo(() => {
     return venues
@@ -182,10 +216,7 @@ export function WeeklyScheduleSection({
   const planSummary = planSummaryByCategory[activeCategory]
   const earliest = displayCourses[0]
   const earliestLabel = earliest
-    ? `最快 ${
-        getRelativeDayLabel(earliest.date, todayIso) ??
-        `${formatShortDate(earliest.date)} 週${earliest.weekday}`
-      } ${earliest.startTime} 可上`
+    ? `最早可預訂 ${formatShortDate(earliest.date)} 週${earliest.weekday} ${earliest.startTime}`
     : null
 
   const content = (
@@ -298,7 +329,7 @@ export function WeeklyScheduleSection({
           <>
             <div className="mb-4 flex items-center justify-between gap-3">
               <p className="text-xs md:text-sm font-heading tracking-[0.18em] text-mist/55 uppercase">
-                {displayCourses.length} 場可選
+                {displayCourses.length} 場目前可預訂
               </p>
               <div className="flex items-center gap-2">
                 <button
@@ -327,6 +358,10 @@ export function WeeklyScheduleSection({
               {displayCourses.map((c, i) => {
                 const bookingUrl = buildCourseBookingUrl(c)
                 const dayLabel = getRelativeDayLabel(c.date, todayIso)
+                const bootCampRouteLabel =
+                  activeCategory === 'BOOT_CAMP'
+                    ? getBootCampRouteLabel(c)
+                    : null
                 return (
                   <motion.a
                     key={c.id}
@@ -355,6 +390,14 @@ export function WeeklyScheduleSection({
                     <p className="text-sm md:text-base text-mist/70 font-heading tabular-nums">
                       {formatShortDate(c.date)} · {c.startTime}–{c.endTime}
                     </p>
+                    <p className="inline-flex w-fit rounded-full border border-pearl/10 bg-pearl/5 px-2.5 py-1 text-[11px] font-heading tracking-wide text-mist/75">
+                      線上小班預留 {ONLINE_SALES_SEAT_LIMIT} 席
+                    </p>
+                    {bootCampRouteLabel && (
+                      <p className="inline-flex w-fit rounded-full border border-neon/20 bg-neon/10 px-2.5 py-1 text-[11px] font-heading tracking-wide text-neon/90">
+                        {bootCampRouteLabel} · 連續 2/4 週
+                      </p>
+                    )}
 
                     <div className="border-t border-pearl/10 pt-3">
                       <p className="text-base md:text-lg text-pearl font-semibold leading-snug">

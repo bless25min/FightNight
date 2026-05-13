@@ -22,7 +22,6 @@ import {
   offersPlanSectionContent,
   planScheduleCategoryMap,
 } from '../data/landingContent'
-import { SCHEDULE_DISPLAY_LIMIT } from '../data/weeklySchedule'
 import type { LiffGateState } from '../hooks/useLiffGate'
 import { useLiffGate } from '../hooks/useLiffGate'
 import type { CourseCategory } from '../types'
@@ -385,8 +384,8 @@ function OffersPlanJumpSection({
 }
 
 const scheduleCountByCategory: Record<CourseCategory, number> = {
-  FIGHT_NIGHT: SCHEDULE_DISPLAY_LIMIT,
-  BOOT_CAMP: SCHEDULE_DISPLAY_LIMIT,
+  FIGHT_NIGHT: 0,
+  BOOT_CAMP: 0,
 }
 
 export function OffersPage() {
@@ -477,7 +476,7 @@ export function OffersPage() {
           liffUrl={liffUrl}
         />
         <WeeklyScheduleSection
-          title="本週可報名場次"
+          title="目前可預訂的課程"
           subtitle="先看時間、場館與課程方向，再決定從單次或完整系統進場。"
           activeCategory={scheduleCategory}
           categories={['FIGHT_NIGHT', 'BOOT_CAMP']}

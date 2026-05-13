@@ -92,7 +92,7 @@ export function PlanCard({
           data-cta={`plan-${plan.id}-schedule`}
           className="mt-3 w-full text-center text-xs md:text-sm font-heading tracking-wide text-mist/75 hover:text-pearl underline-offset-4 hover:underline transition-colors"
         >
-          查看近期
+          查看目前可預訂
           {scheduleCount !== undefined && scheduleCount > 0
             ? ` ${scheduleCount} 場 `
             : ' '}
