@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import heroPoster from '../../assets/landing/hero-poster.png'
 import { heroContent } from '../../data/landingContent'
+import { ZoomableImage } from '../ui/ZoomableImage'
 
 export function HeroSection() {
   return (
@@ -27,7 +28,7 @@ export function HeroSection() {
           transition={{ duration: 0.8, delay: 0.4 }}
           className="mx-auto overflow-hidden rounded-2xl md:rounded-[2rem] border border-pearl/10 bg-black/40 shadow-[0_30px_80px_rgba(0,0,0,0.45)]"
         >
-          <img
+          <ZoomableImage
             src={heroPoster}
             alt={`${heroContent.title} ${heroContent.subtitle}`}
             className="w-full h-auto"

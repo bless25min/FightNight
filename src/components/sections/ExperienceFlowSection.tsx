@@ -7,6 +7,7 @@ import flowStep4Poster from '../../assets/landing/flow-step-4.png'
 import flowStep5Poster from '../../assets/landing/flow-step-5.png'
 import { flowSteps } from '../../data/landingContent'
 import { SectionWrapper } from '../ui/SectionWrapper'
+import { ZoomableImage } from '../ui/ZoomableImage'
 
 const flowOverviewContent = {
   title: '安全並且精心編排的失控',
@@ -32,7 +33,7 @@ export function ExperienceFlowSection() {
           transition={{ duration: 0.7 }}
           className="overflow-hidden rounded-2xl md:rounded-[2rem] border border-pearl/10 bg-black/40 shadow-[0_30px_80px_rgba(0,0,0,0.35)]"
         >
-          <img
+          <ZoomableImage
             src={flowOverviewPoster}
             alt={`${flowOverviewContent.title} ${flowOverviewContent.subtitle}`}
             className="w-full h-auto"
@@ -53,7 +54,7 @@ export function ExperienceFlowSection() {
             transition={{ duration: 0.6, delay: i * 0.08 }}
             className="overflow-hidden rounded-2xl md:rounded-[2rem] border border-pearl/10 bg-black/40 shadow-[0_24px_60px_rgba(0,0,0,0.3)]"
           >
-            <img
+            <ZoomableImage
               src={flowImageMap[step.id]}
               alt={`${step.stage}. ${step.title} ${step.description}`}
               className="w-full h-auto"

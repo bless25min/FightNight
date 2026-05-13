@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import formulaPoster from '../../assets/landing/formula-poster.png'
 import { SectionWrapper } from '../ui/SectionWrapper'
+import { ZoomableImage } from '../ui/ZoomableImage'
 
 const formulaContent = {
   title: '為什麼你會被帶進去？',
@@ -21,7 +22,7 @@ export function FormulaSection() {
           transition={{ duration: 0.7 }}
           className="overflow-hidden rounded-2xl md:rounded-[2rem] border border-pearl/10 bg-black/40 shadow-[0_30px_80px_rgba(0,0,0,0.35)]"
         >
-          <img src={formulaPoster} alt={formulaContent.title} className="w-full h-auto" loading="lazy" />
+          <ZoomableImage src={formulaPoster} alt={formulaContent.title} className="w-full h-auto" loading="lazy" />
           <figcaption className="sr-only">
             <p>{formulaContent.title}</p>
             <ul>

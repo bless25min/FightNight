@@ -6,6 +6,7 @@ import grindTrainingCard from '../../assets/landing/grind-training-card.png'
 import { frameworkCards, oldFrameworkContent } from '../../data/landingContent'
 import { SectionWrapper } from '../ui/SectionWrapper'
 import { SectionHeading } from '../ui/SectionHeading'
+import { ZoomableImage } from '../ui/ZoomableImage'
 
 const frameworkImageMap: Record<string, string> = {
   'fw-1': electronicOpiumCard,
@@ -32,7 +33,7 @@ export function OldFrameworkBreakSection() {
             transition={{ duration: 0.5, delay: i * 0.1 }}
             className="overflow-hidden rounded-2xl md:rounded-[1.75rem] border border-pearl/10 bg-black/40 shadow-[0_20px_60px_rgba(0,0,0,0.3)] transition-transform duration-300 hover:-translate-y-1"
           >
-            <img
+            <ZoomableImage
               src={frameworkImageMap[card.id]}
               alt={`${card.label} ${card.description}`}
               className="w-full h-auto"

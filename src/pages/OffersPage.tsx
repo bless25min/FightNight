@@ -42,6 +42,7 @@ import { Button } from '../components/ui/Button'
 import { SectionHeading } from '../components/ui/SectionHeading'
 import { SectionWrapper } from '../components/ui/SectionWrapper'
 import { StickyActionBar } from '../components/ui/StickyActionBar'
+import { ZoomableImage } from '../components/ui/ZoomableImage'
 
 const curriculumPosterMap: Record<string, string> = {
   'module-1': bootcampModule1Poster,
@@ -75,7 +76,7 @@ function PosterFigure({
       transition={{ duration: 0.7, delay }}
       className={`overflow-hidden rounded-2xl md:rounded-[2rem] border border-pearl/10 bg-black/40 shadow-[0_30px_80px_rgba(0,0,0,0.35)] ${className}`}
     >
-      <img src={src} alt={alt} className="w-full h-auto" loading={loading} />
+      <ZoomableImage src={src} alt={alt} className="w-full h-auto" loading={loading} />
       <figcaption className="sr-only">{children}</figcaption>
     </motion.figure>
   )
@@ -122,7 +123,7 @@ function OffersHero({ gateState }: { gateState: LiffGateState }) {
           transition={{ duration: 0.8, delay: 0.2 }}
           className="mx-auto overflow-hidden rounded-2xl md:rounded-[2rem] border border-pearl/10 bg-black/40 shadow-[0_20px_60px_rgba(0,0,0,0.4)] md:shadow-[0_30px_80px_rgba(0,0,0,0.45)]"
         >
-          <img
+          <ZoomableImage
             src={offersHeroPoster}
             alt={`${offersHeroContent.title} ${offersHeroContent.subtitle}`}
             className="w-full h-auto"
@@ -491,10 +492,12 @@ export function OffersPage() {
       <Footer onVenueAction={(url) => void openWhenUnlocked(url)} />
       {gateState.status === 'unlocked' && (
         <StickyActionBar
-          eyebrow="Boot Camp"
-          title="兩堂 NT$1,800 起"
-          detail="四堂完整旅程 NT$3,800"
-          actionLabel="看方案"
+          eyebrow="方案入口"
+          title="Fight Night 或 Boot Camp"
+          detail="先試一次，或直接走完整系統"
+          secondaryActionLabel="Fight Night"
+          onSecondaryAction={scrollToFightNightPlan}
+          actionLabel="Boot Camp"
           onAction={scrollToBootCampPlans}
         />
       )}

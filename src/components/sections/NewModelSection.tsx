@@ -2,6 +2,7 @@ import { motion } from 'framer-motion'
 import trainDifferentPoster from '../../assets/landing/train-different-poster.png'
 import { newModelContent } from '../../data/landingContent'
 import { SectionWrapper } from '../ui/SectionWrapper'
+import { ZoomableImage } from '../ui/ZoomableImage'
 
 export function NewModelSection() {
   return (
@@ -17,7 +18,7 @@ export function NewModelSection() {
           transition={{ duration: 0.7 }}
           className="overflow-hidden rounded-2xl md:rounded-[2rem] border border-pearl/10 bg-black/40 shadow-[0_30px_80px_rgba(0,0,0,0.35)]"
         >
-          <img
+          <ZoomableImage
             src={trainDifferentPoster}
             alt={`${newModelContent.title} ${newModelContent.description}`}
             className="w-full h-auto"
