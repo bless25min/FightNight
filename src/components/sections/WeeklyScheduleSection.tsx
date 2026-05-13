@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
+  bootCampRouteContent,
   planSummaryByCategory,
   venues,
 } from '../../data/landingContent'
@@ -26,22 +27,6 @@ const BOOT_CAMP_ROUTE_ORDER: Array<BootCampRoute | null> = [
   'MUAY_THAI',
 ]
 
-const bootCampRouteMeta: Record<
-  BootCampRoute,
-  { label: string; shortLabel: string; hint: string }
-> = {
-  BOXING: {
-    label: '拳擊 Boot Camp',
-    shortLabel: '拳擊',
-    hint: '站姿、出拳、回防',
-  },
-  MUAY_THAI: {
-    label: '泰拳 Boot Camp',
-    shortLabel: '泰拳',
-    hint: '拳、踢、膝、重心',
-  },
-}
-
 const categoryMeta: Record<
   CourseCategory,
   {
@@ -55,13 +40,13 @@ const categoryMeta: Record<
     label: 'FIGHT NIGHT',
     tabActiveClass: 'bg-blaze text-abyss border-blaze',
     badgeClass: 'border-blaze/40 bg-blaze/15 text-blaze',
-    lead: '選定日期與場館，購買該場 Fight Night Pass。',
+    lead: '選定日期與場館，保留今晚進入狀態的位置。',
   },
   BOOT_CAMP: {
     label: 'BOOT CAMP',
     tabActiveClass: 'bg-neon text-abyss border-neon',
     badgeClass: 'border-neon/40 bg-neon/15 text-neon',
-    lead: '先選拳擊或泰拳路徑，再選一堂作為兩堂或四堂的開始。',
+    lead: '先選路徑，再選第一堂。後續兩堂或四堂會沿著同館同時段往下走。',
   },
 }
 
@@ -145,7 +130,7 @@ function isBootCampEntryCourse(course: WeeklyCourse) {
 
 function getBootCampRouteLabel(course: WeeklyCourse) {
   const route = getBootCampRoute(course)
-  if (route) return bootCampRouteMeta[route].label
+  if (route) return bootCampRouteContent[route].label
   return 'Boot Camp'
 }
 
@@ -411,6 +396,10 @@ export function WeeklyScheduleSection({
 
   const meta = categoryMeta[activeCategory]
   const planSummary = planSummaryByCategory[activeCategory]
+  const purchaseSteps =
+    activeCategory === 'BOOT_CAMP'
+      ? ['1 選路徑', '2 選梯次', '3 保留位置']
+      : ['1 選場館', '2 選日期', '3 保留位置']
   const earliest = displayCourses[0]
   const earliestLabel = earliest
     ? `最早可購買 ${formatShortDate(earliest.date)} 週${earliest.weekday} ${earliest.startTime}`
@@ -464,7 +453,7 @@ export function WeeklyScheduleSection({
       )}
 
       <div className="mx-auto mb-6 grid max-w-3xl grid-cols-3 gap-2 text-center md:mb-8">
-        {['1 選場館', '2 選日期', '3 購買名額'].map((step) => (
+        {purchaseSteps.map((step) => (
           <div
             key={step}
             className="rounded-xl border border-pearl/10 bg-black/25 px-2.5 py-2 text-[11px] font-heading font-semibold tracking-wide text-mist/80 md:text-sm"
@@ -535,18 +524,18 @@ export function WeeklyScheduleSection({
             <div className="mb-5 md:mb-6 rounded-2xl border border-neon/15 bg-neon/5 p-4 md:p-5">
               <div className="flex items-center justify-between gap-3">
                 <p className="text-xs md:text-sm font-heading tracking-[0.22em] text-neon/80 uppercase">
-                  2 選技能路徑
+                  2 選風格路徑
                 </p>
                 <p className="text-xs text-mist/55">
-                  先決定這次要從哪個入口開始
+                  核心都是 Fighter 壓力應對
                 </p>
               </div>
 
               <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-3">
                 {routeOptions.map(({ route, count }) => {
                   const active = route === activeBootCampRoute
-                  const label = route ? bootCampRouteMeta[route].label : '全部路徑'
-                  const hint = route ? bootCampRouteMeta[route].hint : '拳擊與泰拳都看'
+                  const label = route ? bootCampRouteContent[route].label : '全部路徑'
+                  const hint = route ? bootCampRouteContent[route].hint : '拳擊與泰拳都看'
 
                   return (
                     <button
@@ -613,10 +602,15 @@ export function WeeklyScheduleSection({
                   activeCategory === 'BOOT_CAMP'
                     ? getBootCampRouteLabel(c)
                     : null
+                const bootCampRoute =
+                  activeCategory === 'BOOT_CAMP' ? getBootCampRoute(c) : null
+                const routeContent = bootCampRoute
+                  ? bootCampRouteContent[bootCampRoute]
+                  : null
                 const sessionTitle =
                   activeCategory === 'FIGHT_NIGHT'
                     ? `${formatShortDate(c.date)} Fight Night Pass`
-                    : `${formatShortDate(c.date)} ${bootCampRouteLabel ?? 'Boot Camp'} 起點`
+                    : `${formatShortDate(c.date)} ${routeContent?.label ?? 'Boot Camp'} 起點`
                 const sessionAvailability = getPackageAvailability(c, 1)
                 const bootCampSeries2 = getBootCampSeries(c, 2)
                 const bootCampSeries4 = getBootCampSeries(c, 4)
@@ -651,7 +645,7 @@ export function WeeklyScheduleSection({
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ duration: 0.4, delay: i * 0.04 }}
-                    className="group flex min-h-[24rem] shrink-0 basis-[84vw] snap-start flex-col gap-3 rounded-2xl border border-pearl/15 bg-black/35 p-5 transition-colors hover:border-pearl/30 hover:bg-black/45 sm:basis-[22rem] md:basis-[21rem] md:p-6 lg:basis-[22rem] xl:basis-[23rem]"
+                    className="group flex min-h-[30rem] shrink-0 basis-[84vw] snap-start flex-col gap-3 rounded-2xl border border-pearl/15 bg-black/35 p-5 transition-colors hover:border-pearl/30 hover:bg-black/45 sm:basis-[22rem] md:basis-[21rem] md:p-6 lg:basis-[22rem] xl:basis-[23rem]"
                   >
                     <div className="flex items-baseline justify-between gap-3">
                       <span className="text-xl md:text-2xl font-heading font-bold text-pearl tracking-wide">
@@ -690,7 +684,7 @@ export function WeeklyScheduleSection({
                       </p>
                       {bootCampRouteLabel && (
                         <p className="inline-flex w-fit rounded-full border border-neon/20 bg-neon/10 px-2.5 py-1 text-[11px] font-heading tracking-wide text-neon/90">
-                          {bootCampRouteLabel}
+                          {routeContent?.badge ?? bootCampRouteLabel}
                         </p>
                       )}
                     </div>
@@ -702,14 +696,30 @@ export function WeeklyScheduleSection({
                       <p className="text-xs md:text-sm text-mist/55 font-heading tracking-wide">
                         {c.nameEn}
                       </p>
-                      <p className="text-xs md:text-sm text-mist/65 mt-1.5">
-                        教練 {c.coach}
-                      </p>
+                      {activeCategory === 'BOOT_CAMP' ? (
+                        <div className="mt-3 rounded-xl border border-pearl/10 bg-black/25 p-3">
+                          <p className="text-[10px] md:text-xs font-heading tracking-[0.18em] text-mist/55">
+                            本梯教練
+                          </p>
+                          <p className="mt-1 font-heading text-lg font-black text-pearl">
+                            {c.coach}
+                          </p>
+                          <p className="mt-1 text-xs md:text-sm leading-relaxed text-mist/66">
+                            {routeContent
+                              ? `帶你進入「${routeContent.badge}」路徑`
+                              : '帶你進入這一梯 Boot Camp'}
+                          </p>
+                        </div>
+                      ) : (
+                        <p className="text-xs md:text-sm text-mist/65 mt-1.5">
+                          教練 {c.coach}
+                        </p>
+                      )}
                     </div>
 
                     <div className="border-t border-pearl/10 pt-3">
                       <p className="text-[10px] md:text-xs font-heading tracking-[0.2em] text-mist/55 mb-1">
-                        購買內容
+                        你正在保留
                       </p>
                       <p className="text-sm md:text-base text-pearl font-heading font-semibold">
                         {sessionTitle}
@@ -723,6 +733,27 @@ export function WeeklyScheduleSection({
                         )}
                       </p>
                     </div>
+
+                    {routeContent && (
+                      <div className="rounded-xl border border-pearl/10 bg-black/25 p-3">
+                        <p className="text-[10px] md:text-xs font-heading tracking-[0.18em] text-mist/55 mb-1.5">
+                          FIGHTER 壓力應對
+                        </p>
+                        <p className="text-sm font-heading font-semibold text-pearl leading-snug">
+                          {routeContent.fighterLesson}
+                        </p>
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          {routeContent.skills.slice(0, 3).map((skill) => (
+                            <span
+                              key={skill}
+                              className="rounded-full border border-pearl/10 bg-pearl/5 px-2 py-0.5 text-[11px] text-mist/75"
+                            >
+                              {skill}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
                     {activeCategory === 'BOOT_CAMP' && (
                       <div className="rounded-xl border border-neon/15 bg-neon/5 p-3">
@@ -739,15 +770,22 @@ export function WeeklyScheduleSection({
                           {bootCampSeries4.map((session, index) => (
                             <div
                               key={session.id}
-                              className="flex items-center justify-between gap-3 text-xs md:text-sm"
+                              className="rounded-lg bg-black/20 px-2.5 py-2 text-xs md:text-sm"
                             >
-                              <span className="font-heading text-mist/55">
-                                第 {index + 1} 堂
-                              </span>
-                              <span className="font-heading text-pearl tabular-nums">
-                                {formatShortDate(session.date)} 週{session.weekday}{' '}
-                                {session.startTime}
-                              </span>
+                              <div className="flex items-center justify-between gap-3">
+                                <span className="font-heading text-mist/55">
+                                  第 {index + 1} 堂
+                                </span>
+                                <span className="font-heading text-pearl tabular-nums">
+                                  {formatShortDate(session.date)} 週{session.weekday}{' '}
+                                  {session.startTime}
+                                </span>
+                              </div>
+                              {routeContent?.weekPlan[index] && (
+                                <p className="mt-1 text-[11px] leading-snug text-mist/65">
+                                  {routeContent.weekPlan[index]}
+                                </p>
+                              )}
                             </div>
                           ))}
                         </div>

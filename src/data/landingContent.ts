@@ -19,6 +19,7 @@ export const siteConfig = {
   // TODO: 正式付款連結完成後，將各 plan.checkoutUrl 從 LINE fallback 換成付款 URL。
   ticketUrl: '#ticket',
   offersUrl: '/offers',
+  bootCampUrl: '/boot-camp',
 }
 
 // ── Hero ─────────────────────────────────────────
@@ -213,26 +214,26 @@ export const audiencePoints: AudiencePoint[] = [
 // ── 票種區（首頁 teaser + 登入後完整資訊共用資料） ─────
 export const ticketSectionContent = {
   title: 'Fight Night Pass',
-  subtitle: '像訂房一樣，先選日期、場館與時段，再購買那一場的名額。',
+  subtitle: '先替今晚的自己留一個出口，確認你還能不能被點燃。',
   description:
-    '如果你只想先嘗試一次，這張 pass 就是最直接的入口。選定一堂目前可購買的 Fight Night，完成後名額會綁定該日期與場館。',
+    '如果你只想先嘗試一次，這張 pass 就是最直接的入口。你買的不是一堂拳擊課，而是一個今晚不再照常滑掉、真的走進場裡的可能。',
   unifiedCtaLabel: '選日期購買',
-  previewItems: ['可購買場次', '指定日期名額', '付款與報到方式'],
+  previewItems: ['目前可購買場次', '指定日期保留', '今晚重新進入狀態'],
 }
 
 export const fightNightPassPlan: TicketPlan = {
   id: 'fight-night-pass-980',
   name: 'Fight Night Pass',
-  subtitle: '單場入場，一晚進入狀態',
-  teaserCopy: 'NT$980，先讓身體確認這是不是你的壓力出口。',
+  subtitle: '今晚先讓自己回到有狀態的樣子',
+  teaserCopy: 'NT$980，買的不是內容，是今晚重新被點燃的期待。',
   description:
-    '適合想先體驗一次 Fight Night 的人。你會跟著教練口令、拳套、沙包與全場節奏進入完整夜場體驗，把日常裡卡住的壓力直接打開。',
+    '適合想先體驗一次 Fight Night 的人。你不是要先學會什麼技術，而是讓身體確認：自己還可以流汗、被帶動、釋放，從日常裡走出來。',
   price: 'NT$980',
   badge: '首頁限定',
   features: [
     '指定日期 Fight Night 入場資格',
-    '完整夜場節奏體驗與教練帶動',
-    '先選場館與時段，再購買該場名額',
+    '教練口令、拳套與沙包回合',
+    '新手可跟，不對打、不被打',
   ],
   highlight: true,
   checkoutUrl: siteConfig.lineUrl,
@@ -243,19 +244,19 @@ export const fightNightPassPlan: TicketPlan = {
 // ── /offers 頁面文案 ──────────────────────────────
 export const offersHeroContent = {
   title: 'Boot Camp 完整方案',
-  subtitle: '把 Fight Night 的刺激，變成真的身體記憶。',
+  subtitle: '把那個想改變的期待，變成每週會出現的自己。',
   description:
-    '如果你已經想從單次體驗往前走，這裡是 Boot Camp 的系統方案。從兩堂入門到四堂完整旅程，完整內容需完成 LINE Login 並加入好友後解鎖。',
+    'Boot Camp 不是把你變成拳擊手或泰拳手，而是替那個想更穩、更敢、更有行動感的自己，先保留一段連續出現的時間。',
   primaryCta: '快速登入查看',
   secondaryCta: '先看完整系統',
 }
 
 export const offersCurriculumSectionContent = {
-  title: 'Boot Camp 如何運作？',
+  title: '你買的不是四堂課，而是接下來四週的自己。',
   subtitle:
-    '職業格鬥選手終其一生都在練習：如何面對恐懼、壓力、打擊，以及重新站起來的能力。',
+    '職業 Fighter 最迷人的地方，不是會多少招式，而是在壓力靠近時還能保持存在感。',
   description:
-    'Fight Night 先讓你感受到刺激與釋放；Boot Camp 則借用格鬥選手面對壓力的底層邏輯，把恐懼、壓迫、打擊的應對技巧，轉成身體反射記憶。你會開始知道，原來壓力靠近時，自己可以站得住、看得見，也做得出下一步。',
+    'Boot Camp 賣的不是課表內容，而是一個你願意期待的自己：更敢正面面對、更能把壓力釋放出去，也更習慣在固定時間回到身體裡。',
 }
 
 export const curriculumModules: CurriculumModule[] = [
@@ -271,21 +272,21 @@ export const curriculumModules: CurriculumModule[] = [
     stage: 2,
     title: '讓刺激變得有意義',
     description:
-      '刺激如果只停在當下，很快就散掉。課程的編排會把技術與經驗串起來，讓那份刺激變成身體反射的記憶。',
+      '刺激如果只停在當下，很快就散掉。課程的編排會把 Fighter 面對壓力的經驗轉成你能跟上的身體流程，讓那份刺激變成反射記憶。',
   },
   {
     id: 'module-3',
     stage: 3,
-    title: '物理性適應恐懼與壓迫',
+    title: '物理性適應壓力靠近',
     description:
-      '在安全邊界內感受距離、速度、靠近感與壓迫，讓身心都學會如何面對恐懼與應對壓力。',
+      '在安全邊界內感受速度、靠近感與壓迫，讓身心都學會：壓力靠近時，不只能僵住或逃開。',
   },
   {
     id: 'module-4',
     stage: 4,
-    title: '物理性的防身技巧',
+    title: '壓力下做出下一步',
     description:
-      '你會開始理解距離、站姿、防禦、閃躲和掙脫反應。這不是紙上談兵，而是身體真的練過一遍。',
+      '你會開始理解如何在混亂、緊張和疲累裡做出下一步。這不是紙上談兵，而是身體真的練過一遍。',
   },
   {
     id: 'module-5',
@@ -308,32 +309,124 @@ export const bootCampFaqItems: FAQItem[] = [
     id: 'bootcamp-faq-1',
     question: 'Boot Camp 和 Fight Night 差在哪？',
     answer:
-      'Fight Night 是單次進場的拳擊節奏體驗，適合先確認自己喜不喜歡這種狀態。Boot Camp 則是選定一條技能路徑，用兩堂或四堂課讓動作真的累積成身體反應。',
+      'Fight Night 是單次進場，適合先確認這種狀態是不是你的出口。Boot Camp 會把同一個時段延伸成兩堂或四堂，讓壓力釋放、穩住反應與行動感開始累積。',
   },
   {
     id: 'bootcamp-faq-2',
     question: '四堂課會不會只是重複上同一套？',
     answer:
-      '會重複同一條路徑，但不是無意義重複。連續跟課的價值在於讓站姿、出拳、距離、防守與回復節奏一次比一次更穩，從「知道怎麼做」變成「身體做得出來」。',
+      '會固定同一個時間與同一條路徑。價值在於每週回到同一個承諾，讓身體一次比一次更容易進入狀態。',
   },
   {
     id: 'bootcamp-faq-3',
+    question: '所以 Boot Camp 是學拳擊或泰拳技術嗎？',
+    answer:
+      '拳擊與泰拳是進入方式，核心是向職業 Fighter 學壓力應對：壓力靠近時，怎麼穩住、怎麼呼吸、怎麼做下一步。',
+  },
+  {
+    id: 'bootcamp-faq-4',
+    question: '拳擊 Boot Camp 和泰拳 Boot Camp 怎麼選？',
+    answer:
+      '兩條路徑都在學 Fighter 的壓力應對。常把壓力往裡收、需要界線感，選拳擊。悶太久、想用全身打開狀態，選泰拳。',
+  },
+  {
+    id: 'bootcamp-faq-5',
     question: '沒有拳擊基礎，適合直接選 Boot Camp 嗎？',
     answer:
       '可以，但要看你的目標。如果你只是想先體驗一次，先選單次會更輕鬆；如果你已經知道自己想建立一套更完整的訓練節奏，Boot Camp 會比單次更適合。',
   },
   {
-    id: 'bootcamp-faq-4',
+    id: 'bootcamp-faq-6',
     question: '兩堂或四堂 Boot Camp 會怎麼安排？',
     answer:
-      'Boot Camp 會以同一課程入口安排兩堂或四堂課。報名後專員會與您確認當月梯次、上課節奏與課程安排。',
+      '你會先選第一堂的館別、日期、時間與路徑；後續課程會自動帶入同館同時段的週次。完成購買前可以先確認系統帶入的日期。',
+  },
+  {
+    id: 'bootcamp-faq-7',
+    question: '教練是固定同一位嗎？',
+    answer:
+      '不同課程可能由不同教練帶領，所以購買前會以你選到的梯次為準，顯示該堂教練、館別、時間與路徑。你保留的是某一梯次的位置。',
   },
 ]
 
 export const offersPlanSectionContent = {
-  title: '選擇 Boot Camp 路徑',
-  subtitle: '先選拳擊或泰拳入口，再從目前可購買場次中選定開始日期。',
+  title: '選擇你想留下的改變路徑',
+  subtitle: '所有 Boot Camp 都是向職業 Fighter 學習應對壓力；拳擊與泰拳只是兩種不同的期待入口。',
   footnote: '每堂線上只開放 6 席，剩餘名額會依線上訂單即時更新。',
+}
+
+export const bootCampCoreContent = {
+  eyebrow: 'BOOT CAMP CORE',
+  title: '先把位置訂下來，改變才有地方發生。',
+  description:
+    '保留接下來四週同一個時間。每週回到場館，讓穩住、釋放、往前的感覺開始留在身體裡。',
+  pillars: [
+    {
+      title: '察覺壓力',
+      description: '先聽見身體在緊、在亂、在想逃的瞬間。',
+    },
+    {
+      title: '回到身體',
+      description: '用呼吸、姿態與教練口令，把注意力拉回可以控制的地方。',
+    },
+    {
+      title: '做出下一步',
+      description: '在疲累和壓迫感裡完成動作，留下自己能往前的證據。',
+    },
+  ],
+}
+
+export const bootCampRouteContent: Record<
+  BootCampRoute,
+  {
+    label: string
+    shortLabel: string
+    badge: string
+    hint: string
+    fighterLesson: string
+    headline: string
+    summary: string
+    bestFor: string
+    skills: string[]
+    weekPlan: string[]
+  }
+> = {
+  BOXING: {
+    label: '拳擊 Boot Camp',
+    shortLabel: '拳擊',
+    badge: '正面面對',
+    hint: '正面面對、清楚界線、穩定前進',
+    fighterLesson: '正面靠近壓力時，先穩住視線和位置。',
+    headline: '適合想把退縮改成正面面對的人。',
+    summary:
+      '拳擊路徑乾淨、直接、界線清楚。每一次出拳都是把注意力從腦袋拉回身體，練習站穩、往前、收回自己的位置。',
+    bestFor: '適合常常忍住、退讓、壓力往裡收的人。',
+    skills: ['界線感', '主動行動', '正面面對', '收回自己'],
+    weekPlan: [
+      '站穩位置，感覺自己有地方可以回來',
+      '把猶豫轉成動作，練習往前一步',
+      '壓力靠近時，維持視線和節奏',
+      '把正面面對的感覺帶回日常',
+    ],
+  },
+  MUAY_THAI: {
+    label: '泰拳 Boot Camp',
+    shortLabel: '泰拳',
+    badge: '全身釋放',
+    hint: '全身釋放、爆發感、重新點燃',
+    fighterLesson: '高強度壓力裡，把慌亂轉成全身行動。',
+    headline: '適合想把悶住的能量打開的人。',
+    summary:
+      '泰拳路徑更強烈、更全身。用踢、膝、重心轉換把情緒和壓力從身體裡帶出來，重新感覺自己被點燃。',
+    bestFor: '適合覺得自己太久沒有被點燃、想要更強烈流汗與釋放的人。',
+    skills: ['全身釋放', '爆發感', '情緒出口', '重新點燃'],
+    weekPlan: [
+      '把悶住的能量帶回身體',
+      '用全身動作釋放卡住的壓力',
+      '在更高強度裡維持節奏',
+      '把被點燃的感覺帶回日常',
+    ],
+  },
 }
 
 export const offersOutcomeSectionContent = {
@@ -377,15 +470,15 @@ export const offersPlans: TicketPlan[] = [
   {
     id: 'offers-bootcamp-boxing-2',
     name: '拳擊 Boot Camp｜兩堂入門',
-    subtitle: '基礎拳擊入口',
-    teaserCopy: '用兩堂課，把站姿、出拳與回防變成身體開始記得的反應。',
+    subtitle: '正面面對壓力的 Fighter 路徑',
+    teaserCopy: '用拳擊風格的直接，學 Fighter 在壓力正面靠近時不退開。',
     description:
-      '適合想從拳擊開始的人。選定基礎拳擊或拳擊技巧入口，透過兩堂課建立出拳節奏、距離感與基本防守。',
+      '適合總是忍住、退一步、把壓力吞下去的人。兩堂課先讓你感覺自己可以站穩、往前、正面面對，而不是一直被日常推著走。',
     price: 'NT$1,800',
     features: [
-      '拳擊路徑兩堂課',
-      '固定課程入口與固定上課節奏',
-      '練習站姿、直拳、組合拳與回防',
+      '向 Fighter 學習正面應對壓力',
+      '用拳擊風格找回界線感',
+      '練習把退縮轉成下一步',
       '每堂線上小班預留 6 席',
     ],
     checkoutUrl: siteConfig.lineUrl,
@@ -395,15 +488,15 @@ export const offersPlans: TicketPlan[] = [
   {
     id: 'offers-bootcamp-muaythai-2',
     name: '泰拳 Boot Camp｜兩堂入門',
-    subtitle: '基礎泰拳入口',
-    teaserCopy: '用兩堂課，讓拳、膝、踢與身體節奏開始連在一起。',
+    subtitle: '全身釋放壓力的 Fighter 路徑',
+    teaserCopy: '用泰拳風格的強度，學 Fighter 在壓迫中把慌亂轉成行動。',
     description:
-      '適合想要更全身性釋放的人。選定基礎泰拳或泰拳技巧入口，透過兩堂課建立攻擊節奏、重心轉換與距離感。',
+      '適合覺得自己悶太久、壓力塞在身體裡、需要更強烈出口的人。兩堂課先讓你用全身進入狀態，重新感覺自己還有能量。',
     price: 'NT$1,800',
     features: [
-      '泰拳路徑兩堂課',
-      '固定課程入口與固定上課節奏',
-      '練習拳、踢、膝與重心轉換',
+      '向 Fighter 學習高強度壓力應對',
+      '用泰拳風格釋放卡住的壓力',
+      '練習把慌亂轉成全身行動',
       '每堂線上小班預留 6 席',
     ],
     checkoutUrl: siteConfig.lineUrl,
@@ -413,16 +506,16 @@ export const offersPlans: TicketPlan[] = [
   {
     id: 'offers-bootcamp-boxing-4',
     name: '拳擊 Boot Camp｜四堂養成',
-    subtitle: '主推：拳擊技能路徑',
-    teaserCopy: '四堂課累積，讓拳擊不只是一晚刺激，而是能帶走的身體反應。',
+    subtitle: '主推：正面面對壓力',
+    teaserCopy: '保留接下來四週同一個時間，學 Fighter 把退縮變成正面面對。',
     description:
-      '適合想真正學到東西的人。四堂課沿著同一條拳擊路徑累積，從出拳、移動、回防到面對壓力時的穩定反應。',
+      '適合想真正改變自己慣性的人。四堂課不是追求拳擊技術，而是透過固定節奏，向 Fighter 學習壓力正面靠近時如何站穩、往前、把自己收回來。',
     price: 'NT$3,800',
     badge: '主推路徑',
     features: [
-      '拳擊路徑四堂課',
-      '同一入口逐堂累積，不用每次重新開始',
-      '建立出拳、移動、防守與壓力下反應',
+      '職業 Fighter 壓力應對邏輯',
+      '同館同時段，保留四週正面面對的節奏',
+      '讓界線感、主動感與穩定感留在身體裡',
       '每堂線上小班預留 6 席',
     ],
     highlight: true,
@@ -433,16 +526,16 @@ export const offersPlans: TicketPlan[] = [
   {
     id: 'offers-bootcamp-muaythai-4',
     name: '泰拳 Boot Camp｜四堂養成',
-    subtitle: '主推：全身節奏路徑',
-    teaserCopy: '四堂課累積，把泰拳的節奏、力量與距離感真的練進身體。',
+    subtitle: '主推：全身釋放壓力',
+    teaserCopy: '保留接下來四週同一個時間，學 Fighter 把壓迫轉成全身行動。',
     description:
-      '適合想用全身進入狀態的人。四堂課沿著同一條泰拳路徑累積，讓拳、踢、膝、重心與攻防節奏逐漸連起來。',
+      '適合想要更強烈轉換的人。四堂課不是追求泰拳技術，而是透過更全身性的主題風格，向 Fighter 學習在高強度壓力裡不僵住、不退縮、重新被點燃。',
     price: 'NT$3,800',
     badge: '全身路徑',
     features: [
-      '泰拳路徑四堂課',
-      '同一入口逐堂累積，不用每次重新開始',
-      '建立拳、踢、膝、重心與距離反應',
+      '職業 Fighter 壓力應對邏輯',
+      '同館同時段，保留四週全身釋放的節奏',
+      '讓爆發感、釋放感與行動能量被重新點燃',
       '每堂線上小班預留 6 席',
     ],
     checkoutUrl: siteConfig.lineUrl,

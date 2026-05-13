@@ -1,17 +1,16 @@
 import { motion } from 'framer-motion'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
-import bootcampOriginPoster from '../assets/offers/bootcamp-origin-poster.png'
-import bootcampModule1Poster from '../assets/offers/bootcamp-module-1-poster.png'
 import bootcampModule2Poster from '../assets/offers/bootcamp-module-2-poster.png'
 import bootcampModule3Poster from '../assets/offers/bootcamp-module-3-poster.png'
-import bootcampModule4Poster from '../assets/offers/bootcamp-module-4-poster.png'
 import bootcampModule5Poster from '../assets/offers/bootcamp-module-5-poster.png'
 import bootcampModule6Poster from '../assets/offers/bootcamp-module-6-poster.png'
 import offersHeroPoster from '../assets/offers/offers-hero-octagon-poster.png'
 import offersPlansTransitionPoster from '../assets/offers/offers-plans-transition-poster.png'
 import {
+  bootCampCoreContent,
   bootCampFaqItems,
+  bootCampRouteContent,
   curriculumModules,
   faqItems,
   fightNightPassPlan,
@@ -43,11 +42,9 @@ import { SectionWrapper } from '../components/ui/SectionWrapper'
 import { StickyActionBar } from '../components/ui/StickyActionBar'
 import { ZoomableImage } from '../components/ui/ZoomableImage'
 
-const curriculumPosterMap: Record<string, string> = {
-  'module-1': bootcampModule1Poster,
+const curriculumPosterMap: Partial<Record<string, string>> = {
   'module-2': bootcampModule2Poster,
   'module-3': bootcampModule3Poster,
-  'module-4': bootcampModule4Poster,
   'module-5': bootcampModule5Poster,
   'module-6': bootcampModule6Poster,
 }
@@ -150,30 +147,49 @@ function OffersCurriculum() {
   return (
     <SectionWrapper id="offers-curriculum" padding="pt-4 pb-10 md:py-28">
       <div className="max-w-6xl mx-auto space-y-4 md:space-y-6">
-        <PosterFigure
-          src={bootcampOriginPoster}
-          alt={`${offersCurriculumSectionContent.title} ${offersCurriculumSectionContent.subtitle}`}
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.7 }}
+          className="border-y border-pearl/10 px-2 py-8 md:px-0 md:py-12"
         >
-          <h2>{offersCurriculumSectionContent.title}</h2>
-          <p>{offersCurriculumSectionContent.subtitle}</p>
-          <p>{offersCurriculumSectionContent.description}</p>
-        </PosterFigure>
+          <p className="font-heading text-xs md:text-sm font-semibold tracking-[0.28em] uppercase text-neon/85">
+            BOOT CAMP EXPECTATION
+          </p>
+          <h2 className="mt-3 font-heading text-3xl md:text-5xl font-black leading-tight text-pearl">
+            {offersCurriculumSectionContent.title}
+          </h2>
+          <p className="mt-4 max-w-3xl text-base md:text-lg leading-relaxed text-mist/78">
+            {offersCurriculumSectionContent.subtitle}
+          </p>
+          <p className="mt-3 max-w-3xl text-sm md:text-base leading-relaxed text-mist/62">
+            {offersCurriculumSectionContent.description}
+          </p>
+        </motion.div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-          {curriculumModules.map((module, i) => (
-            <PosterFigure
-              key={module.id}
-              src={curriculumPosterMap[module.id]}
-              alt={`${module.title} ${module.description}`}
-              delay={i * 0.08}
-              className="md:rounded-[1.75rem] shadow-[0_24px_60px_rgba(0,0,0,0.3)]"
-            >
-              <h3>
-                {module.stage}. {module.title}
-              </h3>
-              <p>{module.description}</p>
-            </PosterFigure>
-          ))}
+          {curriculumModules.map((module, i) => {
+            const poster = curriculumPosterMap[module.id]
+            if (!poster) {
+              return null
+            }
+
+            return (
+              <PosterFigure
+                key={module.id}
+                src={poster}
+                alt={`${module.title} ${module.description}`}
+                delay={i * 0.08}
+                className="md:rounded-[1.75rem] shadow-[0_24px_60px_rgba(0,0,0,0.3)]"
+              >
+                <h3>
+                  {module.stage}. {module.title}
+                </h3>
+                <p>{module.description}</p>
+              </PosterFigure>
+            )
+          })}
         </div>
       </div>
     </SectionWrapper>
@@ -309,10 +325,16 @@ function OffersPlans({
           <h2>{offersPlanSectionContent.title}</h2>
           <p>{offersPlanSectionContent.subtitle}</p>
           <p>
-            如果你已經確認想走進更完整的系統，Boot Camp 會把刺激轉成壓力適應、防身反應與更穩定的身體記憶。
+            如果你已經確認想走進更完整的系統，Boot Camp 會把一晚的刺激轉成更穩定、更敢行動的身體記憶。
           </p>
         </PosterFigure>
       </div>
+
+      <BootCampCoreSection />
+
+      <BootCampRouteComparison
+        onRouteSelect={(route) => onScheduleNav('BOOT_CAMP', route)}
+      />
 
       <LockedContent
         title="登入後查看完整費用資訊"
@@ -348,6 +370,126 @@ function OffersPlans({
         {offersPlanSectionContent.footnote}
       </p>
     </SectionWrapper>
+  )
+}
+
+function BootCampCoreSection() {
+  return (
+    <div className="mx-auto mb-8 max-w-6xl md:mb-10">
+      <div className="border-y border-pearl/10 py-6 md:py-8">
+        <div className="max-w-3xl">
+          <p className="text-xs md:text-sm font-heading tracking-[0.28em] text-neon uppercase">
+            {bootCampCoreContent.eyebrow}
+          </p>
+          <h3 className="mt-3 text-2xl md:text-4xl font-heading font-bold text-pearl leading-tight">
+            {bootCampCoreContent.title}
+          </h3>
+          <p className="mt-4 text-sm md:text-lg leading-relaxed text-mist/75">
+            {bootCampCoreContent.description}
+          </p>
+        </div>
+
+        <div className="mt-5 grid grid-cols-1 gap-3 md:mt-7 md:grid-cols-3">
+          {bootCampCoreContent.pillars.map((pillar) => (
+            <div
+              key={pillar.title}
+              className="rounded-2xl border border-pearl/10 bg-black/25 p-4 md:p-5"
+            >
+              <p className="font-heading text-base font-semibold text-pearl">
+                {pillar.title}
+              </p>
+              <p className="mt-2 text-sm leading-relaxed text-mist/65">
+                {pillar.description}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function BootCampRouteComparison({
+  onRouteSelect,
+}: {
+  onRouteSelect: (route: BootCampRoute) => void
+}) {
+  const routes: BootCampRoute[] = ['BOXING', 'MUAY_THAI']
+
+  return (
+    <div className="mx-auto mb-8 grid max-w-6xl grid-cols-1 gap-4 md:mb-10 md:grid-cols-2 md:gap-6">
+      {routes.map((route) => {
+        const content = bootCampRouteContent[route]
+        const accentClass =
+          route === 'BOXING'
+            ? 'border-blaze/25 bg-blaze/10'
+            : 'border-neon/25 bg-neon/10'
+        const badgeClass =
+          route === 'BOXING'
+            ? 'border-blaze/35 bg-blaze/15 text-blaze'
+            : 'border-neon/35 bg-neon/15 text-neon'
+
+        return (
+          <motion.article
+            key={route}
+            initial={{ opacity: 0, y: 18 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.45 }}
+            className={`rounded-2xl border p-5 md:p-6 ${accentClass}`}
+          >
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-heading tracking-[0.24em] text-mist/55">
+                  {content.badge}
+                </p>
+                <h3 className="mt-1 text-2xl font-heading font-bold text-pearl">
+                  {content.label}
+                </h3>
+              </div>
+              <span
+                className={`shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-heading tracking-wide ${badgeClass}`}
+              >
+                {content.shortLabel}
+              </span>
+            </div>
+
+            <p className="text-base font-heading font-semibold leading-snug text-pearl">
+              {content.headline}
+            </p>
+            <p className="mt-3 rounded-xl border border-pearl/10 bg-black/25 px-3 py-2 text-sm leading-relaxed text-neon/85">
+              {content.fighterLesson}
+            </p>
+            <p className="mt-3 text-sm md:text-base leading-relaxed text-mist/75">
+              {content.summary}
+            </p>
+            <p className="mt-3 text-sm leading-relaxed text-mist/60">
+              {content.bestFor}
+            </p>
+
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              {content.skills.map((skill) => (
+                <div
+                  key={skill}
+                  className="rounded-xl border border-pearl/10 bg-black/25 px-3 py-2 text-sm text-mist/80"
+                >
+                  {skill}
+                </div>
+              ))}
+            </div>
+
+            <Button
+              variant={route === 'BOXING' ? 'secondary' : 'primary'}
+              className="mt-5 w-full"
+              onClick={() => onRouteSelect(route)}
+              data-cta={`bootcamp-route-${route.toLowerCase()}`}
+            >
+              看這條路徑可購買場次
+            </Button>
+          </motion.article>
+        )
+      })}
+    </div>
   )
 }
 
@@ -506,7 +648,7 @@ export function OffersPage() {
         />
         <WeeklyScheduleSection
           title="目前可購買的課程名額"
-          subtitle="像訂房一樣，選定場館、日期與時段後，再購買該場名額。"
+          subtitle="先選一個你真的會出現的日期、場館與時段，再把那一場的位置保留下來。"
           activeCategory={scheduleCategory}
           activeBootCampRoute={scheduleRoute}
           onBootCampRouteChange={setScheduleRoute}

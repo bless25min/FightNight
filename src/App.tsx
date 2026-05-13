@@ -11,6 +11,7 @@ import { IdentitySection } from './components/sections/IdentitySection'
 import { FAQSection } from './components/sections/FAQSection'
 import { FinalCTASection } from './components/sections/FinalCTASection'
 import { Footer } from './components/layout/Footer'
+import { BootCampPage } from './pages/BootCampPage'
 import { OffersPage } from './pages/OffersPage'
 import { useScrollProgress } from './hooks/useScrollProgress'
 
@@ -49,6 +50,10 @@ function App() {
 
   if (pathname.startsWith('/offers')) {
     return <OffersPage />
+  }
+
+  if (pathname.startsWith('/boot-camp')) {
+    return <BootCampPage />
   }
 
   return <HomePage />

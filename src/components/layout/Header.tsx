@@ -6,8 +6,12 @@ import logo from '../../assets/ufcgymtaiwan_logo.svg'
 
 export function Header() {
   const [scrolled, setScrolled] = useState(false)
+  const pathname =
+    typeof window !== 'undefined' ? window.location.pathname : '/'
   const isOffersPage =
-    typeof window !== 'undefined' && window.location.pathname.startsWith('/offers')
+    pathname.startsWith('/offers')
+  const isBootCampPage =
+    pathname.startsWith('/boot-camp')
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 50)
@@ -19,10 +23,16 @@ export function Header() {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
   }
 
-  const ctaLabel = isOffersPage
-    ? '選 Boot Camp 場次'
-    : '選日期購買'
-  const ctaTargetId = isOffersPage ? 'offers-plans' : 'ticket'
+  const ctaLabel = isBootCampPage
+    ? '查看可購買梯次'
+    : isOffersPage
+      ? '選 Boot Camp 場次'
+      : '選日期購買'
+  const ctaTargetId = isBootCampPage
+    ? 'boot-camp-booking'
+    : isOffersPage
+      ? 'offers-plans'
+      : 'ticket'
   const ctaHref = `#${ctaTargetId}`
 
   return (
@@ -36,9 +46,9 @@ export function Header() {
     >
       <div className="max-w-6xl mx-auto px-3 sm:px-8 flex items-center justify-between">
         <a
-          href={isOffersPage ? '/' : '#hero'}
+          href={isOffersPage || isBootCampPage ? '/' : '#hero'}
           onClick={(e) => {
-            if (!isOffersPage) {
+            if (!isOffersPage && !isBootCampPage) {
               e.preventDefault()
               scrollTo('hero')
             }

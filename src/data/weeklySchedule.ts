@@ -49,7 +49,7 @@ export const ONLINE_BOOKING_START_OFFSET_DAYS = 8
 
 export const weeklyScheduleSectionContent = {
   title: '目前可購買的課程名額',
-  subtitle: '先選場館，再選日期與時段。你購買的是指定場次的一個線上名額。',
+  subtitle: '先選一個你真的會出現的日期、場館與時段，再把那一場的位置保留下來。',
   footnote: '每堂線上只開放 6 席，剩餘名額會依線上訂單即時更新。',
 }
 
