@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import bootcampOriginPoster from '../assets/offers/bootcamp-origin-poster.png'
 import bootcampModule1Poster from '../assets/offers/bootcamp-module-1-poster.png'
@@ -394,6 +394,25 @@ export function OffersPage() {
 
   const [scheduleCategory, setScheduleCategory] =
     useState<CourseCategory>('BOOT_CAMP')
+
+  useEffect(() => {
+    const targetId = window.location.hash.replace('#', '')
+    if (!targetId) return
+
+    const scrollToHashTarget = () => {
+      document
+        .getElementById(targetId)
+        ?.scrollIntoView({ behavior: 'auto', block: 'start' })
+    }
+
+    const timers = [0, 120, 360, 800].map((delay) =>
+      window.setTimeout(scrollToHashTarget, delay),
+    )
+
+    return () => {
+      timers.forEach((timer) => window.clearTimeout(timer))
+    }
+  }, [])
 
   const navigateToSchedule = useCallback((category: CourseCategory) => {
     setScheduleCategory(category)
