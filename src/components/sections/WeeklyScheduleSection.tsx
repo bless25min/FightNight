@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   planSummaryByCategory,
   venues,
@@ -82,12 +82,19 @@ const venueShortLookup = (() => {
   return map
 })()
 
+const venueLandmarks: Record<string, string> = {
+  'venue-dunnan': '忠孝敦化站',
+  'venue-neihu': '港墘站',
+  'venue-taichung': '勤美誠品綠園道',
+}
+
 type Props = {
   id?: string
   activeCategory?: CourseCategory
   onCategoryChange?: (category: CourseCategory) => void
   categories?: CourseCategory[]
   showCategoryTabs?: boolean
+  showVenueFilter?: boolean
   title?: string
   subtitle?: string
   embedded?: boolean
@@ -100,6 +107,7 @@ export function WeeklyScheduleSection({
   onCategoryChange,
   categories = CATEGORY_ORDER,
   showCategoryTabs = categories.length > 1,
+  showVenueFilter = false,
   title = weeklyScheduleSectionContent.title,
   subtitle = weeklyScheduleSectionContent.subtitle,
   embedded = false,
@@ -117,6 +125,7 @@ export function WeeklyScheduleSection({
     else setInternalCategory(c)
   }
   const scrollerRef = useRef<HTMLDivElement>(null)
+  const [activeVenueId, setActiveVenueId] = useState<string | null>(null)
 
   const scrollSchedule = (direction: -1 | 1) => {
     const el = scrollerRef.current
@@ -131,7 +140,7 @@ export function WeeklyScheduleSection({
 
   const todayIso = useMemo(() => getTodayLocal(), [])
 
-  const displayCourses = useMemo(() => {
+  const upcomingCourses = useMemo(() => {
     return weeklyCourses
       .filter((c) => c.category === activeCategory && c.date >= todayIso)
       .sort((a, b) => {
@@ -140,8 +149,34 @@ export function WeeklyScheduleSection({
           return a.startTime < b.startTime ? -1 : 1
         return sortByVenueThenName(a, b)
       })
-      .slice(0, SCHEDULE_DISPLAY_LIMIT)
   }, [activeCategory, todayIso])
+
+  const venueOptions = useMemo(() => {
+    return venues
+      .map((venue) => ({
+        venue,
+        count: upcomingCourses.filter((c) => c.venueId === venue.id).length,
+      }))
+      .filter((option) => option.count > 0)
+  }, [upcomingCourses])
+
+  const displayCourses = useMemo(() => {
+    return upcomingCourses
+      .filter((c) => !activeVenueId || c.venueId === activeVenueId)
+      .slice(0, SCHEDULE_DISPLAY_LIMIT)
+  }, [activeVenueId, upcomingCourses])
+
+  useEffect(() => {
+    scrollerRef.current?.scrollTo({ left: 0, behavior: 'smooth' })
+  }, [activeCategory, activeVenueId])
+
+  useEffect(() => {
+    if (!activeVenueId) return
+    const stillAvailable = venueOptions.some(
+      (option) => option.venue.id === activeVenueId,
+    )
+    if (!stillAvailable) setActiveVenueId(null)
+  }, [activeVenueId, venueOptions])
 
   const meta = categoryMeta[activeCategory]
   const planSummary = planSummaryByCategory[activeCategory]
@@ -201,6 +236,60 @@ export function WeeklyScheduleSection({
       )}
 
       <div className="max-w-6xl mx-auto">
+        {showVenueFilter && upcomingCourses.length > 0 && (
+          <div className="mb-5 md:mb-6 rounded-2xl border border-pearl/10 bg-black/25 p-4 md:p-5">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs md:text-sm font-heading tracking-[0.22em] text-neon/80 uppercase">
+                上課地點
+              </p>
+              <p className="text-xs text-mist/55">
+                點選篩選下方課表
+              </p>
+            </div>
+
+            <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-4">
+              <button
+                type="button"
+                aria-pressed={activeVenueId === null}
+                onClick={() => setActiveVenueId(null)}
+                className={`rounded-xl border px-3.5 py-3 text-left transition-colors ${
+                  activeVenueId === null
+                    ? 'border-neon/50 bg-neon/15'
+                    : 'border-pearl/10 bg-black/25 hover:border-pearl/25'
+                }`}
+              >
+                <p className="text-sm font-heading font-semibold text-pearl">
+                  全部場館
+                </p>
+                <p className="mt-1 text-xs text-mist/70">
+                  {upcomingCourses.length} 場可選
+                </p>
+              </button>
+
+              {venueOptions.map(({ venue, count }) => (
+                <button
+                  key={venue.id}
+                  type="button"
+                  aria-pressed={activeVenueId === venue.id}
+                  onClick={() => setActiveVenueId(venue.id)}
+                  className={`rounded-xl border px-3.5 py-3 text-left transition-colors ${
+                    activeVenueId === venue.id
+                      ? 'border-neon/50 bg-neon/15'
+                      : 'border-pearl/10 bg-black/25 hover:border-pearl/25'
+                  }`}
+                >
+                  <p className="text-sm font-heading font-semibold text-pearl">
+                    {venueShortLookup[venue.id] ?? venue.name}
+                  </p>
+                  <p className="mt-1 text-xs text-mist/70">
+                    {venueLandmarks[venue.id] ?? venue.transit} · {count} 場
+                  </p>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {displayCourses.length === 0 ? (
           <p className="text-center text-sm text-mist/60">
             這個方向近期沒有開課，先用 LINE 加入會員，下一輪開放會優先通知你。

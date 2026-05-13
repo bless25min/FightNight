@@ -4,7 +4,6 @@ import {
   fightNightPassPlan,
   siteConfig,
   ticketSectionContent,
-  venues,
 } from '../../data/landingContent'
 import { useLiffGate } from '../../hooks/useLiffGate'
 import { useTracking } from '../../hooks/useTracking'
@@ -15,48 +14,6 @@ import { SectionHeading } from '../ui/SectionHeading'
 import { SectionWrapper } from '../ui/SectionWrapper'
 import { StickyActionBar } from '../ui/StickyActionBar'
 import { WeeklyScheduleSection } from './WeeklyScheduleSection'
-
-const venueLandmarks: Record<string, string> = {
-  'venue-dunnan': '忠孝敦化站',
-  'venue-neihu': '港墘站',
-  'venue-taichung': '勤美誠品綠園道',
-}
-
-function venueDisplayName(fullName: string) {
-  const idx = fullName.indexOf('—')
-  return idx >= 0 ? fullName.slice(idx + 1).trim() : fullName
-}
-
-function FightNightVenueSummary() {
-  return (
-    <div className="mt-7 md:mt-8 rounded-2xl border border-pearl/10 bg-black/25 p-4 md:p-5">
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-xs md:text-sm font-heading tracking-[0.22em] text-neon/80 uppercase">
-          上課地點
-        </p>
-        <p className="text-xs text-mist/55">
-          三館可選
-        </p>
-      </div>
-
-      <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-3">
-        {venues.map((venue) => (
-          <div
-            key={venue.id}
-            className="rounded-xl border border-pearl/10 bg-black/25 px-3.5 py-3"
-          >
-            <p className="text-sm font-heading font-semibold text-pearl">
-              {venueDisplayName(venue.name)}
-            </p>
-            <p className="mt-1 text-xs text-mist/70">
-              {venueLandmarks[venue.id] ?? venue.transit}
-            </p>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
 
 export function TicketSection() {
   const { trackTicketView, trackTicketCta } = useTracking()
@@ -131,17 +88,15 @@ export function TicketSection() {
                     />
                   </div>
                 </div>
-
-                <FightNightVenueSummary />
-
-                <div className="mt-10 md:mt-12">
+                <div className="mt-9 md:mt-12">
                   <WeeklyScheduleSection
                     id="fight-night-schedule"
                     activeCategory="FIGHT_NIGHT"
                     categories={['FIGHT_NIGHT']}
                     showCategoryTabs={false}
+                    showVenueFilter
                     title="本週可報名 Fight Night"
-                    subtitle="先選一堂你能到場的時間，再完成預留。"
+                    subtitle="先選你方便到場的館別，再挑一堂可以進場的時間。"
                     embedded
                   />
                 </div>
@@ -152,7 +107,7 @@ export function TicketSection() {
               <div className="mt-6 flex justify-center">
                 <Button
                   variant="ghost"
-                  href={`${siteConfig.offersUrl}#identity`}
+                  href={`${siteConfig.offersUrl}#offers-hero`}
                   data-cta="ticket-offers-entry"
                 >
                   了解 Boot Camp 方案

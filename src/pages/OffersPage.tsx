@@ -99,7 +99,7 @@ function OffersHero({ gateState }: { gateState: LiffGateState }) {
     <section
       id="offers-hero"
       data-section="offers-hero"
-      className="relative pt-20 pb-2 md:pt-36 md:pb-20 overflow-hidden"
+      className="relative scroll-mt-20 pt-8 pb-2 md:pt-16 md:pb-4 overflow-hidden"
     >
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute inset-0 bg-gradient-to-b from-abyss via-obsidian to-abyss" />
@@ -419,7 +419,6 @@ export function OffersPage() {
     <div className="overflow-x-hidden w-full relative">
       <Header />
       <main>
-        <OffersHero gateState={gateState} />
         <PainSection />
         <OldFrameworkBreakSection />
         <NewModelSection />
@@ -440,6 +439,7 @@ export function OffersPage() {
           subtitle="先回答你心裡那些「可是...」"
           items={faqItems}
         />
+        <OffersHero gateState={gateState} />
         <OffersCurriculum />
         <FAQSection
           id="boot-camp-faq"
