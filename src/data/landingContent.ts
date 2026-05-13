@@ -333,9 +333,8 @@ export const bootCampFaqItems: FAQItem[] = [
 
 export const offersPlanSectionContent = {
   title: 'Fight Night + Boot Camp 方案',
-  subtitle: '這裡販售首頁 NT$980 以外的全部方案。登入加好友後查看完整內容。',
-  footnote:
-    '首頁的 NT$980 Fight Night Pass 不會出現在這裡；這一頁只保留更完整的 Fight Night + Boot Camp 選項。',
+  subtitle: '從單堂 Fight Night NT$980，到 Boot Camp 兩堂、四堂完整旅程，登入加好友後查看完整內容。',
+  footnote: '完整內容、活動場次與名額狀態，以實際公告為準。',
 }
 
 export const offersOutcomeSectionContent = {
@@ -349,96 +348,132 @@ export const offersOutcomeSectionContent = {
 
 // Plan ID → 對應的課表 category。沒列在這裡的 plan 不會出現「查看近期場次」連結
 export const planScheduleCategoryMap: Record<string, CourseCategory> = {
-  'offers-session-pass': 'FIGHT_NIGHT',
-  'offers-session-glove-pass': 'FIGHT_NIGHT',
-  'offers-transformation-pass': 'BOOT_CAMP',
-  'offers-upgrade-pass': 'BOOT_CAMP',
+  'offers-fight-night-pass': 'FIGHT_NIGHT',
+  'offers-bootcamp-2': 'BOOT_CAMP',
+  'offers-bootcamp-2-gear': 'BOOT_CAMP',
+  'offers-bootcamp-4': 'BOOT_CAMP',
+  'offers-bootcamp-4-gear': 'BOOT_CAMP',
+}
+
+// 課表卡上「可用方案」摘要：每個 category 顯示入門價
+// BOOT_CAMP 不能單堂買，最低是兩堂套票，所以價格帶「起」並用 hint 提示升級路徑
+export const planSummaryByCategory: Record<
+  CourseCategory,
+  { label: string; price: string; hint?: string }
+> = {
+  FIGHT_NIGHT: {
+    label: 'Fight Night Pass',
+    price: 'NT$980 / 堂',
+  },
+  BOOT_CAMP: {
+    label: 'Boot Camp 兩堂',
+    price: 'NT$1,800 起',
+    hint: '或四堂 NT$3,800',
+  },
 }
 
 export const offersPlans: TicketPlan[] = [
   {
-    id: 'offers-session-pass',
-    name: 'First Round｜初次進場',
-    subtitle: '先讓身體確認一次',
-    teaserCopy: '一晚就夠你知道，這不是又一個週末活動。',
+    id: 'offers-fight-night-pass',
+    name: 'Fight Night Pass｜單堂入場',
+    subtitle: '一堂體驗 Fight Night',
+    teaserCopy: '一堂就夠你知道，這是不是你的方向。',
     description:
-      '適合第一次靠近 Fight Night 的人。你會進入完整場域，跟著教練口令、拳套、沙包和群體節奏，把平常壓在身體裡的東西真正打開一次。',
-    price: 'NT$1,800',
+      '單堂 Fight Night 入場（拳擊／泰拳體適能）。零基礎可進場，跟著教練口令與全場節奏完整走過一堂。',
+    price: 'NT$980',
     features: [
-      '單次 Fight Night 完整進場資格',
-      '拳套可租用或自備',
-      '從暖場、節奏推進到高峰釋放，完整走過一次情緒曲線',
-      '適合想先確認這是不是自己的壓力出口',
+      '單堂 Fight Night 入場資格',
+      '拳擊或泰拳體適能任選一堂',
+      '零基礎可進場，拳套可現場租用',
+      '適合想先用一堂課驗證方向的人',
     ],
     checkoutUrl: siteConfig.lineUrl,
-    ctaLabel: '購買 First Round Pass',
+    ctaLabel: '購買 Fight Night Pass',
     ctaVariant: 'secondary',
   },
   {
-    id: 'offers-session-glove-pass',
-    name: 'First Round Gear｜初次進場＋專屬拳套',
-    subtitle: '把第一次變成一個開始',
-    teaserCopy: '不是加購裝備，是替這個夜晚留下重量。',
+    id: 'offers-bootcamp-2',
+    name: 'Boot Camp 兩堂｜入門套票',
+    subtitle: '兩堂試系統訓練',
+    teaserCopy: '兩堂讓身體開始記住一件事。',
     description:
-      '適合你已經不想只是來看看。自己的拳套會讓進場更有儀式感，也讓結束後的狀態不只停在現場。',
+      '兩堂 Boot Camp 課程（技術與格鬥邏輯）。適合先試結構化訓練，再決定要不要走完整四堂。',
+    price: 'NT$1,800',
+    features: [
+      '兩堂 Boot Camp 入場資格',
+      '可從泰拳、拳擊、踢拳、MMA、BJJ 中任選兩堂',
+      '從技術到格鬥邏輯，循序進場',
+      '想完整體驗請選四堂方案',
+    ],
+    checkoutUrl: siteConfig.lineUrl,
+    ctaLabel: '購買 Boot Camp 兩堂',
+    ctaVariant: 'secondary',
+  },
+  {
+    id: 'offers-bootcamp-2-gear',
+    name: 'Boot Camp 兩堂 ＋ 專屬拳套',
+    subtitle: '兩堂 + 一副自己的拳套',
+    teaserCopy: '兩堂加上一副屬於你的拳套。',
+    description:
+      '兩堂 Boot Camp，附品牌專屬拳套一副。讓第一次的投入留下一個帶得走的物件。',
     price: 'NT$2,800',
     badge: '附專屬拳套',
     features: [
-      '包含 First Round 完整進場內容',
+      '包含 Boot Camp 兩堂內容',
       '附品牌專屬拳套一副，活動後帶走',
-      '第一次就使用自己的裝備，手感、投入感和記憶點更完整',
-      '適合重視儀式感，也想把開始留下來的人',
+      '從第一堂開始用自己的拳套，手感更穩定',
+      '比單純兩堂多 NT$1,000 = 一副拳套',
     ],
     checkoutUrl: siteConfig.lineUrl,
-    ctaLabel: '購買 First Round Gear Pass',
+    ctaLabel: '購買 Boot Camp 兩堂 ＋ 拳套',
     ctaVariant: 'secondary',
   },
   {
-    id: 'offers-transformation-pass',
-    name: 'Boot Camp｜四次完整旅程',
-    subtitle: '主推：真正走完整套設計',
-    teaserCopy: '如果你要看到完整系統，選這個。',
+    id: 'offers-bootcamp-4',
+    name: 'Boot Camp 四堂｜完整旅程',
+    subtitle: '主推：走完完整系統',
+    teaserCopy: '看到刺激如何變成身體反射。',
     description:
-      '四次不同的系統化課程編排，把刺激、壓力排空、恐懼適應、防身反應、自信成長和焦慮耐受串成一段完整經驗。這是最完整體驗的版本。',
+      '四堂 Boot Camp 系統訓練，循序累積技術、壓力適應、防身反應與自信。這是最完整體驗的版本。',
     price: 'NT$3,800',
     badge: '主推方案',
     features: [
-      '四次循序進場，從釋放、穩定到建立底氣',
-      '每次都累積不同的身體記憶，不只是重複流汗',
-      '適合想把壓力出口變成可回到生活裡的力量感',
-      '主推給不想只買新鮮感，而是想留下真正變化的人',
+      '四堂 Boot Camp 入場資格',
+      '可任意組合泰拳、拳擊、踢拳、MMA、BJJ',
+      '循序累積：從釋放、穩定到建立底氣',
+      '主推給想留下真正變化，不只新鮮感的人',
     ],
     highlight: true,
     checkoutUrl: siteConfig.lineUrl,
-    ctaLabel: '購買 Signature Four Pass',
+    ctaLabel: '購買 Boot Camp 四堂',
     ctaVariant: 'primary',
   },
   {
-    id: 'offers-upgrade-pass',
-    name: 'Boot Camp Gear｜四次完整旅程＋專屬拳套',
-    subtitle: '把完整體驗帶回生活',
-    teaserCopy: '四次旅程，加上一副屬於你的拳套。',
+    id: 'offers-bootcamp-4-gear',
+    name: 'Boot Camp 四堂 ＋ 專屬拳套',
+    subtitle: '完整四堂 + 一副自己的拳套',
+    teaserCopy: '四堂完整旅程，加上一副屬於你的拳套。',
     description:
-      '給已經決定完整投入的人。你買的不是紀念品，而是一個能被看見、被拿起、把那段狀態找回來的物件。',
+      '四堂 Boot Camp 完整系統，附品牌專屬拳套。所有方案中最完整、最有長尾價值的版本。',
     price: 'NT$4,800',
     badge: '完整投入',
     features: [
-      '包含 Signature Four 全部四次完整內容',
+      '包含 Boot Camp 四堂全部內容',
       '附品牌專屬拳套一副，活動後帶走',
-      '讓儀式感、力量感和收藏感延續到日常',
+      '從第一堂開始用自己的拳套，建立完整身體記憶',
       '所有方案中最完整，也最有長尾價值的版本',
     ],
     checkoutUrl: siteConfig.lineUrl,
-    ctaLabel: '購買 Signature Gear Pass',
+    ctaLabel: '購買 Boot Camp 四堂 ＋ 拳套',
     ctaVariant: 'secondary',
   },
   {
     id: 'offers-private-intro',
-    name: 'Private Onboarding｜私人預備進場',
+    name: 'Private Onboarding｜私人預備課',
     subtitle: '給想先被接住的人',
     teaserCopy: '不是降低強度，是先把安全感建立起來。',
     description:
-      '適合對群體節奏、身體互動或陌生場域有顧慮的人。先用更細緻的方式熟悉節奏與邊界，正式進場時才不用把注意力浪費在緊張上。',
+      '一對一或小班式預備體驗。先熟悉場域、節奏、邊界與互動方式，正式進場時把注意力留給訓練本身。',
     price: '私訊詢問',
     features: [
       '一對一或小班式預備體驗',
@@ -579,6 +614,7 @@ export type Venue = {
   address: string
   transit: string
   lineUrl: string
+  mapEmbedUrl: string
 }
 
 export const venues: Venue[] = [
@@ -588,6 +624,8 @@ export const venues: Venue[] = [
     address: '台北市大安區安和路一段27號 B1',
     transit: '捷運忠孝敦化站5號出口，步行2分鐘',
     lineUrl: 'https://lin.ee/dTCkydS',
+    mapEmbedUrl:
+      'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3614.8455611296736!2d121.54767441193627!3d25.03931467772036!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3442abcf90bf71ab%3A0x7d7e74bdafe72664!2zVUZDIEd5bSDmlabljZfml5foiabppKg!5e0!3m2!1szh-TW!2stw!4v1778650670170!5m2!1szh-TW!2stw',
   },
   {
     id: 'venue-neihu',
@@ -595,6 +633,8 @@ export const venues: Venue[] = [
     address: '台北市內湖區洲子街55號1F',
     transit: '捷運港墘站2號出口，步行1分鐘',
     lineUrl: 'https://lin.ee/baMDUpI',
+    mapEmbedUrl:
+      'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3613.6660747640794!2d121.57099151193722!3d25.079304677694402!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3442ac650cf40e81%3A0xf48b85ba2f238dfc!2zVUZDIEdZTeWFp-enkeaooeevhOmkqA!5e0!3m2!1szh-TW!2stw!4v1778650720964!5m2!1szh-TW!2stw',
   },
   {
     id: 'venue-taichung',
@@ -603,5 +643,7 @@ export const venues: Venue[] = [
     transit:
       '台中高鐵站免費接駁專車（往中國醫藥大學），至科博館站，步行5分鐘',
     lineUrl: 'https://lin.ee/Hhi6BCP',
+    mapEmbedUrl:
+      'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3640.584226597405!2d120.66126771191507!3d24.151235378309035!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x34693d2593548857%3A0x42da96286faa6a85!2zVUZDIEdZTSDlj7DkuK3li6Tnvo7ml5foiabppKg!5e0!3m2!1szh-TW!2stw!4v1778650738687!5m2!1szh-TW!2stw',
   },
 ]

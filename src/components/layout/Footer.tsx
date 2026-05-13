@@ -30,9 +30,19 @@ export function Footer({ onVenueAction }: FooterProps = {}) {
               <h3 className="text-base md:text-lg font-heading font-semibold text-pearl">
                 {venue.name}
               </h3>
-              <div className="space-y-1.5 text-sm text-mist/80 leading-relaxed flex-1">
+              <div className="space-y-1.5 text-sm text-mist/80 leading-relaxed">
                 <p>{venue.address}</p>
                 <p className="text-mist/60">{venue.transit}</p>
+              </div>
+              <div className="aspect-[4/3] overflow-hidden rounded-lg border border-pearl/10 bg-black/40">
+                <iframe
+                  src={venue.mapEmbedUrl}
+                  title={`${venue.name} 地圖`}
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  allowFullScreen
+                  className="w-full h-full border-0"
+                />
               </div>
               {onVenueAction ? (
                 <button

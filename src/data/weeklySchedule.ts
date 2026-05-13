@@ -16,8 +16,8 @@ export function buildCourseBookingUrl(course: WeeklyCourse): string | null {
 export const SCHEDULE_DISPLAY_LIMIT = 3
 
 export const weeklyScheduleSectionContent = {
-  title: '近期可報名的場次',
-  subtitle: '選一個你想試的方向，看看接下來幾天哪些場次可以走進場。',
+  title: '下一個可上的場次',
+  subtitle: '依方向推薦近 3 場。點下去先預留這一場。',
   footnote: '完整課表與名額狀態以 UFC GYM 線上隨時購官方公告為準。',
 }
 

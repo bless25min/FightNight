@@ -425,11 +425,11 @@ export function OffersPage() {
           scheduleCountByCategory={scheduleCountByCategory}
           liffUrl={liffUrl}
         />
-        <OffersSessions />
         <WeeklyScheduleSection
           activeCategory={scheduleCategory}
           onCategoryChange={setScheduleCategory}
         />
+        <OffersSessions />
         <FAQSection />
       </main>
       <Footer onVenueAction={(url) => void openWhenUnlocked(url)} />

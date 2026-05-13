@@ -1,6 +1,9 @@
 import { motion } from 'framer-motion'
 import { useMemo, useState } from 'react'
-import { venues } from '../../data/landingContent'
+import {
+  planSummaryByCategory,
+  venues,
+} from '../../data/landingContent'
 import {
   buildCourseBookingUrl,
   SCHEDULE_DISPLAY_LIMIT,
@@ -11,14 +14,6 @@ import type { CourseCategory, WeeklyCourse } from '../../types'
 import { SectionHeading } from '../ui/SectionHeading'
 import { SectionWrapper } from '../ui/SectionWrapper'
 
-function getTodayLocal(): string {
-  const d = new Date()
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
-}
-
 const CATEGORY_ORDER: CourseCategory[] = ['FIGHT_NIGHT', 'BOOT_CAMP']
 
 const categoryMeta: Record<
@@ -27,6 +22,7 @@ const categoryMeta: Record<
     label: string
     tabActiveClass: string
     badgeClass: string
+    ctaClass: string
     lead: string
   }
 > = {
@@ -34,14 +30,24 @@ const categoryMeta: Record<
     label: 'FIGHT NIGHT',
     tabActiveClass: 'bg-blaze text-abyss border-blaze',
     badgeClass: 'border-blaze/40 bg-blaze/15 text-blaze',
-    lead: '節奏與體能驅動。第一次進場、想跟著音樂與教練吶喊進入狀態的人，從這裡開始。',
+    ctaClass: 'bg-blaze text-abyss hover:bg-blaze/90',
+    lead: '節奏與體能。零基礎能跟，第一次靠近格鬥的人從這裡開始。',
   },
   BOOT_CAMP: {
     label: 'BOOT CAMP',
     tabActiveClass: 'bg-neon text-abyss border-neon',
     badgeClass: 'border-neon/40 bg-neon/15 text-neon',
-    lead: '技術與格鬥邏輯。想把刺激變成可以記住的身體反射、進入完整系統訓練的人。',
+    ctaClass: 'bg-neon text-abyss hover:bg-neon/90',
+    lead: '技術與格鬥邏輯。系統化訓練，把刺激變成可以記住的身體反射。',
   },
+}
+
+function getTodayLocal(): string {
+  const d = new Date()
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
 }
 
 function venueShortName(fullName: string) {
@@ -54,35 +60,20 @@ function sortByVenueThenName(a: WeeklyCourse, b: WeeklyCourse) {
   return a.name < b.name ? -1 : a.name > b.name ? 1 : 0
 }
 
-function sortByTime(a: WeeklyCourse, b: WeeklyCourse) {
-  if (a.startTime !== b.startTime) return a.startTime < b.startTime ? -1 : 1
-  return sortByVenueThenName(a, b)
-}
-
-type DateGroup = {
-  date: string
-  weekday: string
-  items: WeeklyCourse[]
-}
-
-function groupByDate(courses: WeeklyCourse[]): DateGroup[] {
-  const map = new Map<string, DateGroup>()
-  for (const c of courses) {
-    if (!map.has(c.date)) {
-      map.set(c.date, { date: c.date, weekday: c.weekday, items: [] })
-    }
-    map.get(c.date)!.items.push(c)
-  }
-  const groups = Array.from(map.values())
-  groups.sort((a, b) => (a.date < b.date ? -1 : 1))
-  for (const g of groups) g.items.sort(sortByTime)
-  return groups
-}
-
 function formatShortDate(iso: string) {
   const parts = iso.split('-')
   if (parts.length !== 3) return iso
   return `${Number(parts[1])}/${Number(parts[2])}`
+}
+
+function getRelativeDayLabel(isoDate: string, todayIso: string): string | null {
+  if (isoDate === todayIso) return '今晚'
+  const today = new Date(`${todayIso}T00:00:00`)
+  const target = new Date(`${isoDate}T00:00:00`)
+  const diff = Math.round((target.getTime() - today.getTime()) / 86400000)
+  if (diff === 1) return '明天'
+  if (diff === 2) return '後天'
+  return null
 }
 
 const venueShortLookup = (() => {
@@ -108,23 +99,29 @@ export function WeeklyScheduleSection({
     else setInternalCategory(c)
   }
 
+  const todayIso = useMemo(() => getTodayLocal(), [])
+
   const displayCourses = useMemo(() => {
-    const today = getTodayLocal()
     return weeklyCourses
-      .filter((c) => c.category === activeCategory && c.date >= today)
+      .filter((c) => c.category === activeCategory && c.date >= todayIso)
       .sort((a, b) => {
         if (a.date !== b.date) return a.date < b.date ? -1 : 1
-        return sortByTime(a, b)
+        if (a.startTime !== b.startTime)
+          return a.startTime < b.startTime ? -1 : 1
+        return sortByVenueThenName(a, b)
       })
       .slice(0, SCHEDULE_DISPLAY_LIMIT)
-  }, [activeCategory])
-
-  const dateGroups = useMemo(
-    () => groupByDate(displayCourses),
-    [displayCourses],
-  )
+  }, [activeCategory, todayIso])
 
   const meta = categoryMeta[activeCategory]
+  const planSummary = planSummaryByCategory[activeCategory]
+  const earliest = displayCourses[0]
+  const earliestLabel = earliest
+    ? `最快 ${
+        getRelativeDayLabel(earliest.date, todayIso) ??
+        `${formatShortDate(earliest.date)} 週${earliest.weekday}`
+      } ${earliest.startTime} 可上`
+    : null
 
   return (
     <SectionWrapper id="weekly-schedule">
@@ -133,7 +130,6 @@ export function WeeklyScheduleSection({
         subtitle={weeklyScheduleSectionContent.subtitle}
       />
 
-      {/* Category tabs */}
       <div
         role="tablist"
         aria-label="選擇課程方向"
@@ -161,79 +157,97 @@ export function WeeklyScheduleSection({
         })}
       </div>
 
-      <p className="text-center text-sm md:text-base text-mist/75 max-w-2xl mx-auto mb-7 md:mb-10 leading-snug">
+      <p className="text-center text-sm md:text-base text-mist/75 max-w-2xl mx-auto mb-2 md:mb-3 leading-snug">
         {meta.lead}
       </p>
 
-      {/* Date groups */}
-      <div className="max-w-5xl mx-auto space-y-7 md:space-y-10">
-        {dateGroups.length === 0 ? (
+      {earliestLabel && (
+        <p className="text-center text-base md:text-lg font-heading font-semibold text-pearl mb-7 md:mb-10 tabular-nums">
+          {earliestLabel}
+        </p>
+      )}
+
+      <div className="max-w-6xl mx-auto">
+        {displayCourses.length === 0 ? (
           <p className="text-center text-sm text-mist/60">
             這個方向近期沒有開課，先用 LINE 加入會員，下一輪開放會優先通知你。
           </p>
         ) : (
-          dateGroups.map((g, gIdx) => (
-            <motion.div
-              key={`${activeCategory}-${g.date}`}
-              initial={{ opacity: 0, y: 16 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.4, delay: gIdx * 0.04 }}
-            >
-              <div className="flex items-baseline gap-3 mb-3 md:mb-4 border-b border-pearl/10 pb-2">
-                <h3 className="text-lg md:text-xl font-heading font-bold text-pearl">
-                  週{g.weekday}
-                </h3>
-                <span className="text-sm md:text-base text-mist/60 font-heading tabular-nums">
-                  {formatShortDate(g.date)}
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3">
-                {g.items.map((c) => {
-                  const bookingUrl = buildCourseBookingUrl(c)
-                  return (
-                    <a
-                      key={c.id}
-                      href={bookingUrl ?? '#'}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-label={`報名 ${c.name}，${formatShortDate(c.date)} 週${c.weekday} ${c.startTime}–${c.endTime}，${c.venueName}`}
-                      data-cta={`schedule-${c.id}`}
-                      className="group rounded-xl border border-pearl/10 bg-black/30 px-4 py-3 md:px-5 md:py-4 flex flex-col gap-1.5 hover:border-pearl/30 hover:bg-black/45 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pearl/40"
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5">
+            {displayCourses.map((c, i) => {
+              const bookingUrl = buildCourseBookingUrl(c)
+              const dayLabel = getRelativeDayLabel(c.date, todayIso)
+              return (
+                <motion.a
+                  key={c.id}
+                  href={bookingUrl ?? '#'}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={`預留 ${c.name}，${formatShortDate(c.date)} 週${c.weekday} ${c.startTime}–${c.endTime}，${c.venueName}`}
+                  data-cta={`schedule-${c.id}`}
+                  initial={{ opacity: 0, y: 16 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.4, delay: i * 0.06 }}
+                  className="group rounded-2xl border border-pearl/15 bg-black/35 p-5 md:p-6 flex flex-col gap-3 hover:border-pearl/30 hover:bg-black/45 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pearl/40"
+                >
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span className="text-xl md:text-2xl font-heading font-bold text-pearl tracking-wide">
+                      {dayLabel ?? `週${c.weekday}`}
+                    </span>
+                    <span
+                      className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded-md text-[10px] md:text-xs font-heading font-medium tracking-wide border ${meta.badgeClass}`}
                     >
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="text-sm md:text-base font-heading text-pearl tabular-nums">
-                          {c.startTime}–{c.endTime}
+                      {venueShortLookup[c.venueId] ?? c.venueName}
+                    </span>
+                  </div>
+                  <p className="text-sm md:text-base text-mist/70 font-heading tabular-nums">
+                    {formatShortDate(c.date)} · {c.startTime}–{c.endTime}
+                  </p>
+
+                  <div className="border-t border-pearl/10 pt-3">
+                    <p className="text-base md:text-lg text-pearl font-semibold leading-snug">
+                      {c.name}
+                    </p>
+                    <p className="text-xs md:text-sm text-mist/55 font-heading tracking-wide">
+                      {c.nameEn}
+                    </p>
+                    <p className="text-xs md:text-sm text-mist/65 mt-1.5">
+                      教練 {c.coach}
+                    </p>
+                  </div>
+
+                  <div className="border-t border-pearl/10 pt-3">
+                    <p className="text-[10px] md:text-xs font-heading tracking-[0.2em] text-mist/55 mb-1">
+                      可用方案
+                    </p>
+                    <p className="text-sm md:text-base text-pearl font-heading font-semibold">
+                      {planSummary.label}
+                    </p>
+                    <p className="text-sm md:text-base text-pearl/85 tabular-nums">
+                      {planSummary.price}
+                      {planSummary.hint && (
+                        <span className="text-mist/55 text-xs ml-2">
+                          {planSummary.hint}
                         </span>
-                        <span
-                          className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded-md text-[10px] md:text-xs font-heading font-medium tracking-wide border ${meta.badgeClass}`}
-                        >
-                          {venueShortLookup[c.venueId] ?? c.venueName}
-                        </span>
-                      </div>
-                      <p className="text-sm md:text-base text-pearl font-medium leading-snug">
-                        {c.name}
-                      </p>
-                      <p className="text-xs md:text-sm text-mist/55 font-heading tracking-wide">
-                        {c.nameEn}
-                      </p>
-                      <p className="text-xs md:text-sm text-mist/60">
-                        {c.coach}
-                      </p>
-                      <span className="mt-1 text-xs md:text-sm font-heading text-mist/55 group-hover:text-pearl transition-colors">
-                        前往報名 →
-                      </span>
-                    </a>
-                  )
-                })}
-              </div>
-            </motion.div>
-          ))
+                      )}
+                    </p>
+                  </div>
+
+                  <div
+                    className={`mt-auto inline-flex items-center justify-center gap-1.5 w-full px-4 py-3 rounded-xl font-heading font-bold tracking-wide text-sm md:text-base transition-colors ${meta.ctaClass}`}
+                  >
+                    預留這一場
+                    <span aria-hidden>→</span>
+                  </div>
+                </motion.a>
+              )
+            })}
+          </div>
         )}
       </div>
 
-      <p className="text-center text-xs md:text-sm text-mist/50 max-w-2xl mx-auto mt-10 md:mt-14">
+      <p className="text-center text-xs md:text-sm text-mist/50 max-w-2xl mx-auto mt-8 md:mt-12">
         {weeklyScheduleSectionContent.footnote}
       </p>
     </SectionWrapper>
