@@ -32,6 +32,22 @@ export type Coach = {
 
 export type SessionCapacity = '仍可報名' | '名額緊張' | '即將額滿' | '本月已額滿'
 
+export type CourseCategory = 'FIGHT_NIGHT' | 'BOOT_CAMP'
+
+export type WeeklyCourse = {
+  id: string
+  category: CourseCategory
+  venueId: string
+  venueName: string
+  name: string
+  nameEn: string
+  coach: string
+  date: string
+  weekday: string
+  startTime: string
+  endTime: string
+}
+
 export type Session = {
   id: string
   venueId: string

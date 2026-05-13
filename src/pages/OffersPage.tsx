@@ -31,6 +31,7 @@ import { IdentitySection } from '../components/sections/IdentitySection'
 import { NewModelSection } from '../components/sections/NewModelSection'
 import { OldFrameworkBreakSection } from '../components/sections/OldFrameworkBreakSection'
 import { PainSection } from '../components/sections/PainSection'
+import { WeeklyScheduleSection } from '../components/sections/WeeklyScheduleSection'
 import { FAQSection } from '../components/sections/FAQSection'
 import { LockedContent } from '../components/ui/LockedContent'
 import { PlanCard } from '../components/ui/PlanCard'
@@ -386,6 +387,7 @@ export function OffersPage() {
           liffUrl={liffUrl}
         />
         <OffersSessions />
+        <WeeklyScheduleSection />
         <FAQSection />
       </main>
       <Footer onVenueAction={(url) => void openWhenUnlocked(url)} />
