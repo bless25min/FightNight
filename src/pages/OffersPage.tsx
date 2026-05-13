@@ -13,6 +13,8 @@ import offersPlansTransitionPoster from '../assets/offers/offers-plans-transitio
 import {
   bootCampFaqItems,
   curriculumModules,
+  faqItems,
+  fightNightPassPlan,
   offersCurriculumSectionContent,
   offersHeroContent,
   offersOutcomeSectionContent,
@@ -37,6 +39,7 @@ import { FAQSection } from '../components/sections/FAQSection'
 import { LockedContent } from '../components/ui/LockedContent'
 import { PlanCard } from '../components/ui/PlanCard'
 import { Button } from '../components/ui/Button'
+import { SectionHeading } from '../components/ui/SectionHeading'
 import { SectionWrapper } from '../components/ui/SectionWrapper'
 import { StickyActionBar } from '../components/ui/StickyActionBar'
 
@@ -78,15 +81,7 @@ function PosterFigure({
   )
 }
 
-function OffersHero({
-  gateState,
-  onPlansClick,
-  onScheduleClick,
-}: {
-  gateState: LiffGateState
-  onPlansClick: () => void
-  onScheduleClick: () => void
-}) {
+function OffersHero({ gateState }: { gateState: LiffGateState }) {
   const helperMessage = useMemo(() => {
     if (gateState.status === 'not-friend') {
       return '你已完成 LINE 登入，下一步加入官方帳號後，就能解鎖完整會員內容。'
@@ -146,20 +141,6 @@ function OffersHero({
             {helperMessage}
           </p>
         )}
-
-        <div className="mt-5 flex flex-col items-center justify-center gap-3 sm:flex-row md:mt-8">
-          <Button size="lg" onClick={onPlansClick} data-cta="offers-hero-plans">
-            查看 Boot Camp 方案
-          </Button>
-          <Button
-            variant="secondary"
-            size="lg"
-            onClick={onScheduleClick}
-            data-cta="offers-hero-schedule"
-          >
-            看本週課表
-          </Button>
-        </div>
       </div>
     </section>
   )
@@ -260,6 +241,48 @@ function OffersOutcomeSummary() {
   )
 }
 
+function OffersFightNightPlan({
+  gateState,
+  onGateAction,
+  onCtaAction,
+  onScheduleNav,
+  scheduleCountByCategory,
+  liffUrl,
+}: {
+  gateState: LiffGateState
+  onGateAction: () => void
+  onCtaAction: (redirectUrl: string, planId: string) => void
+  onScheduleNav: (category: CourseCategory) => void
+  scheduleCountByCategory: Record<CourseCategory, number>
+  liffUrl?: string
+}) {
+  return (
+    <SectionWrapper id="offers-fight-night-plan">
+      <SectionHeading
+        title="Fight Night Pass"
+        subtitle="如果你只想先嘗試一次，這張 pass 就是最直接的入口。"
+      />
+
+      <LockedContent
+        title="登入後查看 Fight Night Pass"
+        gateState={gateState}
+        liffUrl={liffUrl}
+        onGateAction={onGateAction}
+      >
+        <div className="max-w-xl mx-auto">
+          <PlanCard
+            plan={fightNightPassPlan}
+            onCtaAction={onCtaAction}
+            scheduleCategory="FIGHT_NIGHT"
+            scheduleCount={scheduleCountByCategory.FIGHT_NIGHT}
+            onScheduleNav={onScheduleNav}
+          />
+        </div>
+      </LockedContent>
+    </SectionWrapper>
+  )
+}
+
 function OffersPlans({
   gateState,
   onGateAction,
@@ -323,6 +346,43 @@ function OffersPlans({
   )
 }
 
+function OffersPlanJumpSection({
+  onFightNight,
+  onBootCamp,
+}: {
+  onFightNight: () => void
+  onBootCamp: () => void
+}) {
+  return (
+    <SectionWrapper
+      id="offers-plan-jump"
+      fullWidth
+      padding="py-8 md:py-14"
+      className="border-y border-pearl/10 bg-black/25 px-3 sm:px-8"
+    >
+      <div className="max-w-4xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-5">
+        <div>
+          <p className="text-xs md:text-sm font-heading tracking-[0.28em] text-neon uppercase mb-2">
+            選擇你的入口
+          </p>
+          <p className="text-xl md:text-2xl font-heading font-bold text-pearl">
+            先試一次，或直接走完整系統。
+          </p>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-3 md:justify-end">
+          <Button variant="secondary" onClick={onFightNight} className="w-full sm:w-auto">
+            FIGHT NIGHT
+          </Button>
+          <Button variant="primary" onClick={onBootCamp} className="w-full sm:w-auto">
+            BOOT CAMP
+          </Button>
+        </div>
+      </div>
+    </SectionWrapper>
+  )
+}
+
 const scheduleCountByCategory: Record<CourseCategory, number> = {
   FIGHT_NIGHT: SCHEDULE_DISPLAY_LIMIT,
   BOOT_CAMP: SCHEDULE_DISPLAY_LIMIT,
@@ -343,7 +403,13 @@ export function OffersPage() {
     }
   }, [])
 
-  const scrollToPlans = useCallback(() => {
+  const scrollToFightNightPlan = useCallback(() => {
+    document
+      .getElementById('offers-fight-night-plan')
+      ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [])
+
+  const scrollToBootCampPlans = useCallback(() => {
     document
       .getElementById('offers-plans')
       ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -353,17 +419,27 @@ export function OffersPage() {
     <div className="overflow-x-hidden w-full relative">
       <Header />
       <main>
-        <OffersHero
-          gateState={gateState}
-          onPlansClick={scrollToPlans}
-          onScheduleClick={() => navigateToSchedule('BOOT_CAMP')}
-        />
+        <OffersHero gateState={gateState} />
         <PainSection />
         <OldFrameworkBreakSection />
         <NewModelSection />
         <FormulaSection />
         <ExperienceFlowSection />
         <IdentitySection />
+        <OffersFightNightPlan
+          gateState={gateState}
+          onGateAction={() => void requestGateAccess()}
+          onCtaAction={(url) => void openWhenUnlocked(url)}
+          onScheduleNav={navigateToSchedule}
+          scheduleCountByCategory={scheduleCountByCategory}
+          liffUrl={liffUrl}
+        />
+        <FAQSection
+          id="offers-fight-night-faq"
+          title="常見問題"
+          subtitle="先回答你心裡那些「可是...」"
+          items={faqItems}
+        />
         <OffersCurriculum />
         <FAQSection
           id="boot-camp-faq"
@@ -381,14 +457,17 @@ export function OffersPage() {
           liffUrl={liffUrl}
         />
         <WeeklyScheduleSection
-          title="本週可報名 Boot Camp"
-          subtitle="選一堂你想上的技術方向，再回到方案完成預留。"
+          title="本週可報名場次"
+          subtitle="先看時間、場館與課程方向，再決定從單次或完整系統進場。"
           activeCategory={scheduleCategory}
-          categories={['BOOT_CAMP']}
-          showCategoryTabs={false}
+          categories={['FIGHT_NIGHT', 'BOOT_CAMP']}
+          showCategoryTabs
           onCategoryChange={setScheduleCategory}
         />
-        <FAQSection />
+        <OffersPlanJumpSection
+          onFightNight={scrollToFightNightPlan}
+          onBootCamp={scrollToBootCampPlans}
+        />
       </main>
       <Footer onVenueAction={(url) => void openWhenUnlocked(url)} />
       {gateState.status === 'unlocked' && (
@@ -397,7 +476,7 @@ export function OffersPage() {
           title="兩堂 NT$1,800 起"
           detail="四堂完整旅程 NT$3,800"
           actionLabel="看方案"
-          onAction={scrollToPlans}
+          onAction={scrollToBootCampPlans}
         />
       )}
     </div>

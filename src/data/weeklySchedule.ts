@@ -13,11 +13,11 @@ export function buildCourseBookingUrl(course: WeeklyCourse): string | null {
   return `https://ec.bookfastpos.com/GbARqWPnjP/search/result?storeIds=%5B%22${storeId}%22%5D&courseType=%5B%5D&queryWeeks=%5B%5D&queryDates=%5B%5D&teacherIds=%5B%5D&courseIds=%5B%5D&startTime=00%3A00&endTime=23%3A59&minPrice=0&maxPrice=0&pageNumber=1&orderType=startTime&orderDirection=ASC`
 }
 
-export const SCHEDULE_DISPLAY_LIMIT = 3
+export const SCHEDULE_DISPLAY_LIMIT = 9
 
 export const weeklyScheduleSectionContent = {
   title: '下一個可上的場次',
-  subtitle: '依方向推薦近 3 場。點下去先預留這一場。',
+  subtitle: '依方向推薦近期可選場次。點下去先預留這一場。',
   footnote: '完整課表與名額狀態以 UFC GYM 線上隨時購官方公告為準。',
 }
 

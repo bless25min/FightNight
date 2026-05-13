@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import {
   planSummaryByCategory,
   venues,
@@ -116,6 +116,18 @@ export function WeeklyScheduleSection({
     if (onCategoryChange) onCategoryChange(c)
     else setInternalCategory(c)
   }
+  const scrollerRef = useRef<HTMLDivElement>(null)
+
+  const scrollSchedule = (direction: -1 | 1) => {
+    const el = scrollerRef.current
+    if (!el) return
+
+    const card = el.querySelector<HTMLElement>('[data-schedule-card]')
+    const style = window.getComputedStyle(el)
+    const gap = Number.parseFloat(style.columnGap || style.gap || '16') || 16
+    const distance = (card?.offsetWidth ?? el.clientWidth * 0.85) + gap
+    el.scrollBy({ left: direction * distance, behavior: 'smooth' })
+  }
 
   const todayIso = useMemo(() => getTodayLocal(), [])
 
@@ -194,77 +206,107 @@ export function WeeklyScheduleSection({
             這個方向近期沒有開課，先用 LINE 加入會員，下一輪開放會優先通知你。
           </p>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5">
-            {displayCourses.map((c, i) => {
-              const bookingUrl = buildCourseBookingUrl(c)
-              const dayLabel = getRelativeDayLabel(c.date, todayIso)
-              return (
-                <motion.a
-                  key={c.id}
-                  href={bookingUrl ?? '#'}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={`預留 ${c.name}，${formatShortDate(c.date)} 週${c.weekday} ${c.startTime}–${c.endTime}，${c.venueName}`}
-                  data-cta={`schedule-${c.id}`}
-                  initial={{ opacity: 0, y: 16 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.4, delay: i * 0.06 }}
-                  className="group rounded-2xl border border-pearl/15 bg-black/35 p-5 md:p-6 flex flex-col gap-3 hover:border-pearl/30 hover:bg-black/45 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pearl/40"
+          <>
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <p className="text-xs md:text-sm font-heading tracking-[0.18em] text-mist/55 uppercase">
+                {displayCourses.length} 場可選
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  aria-label="上一堂課"
+                  onClick={() => scrollSchedule(-1)}
+                  className="h-10 px-3 rounded-full border border-pearl/15 bg-black/35 text-sm font-heading text-mist hover:text-pearl hover:border-pearl/30 transition-colors"
                 >
-                  <div className="flex items-baseline justify-between gap-3">
-                    <span className="text-xl md:text-2xl font-heading font-bold text-pearl tracking-wide">
-                      {dayLabel ?? `週${c.weekday}`}
-                    </span>
-                    <span
-                      className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded-md text-[10px] md:text-xs font-heading font-medium tracking-wide border ${meta.badgeClass}`}
-                    >
-                      {venueShortLookup[c.venueId] ?? c.venueName}
-                    </span>
-                  </div>
-                  <p className="text-sm md:text-base text-mist/70 font-heading tabular-nums">
-                    {formatShortDate(c.date)} · {c.startTime}–{c.endTime}
-                  </p>
+                  ← 上一堂
+                </button>
+                <button
+                  type="button"
+                  aria-label="下一堂課"
+                  onClick={() => scrollSchedule(1)}
+                  className="h-10 px-3 rounded-full border border-pearl/15 bg-black/35 text-sm font-heading text-mist hover:text-pearl hover:border-pearl/30 transition-colors"
+                >
+                  下一堂 →
+                </button>
+              </div>
+            </div>
 
-                  <div className="border-t border-pearl/10 pt-3">
-                    <p className="text-base md:text-lg text-pearl font-semibold leading-snug">
-                      {c.name}
-                    </p>
-                    <p className="text-xs md:text-sm text-mist/55 font-heading tracking-wide">
-                      {c.nameEn}
-                    </p>
-                    <p className="text-xs md:text-sm text-mist/65 mt-1.5">
-                      教練 {c.coach}
-                    </p>
-                  </div>
-
-                  <div className="border-t border-pearl/10 pt-3">
-                    <p className="text-[10px] md:text-xs font-heading tracking-[0.2em] text-mist/55 mb-1">
-                      可用方案
-                    </p>
-                    <p className="text-sm md:text-base text-pearl font-heading font-semibold">
-                      {planSummary.label}
-                    </p>
-                    <p className="text-sm md:text-base text-pearl/85 tabular-nums">
-                      {planSummary.price}
-                      {planSummary.hint && (
-                        <span className="text-mist/55 text-xs ml-2">
-                          {planSummary.hint}
-                        </span>
-                      )}
-                    </p>
-                  </div>
-
-                  <div
-                    className={`mt-auto inline-flex items-center justify-center gap-1.5 w-full px-4 py-3 rounded-xl font-heading font-bold tracking-wide text-sm md:text-base transition-colors ${meta.ctaClass}`}
+            <div
+              ref={scrollerRef}
+              className="-mx-3 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-3 pb-4 sm:mx-0 sm:px-0 md:gap-5"
+            >
+              {displayCourses.map((c, i) => {
+                const bookingUrl = buildCourseBookingUrl(c)
+                const dayLabel = getRelativeDayLabel(c.date, todayIso)
+                return (
+                  <motion.a
+                    key={c.id}
+                    href={bookingUrl ?? '#'}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`預留 ${c.name}，${formatShortDate(c.date)} 週${c.weekday} ${c.startTime}–${c.endTime}，${c.venueName}`}
+                    data-cta={`schedule-${c.id}`}
+                    data-schedule-card
+                    initial={{ opacity: 0, y: 16 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.4, delay: i * 0.04 }}
+                    className="group flex min-h-[22rem] shrink-0 basis-[82vw] snap-start flex-col gap-3 rounded-2xl border border-pearl/15 bg-black/35 p-5 transition-colors hover:border-pearl/30 hover:bg-black/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pearl/40 sm:basis-[22rem] md:basis-[21rem] md:p-6 lg:basis-[22rem] xl:basis-[23rem]"
                   >
-                    預留這一場
-                    <span aria-hidden>→</span>
-                  </div>
-                </motion.a>
-              )
-            })}
-          </div>
+                    <div className="flex items-baseline justify-between gap-3">
+                      <span className="text-xl md:text-2xl font-heading font-bold text-pearl tracking-wide">
+                        {dayLabel ?? `週${c.weekday}`}
+                      </span>
+                      <span
+                        className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded-md text-[10px] md:text-xs font-heading font-medium tracking-wide border ${meta.badgeClass}`}
+                      >
+                        {venueShortLookup[c.venueId] ?? c.venueName}
+                      </span>
+                    </div>
+                    <p className="text-sm md:text-base text-mist/70 font-heading tabular-nums">
+                      {formatShortDate(c.date)} · {c.startTime}–{c.endTime}
+                    </p>
+
+                    <div className="border-t border-pearl/10 pt-3">
+                      <p className="text-base md:text-lg text-pearl font-semibold leading-snug">
+                        {c.name}
+                      </p>
+                      <p className="text-xs md:text-sm text-mist/55 font-heading tracking-wide">
+                        {c.nameEn}
+                      </p>
+                      <p className="text-xs md:text-sm text-mist/65 mt-1.5">
+                        教練 {c.coach}
+                      </p>
+                    </div>
+
+                    <div className="border-t border-pearl/10 pt-3">
+                      <p className="text-[10px] md:text-xs font-heading tracking-[0.2em] text-mist/55 mb-1">
+                        可用方案
+                      </p>
+                      <p className="text-sm md:text-base text-pearl font-heading font-semibold">
+                        {planSummary.label}
+                      </p>
+                      <p className="text-sm md:text-base text-pearl/85 tabular-nums">
+                        {planSummary.price}
+                        {planSummary.hint && (
+                          <span className="text-mist/55 text-xs ml-2">
+                            {planSummary.hint}
+                          </span>
+                        )}
+                      </p>
+                    </div>
+
+                    <div
+                      className={`mt-auto inline-flex items-center justify-center gap-1.5 w-full px-4 py-3 rounded-xl font-heading font-bold tracking-wide text-sm md:text-base transition-colors ${meta.ctaClass}`}
+                    >
+                      預留這一場
+                      <span aria-hidden>→</span>
+                    </div>
+                  </motion.a>
+                )
+              })}
+            </div>
+          </>
         )}
       </div>
 

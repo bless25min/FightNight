@@ -212,10 +212,9 @@ export const audiencePoints: AudiencePoint[] = [
 // ── 票種區（首頁 teaser + 登入後完整資訊共用資料） ─────
 export const ticketSectionContent = {
   title: 'Fight Night Pass',
-  subtitle:
-    '不用成為會員，不用有拳擊基礎。先進場一次，體驗一個不一樣的週五晚上。',
+  subtitle: '',
   description:
-    '如果你只想先進場一次，這張 pass 就是最直接的入口。先完成 LINE 會員驗證，再查看完整權益、場次狀態與購買方式。',
+    '如果你只想先嘗試一次，這張 pass 就是最直接的入口。',
   unifiedCtaLabel: '購買 Fight Night Pass',
   previewItems: ['完整方案權益', '活動場次狀態', '預留名額方式'],
 }
@@ -327,7 +326,7 @@ export const bootCampFaqItems: FAQItem[] = [
     id: 'bootcamp-faq-4',
     question: '四堂 Boot Camp 是連續四週嗎？缺席怎麼辦？',
     answer:
-      'Boot Camp 會依當月場次規劃安排，不一定每次都剛好連續四週。報名前會先確認當月梯次、上課節奏與缺席處理方式；如果你有時間限制，建議先確認可參與場次再選方案。',
+      'Boot Camp 會依當月場次規劃安排，報名後專員會與您確認當月梯次、上課節奏、課程安排。',
   },
 ]
 
@@ -489,7 +488,7 @@ export const faqItems: FAQItem[] = [
     id: 'faq-1',
     question: '這到底是拳擊課、團課，還是防身課？',
     answer:
-      'Fight Night 是拳擊節奏體驗，不是傳統技術課，也不是實戰對打或防身課。你會跟著教練口令、沙包與基礎動作進入狀態，先用一晚確認這是不是你的壓力出口。',
+      'Fight Night 是精心編排的入門娛樂體驗課，不是傳統技術課，也不是實戰對打或防身課。你會跟著教練口令、沙包與基礎動作進入狀態，先用一晚確認這是不是你的壓力出口。',
   },
   {
     id: 'faq-2',
@@ -537,8 +536,8 @@ export const faqItems: FAQItem[] = [
 
 // ── Final CTA ─────────────────────────────────────
 export const finalCtaContent = {
-  title: '不是每個夜晚都值得出門。',
-  subtitle: '先用 NT$980 Fight Night Pass 進場一次，再決定要不要走完整旅程。',
+  title: '先進場一次，再決定要不要走完整旅程。',
+  subtitle: '',
   primaryCta: '購買 Fight Night Pass',
   ghostCta: '先加 LINE 取得通知',
 }
