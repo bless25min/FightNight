@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   planSummaryByCategory,
   venues,
@@ -12,11 +12,35 @@ import {
   weeklyCourses,
   weeklyScheduleSectionContent,
 } from '../../data/weeklySchedule'
-import type { CourseCategory, WeeklyCourse } from '../../types'
+import { useSessionAvailability } from '../../hooks/useSessionAvailability'
+import type { BootCampRoute, CourseCategory, WeeklyCourse } from '../../types'
+import { Button } from '../ui/Button'
 import { SectionHeading } from '../ui/SectionHeading'
 import { SectionWrapper } from '../ui/SectionWrapper'
 
 const CATEGORY_ORDER: CourseCategory[] = ['FIGHT_NIGHT', 'BOOT_CAMP']
+const WEEKDAY_LABELS = ['日', '一', '二', '三', '四', '五', '六']
+const BOOT_CAMP_ROUTE_ORDER: Array<BootCampRoute | null> = [
+  null,
+  'BOXING',
+  'MUAY_THAI',
+]
+
+const bootCampRouteMeta: Record<
+  BootCampRoute,
+  { label: string; shortLabel: string; hint: string }
+> = {
+  BOXING: {
+    label: '拳擊 Boot Camp',
+    shortLabel: '拳擊',
+    hint: '站姿、出拳、回防',
+  },
+  MUAY_THAI: {
+    label: '泰拳 Boot Camp',
+    shortLabel: '泰拳',
+    hint: '拳、踢、膝、重心',
+  },
+}
 
 const categoryMeta: Record<
   CourseCategory,
@@ -24,7 +48,6 @@ const categoryMeta: Record<
     label: string
     tabActiveClass: string
     badgeClass: string
-    ctaClass: string
     lead: string
   }
 > = {
@@ -32,15 +55,13 @@ const categoryMeta: Record<
     label: 'FIGHT NIGHT',
     tabActiveClass: 'bg-blaze text-abyss border-blaze',
     badgeClass: 'border-blaze/40 bg-blaze/15 text-blaze',
-    ctaClass: 'bg-blaze text-abyss hover:bg-blaze/90',
-    lead: '節奏與體能。零基礎能跟，第一次靠近格鬥的人從這裡開始。',
+    lead: '選定日期與場館，購買該場 Fight Night Pass。',
   },
   BOOT_CAMP: {
     label: 'BOOT CAMP',
     tabActiveClass: 'bg-neon text-abyss border-neon',
     badgeClass: 'border-neon/40 bg-neon/15 text-neon',
-    ctaClass: 'bg-neon text-abyss hover:bg-neon/90',
-    lead: '技術與格鬥邏輯。系統化訓練，把刺激變成可以記住的身體反射。',
+    lead: '先選拳擊或泰拳路徑，再選一堂作為兩堂或四堂的開始。',
   },
 }
 
@@ -61,6 +82,46 @@ function addDays(iso: string, days: number): string {
   return `${y}-${m}-${day}`
 }
 
+function getNextWeeklyOccurrence(course: WeeklyCourse, fromIso: string) {
+  let date = course.date
+  while (date < fromIso) {
+    date = addDays(date, 7)
+  }
+
+  if (date === course.date) return course
+
+  return {
+    ...course,
+    id: `${course.id}-${date}`,
+    date,
+  }
+}
+
+function getWeekdayLabel(iso: string) {
+  const d = new Date(`${iso}T00:00:00`)
+  return WEEKDAY_LABELS[d.getDay()] ?? ''
+}
+
+function getBootCampSeries(course: WeeklyCourse, count: 2 | 4) {
+  return Array.from({ length: count }, (_, index) => {
+    const date = addDays(course.date, index * 7)
+    return {
+      id: getSessionInventoryId(course, date),
+      date,
+      weekday: getWeekdayLabel(date),
+      startTime: course.startTime,
+      endTime: course.endTime,
+    }
+  })
+}
+
+function getSessionInventoryId(course: WeeklyCourse, date = course.date) {
+  if (date === course.date) return course.id
+  const dynamicDateSuffix = /-\d{4}-\d{2}-\d{2}$/
+  const baseId = course.id.replace(dynamicDateSuffix, '')
+  return `${baseId}-${date}`
+}
+
 function venueShortName(fullName: string) {
   const idx = fullName.indexOf('—')
   return idx >= 0 ? fullName.slice(idx + 1).trim() : fullName
@@ -71,17 +132,20 @@ function sortByVenueThenName(a: WeeklyCourse, b: WeeklyCourse) {
   return a.name < b.name ? -1 : a.name > b.name ? 1 : 0
 }
 
+function getBootCampRoute(course: WeeklyCourse): BootCampRoute | null {
+  if (course.name.includes('泰拳')) return 'MUAY_THAI'
+  if (course.name.includes('拳擊')) return 'BOXING'
+  return null
+}
+
 function isBootCampEntryCourse(course: WeeklyCourse) {
   if (course.category !== 'BOOT_CAMP') return true
-  return (
-    course.name.includes('拳擊') ||
-    course.name.includes('泰拳')
-  )
+  return getBootCampRoute(course) !== null
 }
 
 function getBootCampRouteLabel(course: WeeklyCourse) {
-  if (course.name.includes('泰拳')) return '泰拳 Boot Camp'
-  if (course.name.includes('拳擊')) return '拳擊 Boot Camp'
+  const route = getBootCampRoute(course)
+  if (route) return bootCampRouteMeta[route].label
   return 'Boot Camp'
 }
 
@@ -113,13 +177,46 @@ const venueLandmarks: Record<string, string> = {
   'venue-taichung': '勤美誠品綠園道',
 }
 
+function DisabledCta({
+  children,
+  className = '',
+}: {
+  children: string
+  className?: string
+}) {
+  return (
+    <button
+      type="button"
+      disabled
+      className={`inline-flex w-full cursor-not-allowed items-center justify-center rounded-xl border border-pearl/10 bg-pearl/5 px-4 py-3 text-sm font-heading font-bold tracking-wide text-mist/45 ${className}`}
+    >
+      {children}
+    </button>
+  )
+}
+
+function getRemainingLabel(remaining: number) {
+  if (remaining <= 0) return '已售完'
+  if (remaining <= 2) return `最後 ${remaining} 席`
+  return `剩餘 ${remaining} 席`
+}
+
+function getRemainingBadgeClass(remaining: number, defaultClass: string) {
+  if (remaining <= 0) return 'border-pearl/15 bg-pearl/5 text-mist/45'
+  if (remaining <= 2) return 'border-blaze/50 bg-blaze/15 text-blaze'
+  return defaultClass
+}
+
 type Props = {
   id?: string
   activeCategory?: CourseCategory
   onCategoryChange?: (category: CourseCategory) => void
+  activeBootCampRoute?: BootCampRoute | null
+  onBootCampRouteChange?: (route: BootCampRoute | null) => void
   categories?: CourseCategory[]
   showCategoryTabs?: boolean
   showVenueFilter?: boolean
+  showBootCampRouteFilter?: boolean
   title?: string
   subtitle?: string
   embedded?: boolean
@@ -130,9 +227,12 @@ export function WeeklyScheduleSection({
   id = 'weekly-schedule',
   activeCategory: controlledCategory,
   onCategoryChange,
+  activeBootCampRoute: controlledBootCampRoute,
+  onBootCampRouteChange,
   categories = CATEGORY_ORDER,
   showCategoryTabs = categories.length > 1,
   showVenueFilter = false,
+  showBootCampRouteFilter = true,
   title = weeklyScheduleSectionContent.title,
   subtitle = weeklyScheduleSectionContent.subtitle,
   embedded = false,
@@ -141,14 +241,24 @@ export function WeeklyScheduleSection({
   const fallbackCategory = categories[0] ?? 'FIGHT_NIGHT'
   const [internalCategory, setInternalCategory] =
     useState<CourseCategory>(fallbackCategory)
+  const [internalBootCampRoute, setInternalBootCampRoute] =
+    useState<BootCampRoute | null>(null)
   const activeCategory =
     controlledCategory && categories.includes(controlledCategory)
       ? controlledCategory
       : internalCategory
+  const activeBootCampRoute =
+    activeCategory === 'BOOT_CAMP'
+      ? controlledBootCampRoute ?? internalBootCampRoute
+      : null
   const setActiveCategory = (c: CourseCategory) => {
     if (onCategoryChange) onCategoryChange(c)
     else setInternalCategory(c)
   }
+  const setActiveBootCampRoute = useCallback((route: BootCampRoute | null) => {
+    if (onBootCampRouteChange) onBootCampRouteChange(route)
+    else setInternalBootCampRoute(route)
+  }, [onBootCampRouteChange])
   const scrollerRef = useRef<HTMLDivElement>(null)
   const [activeVenueId, setActiveVenueId] = useState<string | null>(null)
 
@@ -169,8 +279,30 @@ export function WeeklyScheduleSection({
     [todayIso],
   )
 
-  const upcomingCourses = useMemo(() => {
-    return weeklyCourses
+  const allUpcomingCourses = useMemo(() => {
+    const courseBySlot = new Map<string, WeeklyCourse>()
+
+    for (const course of weeklyCourses) {
+      if (course.category !== activeCategory || !isBootCampEntryCourse(course)) {
+        continue
+      }
+
+      const nextCourse = getNextWeeklyOccurrence(course, bookableFromIso)
+      const slotKey = [
+        nextCourse.category,
+        nextCourse.venueId,
+        nextCourse.date,
+        nextCourse.startTime,
+        nextCourse.endTime,
+        nextCourse.name,
+      ].join('|')
+
+      if (!courseBySlot.has(slotKey)) {
+        courseBySlot.set(slotKey, nextCourse)
+      }
+    }
+
+    return Array.from(courseBySlot.values())
       .filter(
         (c) =>
           c.category === activeCategory &&
@@ -184,6 +316,28 @@ export function WeeklyScheduleSection({
         return sortByVenueThenName(a, b)
       })
   }, [activeCategory, bookableFromIso])
+
+  const upcomingCourses = useMemo(() => {
+    if (activeCategory !== 'BOOT_CAMP' || !activeBootCampRoute) {
+      return allUpcomingCourses
+    }
+    return allUpcomingCourses.filter(
+      (course) => getBootCampRoute(course) === activeBootCampRoute,
+    )
+  }, [activeBootCampRoute, activeCategory, allUpcomingCourses])
+
+  const routeOptions = useMemo(() => {
+    if (activeCategory !== 'BOOT_CAMP') return []
+
+    return BOOT_CAMP_ROUTE_ORDER.map((route) => ({
+      route,
+      count:
+        route === null
+          ? allUpcomingCourses.length
+          : allUpcomingCourses.filter((c) => getBootCampRoute(c) === route)
+              .length,
+    })).filter((option) => option.count > 0)
+  }, [activeCategory, allUpcomingCourses])
 
   const venueOptions = useMemo(() => {
     return venues
@@ -200,9 +354,44 @@ export function WeeklyScheduleSection({
       .slice(0, SCHEDULE_DISPLAY_LIMIT)
   }, [activeVenueId, upcomingCourses])
 
+  const availabilitySessionIds = useMemo(() => {
+    return displayCourses.flatMap((course) => {
+      if (activeCategory !== 'BOOT_CAMP') {
+        return [getSessionInventoryId(course)]
+      }
+
+      return getBootCampSeries(course, 4).map((session) => session.id)
+    })
+  }, [activeCategory, displayCourses])
+
+  const { getAvailability, hasLiveData } =
+    useSessionAvailability(availabilitySessionIds)
+
+  const getPackageAvailability = useCallback(
+    (course: WeeklyCourse, count: 1 | 2 | 4) => {
+      const sessionIds =
+        count === 1
+          ? [getSessionInventoryId(course)]
+          : getBootCampSeries(course, count).map((session) => session.id)
+      const records = sessionIds.map((sessionId) => getAvailability(sessionId))
+      const capacity = Math.min(
+        ...records.map((record) => record.capacity),
+        ONLINE_SALES_SEAT_LIMIT,
+      )
+      const remaining = Math.min(...records.map((record) => record.remaining))
+
+      return {
+        capacity,
+        remaining,
+        sold: Math.max(0, capacity - remaining),
+      }
+    },
+    [getAvailability],
+  )
+
   useEffect(() => {
     scrollerRef.current?.scrollTo({ left: 0, behavior: 'smooth' })
-  }, [activeCategory, activeVenueId])
+  }, [activeCategory, activeBootCampRoute, activeVenueId])
 
   useEffect(() => {
     if (!activeVenueId) return
@@ -212,11 +401,19 @@ export function WeeklyScheduleSection({
     if (!stillAvailable) setActiveVenueId(null)
   }, [activeVenueId, venueOptions])
 
+  useEffect(() => {
+    if (!activeBootCampRoute) return
+    const stillAvailable = routeOptions.some(
+      (option) => option.route === activeBootCampRoute,
+    )
+    if (!stillAvailable) setActiveBootCampRoute(null)
+  }, [activeBootCampRoute, routeOptions, setActiveBootCampRoute])
+
   const meta = categoryMeta[activeCategory]
   const planSummary = planSummaryByCategory[activeCategory]
   const earliest = displayCourses[0]
   const earliestLabel = earliest
-    ? `最早可預訂 ${formatShortDate(earliest.date)} 週${earliest.weekday} ${earliest.startTime}`
+    ? `最早可購買 ${formatShortDate(earliest.date)} 週${earliest.weekday} ${earliest.startTime}`
     : null
 
   const content = (
@@ -266,15 +463,26 @@ export function WeeklyScheduleSection({
         </p>
       )}
 
+      <div className="mx-auto mb-6 grid max-w-3xl grid-cols-3 gap-2 text-center md:mb-8">
+        {['1 選場館', '2 選日期', '3 購買名額'].map((step) => (
+          <div
+            key={step}
+            className="rounded-xl border border-pearl/10 bg-black/25 px-2.5 py-2 text-[11px] font-heading font-semibold tracking-wide text-mist/80 md:text-sm"
+          >
+            {step}
+          </div>
+        ))}
+      </div>
+
       <div className="max-w-6xl mx-auto">
         {showVenueFilter && upcomingCourses.length > 0 && (
           <div className="mb-5 md:mb-6 rounded-2xl border border-pearl/10 bg-black/25 p-4 md:p-5">
             <div className="flex items-center justify-between gap-3">
               <p className="text-xs md:text-sm font-heading tracking-[0.22em] text-neon/80 uppercase">
-                上課地點
+                1 選上課地點
               </p>
               <p className="text-xs text-mist/55">
-                點選篩選下方課表
+                只看你方便到場的館別
               </p>
             </div>
 
@@ -293,7 +501,7 @@ export function WeeklyScheduleSection({
                   全部場館
                 </p>
                 <p className="mt-1 text-xs text-mist/70">
-                  {upcomingCourses.length} 場可選
+                  {upcomingCourses.length} 場可購買
                 </p>
               </button>
 
@@ -313,7 +521,7 @@ export function WeeklyScheduleSection({
                     {venueShortLookup[venue.id] ?? venue.name}
                   </p>
                   <p className="mt-1 text-xs text-mist/70">
-                    {venueLandmarks[venue.id] ?? venue.transit} · {count} 場
+                    {venueLandmarks[venue.id] ?? venue.transit} · {count} 場可購買
                   </p>
                 </button>
               ))}
@@ -321,15 +529,59 @@ export function WeeklyScheduleSection({
           </div>
         )}
 
+        {activeCategory === 'BOOT_CAMP' &&
+          showBootCampRouteFilter &&
+          routeOptions.length > 0 && (
+            <div className="mb-5 md:mb-6 rounded-2xl border border-neon/15 bg-neon/5 p-4 md:p-5">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs md:text-sm font-heading tracking-[0.22em] text-neon/80 uppercase">
+                  2 選技能路徑
+                </p>
+                <p className="text-xs text-mist/55">
+                  先決定這次要從哪個入口開始
+                </p>
+              </div>
+
+              <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-3">
+                {routeOptions.map(({ route, count }) => {
+                  const active = route === activeBootCampRoute
+                  const label = route ? bootCampRouteMeta[route].label : '全部路徑'
+                  const hint = route ? bootCampRouteMeta[route].hint : '拳擊與泰拳都看'
+
+                  return (
+                    <button
+                      key={route ?? 'all'}
+                      type="button"
+                      aria-pressed={active}
+                      onClick={() => setActiveBootCampRoute(route)}
+                      className={`rounded-xl border px-3.5 py-3 text-left transition-colors ${
+                        active
+                          ? 'border-neon/50 bg-neon/15'
+                          : 'border-pearl/10 bg-black/25 hover:border-pearl/25'
+                      }`}
+                    >
+                      <p className="text-sm font-heading font-semibold text-pearl">
+                        {label}
+                      </p>
+                      <p className="mt-1 text-xs text-mist/70">
+                        {hint} · {count} 場
+                      </p>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
         {displayCourses.length === 0 ? (
           <p className="text-center text-sm text-mist/60">
-            這個方向近期沒有開課，先用 LINE 加入會員，下一輪開放會優先通知你。
+            這個條件目前沒有可購買場次，換一個場館或路徑看看。
           </p>
         ) : (
           <>
             <div className="mb-4 flex items-center justify-between gap-3">
               <p className="text-xs md:text-sm font-heading tracking-[0.18em] text-mist/55 uppercase">
-                {displayCourses.length} 場目前可預訂
+                {displayCourses.length} 場目前可購買
               </p>
               <div className="flex items-center gap-2">
                 <button
@@ -356,26 +608,50 @@ export function WeeklyScheduleSection({
               className="-mx-3 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-3 pb-4 sm:mx-0 sm:px-0 md:gap-5"
             >
               {displayCourses.map((c, i) => {
-                const bookingUrl = buildCourseBookingUrl(c)
                 const dayLabel = getRelativeDayLabel(c.date, todayIso)
                 const bootCampRouteLabel =
                   activeCategory === 'BOOT_CAMP'
                     ? getBootCampRouteLabel(c)
                     : null
+                const sessionTitle =
+                  activeCategory === 'FIGHT_NIGHT'
+                    ? `${formatShortDate(c.date)} Fight Night Pass`
+                    : `${formatShortDate(c.date)} ${bootCampRouteLabel ?? 'Boot Camp'} 起點`
+                const sessionAvailability = getPackageAvailability(c, 1)
+                const bootCampSeries2 = getBootCampSeries(c, 2)
+                const bootCampSeries4 = getBootCampSeries(c, 4)
+                const bootCamp2Availability = getPackageAvailability(c, 2)
+                const bootCamp4Availability = getPackageAvailability(c, 4)
+                const displayAvailability =
+                  activeCategory === 'BOOT_CAMP'
+                    ? bootCamp4Availability
+                    : sessionAvailability
+                const remainingBadgeClass = getRemainingBadgeClass(
+                  displayAvailability.remaining,
+                  meta.badgeClass,
+                )
+                const bookingUrl = buildCourseBookingUrl(c, {
+                  packageSize: 1,
+                  seriesDates: [c.date],
+                })
+                const bookingUrl2 = buildCourseBookingUrl(c, {
+                  packageSize: 2,
+                  seriesDates: bootCampSeries2.map((session) => session.date),
+                })
+                const bookingUrl4 = buildCourseBookingUrl(c, {
+                  packageSize: 4,
+                  seriesDates: bootCampSeries4.map((session) => session.date),
+                })
                 return (
-                  <motion.a
+                  <motion.article
                     key={c.id}
-                    href={bookingUrl ?? '#'}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label={`預留 ${c.name}，${formatShortDate(c.date)} 週${c.weekday} ${c.startTime}–${c.endTime}，${c.venueName}`}
-                    data-cta={`schedule-${c.id}`}
+                    aria-label={`${sessionTitle}，${formatShortDate(c.date)} 週${c.weekday} ${c.startTime}–${c.endTime}，${c.venueName}`}
                     data-schedule-card
                     initial={{ opacity: 0, y: 16 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ duration: 0.4, delay: i * 0.04 }}
-                    className="group flex min-h-[22rem] shrink-0 basis-[82vw] snap-start flex-col gap-3 rounded-2xl border border-pearl/15 bg-black/35 p-5 transition-colors hover:border-pearl/30 hover:bg-black/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pearl/40 sm:basis-[22rem] md:basis-[21rem] md:p-6 lg:basis-[22rem] xl:basis-[23rem]"
+                    className="group flex min-h-[24rem] shrink-0 basis-[84vw] snap-start flex-col gap-3 rounded-2xl border border-pearl/15 bg-black/35 p-5 transition-colors hover:border-pearl/30 hover:bg-black/45 sm:basis-[22rem] md:basis-[21rem] md:p-6 lg:basis-[22rem] xl:basis-[23rem]"
                   >
                     <div className="flex items-baseline justify-between gap-3">
                       <span className="text-xl md:text-2xl font-heading font-bold text-pearl tracking-wide">
@@ -387,17 +663,37 @@ export function WeeklyScheduleSection({
                         {venueShortLookup[c.venueId] ?? c.venueName}
                       </span>
                     </div>
-                    <p className="text-sm md:text-base text-mist/70 font-heading tabular-nums">
-                      {formatShortDate(c.date)} · {c.startTime}–{c.endTime}
-                    </p>
-                    <p className="inline-flex w-fit rounded-full border border-pearl/10 bg-pearl/5 px-2.5 py-1 text-[11px] font-heading tracking-wide text-mist/75">
-                      線上小班預留 {ONLINE_SALES_SEAT_LIMIT} 席
-                    </p>
-                    {bootCampRouteLabel && (
-                      <p className="inline-flex w-fit rounded-full border border-neon/20 bg-neon/10 px-2.5 py-1 text-[11px] font-heading tracking-wide text-neon/90">
-                        {bootCampRouteLabel} · 連續 2/4 週
+
+                    <div>
+                      <p className="text-2xl md:text-3xl font-heading font-black text-pearl tabular-nums">
+                        {c.startTime}
                       </p>
-                    )}
+                      <p className="text-sm md:text-base text-mist/70 font-heading tabular-nums">
+                        {formatShortDate(c.date)} 週{c.weekday} · {c.startTime}–{c.endTime}
+                      </p>
+                      <p className="mt-1 text-xs md:text-sm text-mist/60">
+                        {venueLandmarks[c.venueId] ?? c.venueName}
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      <p className="inline-flex w-fit rounded-full border border-pearl/10 bg-pearl/5 px-2.5 py-1 text-[11px] font-heading tracking-wide text-mist/75">
+                        線上限量 {displayAvailability.capacity} 席
+                      </p>
+                      <p
+                        className={`inline-flex w-fit rounded-full px-2.5 py-1 text-[11px] font-heading tracking-wide border ${remainingBadgeClass}`}
+                      >
+                        {getRemainingLabel(displayAvailability.remaining)}
+                      </p>
+                      <p className="inline-flex w-fit rounded-full border border-pearl/10 bg-black/25 px-2.5 py-1 text-[11px] font-heading tracking-wide text-mist/55">
+                        {hasLiveData ? '即時更新' : '名額同步中'}
+                      </p>
+                      {bootCampRouteLabel && (
+                        <p className="inline-flex w-fit rounded-full border border-neon/20 bg-neon/10 px-2.5 py-1 text-[11px] font-heading tracking-wide text-neon/90">
+                          {bootCampRouteLabel}
+                        </p>
+                      )}
+                    </div>
 
                     <div className="border-t border-pearl/10 pt-3">
                       <p className="text-base md:text-lg text-pearl font-semibold leading-snug">
@@ -413,10 +709,10 @@ export function WeeklyScheduleSection({
 
                     <div className="border-t border-pearl/10 pt-3">
                       <p className="text-[10px] md:text-xs font-heading tracking-[0.2em] text-mist/55 mb-1">
-                        可用方案
+                        購買內容
                       </p>
                       <p className="text-sm md:text-base text-pearl font-heading font-semibold">
-                        {planSummary.label}
+                        {sessionTitle}
                       </p>
                       <p className="text-sm md:text-base text-pearl/85 tabular-nums">
                         {planSummary.price}
@@ -428,13 +724,82 @@ export function WeeklyScheduleSection({
                       </p>
                     </div>
 
-                    <div
-                      className={`mt-auto inline-flex items-center justify-center gap-1.5 w-full px-4 py-3 rounded-xl font-heading font-bold tracking-wide text-sm md:text-base transition-colors ${meta.ctaClass}`}
-                    >
-                      預留這一場
-                      <span aria-hidden>→</span>
+                    {activeCategory === 'BOOT_CAMP' && (
+                      <div className="rounded-xl border border-neon/15 bg-neon/5 p-3">
+                        <div className="mb-2 flex items-center justify-between gap-2">
+                          <p className="text-[10px] md:text-xs font-heading tracking-[0.18em] text-neon/80">
+                            自動帶入四週
+                          </p>
+                          <p className="text-[11px] text-mist/55">
+                            同館同時段
+                          </p>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          {bootCampSeries4.map((session, index) => (
+                            <div
+                              key={session.id}
+                              className="flex items-center justify-between gap-3 text-xs md:text-sm"
+                            >
+                              <span className="font-heading text-mist/55">
+                                第 {index + 1} 堂
+                              </span>
+                              <span className="font-heading text-pearl tabular-nums">
+                                {formatShortDate(session.date)} 週{session.weekday}{' '}
+                                {session.startTime}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="mt-auto">
+                      {activeCategory === 'BOOT_CAMP' ? (
+                        <div className="grid grid-cols-2 gap-2">
+                          {bootCamp2Availability.remaining > 0 ? (
+                            <Button
+                              href={bookingUrl2 ?? undefined}
+                              variant="secondary"
+                              size="sm"
+                              className="w-full border-neon/25 bg-neon/10 text-pearl"
+                              data-cta={`schedule-${c.id}-bootcamp-2`}
+                            >
+                              兩堂 · 剩 {bootCamp2Availability.remaining}
+                            </Button>
+                          ) : (
+                            <DisabledCta>兩堂已售完</DisabledCta>
+                          )}
+                          {bootCamp4Availability.remaining > 0 ? (
+                            <Button
+                              href={bookingUrl4 ?? undefined}
+                              variant="primary"
+                              size="sm"
+                              className="w-full"
+                              data-cta={`schedule-${c.id}-bootcamp-4`}
+                            >
+                              四堂 · 剩 {bootCamp4Availability.remaining}
+                            </Button>
+                          ) : (
+                            <DisabledCta>四堂已售完</DisabledCta>
+                          )}
+                        </div>
+                      ) : (
+                        sessionAvailability.remaining > 0 ? (
+                          <Button
+                            href={bookingUrl ?? undefined}
+                            variant="primary"
+                            className="w-full"
+                            data-cta={`schedule-${c.id}-fight-night`}
+                          >
+                            購買這一場 · 剩 {sessionAvailability.remaining}
+                          </Button>
+                        ) : (
+                          <DisabledCta>本場已售完</DisabledCta>
+                        )
+                      )}
                     </div>
-                  </motion.a>
+                  </motion.article>
                 )
               })}
             </div>

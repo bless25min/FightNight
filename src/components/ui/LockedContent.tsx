@@ -6,8 +6,9 @@ type Props = {
   children: ReactNode
   gateState: LiffGateState
   title: string
+  description?: string
   onGateAction?: () => void
-  liffUrl?: string
+  loginUrl?: string
   lockedEyebrow?: string
   className?: string
 }
@@ -23,8 +24,9 @@ export function LockedContent({
   children,
   gateState,
   title,
+  description,
   onGateAction,
-  liffUrl,
+  loginUrl,
   lockedEyebrow = 'LINE 會員專屬內容',
   className = '',
 }: Props) {
@@ -34,7 +36,7 @@ export function LockedContent({
 
   const actionLabel = getActionLabel(gateState)
   const shouldUseLiffLink =
-    liffUrl && ['loading', 'logged-out'].includes(gateState.status)
+    loginUrl && ['loading', 'logged-out'].includes(gateState.status)
 
   return (
     <div
@@ -49,13 +51,18 @@ export function LockedContent({
         <h3 className="mt-3 text-2xl md:text-3xl font-heading font-bold text-pearl">
           {title}
         </h3>
+        {description && (
+          <p className="mx-auto mt-3 max-w-xl text-sm md:text-base text-mist/70 leading-relaxed">
+            {description}
+          </p>
+        )}
 
         {actionLabel && (
           shouldUseLiffLink ? (
             <Button
               size="lg"
               className="mt-6"
-              href={liffUrl}
+              href={loginUrl}
               target="_self"
               data-cta="liff-gate-link"
             >

@@ -20,8 +20,8 @@ export function Header() {
   }
 
   const ctaLabel = isOffersPage
-    ? '查看 Boot Camp 方案'
-    : '購買 Fight Night Pass'
+    ? '選 Boot Camp 場次'
+    : '選日期購買'
   const ctaTargetId = isOffersPage ? 'offers-plans' : 'ticket'
   const ctaHref = `#${ctaTargetId}`
 

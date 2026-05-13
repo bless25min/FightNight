@@ -34,6 +34,8 @@ export type SessionCapacity = '仍可報名' | '名額緊張' | '即將額滿' |
 
 export type CourseCategory = 'FIGHT_NIGHT' | 'BOOT_CAMP'
 
+export type BootCampRoute = 'BOXING' | 'MUAY_THAI'
+
 export type WeeklyCourse = {
   id: string
   category: CourseCategory

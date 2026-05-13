@@ -1,26 +1,56 @@
 import type { WeeklyCourse } from '../types'
 
-// 暫用 BookFast 各分店搜尋頁取代正式付款頁。將來換掉這支即可。
+// 暫用 BookFast 各分店搜尋頁取代正式付款頁。
+// 目前先帶入場館、日期與時間，讓使用者落在最接近「指定場次」的搜尋結果。
 const venueBookfastStoreId: Record<string, string> = {
   'venue-dunnan': '9qa53QGE3W',
   'venue-neihu': '0rmRDN8ny6',
   'venue-taichung': 'VkB5d8p5j3',
 }
 
-export function buildCourseBookingUrl(course: WeeklyCourse): string | null {
-  const storeId = venueBookfastStoreId[course.venueId]
-  if (!storeId) return null
-  return `https://ec.bookfastpos.com/GbARqWPnjP/search/result?storeIds=%5B%22${storeId}%22%5D&courseType=%5B%5D&queryWeeks=%5B%5D&queryDates=%5B%5D&teacherIds=%5B%5D&courseIds=%5B%5D&startTime=00%3A00&endTime=23%3A59&minPrice=0&maxPrice=0&pageNumber=1&orderType=startTime&orderDirection=ASC`
+type BookingUrlOptions = {
+  packageSize?: 1 | 2 | 4
+  seriesDates?: string[]
 }
 
-export const SCHEDULE_DISPLAY_LIMIT = 9
+export function buildCourseBookingUrl(
+  course: WeeklyCourse,
+  options: BookingUrlOptions = {},
+): string | null {
+  const storeId = venueBookfastStoreId[course.venueId]
+  if (!storeId) return null
+
+  const params = new URLSearchParams({
+    storeIds: JSON.stringify([storeId]),
+    courseType: JSON.stringify([]),
+    queryWeeks: JSON.stringify([]),
+    queryDates: JSON.stringify([course.date]),
+    teacherIds: JSON.stringify([]),
+    courseIds: JSON.stringify([]),
+    startTime: course.startTime,
+    endTime: course.endTime,
+    minPrice: '0',
+    maxPrice: '0',
+    pageNumber: '1',
+    orderType: 'startTime',
+    orderDirection: 'ASC',
+    fnSessionId: course.id,
+    fnCourseName: course.name,
+    fnPackageSize: String(options.packageSize ?? 1),
+    fnSeriesDates: JSON.stringify(options.seriesDates ?? [course.date]),
+  })
+
+  return `https://ec.bookfastpos.com/GbARqWPnjP/search/result?${params.toString()}`
+}
+
+export const SCHEDULE_DISPLAY_LIMIT = 12
 export const ONLINE_SALES_SEAT_LIMIT = 6
 export const ONLINE_BOOKING_START_OFFSET_DAYS = 8
 
 export const weeklyScheduleSectionContent = {
-  title: '目前可預訂的課程',
-  subtitle: '選一個你能到場的時間。每堂線上名額採小班上限，保留教練照顧品質。',
-  footnote: '完整課表與名額狀態以 UFC GYM 線上隨時購官方公告為準。',
+  title: '目前可購買的課程名額',
+  subtitle: '先選場館，再選日期與時段。你購買的是指定場次的一個線上名額。',
+  footnote: '每堂線上只開放 6 席，剩餘名額會依線上訂單即時更新。',
 }
 
 export const weeklyCourses: WeeklyCourse[] = [

@@ -17,7 +17,7 @@ import { WeeklyScheduleSection } from './WeeklyScheduleSection'
 
 export function TicketSection() {
   const { trackTicketView, trackTicketCta } = useTracking()
-  const { gateState, requestGateAccess, openWhenUnlocked, liffUrl } =
+  const { gateState, requestGateAccess, loginUrl } =
     useLiffGate()
   const ref = useRef<HTMLDivElement>(null)
   const isInView = useInView(ref, { once: true })
@@ -44,6 +44,12 @@ export function TicketSection() {
       window.history.replaceState(null, '', `${window.location.pathname}#ticket`)
     }, 120)
   }, [gateState.status])
+
+  const scrollToSchedule = () => {
+    document
+      .getElementById('fight-night-schedule')
+      ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
 
   return (
     <SectionWrapper id="ticket">
@@ -73,7 +79,8 @@ export function TicketSection() {
             <LockedContent
               gateState={gateState}
               title="登入後查看完整費用資訊"
-              liffUrl={liffUrl}
+              description="登入後可查看可購買日期、即時剩餘名額與價格。"
+              loginUrl={loginUrl}
               onGateAction={() => void requestGateAccess()}
             >
               <div>
@@ -81,9 +88,9 @@ export function TicketSection() {
                   <div className="mx-auto max-w-xl">
                     <PlanCard
                       plan={fightNightPassPlan}
-                      onCtaAction={(url, planId) => {
+                      onCtaAction={(_url, planId) => {
                         trackTicketCta(planId)
-                        void openWhenUnlocked(url)
+                        scrollToSchedule()
                       }}
                     />
                   </div>
@@ -95,8 +102,8 @@ export function TicketSection() {
                     categories={['FIGHT_NIGHT']}
                     showCategoryTabs={false}
                     showVenueFilter
-                    title="目前可預訂的 Fight Night"
-                    subtitle="先選你方便到場的館別，再挑一堂可以進場的時間。"
+                    title="目前可購買的 Fight Night 名額"
+                    subtitle="先選你方便到場的館別，再購買指定日期與時段的名額。"
                     embedded
                   />
                 </div>
@@ -120,12 +127,12 @@ export function TicketSection() {
         {gateState.status === 'unlocked' && (
           <StickyActionBar
             eyebrow="已解鎖"
-            title="Fight Night Pass"
-            detail="NT$980 / 堂"
-            actionLabel="購買"
+            title="選一堂 Fight Night"
+            detail="購買指定日期名額"
+            actionLabel="選日期"
             onAction={() => {
               trackTicketCta(fightNightPassPlan.id)
-              void openWhenUnlocked(fightNightPassPlan.checkoutUrl)
+              scrollToSchedule()
             }}
           />
         )}

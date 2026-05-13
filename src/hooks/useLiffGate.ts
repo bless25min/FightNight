@@ -22,6 +22,15 @@ function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : liffErrorMessage
 }
 
+function isMobileDevice() {
+  if (typeof window === 'undefined') return false
+  const userAgent = window.navigator.userAgent
+  const mobileViewport =
+    window.matchMedia?.('(max-width: 767px)').matches &&
+    window.navigator.maxTouchPoints > 0
+  return /Android|iPhone|iPad|iPod|Line/i.test(userAgent) || mobileViewport
+}
+
 export function useLiffGate() {
   const [gateState, setGateState] = useState<LiffGateState>({
     status: 'loading',
@@ -30,6 +39,7 @@ export function useLiffGate() {
   const liffUrl = liffId
     ? `https://line.me/R/app/${liffId}`
     : undefined
+  const loginUrl = isMobileDevice() ? liffUrl : undefined
 
   const runGateCheck = useCallback(async () => {
     await Promise.resolve()
@@ -136,6 +146,7 @@ export function useLiffGate() {
     runGateCheck,
     requestGateAccess,
     openWhenUnlocked,
+    loginUrl,
     liffUrl,
   }
 }

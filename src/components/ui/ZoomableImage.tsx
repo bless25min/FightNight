@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 
 type Props = {
   src: string
@@ -14,6 +15,7 @@ export function ZoomableImage({
   loading = 'lazy',
 }: Props) {
   const [open, setOpen] = useState(false)
+  const [zoomed, setZoomed] = useState(false)
 
   useEffect(() => {
     if (!open) return
@@ -32,51 +34,80 @@ export function ZoomableImage({
     }
   }, [open])
 
+  const modal =
+    open && typeof document !== 'undefined' ? (
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={alt}
+        className="fixed inset-0 z-[100] bg-abyss/95 backdrop-blur-md"
+      >
+        <div className="fixed left-3 right-3 top-3 z-[102] flex items-center justify-between gap-2">
+          <button
+            type="button"
+            aria-label={zoomed ? '適合螢幕' : '放大圖片'}
+            onClick={() => setZoomed((value) => !value)}
+            className="rounded-full border border-pearl/20 bg-black/70 px-4 py-2 text-sm font-heading font-semibold text-pearl shadow-lg"
+          >
+            {zoomed ? '適合螢幕' : '放大'}
+          </button>
+
+          <button
+            type="button"
+            aria-label="關閉圖片"
+            onClick={() => setOpen(false)}
+            className="h-11 w-11 rounded-full border border-pearl/20 bg-black/70 text-xl font-heading text-pearl shadow-lg"
+          >
+            x
+          </button>
+        </div>
+
+        <div
+          className="absolute inset-0"
+          role="button"
+          tabIndex={-1}
+          aria-label="關閉放大圖片"
+          onClick={() => setOpen(false)}
+        />
+
+        <div className="relative z-[101] h-full w-full overflow-auto overscroll-contain p-3 pt-16">
+          <div className="flex min-h-full min-w-full items-center justify-center">
+            <button
+              type="button"
+              onClick={() => setZoomed((value) => !value)}
+              className="cursor-zoom-in appearance-none border-0 bg-transparent p-0"
+              aria-label={zoomed ? '適合螢幕' : '放大圖片'}
+            >
+              <img
+                src={src}
+                alt={alt}
+                className={
+                  zoomed
+                    ? 'h-auto w-[160vw] max-w-none rounded-xl border border-pearl/10 shadow-[0_30px_90px_rgba(0,0,0,0.55)] sm:w-[125vw] md:w-[1200px]'
+                    : 'max-h-[82vh] max-w-[96vw] rounded-xl border border-pearl/10 object-contain shadow-[0_30px_90px_rgba(0,0,0,0.55)]'
+                }
+              />
+            </button>
+          </div>
+        </div>
+      </div>
+    ) : null
+
   return (
     <>
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          setZoomed(false)
+          setOpen(true)
+        }}
         className="block w-full cursor-zoom-in appearance-none border-0 bg-transparent p-0 text-left"
         aria-label={`放大查看：${alt}`}
       >
         <img src={src} alt={alt} className={className} loading={loading} />
       </button>
 
-      {open && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label={alt}
-          className="fixed inset-0 z-[100] bg-abyss/95 p-3 backdrop-blur-md"
-        >
-          <button
-            type="button"
-            aria-label="關閉圖片"
-            onClick={() => setOpen(false)}
-            className="fixed right-3 top-3 z-[101] h-11 w-11 rounded-full border border-pearl/20 bg-black/70 text-xl font-heading text-pearl shadow-lg"
-          >
-            x
-          </button>
-
-          <button
-            type="button"
-            aria-label="關閉放大圖片"
-            onClick={() => setOpen(false)}
-            className="absolute inset-0 cursor-zoom-out"
-          />
-
-          <div className="relative z-[100] h-full w-full overflow-auto overscroll-contain">
-            <div className="flex min-h-full min-w-full items-start justify-center px-1 py-14">
-              <img
-                src={src}
-                alt={alt}
-                className="h-auto w-[140vw] max-w-none rounded-xl border border-pearl/10 shadow-[0_30px_90px_rgba(0,0,0,0.55)] sm:w-[110vw] md:w-[92vw] xl:w-[1400px]"
-              />
-            </div>
-          </div>
-        </div>
-      )}
+      {modal && createPortal(modal, document.body)}
     </>
   )
 }

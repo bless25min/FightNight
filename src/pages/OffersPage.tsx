@@ -20,11 +20,11 @@ import {
   offersOutcomeSectionContent,
   offersPlans,
   offersPlanSectionContent,
-  planScheduleCategoryMap,
+  planScheduleTargetMap,
 } from '../data/landingContent'
 import type { LiffGateState } from '../hooks/useLiffGate'
 import { useLiffGate } from '../hooks/useLiffGate'
-import type { CourseCategory } from '../types'
+import type { BootCampRoute, CourseCategory } from '../types'
 import { Footer } from '../components/layout/Footer'
 import { Header } from '../components/layout/Header'
 import { ExperienceFlowSection } from '../components/sections/ExperienceFlowSection'
@@ -247,14 +247,14 @@ function OffersFightNightPlan({
   onCtaAction,
   onScheduleNav,
   scheduleCountByCategory,
-  liffUrl,
+  loginUrl,
 }: {
   gateState: LiffGateState
   onGateAction: () => void
   onCtaAction: (redirectUrl: string, planId: string) => void
-  onScheduleNav: (category: CourseCategory) => void
+  onScheduleNav: (category: CourseCategory, route?: BootCampRoute) => void
   scheduleCountByCategory: Record<CourseCategory, number>
-  liffUrl?: string
+  loginUrl?: string
 }) {
   return (
     <SectionWrapper id="offers-fight-night-plan">
@@ -265,8 +265,9 @@ function OffersFightNightPlan({
 
       <LockedContent
         title="登入後查看 Fight Night Pass"
+        description="登入後可查看可購買日期、即時剩餘名額與價格。"
         gateState={gateState}
-        liffUrl={liffUrl}
+        loginUrl={loginUrl}
         onGateAction={onGateAction}
       >
         <div className="max-w-xl mx-auto">
@@ -289,14 +290,14 @@ function OffersPlans({
   onCtaAction,
   onScheduleNav,
   scheduleCountByCategory,
-  liffUrl,
+  loginUrl,
 }: {
   gateState: LiffGateState
   onGateAction: () => void
   onCtaAction: (redirectUrl: string, planId: string) => void
-  onScheduleNav: (category: CourseCategory) => void
+  onScheduleNav: (category: CourseCategory, route?: BootCampRoute) => void
   scheduleCountByCategory: Record<CourseCategory, number>
-  liffUrl?: string
+  loginUrl?: string
 }) {
   return (
     <SectionWrapper id="offers-plans">
@@ -315,22 +316,26 @@ function OffersPlans({
 
       <LockedContent
         title="登入後查看完整費用資訊"
+        description="登入後可查看 Boot Camp 路徑、四週自動帶入場次、即時剩餘名額與價格。"
         gateState={gateState}
-        liffUrl={liffUrl}
+        loginUrl={loginUrl}
         onGateAction={onGateAction}
       >
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6 max-w-6xl mx-auto items-start">
           {offersPlans.map((plan, i) => {
-            const planCategory = planScheduleCategoryMap[plan.id]
+            const planTarget = planScheduleTargetMap[plan.id]
             return (
               <PlanCard
                 key={plan.id}
                 plan={plan}
                 index={i}
                 onCtaAction={onCtaAction}
-                scheduleCategory={planCategory}
+                scheduleCategory={planTarget?.category}
+                scheduleRoute={planTarget?.route}
                 scheduleCount={
-                  planCategory ? scheduleCountByCategory[planCategory] : undefined
+                  planTarget
+                    ? scheduleCountByCategory[planTarget.category]
+                    : undefined
                 }
                 onScheduleNav={onScheduleNav}
               />
@@ -389,11 +394,13 @@ const scheduleCountByCategory: Record<CourseCategory, number> = {
 }
 
 export function OffersPage() {
-  const { gateState, requestGateAccess, openWhenUnlocked, liffUrl } =
+  const { gateState, requestGateAccess, openWhenUnlocked, loginUrl } =
     useLiffGate()
 
   const [scheduleCategory, setScheduleCategory] =
     useState<CourseCategory>('BOOT_CAMP')
+  const [scheduleRoute, setScheduleRoute] =
+    useState<BootCampRoute | null>(null)
 
   useEffect(() => {
     const targetId = window.location.hash.replace('#', '')
@@ -414,13 +421,35 @@ export function OffersPage() {
     }
   }, [])
 
-  const navigateToSchedule = useCallback((category: CourseCategory) => {
+  const navigateToSchedule = useCallback((
+    category: CourseCategory,
+    route?: BootCampRoute,
+  ) => {
     setScheduleCategory(category)
+    setScheduleRoute(category === 'BOOT_CAMP' ? route ?? null : null)
     const el = document.getElementById('weekly-schedule')
     if (el) {
       el.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }
   }, [])
+
+  const handlePlanCta = useCallback(
+    (url: string, planId: string) => {
+      if (planId === fightNightPassPlan.id) {
+        navigateToSchedule('FIGHT_NIGHT')
+        return
+      }
+
+      const target = planScheduleTargetMap[planId]
+      if (target) {
+        navigateToSchedule(target.category, target.route)
+        return
+      }
+
+      void openWhenUnlocked(url)
+    },
+    [navigateToSchedule, openWhenUnlocked],
+  )
 
   const scrollToFightNightPlan = useCallback(() => {
     document
@@ -447,10 +476,10 @@ export function OffersPage() {
         <OffersFightNightPlan
           gateState={gateState}
           onGateAction={() => void requestGateAccess()}
-          onCtaAction={(url) => void openWhenUnlocked(url)}
+          onCtaAction={handlePlanCta}
           onScheduleNav={navigateToSchedule}
           scheduleCountByCategory={scheduleCountByCategory}
-          liffUrl={liffUrl}
+          loginUrl={loginUrl}
         />
         <FAQSection
           id="offers-fight-night-faq"
@@ -470,17 +499,20 @@ export function OffersPage() {
         <OffersPlans
           gateState={gateState}
           onGateAction={() => void requestGateAccess()}
-          onCtaAction={(url) => void openWhenUnlocked(url)}
+          onCtaAction={handlePlanCta}
           onScheduleNav={navigateToSchedule}
           scheduleCountByCategory={scheduleCountByCategory}
-          liffUrl={liffUrl}
+          loginUrl={loginUrl}
         />
         <WeeklyScheduleSection
-          title="目前可預訂的課程"
-          subtitle="先看時間、場館與課程方向，再決定從單次或完整系統進場。"
+          title="目前可購買的課程名額"
+          subtitle="像訂房一樣，選定場館、日期與時段後，再購買該場名額。"
           activeCategory={scheduleCategory}
+          activeBootCampRoute={scheduleRoute}
+          onBootCampRouteChange={setScheduleRoute}
           categories={['FIGHT_NIGHT', 'BOOT_CAMP']}
           showCategoryTabs
+          showVenueFilter
           onCategoryChange={setScheduleCategory}
         />
         <OffersPlanJumpSection

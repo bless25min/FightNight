@@ -8,6 +8,7 @@ import type {
   FAQItem,
   CurriculumModule,
   CourseCategory,
+  BootCampRoute,
 } from '../types'
 
 // ── 全域設定 ──────────────────────────────────────
@@ -24,7 +25,7 @@ export const siteConfig = {
 export const heroContent = {
   title: '今晚，一起進入狀態。',
   subtitle: '這是一張讓你脫離日常的入場券。',
-  primaryCta: '購買 Fight Night Pass',
+  primaryCta: '選日期購買',
   secondaryCta: '這一晚會發生什麼',
   tags: ['🥊 拳套入場', '👥 集體同步', '🔥 壓力釋放'],
 }
@@ -212,11 +213,11 @@ export const audiencePoints: AudiencePoint[] = [
 // ── 票種區（首頁 teaser + 登入後完整資訊共用資料） ─────
 export const ticketSectionContent = {
   title: 'Fight Night Pass',
-  subtitle: '',
+  subtitle: '像訂房一樣，先選日期、場館與時段，再購買那一場的名額。',
   description:
-    '如果你只想先嘗試一次，這張 pass 就是最直接的入口。',
-  unifiedCtaLabel: '購買 Fight Night Pass',
-  previewItems: ['完整方案權益', '活動場次狀態', '預留名額方式'],
+    '如果你只想先嘗試一次，這張 pass 就是最直接的入口。選定一堂目前可購買的 Fight Night，完成後名額會綁定該日期與場館。',
+  unifiedCtaLabel: '選日期購買',
+  previewItems: ['可購買場次', '指定日期名額', '付款與報到方式'],
 }
 
 export const fightNightPassPlan: TicketPlan = {
@@ -229,13 +230,13 @@ export const fightNightPassPlan: TicketPlan = {
   price: 'NT$980',
   badge: '首頁限定',
   features: [
-    '單次 Fight Night 入場資格',
+    '指定日期 Fight Night 入場資格',
     '完整夜場節奏體驗與教練帶動',
-    '適合零基礎、第一次進場與朋友同行',
+    '先選場館與時段，再購買該場名額',
   ],
   highlight: true,
   checkoutUrl: siteConfig.lineUrl,
-  ctaLabel: '購買 Fight Night Pass',
+  ctaLabel: '選日期購買',
   ctaVariant: 'primary',
 }
 
@@ -307,7 +308,7 @@ export const bootCampFaqItems: FAQItem[] = [
     id: 'bootcamp-faq-1',
     question: 'Boot Camp 和 Fight Night 差在哪？',
     answer:
-      'Fight Night 是單次進場的拳擊節奏體驗，適合先確認自己喜不喜歡這種狀態。Boot Camp 則是選定一條技能路徑，連續兩週或四週固定跟課，讓動作真的累積成身體反應。',
+      'Fight Night 是單次進場的拳擊節奏體驗，適合先確認自己喜不喜歡這種狀態。Boot Camp 則是選定一條技能路徑，用兩堂或四堂課讓動作真的累積成身體反應。',
   },
   {
     id: 'bootcamp-faq-2',
@@ -323,16 +324,16 @@ export const bootCampFaqItems: FAQItem[] = [
   },
   {
     id: 'bootcamp-faq-4',
-    question: '四堂 Boot Camp 是連續四週嗎？缺席怎麼辦？',
+    question: '兩堂或四堂 Boot Camp 會怎麼安排？',
     answer:
-      'Boot Camp 原則上會以同一課程入口、同一時段連續兩週或四週安排。報名後專員會與您確認當月梯次、上課節奏與課程安排。',
+      'Boot Camp 會以同一課程入口安排兩堂或四堂課。報名後專員會與您確認當月梯次、上課節奏與課程安排。',
   },
 ]
 
 export const offersPlanSectionContent = {
   title: '選擇 Boot Camp 路徑',
-  subtitle: '不是任選課程拼盤，而是選一個入口，連續兩週或四週固定跟課。',
-  footnote: '每堂線上小班預留 6 席，完整梯次與可預訂時段以實際公告為準。',
+  subtitle: '先選拳擊或泰拳入口，再從目前可購買場次中選定開始日期。',
+  footnote: '每堂線上只開放 6 席，剩餘名額會依線上訂單即時更新。',
 }
 
 export const offersOutcomeSectionContent = {
@@ -344,12 +345,15 @@ export const offersOutcomeSectionContent = {
   formulaResult: '從釋放壓力的痛快，變成帶得走的能力',
 }
 
-// Plan ID → 對應的課表 category。沒列在這裡的 plan 不會出現「查看近期場次」連結
-export const planScheduleCategoryMap: Record<string, CourseCategory> = {
-  'offers-bootcamp-boxing-2': 'BOOT_CAMP',
-  'offers-bootcamp-muaythai-2': 'BOOT_CAMP',
-  'offers-bootcamp-boxing-4': 'BOOT_CAMP',
-  'offers-bootcamp-muaythai-4': 'BOOT_CAMP',
+// Plan ID → 對應的課表入口。方案卡只負責帶使用者去選場次，不再直接代表購買完成。
+export const planScheduleTargetMap: Record<
+  string,
+  { category: CourseCategory; route?: BootCampRoute }
+> = {
+  'offers-bootcamp-boxing-2': { category: 'BOOT_CAMP', route: 'BOXING' },
+  'offers-bootcamp-muaythai-2': { category: 'BOOT_CAMP', route: 'MUAY_THAI' },
+  'offers-bootcamp-boxing-4': { category: 'BOOT_CAMP', route: 'BOXING' },
+  'offers-bootcamp-muaythai-4': { category: 'BOOT_CAMP', route: 'MUAY_THAI' },
 }
 
 // 課表卡上「可用方案」摘要：每個 category 顯示入門價
@@ -360,89 +364,89 @@ export const planSummaryByCategory: Record<
 > = {
   FIGHT_NIGHT: {
     label: 'Fight Night Pass',
-    price: 'NT$980 / 堂',
+    price: 'NT$980 / 指定場次',
   },
   BOOT_CAMP: {
     label: 'Boot Camp 路徑',
     price: 'NT$1,800 起',
-    hint: '兩週/四週固定跟課',
+    hint: '兩堂/四堂路徑',
   },
 }
 
 export const offersPlans: TicketPlan[] = [
   {
     id: 'offers-bootcamp-boxing-2',
-    name: '拳擊 Boot Camp｜兩週入門',
+    name: '拳擊 Boot Camp｜兩堂入門',
     subtitle: '基礎拳擊入口',
-    teaserCopy: '連續兩週，把站姿、出拳與回防變成身體開始記得的反應。',
+    teaserCopy: '用兩堂課，把站姿、出拳與回防變成身體開始記得的反應。',
     description:
-      '適合想從拳擊開始的人。選定基礎拳擊或拳擊技巧時段，連續兩週跟課，先建立出拳節奏、距離感與基本防守。',
+      '適合想從拳擊開始的人。選定基礎拳擊或拳擊技巧入口，透過兩堂課建立出拳節奏、距離感與基本防守。',
     price: 'NT$1,800',
     features: [
-      '拳擊路徑連續兩週',
+      '拳擊路徑兩堂課',
       '固定課程入口與固定上課節奏',
       '練習站姿、直拳、組合拳與回防',
       '每堂線上小班預留 6 席',
     ],
     checkoutUrl: siteConfig.lineUrl,
-    ctaLabel: '選擇拳擊兩週',
+    ctaLabel: '選拳擊兩堂場次',
     ctaVariant: 'secondary',
   },
   {
     id: 'offers-bootcamp-muaythai-2',
-    name: '泰拳 Boot Camp｜兩週入門',
+    name: '泰拳 Boot Camp｜兩堂入門',
     subtitle: '基礎泰拳入口',
-    teaserCopy: '連續兩週，讓拳、膝、踢與身體節奏開始連在一起。',
+    teaserCopy: '用兩堂課，讓拳、膝、踢與身體節奏開始連在一起。',
     description:
-      '適合想要更全身性釋放的人。選定基礎泰拳或泰拳技巧時段，連續兩週跟課，建立攻擊節奏、重心轉換與距離感。',
+      '適合想要更全身性釋放的人。選定基礎泰拳或泰拳技巧入口，透過兩堂課建立攻擊節奏、重心轉換與距離感。',
     price: 'NT$1,800',
     features: [
-      '泰拳路徑連續兩週',
+      '泰拳路徑兩堂課',
       '固定課程入口與固定上課節奏',
       '練習拳、踢、膝與重心轉換',
       '每堂線上小班預留 6 席',
     ],
     checkoutUrl: siteConfig.lineUrl,
-    ctaLabel: '選擇泰拳兩週',
+    ctaLabel: '選泰拳兩堂場次',
     ctaVariant: 'secondary',
   },
   {
     id: 'offers-bootcamp-boxing-4',
-    name: '拳擊 Boot Camp｜四週養成',
+    name: '拳擊 Boot Camp｜四堂養成',
     subtitle: '主推：拳擊技能路徑',
-    teaserCopy: '四週固定跟課，讓拳擊不只是一晚刺激，而是能帶走的身體反應。',
+    teaserCopy: '四堂課累積，讓拳擊不只是一晚刺激，而是能帶走的身體反應。',
     description:
-      '適合想真正學到東西的人。四週沿著同一條拳擊路徑累積，從出拳、移動、回防到面對壓力時的穩定反應。',
+      '適合想真正學到東西的人。四堂課沿著同一條拳擊路徑累積，從出拳、移動、回防到面對壓力時的穩定反應。',
     price: 'NT$3,800',
     badge: '主推路徑',
     features: [
-      '拳擊路徑連續四週',
-      '同一入口逐週累積，不用每次重新開始',
+      '拳擊路徑四堂課',
+      '同一入口逐堂累積，不用每次重新開始',
       '建立出拳、移動、防守與壓力下反應',
       '每堂線上小班預留 6 席',
     ],
     highlight: true,
     checkoutUrl: siteConfig.lineUrl,
-    ctaLabel: '選擇拳擊四週',
+    ctaLabel: '選拳擊四堂場次',
     ctaVariant: 'primary',
   },
   {
     id: 'offers-bootcamp-muaythai-4',
-    name: '泰拳 Boot Camp｜四週養成',
+    name: '泰拳 Boot Camp｜四堂養成',
     subtitle: '主推：全身節奏路徑',
-    teaserCopy: '四週固定跟課，把泰拳的節奏、力量與距離感真的練進身體。',
+    teaserCopy: '四堂課累積，把泰拳的節奏、力量與距離感真的練進身體。',
     description:
-      '適合想用全身進入狀態的人。四週沿著同一條泰拳路徑累積，讓拳、踢、膝、重心與攻防節奏逐漸連起來。',
+      '適合想用全身進入狀態的人。四堂課沿著同一條泰拳路徑累積，讓拳、踢、膝、重心與攻防節奏逐漸連起來。',
     price: 'NT$3,800',
     badge: '全身路徑',
     features: [
-      '泰拳路徑連續四週',
-      '同一入口逐週累積，不用每次重新開始',
+      '泰拳路徑四堂課',
+      '同一入口逐堂累積，不用每次重新開始',
       '建立拳、踢、膝、重心與距離反應',
       '每堂線上小班預留 6 席',
     ],
     checkoutUrl: siteConfig.lineUrl,
-    ctaLabel: '選擇泰拳四週',
+    ctaLabel: '選泰拳四堂場次',
     ctaVariant: 'secondary',
   },
   {
@@ -466,7 +470,7 @@ export const offersPlans: TicketPlan[] = [
 ]
 
 export const offersStatusCopy = {
-  notLoggedIn: 'LINE Login 後解鎖四次完整內容、活動場次、費用資訊與可報名名額。',
+  notLoggedIn: 'LINE 登入後即可查看可購買日期、即時剩餘名額與價格。',
   noSession: '本月名額已滿。先加入 LINE，下一次開放時會優先通知你。',
   almostFull: '這個場館名額不多了，想進場就不要再等等。',
   awaitingRelease: '本月場次即將開放，先加入 LINE，我們會先通知你。',
@@ -522,7 +526,7 @@ export const faqItems: FAQItem[] = [
     id: 'faq-7',
     question: '場次日期和名額是真的嗎？',
     answer:
-      '頁面會顯示目前可預訂的課程。每堂課線上小班預留 6 席，用來維持教練照顧品質；最終可預訂狀態以當月確認與官方回覆為準。',
+      '頁面只顯示目前可線上購買的課程。每堂線上開放 6 席，剩餘數字會依線上訂單即時更新；售完後該場次就不再開放購買。',
   },
   {
     id: 'faq-8',
@@ -536,7 +540,7 @@ export const faqItems: FAQItem[] = [
 export const finalCtaContent = {
   title: '先進場一次，再決定要不要走完整旅程。',
   subtitle: '',
-  primaryCta: '購買 Fight Night Pass',
+  primaryCta: '選日期購買',
   ghostCta: '先加 LINE 取得通知',
 }
 
