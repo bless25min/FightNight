@@ -2,6 +2,7 @@ import { motion, useInView } from 'framer-motion'
 import { useEffect, useRef } from 'react'
 import {
   fightNightPassPlan,
+  siteConfig,
   ticketSectionContent,
   venues,
 } from '../../data/landingContent'
@@ -151,7 +152,7 @@ export function TicketSection() {
               <div className="mt-6 flex justify-center">
                 <Button
                   variant="ghost"
-                  href="#identity"
+                  href={`${siteConfig.offersUrl}#identity`}
                   data-cta="ticket-offers-entry"
                 >
                   了解 Boot Camp 方案

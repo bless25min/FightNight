@@ -232,7 +232,6 @@ export const fightNightPassPlan: TicketPlan = {
     '單次 Fight Night 入場資格',
     '完整夜場節奏體驗與教練帶動',
     '適合零基礎、第一次進場與朋友同行',
-    '完成 LINE Login 並加入好友後查看可報名名額',
   ],
   highlight: true,
   checkoutUrl: siteConfig.lineUrl,
