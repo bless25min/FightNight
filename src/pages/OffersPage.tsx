@@ -18,14 +18,12 @@ import {
   offersOutcomeSectionContent,
   offersPlans,
   offersPlanSectionContent,
-  offersSessionSectionContent,
   planScheduleCategoryMap,
-  sessions,
 } from '../data/landingContent'
 import { SCHEDULE_DISPLAY_LIMIT } from '../data/weeklySchedule'
 import type { LiffGateState } from '../hooks/useLiffGate'
 import { useLiffGate } from '../hooks/useLiffGate'
-import type { CourseCategory, SessionCapacity } from '../types'
+import type { CourseCategory } from '../types'
 import { Footer } from '../components/layout/Footer'
 import { Header } from '../components/layout/Header'
 import { ExperienceFlowSection } from '../components/sections/ExperienceFlowSection'
@@ -38,30 +36,9 @@ import { WeeklyScheduleSection } from '../components/sections/WeeklyScheduleSect
 import { FAQSection } from '../components/sections/FAQSection'
 import { LockedContent } from '../components/ui/LockedContent'
 import { PlanCard } from '../components/ui/PlanCard'
-import { SectionHeading } from '../components/ui/SectionHeading'
+import { Button } from '../components/ui/Button'
 import { SectionWrapper } from '../components/ui/SectionWrapper'
-
-const capacityStyles: Record<
-  SessionCapacity,
-  { label: string; className: string }
-> = {
-  仍可報名: {
-    label: '仍可報名',
-    className: 'bg-neon/15 text-neon border-neon/30',
-  },
-  名額緊張: {
-    label: '名額緊張',
-    className: 'bg-gold/15 text-gold border-gold/30',
-  },
-  即將額滿: {
-    label: '即將額滿',
-    className: 'bg-blaze/15 text-blaze border-blaze/30',
-  },
-  本月已額滿: {
-    label: '本月已額滿',
-    className: 'bg-pearl/10 text-mist/60 border-pearl/10',
-  },
-}
+import { StickyActionBar } from '../components/ui/StickyActionBar'
 
 const curriculumPosterMap: Record<string, string> = {
   'module-1': bootcampModule1Poster,
@@ -101,7 +78,15 @@ function PosterFigure({
   )
 }
 
-function OffersHero({ gateState }: { gateState: LiffGateState }) {
+function OffersHero({
+  gateState,
+  onPlansClick,
+  onScheduleClick,
+}: {
+  gateState: LiffGateState
+  onPlansClick: () => void
+  onScheduleClick: () => void
+}) {
   const helperMessage = useMemo(() => {
     if (gateState.status === 'not-friend') {
       return '你已完成 LINE 登入，下一步加入官方帳號後，就能解鎖完整會員內容。'
@@ -161,6 +146,20 @@ function OffersHero({ gateState }: { gateState: LiffGateState }) {
             {helperMessage}
           </p>
         )}
+
+        <div className="mt-5 flex flex-col items-center justify-center gap-3 sm:flex-row md:mt-8">
+          <Button size="lg" onClick={onPlansClick} data-cta="offers-hero-plans">
+            查看 Boot Camp 方案
+          </Button>
+          <Button
+            variant="secondary"
+            size="lg"
+            onClick={onScheduleClick}
+            data-cta="offers-hero-schedule"
+          >
+            看本週課表
+          </Button>
+        </div>
       </div>
     </section>
   )
@@ -286,7 +285,7 @@ function OffersPlans({
           <h2>{offersPlanSectionContent.title}</h2>
           <p>{offersPlanSectionContent.subtitle}</p>
           <p>
-            如果你想先驗證入口，First Round 讓你完整進場一次。若你想看到刺激如何變成壓力適應、防身反應與自信成長，Boot Camp 會讓你蛻變。
+            如果你已經確認想走進更完整的系統，Boot Camp 會把刺激轉成壓力適應、防身反應與更穩定的身體記憶。
           </p>
         </PosterFigure>
       </div>
@@ -324,60 +323,6 @@ function OffersPlans({
   )
 }
 
-function OffersSessions() {
-  return (
-    <SectionWrapper id="offers-sessions">
-      <SectionHeading
-        title={offersSessionSectionContent.title}
-        subtitle={offersSessionSectionContent.subtitle}
-      />
-
-      <p className="text-center text-sm md:text-base text-neon/90 font-heading tracking-wide -mt-2 mb-8 md:mb-12">
-        {offersSessionSectionContent.ruleLine}
-      </p>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 max-w-5xl mx-auto">
-        {sessions.map((session, i) => {
-          const capacity = capacityStyles[session.capacity]
-          return (
-            <motion.div
-              key={session.id}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: i * 0.1 }}
-              className="rounded-2xl border border-pearl/10 bg-black/30 p-5 md:p-6 flex flex-col gap-4"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <h3 className="text-base md:text-lg font-heading font-semibold text-pearl leading-snug">
-                  {session.venueName}
-                </h3>
-                <span
-                  className={`shrink-0 inline-flex items-center px-2.5 py-1 rounded-full text-xs font-heading font-medium border ${capacity.className}`}
-                >
-                  {capacity.label}
-                </span>
-              </div>
-
-              <div className="space-y-1 text-sm text-mist">
-                <p className="text-pearl/90 font-heading">
-                  {session.date}{' '}
-                  <span className="text-mist/60">{session.weekday}</span>
-                </p>
-                <p>{session.time}</p>
-              </div>
-            </motion.div>
-          )
-        })}
-      </div>
-
-      <p className="text-center text-xs md:text-sm text-mist/50 max-w-2xl mx-auto mt-6 md:mt-8">
-        {offersSessionSectionContent.footnote}
-      </p>
-    </SectionWrapper>
-  )
-}
-
 const scheduleCountByCategory: Record<CourseCategory, number> = {
   FIGHT_NIGHT: SCHEDULE_DISPLAY_LIMIT,
   BOOT_CAMP: SCHEDULE_DISPLAY_LIMIT,
@@ -388,7 +333,7 @@ export function OffersPage() {
     useLiffGate()
 
   const [scheduleCategory, setScheduleCategory] =
-    useState<CourseCategory>('FIGHT_NIGHT')
+    useState<CourseCategory>('BOOT_CAMP')
 
   const navigateToSchedule = useCallback((category: CourseCategory) => {
     setScheduleCategory(category)
@@ -398,11 +343,21 @@ export function OffersPage() {
     }
   }, [])
 
+  const scrollToPlans = useCallback(() => {
+    document
+      .getElementById('offers-plans')
+      ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [])
+
   return (
     <div className="overflow-x-hidden w-full relative">
       <Header />
       <main>
-        <OffersHero gateState={gateState} />
+        <OffersHero
+          gateState={gateState}
+          onPlansClick={scrollToPlans}
+          onScheduleClick={() => navigateToSchedule('BOOT_CAMP')}
+        />
         <PainSection />
         <OldFrameworkBreakSection />
         <NewModelSection />
@@ -426,13 +381,25 @@ export function OffersPage() {
           liffUrl={liffUrl}
         />
         <WeeklyScheduleSection
+          title="本週可報名 Boot Camp"
+          subtitle="選一堂你想上的技術方向，再回到方案完成預留。"
           activeCategory={scheduleCategory}
+          categories={['BOOT_CAMP']}
+          showCategoryTabs={false}
           onCategoryChange={setScheduleCategory}
         />
-        <OffersSessions />
         <FAQSection />
       </main>
       <Footer onVenueAction={(url) => void openWhenUnlocked(url)} />
+      {gateState.status === 'unlocked' && (
+        <StickyActionBar
+          eyebrow="Boot Camp"
+          title="兩堂 NT$1,800 起"
+          detail="四堂完整旅程 NT$3,800"
+          actionLabel="看方案"
+          onAction={scrollToPlans}
+        />
+      )}
     </div>
   )
 }

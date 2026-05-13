@@ -83,17 +83,35 @@ const venueShortLookup = (() => {
 })()
 
 type Props = {
+  id?: string
   activeCategory?: CourseCategory
   onCategoryChange?: (category: CourseCategory) => void
+  categories?: CourseCategory[]
+  showCategoryTabs?: boolean
+  title?: string
+  subtitle?: string
+  embedded?: boolean
+  className?: string
 }
 
 export function WeeklyScheduleSection({
+  id = 'weekly-schedule',
   activeCategory: controlledCategory,
   onCategoryChange,
+  categories = CATEGORY_ORDER,
+  showCategoryTabs = categories.length > 1,
+  title = weeklyScheduleSectionContent.title,
+  subtitle = weeklyScheduleSectionContent.subtitle,
+  embedded = false,
+  className = '',
 }: Props = {}) {
+  const fallbackCategory = categories[0] ?? 'FIGHT_NIGHT'
   const [internalCategory, setInternalCategory] =
-    useState<CourseCategory>('FIGHT_NIGHT')
-  const activeCategory = controlledCategory ?? internalCategory
+    useState<CourseCategory>(fallbackCategory)
+  const activeCategory =
+    controlledCategory && categories.includes(controlledCategory)
+      ? controlledCategory
+      : internalCategory
   const setActiveCategory = (c: CourseCategory) => {
     if (onCategoryChange) onCategoryChange(c)
     else setInternalCategory(c)
@@ -123,39 +141,42 @@ export function WeeklyScheduleSection({
       } ${earliest.startTime} 可上`
     : null
 
-  return (
-    <SectionWrapper id="weekly-schedule">
+  const content = (
+    <>
       <SectionHeading
-        title={weeklyScheduleSectionContent.title}
-        subtitle={weeklyScheduleSectionContent.subtitle}
+        title={title}
+        subtitle={subtitle}
+        className={embedded ? 'mb-5 md:mb-7' : ''}
       />
 
-      <div
-        role="tablist"
-        aria-label="選擇課程方向"
-        className="flex flex-wrap justify-center gap-2 md:gap-3 mb-4 md:mb-6"
-      >
-        {CATEGORY_ORDER.map((cat) => {
-          const active = cat === activeCategory
-          const m = categoryMeta[cat]
-          return (
-            <button
-              key={cat}
-              role="tab"
-              type="button"
-              aria-selected={active}
-              onClick={() => setActiveCategory(cat)}
-              className={`px-5 py-2.5 rounded-full text-sm md:text-base font-heading font-semibold tracking-[0.15em] transition-colors border ${
-                active
-                  ? m.tabActiveClass
-                  : 'bg-black/30 text-mist border-pearl/15 hover:border-pearl/35 hover:text-pearl'
-              }`}
-            >
-              {m.label}
-            </button>
-          )
-        })}
-      </div>
+      {showCategoryTabs && (
+        <div
+          role="tablist"
+          aria-label="選擇課程方向"
+          className="flex flex-wrap justify-center gap-2 md:gap-3 mb-4 md:mb-6"
+        >
+          {categories.map((cat) => {
+            const active = cat === activeCategory
+            const m = categoryMeta[cat]
+            return (
+              <button
+                key={cat}
+                role="tab"
+                type="button"
+                aria-selected={active}
+                onClick={() => setActiveCategory(cat)}
+                className={`px-5 py-2.5 rounded-full text-sm md:text-base font-heading font-semibold tracking-[0.15em] transition-colors border ${
+                  active
+                    ? m.tabActiveClass
+                    : 'bg-black/30 text-mist border-pearl/15 hover:border-pearl/35 hover:text-pearl'
+                }`}
+              >
+                {m.label}
+              </button>
+            )
+          })}
+        </div>
+      )}
 
       <p className="text-center text-sm md:text-base text-mist/75 max-w-2xl mx-auto mb-2 md:mb-3 leading-snug">
         {meta.lead}
@@ -250,6 +271,20 @@ export function WeeklyScheduleSection({
       <p className="text-center text-xs md:text-sm text-mist/50 max-w-2xl mx-auto mt-8 md:mt-12">
         {weeklyScheduleSectionContent.footnote}
       </p>
+    </>
+  )
+
+  if (embedded) {
+    return (
+      <div id={id} data-section={id} className={className}>
+        {content}
+      </div>
+    )
+  }
+
+  return (
+    <SectionWrapper id={id} className={className}>
+      {content}
     </SectionWrapper>
   )
 }

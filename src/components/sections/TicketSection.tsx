@@ -12,6 +12,8 @@ import { LockedContent } from '../ui/LockedContent'
 import { PlanCard } from '../ui/PlanCard'
 import { SectionHeading } from '../ui/SectionHeading'
 import { SectionWrapper } from '../ui/SectionWrapper'
+import { StickyActionBar } from '../ui/StickyActionBar'
+import { WeeklyScheduleSection } from './WeeklyScheduleSection'
 
 export function TicketSection() {
   const { trackTicketView, trackTicketCta } = useTracking()
@@ -64,12 +66,24 @@ export function TicketSection() {
                   <div className="mx-auto max-w-xl">
                     <PlanCard
                       plan={fightNightPassPlan}
-                    onCtaAction={(url, planId) => {
-                      trackTicketCta(planId)
-                      void openWhenUnlocked(url)
+                      onCtaAction={(url, planId) => {
+                        trackTicketCta(planId)
+                        void openWhenUnlocked(url)
                       }}
                     />
                   </div>
+                </div>
+
+                <div className="mt-10 md:mt-12">
+                  <WeeklyScheduleSection
+                    id="fight-night-schedule"
+                    activeCategory="FIGHT_NIGHT"
+                    categories={['FIGHT_NIGHT']}
+                    showCategoryTabs={false}
+                    title="本週可報名 Fight Night"
+                    subtitle="先選一堂你能到場的時間，再完成預留。"
+                    embedded
+                  />
                 </div>
               </div>
             </LockedContent>
@@ -81,12 +95,25 @@ export function TicketSection() {
                   href={siteConfig.offersUrl}
                   data-cta="ticket-offers-entry"
                 >
-                  查看 Fight Night + Boot Camp 方案
+                  了解 Boot Camp 方案
                 </Button>
               </div>
             )}
           </div>
         </motion.div>
+
+        {gateState.status === 'unlocked' && (
+          <StickyActionBar
+            eyebrow="已解鎖"
+            title="Fight Night Pass"
+            detail="NT$980 / 堂"
+            actionLabel="購買"
+            onAction={() => {
+              trackTicketCta(fightNightPassPlan.id)
+              void openWhenUnlocked(fightNightPassPlan.checkoutUrl)
+            }}
+          />
+        )}
 
       </div>
     </SectionWrapper>

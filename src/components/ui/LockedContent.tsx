@@ -14,6 +14,8 @@ type Props = {
 
 function getActionLabel(gateState: LiffGateState) {
   if (gateState.status === 'missing-config') return null
+  if (gateState.status === 'not-friend') return '加入 LINE 好友解鎖'
+  if (gateState.status === 'error') return '重新驗證'
   return 'LINE 快速登入'
 }
 
@@ -31,6 +33,8 @@ export function LockedContent({
   }
 
   const actionLabel = getActionLabel(gateState)
+  const shouldUseLiffLink =
+    liffUrl && ['loading', 'logged-out'].includes(gateState.status)
 
   return (
     <div
@@ -47,7 +51,7 @@ export function LockedContent({
         </h3>
 
         {actionLabel && (
-          liffUrl ? (
+          shouldUseLiffLink ? (
             <Button
               size="lg"
               className="mt-6"

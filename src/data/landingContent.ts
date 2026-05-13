@@ -6,7 +6,6 @@ import type {
   AudiencePoint,
   TicketPlan,
   FAQItem,
-  Session,
   CurriculumModule,
   CourseCategory,
 } from '../types'
@@ -16,6 +15,7 @@ export const siteConfig = {
   brandName: 'UFCGYM TAIWAN',
   eventName: 'Fight Night',
   lineUrl: 'https://page.line.me/340uxvgb',
+  // TODO: 正式付款連結完成後，將各 plan.checkoutUrl 從 LINE fallback 換成付款 URL。
   ticketUrl: '#ticket',
   offersUrl: '/offers',
 }
@@ -243,10 +243,10 @@ export const fightNightPassPlan: TicketPlan = {
 
 // ── /offers 頁面文案 ──────────────────────────────
 export const offersHeroContent = {
-  title: 'Fight Night + Boot Camp 完整方案',
-  subtitle: 'Fight Night 是入口，Boot Camp 讓刺激變成真的身體記憶。',
+  title: 'Boot Camp 完整方案',
+  subtitle: '把 Fight Night 的刺激，變成真的身體記憶。',
   description:
-    '這裡販售首頁 NT$980 以外的完整方案。從單次進場、專屬拳套，到四次 Boot Camp 系統旅程，完整方案內容需完成 LINE Login 並加入好友後解鎖。',
+    '如果你已經想從單次體驗往前走，這裡是 Boot Camp 的系統方案。從兩堂入門到四堂完整旅程，完整內容需完成 LINE Login 並加入好友後解鎖。',
   primaryCta: '快速登入查看',
   secondaryCta: '先看完整系統',
 }
@@ -332,8 +332,8 @@ export const bootCampFaqItems: FAQItem[] = [
 ]
 
 export const offersPlanSectionContent = {
-  title: 'Fight Night + Boot Camp 方案',
-  subtitle: '從單堂 Fight Night NT$980，到 Boot Camp 兩堂、四堂完整旅程，登入加好友後查看完整內容。',
+  title: 'Boot Camp 方案',
+  subtitle: '從 Boot Camp 兩堂入門，到四堂完整旅程，登入加好友後查看完整內容。',
   footnote: '完整內容、活動場次與名額狀態，以實際公告為準。',
 }
 
@@ -348,7 +348,6 @@ export const offersOutcomeSectionContent = {
 
 // Plan ID → 對應的課表 category。沒列在這裡的 plan 不會出現「查看近期場次」連結
 export const planScheduleCategoryMap: Record<string, CourseCategory> = {
-  'offers-fight-night-pass': 'FIGHT_NIGHT',
   'offers-bootcamp-2': 'BOOT_CAMP',
   'offers-bootcamp-2-gear': 'BOOT_CAMP',
   'offers-bootcamp-4': 'BOOT_CAMP',
@@ -373,24 +372,6 @@ export const planSummaryByCategory: Record<
 }
 
 export const offersPlans: TicketPlan[] = [
-  {
-    id: 'offers-fight-night-pass',
-    name: 'Fight Night Pass｜單堂入場',
-    subtitle: '一堂體驗 Fight Night',
-    teaserCopy: '一堂就夠你知道，這是不是你的方向。',
-    description:
-      '單堂 Fight Night 入場（拳擊／泰拳體適能）。零基礎可進場，跟著教練口令與全場節奏完整走過一堂。',
-    price: 'NT$980',
-    features: [
-      '單堂 Fight Night 入場資格',
-      '拳擊或泰拳體適能任選一堂',
-      '零基礎可進場，拳套可現場租用',
-      '適合想先用一堂課驗證方向的人',
-    ],
-    checkoutUrl: siteConfig.lineUrl,
-    ctaLabel: '購買 Fight Night Pass',
-    ctaVariant: 'secondary',
-  },
   {
     id: 'offers-bootcamp-2',
     name: 'Boot Camp 兩堂｜入門套票',
@@ -484,51 +465,6 @@ export const offersPlans: TicketPlan[] = [
     checkoutUrl: siteConfig.lineUrl,
     ctaLabel: '購買 Private Onboarding',
     ctaVariant: 'ghost',
-  },
-]
-
-export const offersSessionSectionContent = {
-  title: '選一個讓自己鬆開的夜晚',
-  subtitle:
-    '選一個願意留給自己的夜晚。到了現場，剩下交給我們。',
-  ruleLine: '每月 1 個梯次 × 3 個場館限量開放',
-  footnote: '各館名額與釋出狀態，以當月實際公告為準。',
-  bookCtaLabel: '用 LINE 預留名額',
-}
-
-export const sessions: Session[] = [
-  {
-    id: 'session-dunnan',
-    venueId: 'venue-dunnan',
-    venueName: '台北 — 敦南旗艦館',
-    date: '2026 年 X 月 X 日',
-    weekday: 'Fri',
-    time: '22:00 - 23:30',
-    capacity: '仍可報名',
-    lineUrl: 'https://lin.ee/dTCkydS',
-    coachIds: ['coach-lead', 'coach-rhythm'],
-  },
-  {
-    id: 'session-neihu',
-    venueId: 'venue-neihu',
-    venueName: '台北 — 內科模範館',
-    date: '2026 年 X 月 X 日',
-    weekday: 'Fri',
-    time: '22:00 - 23:30',
-    capacity: '名額緊張',
-    lineUrl: 'https://lin.ee/baMDUpI',
-    coachIds: ['coach-lead', 'coach-safety'],
-  },
-  {
-    id: 'session-taichung',
-    venueId: 'venue-taichung',
-    venueName: '台中 — 台中勤美旗艦館',
-    date: '2026 年 X 月 X 日',
-    weekday: 'Fri',
-    time: '22:00 - 23:30',
-    capacity: '即將額滿',
-    lineUrl: 'https://lin.ee/Hhi6BCP',
-    coachIds: ['coach-rhythm', 'coach-safety'],
   },
 ]
 
