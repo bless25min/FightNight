@@ -30,6 +30,21 @@ export function TicketSection() {
     }
   }, [isInView, trackTicketView])
 
+  useEffect(() => {
+    if (gateState.status !== 'unlocked') return
+
+    const params = new URLSearchParams(window.location.search)
+    const shouldFocusTicket =
+      params.get('entry') === 'ticket' || window.location.hash === '#ticket'
+
+    if (!shouldFocusTicket) return
+
+    window.setTimeout(() => {
+      ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      window.history.replaceState(null, '', `${window.location.pathname}#ticket`)
+    }, 120)
+  }, [gateState.status])
+
   return (
     <SectionWrapper id="ticket">
       <div ref={ref}>

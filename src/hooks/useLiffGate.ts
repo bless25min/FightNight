@@ -27,7 +27,9 @@ export function useLiffGate() {
     status: 'loading',
   })
   const liffId = import.meta.env.VITE_LINE_LIFF_ID
-  const liffUrl = liffId ? `https://line.me/R/app/${liffId}` : undefined
+  const liffUrl = liffId
+    ? `https://liff.line.me/${liffId}/?entry=ticket`
+    : undefined
 
   const runGateCheck = useCallback(async () => {
     await Promise.resolve()
