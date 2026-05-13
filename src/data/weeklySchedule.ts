@@ -1,5 +1,20 @@
 import type { WeeklyCourse } from '../types'
 
+// 暫用 BookFast 各分店搜尋頁取代正式付款頁。將來換掉這支即可。
+const venueBookfastStoreId: Record<string, string> = {
+  'venue-dunnan': '9qa53QGE3W',
+  'venue-neihu': '0rmRDN8ny6',
+  'venue-taichung': 'VkB5d8p5j3',
+}
+
+export function buildCourseBookingUrl(course: WeeklyCourse): string | null {
+  const storeId = venueBookfastStoreId[course.venueId]
+  if (!storeId) return null
+  return `https://ec.bookfastpos.com/GbARqWPnjP/search/result?storeIds=%5B%22${storeId}%22%5D&courseType=%5B%5D&queryWeeks=%5B%5D&queryDates=%5B%5D&teacherIds=%5B%5D&courseIds=%5B%5D&startTime=00%3A00&endTime=23%3A59&minPrice=0&maxPrice=0&pageNumber=1&orderType=startTime&orderDirection=ASC`
+}
+
+export const SCHEDULE_DISPLAY_LIMIT = 3
+
 export const weeklyScheduleSectionContent = {
   title: '近期可報名的場次',
   subtitle: '選一個你想試的方向，看看接下來幾天哪些場次可以走進場。',

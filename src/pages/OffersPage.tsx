@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { useMemo } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import bootcampOriginPoster from '../assets/offers/bootcamp-origin-poster.png'
 import bootcampModule1Poster from '../assets/offers/bootcamp-module-1-poster.png'
@@ -11,6 +11,7 @@ import bootcampModule6Poster from '../assets/offers/bootcamp-module-6-poster.png
 import offersHeroPoster from '../assets/offers/offers-hero-octagon-poster.png'
 import offersPlansTransitionPoster from '../assets/offers/offers-plans-transition-poster.png'
 import {
+  bootCampFaqItems,
   curriculumModules,
   offersCurriculumSectionContent,
   offersHeroContent,
@@ -18,11 +19,13 @@ import {
   offersPlans,
   offersPlanSectionContent,
   offersSessionSectionContent,
+  planScheduleCategoryMap,
   sessions,
 } from '../data/landingContent'
+import { SCHEDULE_DISPLAY_LIMIT } from '../data/weeklySchedule'
 import type { LiffGateState } from '../hooks/useLiffGate'
 import { useLiffGate } from '../hooks/useLiffGate'
-import type { SessionCapacity } from '../types'
+import type { CourseCategory, SessionCapacity } from '../types'
 import { Footer } from '../components/layout/Footer'
 import { Header } from '../components/layout/Header'
 import { ExperienceFlowSection } from '../components/sections/ExperienceFlowSection'
@@ -262,11 +265,15 @@ function OffersPlans({
   gateState,
   onGateAction,
   onCtaAction,
+  onScheduleNav,
+  scheduleCountByCategory,
   liffUrl,
 }: {
   gateState: LiffGateState
   onGateAction: () => void
   onCtaAction: (redirectUrl: string, planId: string) => void
+  onScheduleNav: (category: CourseCategory) => void
+  scheduleCountByCategory: Record<CourseCategory, number>
   liffUrl?: string
 }) {
   return (
@@ -291,14 +298,22 @@ function OffersPlans({
         onGateAction={onGateAction}
       >
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6 max-w-6xl mx-auto items-start">
-          {offersPlans.map((plan, i) => (
-            <PlanCard
-              key={plan.id}
-              plan={plan}
-              index={i}
-              onCtaAction={onCtaAction}
-            />
-          ))}
+          {offersPlans.map((plan, i) => {
+            const planCategory = planScheduleCategoryMap[plan.id]
+            return (
+              <PlanCard
+                key={plan.id}
+                plan={plan}
+                index={i}
+                onCtaAction={onCtaAction}
+                scheduleCategory={planCategory}
+                scheduleCount={
+                  planCategory ? scheduleCountByCategory[planCategory] : undefined
+                }
+                onScheduleNav={onScheduleNav}
+              />
+            )
+          })}
         </div>
       </LockedContent>
 
@@ -363,9 +378,25 @@ function OffersSessions() {
   )
 }
 
+const scheduleCountByCategory: Record<CourseCategory, number> = {
+  FIGHT_NIGHT: SCHEDULE_DISPLAY_LIMIT,
+  BOOT_CAMP: SCHEDULE_DISPLAY_LIMIT,
+}
+
 export function OffersPage() {
   const { gateState, requestGateAccess, openWhenUnlocked, liffUrl } =
     useLiffGate()
+
+  const [scheduleCategory, setScheduleCategory] =
+    useState<CourseCategory>('FIGHT_NIGHT')
+
+  const navigateToSchedule = useCallback((category: CourseCategory) => {
+    setScheduleCategory(category)
+    const el = document.getElementById('weekly-schedule')
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }, [])
 
   return (
     <div className="overflow-x-hidden w-full relative">
@@ -379,15 +410,26 @@ export function OffersPage() {
         <ExperienceFlowSection />
         <IdentitySection />
         <OffersCurriculum />
+        <FAQSection
+          id="boot-camp-faq"
+          title="Boot Camp 常見問題"
+          subtitle="先把四堂系統課會讓人猶豫的地方講清楚"
+          items={bootCampFaqItems}
+        />
         <OffersOutcomeSummary />
         <OffersPlans
           gateState={gateState}
           onGateAction={() => void requestGateAccess()}
           onCtaAction={(url) => void openWhenUnlocked(url)}
+          onScheduleNav={navigateToSchedule}
+          scheduleCountByCategory={scheduleCountByCategory}
           liffUrl={liffUrl}
         />
         <OffersSessions />
-        <WeeklyScheduleSection />
+        <WeeklyScheduleSection
+          activeCategory={scheduleCategory}
+          onCategoryChange={setScheduleCategory}
+        />
         <FAQSection />
       </main>
       <Footer onVenueAction={(url) => void openWhenUnlocked(url)} />

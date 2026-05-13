@@ -2,12 +2,22 @@ import { motion } from 'framer-motion'
 import { useMemo, useState } from 'react'
 import { venues } from '../../data/landingContent'
 import {
+  buildCourseBookingUrl,
+  SCHEDULE_DISPLAY_LIMIT,
   weeklyCourses,
   weeklyScheduleSectionContent,
 } from '../../data/weeklySchedule'
 import type { CourseCategory, WeeklyCourse } from '../../types'
 import { SectionHeading } from '../ui/SectionHeading'
 import { SectionWrapper } from '../ui/SectionWrapper'
+
+function getTodayLocal(): string {
+  const d = new Date()
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
 
 const CATEGORY_ORDER: CourseCategory[] = ['FIGHT_NIGHT', 'BOOT_CAMP']
 
@@ -81,15 +91,38 @@ const venueShortLookup = (() => {
   return map
 })()
 
-export function WeeklyScheduleSection() {
-  const [activeCategory, setActiveCategory] =
-    useState<CourseCategory>('FIGHT_NIGHT')
+type Props = {
+  activeCategory?: CourseCategory
+  onCategoryChange?: (category: CourseCategory) => void
+}
 
-  const activeCourses = useMemo(
-    () => weeklyCourses.filter((c) => c.category === activeCategory),
-    [activeCategory],
+export function WeeklyScheduleSection({
+  activeCategory: controlledCategory,
+  onCategoryChange,
+}: Props = {}) {
+  const [internalCategory, setInternalCategory] =
+    useState<CourseCategory>('FIGHT_NIGHT')
+  const activeCategory = controlledCategory ?? internalCategory
+  const setActiveCategory = (c: CourseCategory) => {
+    if (onCategoryChange) onCategoryChange(c)
+    else setInternalCategory(c)
+  }
+
+  const displayCourses = useMemo(() => {
+    const today = getTodayLocal()
+    return weeklyCourses
+      .filter((c) => c.category === activeCategory && c.date >= today)
+      .sort((a, b) => {
+        if (a.date !== b.date) return a.date < b.date ? -1 : 1
+        return sortByTime(a, b)
+      })
+      .slice(0, SCHEDULE_DISPLAY_LIMIT)
+  }, [activeCategory])
+
+  const dateGroups = useMemo(
+    () => groupByDate(displayCourses),
+    [displayCourses],
   )
-  const dateGroups = useMemo(() => groupByDate(activeCourses), [activeCourses])
 
   const meta = categoryMeta[activeCategory]
 
@@ -157,32 +190,43 @@ export function WeeklyScheduleSection() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3">
-                {g.items.map((c) => (
-                  <article
-                    key={c.id}
-                    className="rounded-xl border border-pearl/10 bg-black/30 px-4 py-3 md:px-5 md:py-4 flex flex-col gap-1.5"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-sm md:text-base font-heading text-pearl tabular-nums">
-                        {c.startTime}–{c.endTime}
+                {g.items.map((c) => {
+                  const bookingUrl = buildCourseBookingUrl(c)
+                  return (
+                    <a
+                      key={c.id}
+                      href={bookingUrl ?? '#'}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={`報名 ${c.name}，${formatShortDate(c.date)} 週${c.weekday} ${c.startTime}–${c.endTime}，${c.venueName}`}
+                      data-cta={`schedule-${c.id}`}
+                      className="group rounded-xl border border-pearl/10 bg-black/30 px-4 py-3 md:px-5 md:py-4 flex flex-col gap-1.5 hover:border-pearl/30 hover:bg-black/45 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pearl/40"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-sm md:text-base font-heading text-pearl tabular-nums">
+                          {c.startTime}–{c.endTime}
+                        </span>
+                        <span
+                          className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded-md text-[10px] md:text-xs font-heading font-medium tracking-wide border ${meta.badgeClass}`}
+                        >
+                          {venueShortLookup[c.venueId] ?? c.venueName}
+                        </span>
+                      </div>
+                      <p className="text-sm md:text-base text-pearl font-medium leading-snug">
+                        {c.name}
+                      </p>
+                      <p className="text-xs md:text-sm text-mist/55 font-heading tracking-wide">
+                        {c.nameEn}
+                      </p>
+                      <p className="text-xs md:text-sm text-mist/60">
+                        {c.coach}
+                      </p>
+                      <span className="mt-1 text-xs md:text-sm font-heading text-mist/55 group-hover:text-pearl transition-colors">
+                        前往報名 →
                       </span>
-                      <span
-                        className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded-md text-[10px] md:text-xs font-heading font-medium tracking-wide border ${meta.badgeClass}`}
-                      >
-                        {venueShortLookup[c.venueId] ?? c.venueName}
-                      </span>
-                    </div>
-                    <p className="text-sm md:text-base text-pearl font-medium leading-snug">
-                      {c.name}
-                    </p>
-                    <p className="text-xs md:text-sm text-mist/55 font-heading tracking-wide">
-                      {c.nameEn}
-                    </p>
-                    <p className="text-xs md:text-sm text-mist/60">
-                      {c.coach}
-                    </p>
-                  </article>
-                ))}
+                    </a>
+                  )
+                })}
               </div>
             </motion.div>
           ))

@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import type { TicketPlan } from '../../types'
+import type { CourseCategory, TicketPlan } from '../../types'
 import { Badge } from './Badge'
 import { Button } from './Button'
 
@@ -7,15 +7,29 @@ type Props = {
   plan: TicketPlan
   index?: number
   onCtaAction: (redirectUrl: string, planId: string) => void
+  scheduleCategory?: CourseCategory
+  scheduleCount?: number
+  onScheduleNav?: (category: CourseCategory) => void
   className?: string
+}
+
+const scheduleCategoryLabel: Record<CourseCategory, string> = {
+  FIGHT_NIGHT: 'FIGHT NIGHT',
+  BOOT_CAMP: 'BOOT CAMP',
 }
 
 export function PlanCard({
   plan,
   index = 0,
   onCtaAction,
+  scheduleCategory,
+  scheduleCount,
+  onScheduleNav,
   className = '',
 }: Props) {
+  const showScheduleLink =
+    scheduleCategory !== undefined && onScheduleNav !== undefined
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 30 }}
@@ -70,6 +84,21 @@ export function PlanCard({
       >
         {plan.ctaLabel}
       </Button>
+
+      {showScheduleLink && (
+        <button
+          type="button"
+          onClick={() => onScheduleNav!(scheduleCategory!)}
+          data-cta={`plan-${plan.id}-schedule`}
+          className="mt-3 w-full text-center text-xs md:text-sm font-heading tracking-wide text-mist/75 hover:text-pearl underline-offset-4 hover:underline transition-colors"
+        >
+          查看近期
+          {scheduleCount !== undefined && scheduleCount > 0
+            ? ` ${scheduleCount} 場 `
+            : ' '}
+          {scheduleCategoryLabel[scheduleCategory!]} 場次 ↓
+        </button>
+      )}
     </motion.div>
   )
 }

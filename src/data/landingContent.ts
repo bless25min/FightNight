@@ -8,6 +8,7 @@ import type {
   FAQItem,
   Session,
   CurriculumModule,
+  CourseCategory,
 } from '../types'
 
 // ── 全域設定 ──────────────────────────────────────
@@ -303,6 +304,33 @@ export const curriculumModules: CurriculumModule[] = [
   },
 ]
 
+export const bootCampFaqItems: FAQItem[] = [
+  {
+    id: 'bootcamp-faq-1',
+    question: 'Boot Camp 和 Fight Night 差在哪？',
+    answer:
+      'Fight Night 是單次進場的拳擊節奏體驗，適合先確認自己喜不喜歡這種狀態。Boot Camp 則是四次系統旅程，會把拳擊、踢拳、防身概念與壓力適應整理成更完整的訓練。',
+  },
+  {
+    id: 'bootcamp-faq-2',
+    question: '四堂課會不會只是重複上同一套？',
+    answer:
+      '不會。Boot Camp 的價值不只是多來幾次，而是每一次都有不同重點：從進入狀態、身體適應、距離與防禦，到把壓力反應轉成更穩定的身體記憶。',
+  },
+  {
+    id: 'bootcamp-faq-3',
+    question: '沒有拳擊基礎，適合直接選 Boot Camp 嗎？',
+    answer:
+      '可以，但要看你的目標。如果你只是想先體驗一次，先選單次會更輕鬆；如果你已經知道自己想建立一套更完整的訓練節奏，Boot Camp 會比單次更適合。',
+  },
+  {
+    id: 'bootcamp-faq-4',
+    question: '四堂 Boot Camp 是連續四週嗎？缺席怎麼辦？',
+    answer:
+      'Boot Camp 會依當月場次規劃安排，不一定每次都剛好連續四週。報名前會先確認當月梯次、上課節奏與缺席處理方式；如果你有時間限制，建議先確認可參與場次再選方案。',
+  },
+]
+
 export const offersPlanSectionContent = {
   title: 'Fight Night + Boot Camp 方案',
   subtitle: '這裡販售首頁 NT$980 以外的全部方案。登入加好友後查看完整內容。',
@@ -317,6 +345,14 @@ export const offersOutcomeSectionContent = {
   formulaLabel: 'Boot Camp完整系統的結構',
   formulaInputs: ['刺激進場', '壓力排空', '身體適應', '心理成長'],
   formulaResult: '從釋放壓力的痛快，變成帶得走的能力',
+}
+
+// Plan ID → 對應的課表 category。沒列在這裡的 plan 不會出現「查看近期場次」連結
+export const planScheduleCategoryMap: Record<string, CourseCategory> = {
+  'offers-session-pass': 'FIGHT_NIGHT',
+  'offers-session-glove-pass': 'FIGHT_NIGHT',
+  'offers-transformation-pass': 'BOOT_CAMP',
+  'offers-upgrade-pass': 'BOOT_CAMP',
 }
 
 export const offersPlans: TicketPlan[] = [
@@ -482,7 +518,7 @@ export const faqItems: FAQItem[] = [
     id: 'faq-1',
     question: '這到底是拳擊課、團課，還是防身課？',
     answer:
-      'Fight Night 是拳擊節奏體驗，不是傳統技術課，也不是實戰對打課。你會跟著教練口令、沙包與基礎動作進入狀態；Boot Camp 則會把拳擊、踢拳與防身概念整理成更完整的訓練系統。',
+      'Fight Night 是拳擊節奏體驗，不是傳統技術課，也不是實戰對打或防身課。你會跟著教練口令、沙包與基礎動作進入狀態，先用一晚確認這是不是你的壓力出口。',
   },
   {
     id: 'faq-2',
@@ -504,36 +540,24 @@ export const faqItems: FAQItem[] = [
   },
   {
     id: 'faq-5',
-    question: 'NT$980、NT$1,800 和 Boot Camp 差在哪？',
-    answer:
-      'NT$980 適合想先進場體驗一次的人；NT$1,800 是更完整的 First Round 入場方案；Boot Camp 是四次系統旅程，適合想把一次釋放延伸成持續訓練的人。第一次不確定，先選單次；已經想完整投入，再看 Boot Camp。',
-  },
-  {
-    id: 'faq-6',
-    question: '四堂 Boot Camp 是連續四週嗎？缺席怎麼辦？',
-    answer:
-      'Boot Camp 會依當月場次規劃安排，不一定每次都剛好連續四週。報名前會先確認當月梯次、上課節奏與缺席處理方式；如果你有時間限制，建議先確認可參與場次再選方案。',
-  },
-  {
-    id: 'faq-7',
     question: '需要帶什麼？穿什麼？',
     answer:
       '穿適合流汗與活動的運動服、運動鞋即可。建議自備水、毛巾與替換衣物。拳套依方案可租用、自備，或選擇附專屬拳套的方案。',
   },
   {
-    id: 'faq-8',
+    id: 'faq-6',
     question: '有更衣室、淋浴和置物空間嗎？',
     answer:
       '場館基本會提供更衣與置物空間，實際設備會依場館而定。報名前建議確認你選擇的場館資訊，尤其是淋浴、置物與活動後行程安排。',
   },
   {
-    id: 'faq-9',
+    id: 'faq-7',
     question: '場次日期和名額是真的嗎？',
     answer:
       '每月場次與名額會依場館、教練與當月開放狀態調整。頁面上的名額提示是報名前判斷用，最終可報名狀態以當月確認與官方回覆為準。',
   },
   {
-    id: 'faq-10',
+    id: 'faq-8',
     question: '可以退款、轉讓或改期嗎？',
     answer:
       '報名前會先確認當月規則。若臨時無法參加，請盡早聯繫官方協助確認是否能改期、轉讓或依當月規則處理；越接近活動日，能調整的空間通常越少。',
