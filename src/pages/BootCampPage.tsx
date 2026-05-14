@@ -34,44 +34,24 @@ const expectationScenes = [
   {
     src: painPoster,
     label: '下班後',
-    title: '不是再撐一下，是走進場館。',
+    title: '告別枯燥乏味的生活',
     description:
-      '你先把某個晚上的位置留下來。那個時間到的時候，不用再跟自己討論要不要開始。',
+      '把每週的某個晚上留下來，讓身體的習慣改變你的內在狀態。',
   },
   {
     src: bootcampModule2Poster,
     label: '訓練中',
-    title: '有人帶你進入壓力，也帶你回來。',
+    title: '不僅僅是運動娛樂，也帶給你身體應對壓力的記憶',
     description:
-      '教練不是把你丟進強度裡，而是讓你在可承受的範圍內流汗、喘氣、穩住，再完成下一個動作。',
+      '讓你在歡笑中經歷一個可承受範圍的流汗、吶喊、穩定，完成反射性的記憶。',
   },
   {
     src: bootcampModule5Poster,
     label: '幾週後',
     title: '身體會開始記得：我有辦法。',
     description:
-      '期待不是來自學了多少招，而是你每週都真的出現，讓穩住、釋放和往前變成身體經驗。',
+      '自信並非來自技巧，而是每週習慣讓穩住、釋放和往前變成身體經驗。',
   },
-]
-
-const priceOptions = [
-  {
-    label: '兩堂',
-    title: '先確認這條路徑是不是你的出口',
-    price: 'NT$1,800',
-  },
-  {
-    label: '四堂',
-    title: '保留四週，讓改變有地方發生',
-    price: 'NT$3,800',
-    highlight: true,
-  },
-]
-
-const bookingSteps = [
-  '選拳擊或泰拳/踢拳路徑',
-  '選第一堂的館別、日期與時間',
-  '確認兩堂或四堂會保留哪些日期',
 ]
 
 function VisualPanel({
@@ -153,12 +133,12 @@ function BootCampHero({
             BOOT CAMP
           </p>
           <h1 className="mt-3 font-heading text-4xl font-black leading-[0.98] text-pearl md:text-6xl">
-            先把位置留下來，
+            用經驗讓身體與內心成長
             <br />
-            讓自己每週出現。
+            用習慣改變生活
           </h1>
           <p className="mt-5 max-w-2xl text-base leading-relaxed text-mist/80 md:text-xl">
-            你買的不是一串課程內容，而是一段會被日期、場館、教練和固定時段接住的期待。先選第一堂，再決定保留兩堂或四堂。
+            買一個讓身體記住正向頻率的習慣
           </p>
 
           <div className="mt-7 flex flex-col gap-3 sm:flex-row">
@@ -179,16 +159,6 @@ function BootCampHero({
             </Button>
           </div>
 
-          <div className="mt-6 grid max-w-2xl grid-cols-3 gap-2">
-            {['指定日期', '當堂教練', '每堂限量 6 席'].map((item) => (
-              <div
-                key={item}
-                className="rounded-xl border border-pearl/10 bg-black/35 px-3 py-2 text-center text-[11px] font-heading text-mist/78 md:text-sm"
-              >
-                {item}
-              </div>
-            ))}
-          </div>
         </motion.div>
       </div>
     </section>
@@ -206,8 +176,8 @@ function ExpectationSection({
       padding="py-10 md:py-24"
     >
       <SectionHeading
-        title="你先買下的，是一個會發生的自己。"
-        subtitle="期待要被看見，也要被安排進行事曆。這幾週，你不是靠意志力撐，而是每週回到同一個場域。"
+        title="預訂一個未來發生變化的自己"
+        subtitle="期待不僅被看見，也要被安排進行事曆"
       />
 
       <div className="grid gap-4 md:grid-cols-3 md:gap-5">
@@ -272,7 +242,18 @@ function RouteSection({
         subtitle="拳擊、泰拳/踢拳只是入口。真正買下的是你想在壓力面前留下的反應。"
       />
 
-      <div className="grid gap-4 md:grid-cols-2 md:gap-6">
+      <div className="-mt-2 mb-4 flex items-center justify-between gap-3 md:hidden">
+        <p className="font-heading text-xs uppercase tracking-[0.24em] text-neon/75">
+          左右滑動選路徑
+        </p>
+        <div className="flex items-center gap-2 text-xs text-mist/55">
+          <span>拳擊</span>
+          <span className="h-px w-8 bg-gradient-to-r from-blaze via-pearl/30 to-neon" />
+          <span>泰拳/踢拳</span>
+        </div>
+      </div>
+
+      <div className="-mx-3 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-3 pb-4 md:mx-0 md:grid md:grid-cols-2 md:gap-6 md:overflow-visible md:px-0 md:pb-0">
         {routeOrder.map((route, index) => {
           const content = bootCampRouteContent[route]
           const active = selectedRoute === route
@@ -280,6 +261,10 @@ function RouteSection({
             route === 'BOXING'
               ? 'border-blaze/35 bg-blaze/10'
               : 'border-neon/35 bg-neon/10'
+          const activeGlowClass =
+            route === 'BOXING'
+              ? 'ring-2 ring-blaze/55 shadow-[0_0_45px_rgba(255,59,92,0.2)]'
+              : 'ring-2 ring-neon/55 shadow-[0_0_45px_rgba(40,236,210,0.2)]'
           const buttonVariant = active ? 'primary' : 'secondary'
 
           return (
@@ -289,10 +274,13 @@ function RouteSection({
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.65, delay: index * 0.08 }}
-              className={`overflow-hidden rounded-2xl border bg-black/40 shadow-[0_28px_80px_rgba(0,0,0,0.35)] ${
-                active ? 'ring-2 ring-neon/45' : ''
+              className={`relative shrink-0 basis-[86vw] snap-center overflow-hidden rounded-2xl border bg-black/40 shadow-[0_28px_80px_rgba(0,0,0,0.35)] transition-all duration-300 md:basis-auto ${
+                active ? activeGlowClass : 'opacity-92'
               } ${accentClass}`}
             >
+              {!active && (
+                <div className="pointer-events-none absolute inset-0 z-10 bg-gradient-to-r from-transparent via-pearl/4 to-transparent opacity-40 md:hidden" />
+              )}
               <div className="relative">
                 <ZoomableImage
                   src={routeImages[route]}
@@ -345,67 +333,6 @@ function RouteSection({
   )
 }
 
-function BookingProductPanel() {
-  return (
-    <div className="mb-5 rounded-2xl border border-pearl/10 bg-black/35 p-5 md:p-6">
-      <div>
-        <p className="font-heading text-xs font-semibold uppercase tracking-[0.3em] text-neon/80">
-          BOOK LIKE A ROOM
-        </p>
-        <h3 className="mt-2 font-heading text-2xl font-black leading-tight text-pearl md:text-4xl">
-          先選第一堂，再確認後面保留哪些日期。
-        </h3>
-        <p className="mt-3 max-w-2xl text-sm leading-relaxed text-mist/70 md:text-base">
-          每張梯次卡都會顯示場館、日期、時間、教練與剩餘名額。選兩堂或四堂後，系統會展開同館同時段的後續日期。
-        </p>
-      </div>
-
-      <div className="mt-5 grid gap-2 md:grid-cols-3">
-        {bookingSteps.map((step, index) => (
-          <div
-            key={step}
-            className="rounded-xl border border-pearl/10 bg-black/25 p-4"
-          >
-            <p className="font-heading text-sm font-black text-neon">
-              0{index + 1}
-            </p>
-            <p className="mt-1 text-sm font-heading font-semibold leading-snug text-pearl">
-              {step}
-            </p>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-function PriceStrip() {
-  return (
-    <div className="mb-6 grid grid-cols-2 gap-2 md:gap-3">
-      {priceOptions.map((option) => (
-        <div
-          key={option.label}
-          className={`rounded-2xl border p-4 md:p-5 ${
-            option.highlight
-              ? 'border-neon/35 bg-neon/10'
-              : 'border-pearl/10 bg-black/30'
-          }`}
-        >
-          <p className="font-heading text-xs tracking-[0.18em] text-mist/65">
-            {option.label}
-          </p>
-          <p className="mt-2 font-heading text-lg font-black leading-tight text-pearl md:text-xl">
-            {option.title}
-          </p>
-          <p className="mt-3 font-heading text-xl font-black text-neon">
-            {option.price}
-          </p>
-        </div>
-      ))}
-    </div>
-  )
-}
-
 function BookingSection({
   selectedRoute,
   onRouteChange,
@@ -419,9 +346,6 @@ function BookingSection({
         <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_top_left,rgba(255,59,92,0.12),transparent_42%),radial-gradient(circle_at_bottom_right,rgba(40,236,210,0.1),transparent_44%)]" />
 
         <div className="relative">
-          <BookingProductPanel />
-          <PriceStrip />
-
           <WeeklyScheduleSection
             id="boot-camp-schedule"
             activeCategory="BOOT_CAMP"
@@ -432,8 +356,8 @@ function BookingSection({
             showVenueFilter
             showBootCampRouteFilter={false}
             bookingMode="bootcamp"
-            title="選擇你的第一堂"
-            subtitle="先選你真的會到的館別、日期與時段。下一步再確認兩堂或四堂會保留哪些日期。"
+            title="選擇你的起點"
+            subtitle="選場館、開始日期、每周習慣的起點"
             embedded
           />
         </div>

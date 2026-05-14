@@ -50,6 +50,13 @@ export function TicketSection() {
       .getElementById('fight-night-schedule')
       ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
+  const bootCampHref =
+    typeof window !== 'undefined' &&
+    (window.location.pathname.endsWith('.html') ||
+      window.location.hostname === '127.0.0.1' ||
+      window.location.hostname === 'localhost')
+      ? '/boot-camp.html'
+      : siteConfig.bootCampUrl
 
   return (
     <SectionWrapper id="ticket">
@@ -114,8 +121,8 @@ export function TicketSection() {
               <div className="mt-6 flex justify-center">
                 <Button
                   variant="ghost"
-                  href={siteConfig.bootCampUrl}
-                  data-cta="ticket-offers-entry"
+                  href={bootCampHref}
+                  data-cta="ticket-bootcamp-entry"
                 >
                   了解 Boot Camp 方案
                 </Button>

@@ -15,6 +15,21 @@ import { BootCampPage } from './pages/BootCampPage'
 import { OffersPage } from './pages/OffersPage'
 import { useScrollProgress } from './hooks/useScrollProgress'
 
+function getCurrentRoutePath() {
+  if (typeof window === 'undefined') return '/'
+
+  const hashPath = window.location.hash.replace(/^#/, '')
+  if (hashPath.startsWith('/offers') || hashPath.startsWith('/boot-camp')) {
+    return hashPath
+  }
+
+  const pathname = window.location.pathname
+  if (pathname.endsWith('/offers.html')) return '/offers'
+  if (pathname.endsWith('/boot-camp.html')) return '/boot-camp'
+
+  return pathname
+}
+
 function HomePage() {
   useScrollProgress()
   return (
@@ -38,14 +53,18 @@ function HomePage() {
 }
 
 function App() {
-  const [pathname, setPathname] = useState(() =>
-    typeof window !== 'undefined' ? window.location.pathname : '/',
-  )
+  const [pathname, setPathname] = useState(getCurrentRoutePath)
 
   useEffect(() => {
-    const onPop = () => setPathname(window.location.pathname)
-    window.addEventListener('popstate', onPop)
-    return () => window.removeEventListener('popstate', onPop)
+    const onRouteChange = () => setPathname(getCurrentRoutePath())
+
+    window.addEventListener('popstate', onRouteChange)
+    window.addEventListener('hashchange', onRouteChange)
+
+    return () => {
+      window.removeEventListener('popstate', onRouteChange)
+      window.removeEventListener('hashchange', onRouteChange)
+    }
   }, [])
 
   if (pathname.startsWith('/offers')) {

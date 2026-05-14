@@ -6,6 +6,11 @@ import {
   venues,
 } from '../../data/landingContent'
 import {
+  findCoachProfile,
+  getCoachDisplayName,
+  type CoachProfile,
+} from '../../data/coachProfiles'
+import {
   buildCourseBookingUrl,
   ONLINE_BOOKING_START_OFFSET_DAYS,
   ONLINE_SALES_SEAT_LIMIT,
@@ -62,7 +67,7 @@ const categoryMeta: Record<
     label: 'BOOT CAMP',
     tabActiveClass: 'bg-neon text-abyss border-neon',
     badgeClass: 'border-neon/40 bg-neon/15 text-neon',
-    lead: '先選路徑，再選第一堂。後續兩堂或四堂會沿著同館同時段往下走。',
+    lead: '選場館、開始日期、每周習慣的起點。',
   },
 }
 
@@ -196,16 +201,127 @@ function DisabledCta({
   )
 }
 
-function getRemainingLabel(remaining: number) {
+function getRemainingLabel(remaining: number, hasLiveData = false) {
   if (remaining <= 0) return '已售完'
-  if (remaining <= 2) return `最後 ${remaining} 席`
-  return `剩餘 ${remaining} 席`
+  return `${hasLiveData ? '即時' : ''}剩餘 ${remaining} 席`
 }
 
 function getRemainingBadgeClass(remaining: number, defaultClass: string) {
   if (remaining <= 0) return 'border-pearl/15 bg-pearl/5 text-mist/45'
   if (remaining <= 2) return 'border-blaze/50 bg-blaze/15 text-blaze'
   return defaultClass
+}
+
+function CoachCard({
+  coachName,
+  profile,
+  expanded,
+  onToggle,
+}: {
+  coachName: string
+  profile: CoachProfile | null
+  expanded: boolean
+  onToggle: () => void
+}) {
+  const displayName = profile?.shortName ?? getCoachDisplayName(coachName)
+  const initials = displayName.slice(0, 1).toUpperCase()
+  const previewTags = profile
+    ? [profile.role, ...profile.specialties.slice(0, 2)]
+    : ['教練介紹待補']
+
+  return (
+    <div className="mt-4 rounded-xl border border-pearl/10 bg-black/25 p-3">
+      <div className="flex items-center gap-3">
+        {profile ? (
+          <img
+            src={profile.photo}
+            alt={profile.displayName}
+            className="h-14 w-14 shrink-0 rounded-full border border-pearl/15 object-cover"
+            loading="lazy"
+          />
+        ) : (
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-pearl/10 bg-pearl/8 font-heading text-lg font-black text-mist">
+            {initials}
+          </div>
+        )}
+
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-heading uppercase tracking-[0.22em] text-mist/55">
+            當堂教練
+          </p>
+          <p className="mt-1 truncate font-heading text-lg font-black text-pearl">
+            {displayName}
+          </p>
+          <div className="mt-1 flex gap-1.5 overflow-x-auto pb-0.5">
+            {previewTags.map((tag) => (
+              <span
+                key={tag}
+                className="shrink-0 rounded-full border border-pearl/10 bg-pearl/5 px-2 py-0.5 text-[10px] text-mist/70"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {profile ? (
+          <button
+            type="button"
+            onClick={onToggle}
+            className="shrink-0 rounded-full border border-neon/25 bg-neon/10 px-3 py-1.5 text-xs font-heading font-bold text-neon transition-colors hover:border-neon/45 hover:bg-neon/15"
+          >
+            {expanded ? '收合' : '看教練'}
+          </button>
+        ) : (
+          <span className="shrink-0 rounded-full border border-pearl/10 bg-pearl/5 px-3 py-1.5 text-xs text-mist/45">
+            待補
+          </span>
+        )}
+      </div>
+
+      {expanded && profile && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          className="mt-3 overflow-hidden rounded-xl border border-neon/15 bg-neon/8 p-3"
+        >
+          <p className="text-sm leading-relaxed text-mist/82">
+            {profile.intro}
+          </p>
+
+          <div className="mt-3 grid gap-1.5">
+            {profile.trustPoints.map((point) => (
+              <div
+                key={point}
+                className="flex gap-2 text-xs leading-relaxed text-mist/72"
+              >
+                <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-neon" />
+                <span>{point}</span>
+              </div>
+            ))}
+          </div>
+
+          {profile.record && (
+            <p className="mt-3 rounded-lg border border-pearl/10 bg-black/20 px-3 py-2 text-xs leading-relaxed text-mist/70">
+              {profile.record}
+            </p>
+          )}
+
+          {profile.languages && (
+            <p className="mt-2 text-[11px] text-mist/52">
+              語言：{profile.languages.join(' / ')}
+            </p>
+          )}
+        </motion.div>
+      )}
+
+      {!profile && (
+        <p className="mt-2 text-xs leading-relaxed text-mist/50">
+          這位教練的照片與完整介紹之後補上；目前先以課表排定名稱為準。
+        </p>
+      )}
+    </div>
+  )
 }
 
 type Props = {
@@ -269,6 +385,8 @@ export function WeeklyScheduleSection({
     courseId: string
     packageSize: 2 | 4
   } | null>(null)
+  const [expandedCoachCourseId, setExpandedCoachCourseId] =
+    useState<string | null>(null)
   const isBootCampBookingMode =
     bookingMode === 'bootcamp' && activeCategory === 'BOOT_CAMP'
 
@@ -462,6 +580,7 @@ export function WeeklyScheduleSection({
 
   useEffect(() => {
     setSelectedBooking(null)
+    setExpandedCoachCourseId(null)
   }, [activeCategory, activeBootCampRoute, activeVenueId, activeDateIso])
 
   useEffect(() => {
@@ -523,13 +642,11 @@ export function WeeklyScheduleSection({
         </div>
       )}
 
-      <p
-        className={`text-sm md:text-base text-mist/75 max-w-2xl mb-2 md:mb-3 leading-snug ${
-          isBootCampBookingMode ? 'text-left' : 'text-center mx-auto'
-        }`}
-      >
-        {meta.lead}
-      </p>
+      {!isBootCampBookingMode && (
+        <p className="mx-auto mb-2 max-w-2xl text-center text-sm leading-snug text-mist/75 md:mb-3 md:text-base">
+          {meta.lead}
+        </p>
+      )}
 
       {earliestLabel && (
         <p className="text-center text-base md:text-lg font-heading font-semibold text-pearl mb-7 md:mb-10 tabular-nums">
@@ -772,6 +889,7 @@ export function WeeklyScheduleSection({
                   packageSize: 4,
                   seriesDates: bootCampSeries4.map((session) => session.date),
                 })
+                const coachProfile = findCoachProfile(c.coach)
 
                 if (isBootCampBookingMode) {
                   const selectedPackageSize =
@@ -825,7 +943,10 @@ export function WeeklyScheduleSection({
                           <span
                             className={`rounded-full border px-2.5 py-1 text-[11px] font-heading tracking-wide ${remainingBadgeClass}`}
                           >
-                            {getRemainingLabel(displayAvailability.remaining)}
+                            {getRemainingLabel(
+                              displayAvailability.remaining,
+                              hasLiveData,
+                            )}
                           </span>
                           <span className="rounded-full border border-pearl/10 bg-pearl/5 px-2.5 py-1 text-[11px] font-heading tracking-wide text-mist/70">
                             每堂 6 席
@@ -839,17 +960,16 @@ export function WeeklyScheduleSection({
                           {venueLandmarks[c.venueId] ?? c.venueName}
                         </p>
 
-                        <div className="mt-4 rounded-xl border border-pearl/10 bg-black/25 p-3">
-                          <p className="text-[10px] font-heading uppercase tracking-[0.22em] text-mist/55">
-                            當堂教練
-                          </p>
-                          <p className="mt-1 font-heading text-lg font-black text-pearl">
-                            {c.coach}
-                          </p>
-                          <p className="mt-1 text-xs leading-relaxed text-mist/62">
-                            你保留的是這一梯的位置，教練以實際排定場次為準。
-                          </p>
-                        </div>
+                        <CoachCard
+                          coachName={c.coach}
+                          profile={coachProfile}
+                          expanded={expandedCoachCourseId === c.id}
+                          onToggle={() =>
+                            setExpandedCoachCourseId((current) =>
+                              current === c.id ? null : c.id,
+                            )
+                          }
+                        />
                       </div>
 
                       <div>
@@ -900,7 +1020,10 @@ export function WeeklyScheduleSection({
                                 <p className="mt-1 text-xs leading-snug text-mist/62">
                                   {soldOut
                                     ? '已售完'
-                                    : `可保留 ${availability.remaining} 席`}
+                                    : getRemainingLabel(
+                                        availability.remaining,
+                                        hasLiveData,
+                                      )}
                                 </p>
                               </button>
                             )
@@ -947,7 +1070,10 @@ export function WeeklyScheduleSection({
                               className="mt-4 w-full"
                               data-cta={`schedule-${c.id}-bootcamp-${selectedPackageSize}`}
                             >
-                              購買這個位置 · 剩 {selectedPackageAvailability.remaining} 席
+                              購買這個位置 · {getRemainingLabel(
+                                selectedPackageAvailability.remaining,
+                                hasLiveData,
+                              )}
                             </Button>
                           ) : (
                             <DisabledCta className="mt-4">
@@ -957,7 +1083,7 @@ export function WeeklyScheduleSection({
                         </div>
                       ) : (
                         <p className="rounded-xl border border-pearl/10 bg-black/20 px-4 py-3 text-sm leading-relaxed text-mist/60">
-                          點選兩堂或四堂後，會展開實際保留的後續日期。
+                          選兩堂或四堂後，系統會直接列出你要保留的每一堂日期。
                         </p>
                       )}
                     </motion.article>
@@ -1005,7 +1131,10 @@ export function WeeklyScheduleSection({
                       <p
                         className={`inline-flex w-fit rounded-full px-2.5 py-1 text-[11px] font-heading tracking-wide border ${remainingBadgeClass}`}
                       >
-                        {getRemainingLabel(displayAvailability.remaining)}
+                        {getRemainingLabel(
+                          displayAvailability.remaining,
+                          hasLiveData,
+                        )}
                       </p>
                       <p className="inline-flex w-fit rounded-full border border-pearl/10 bg-black/25 px-2.5 py-1 text-[11px] font-heading tracking-wide text-mist/55">
                         {hasLiveData ? '即時更新' : '名額同步中'}
@@ -1131,7 +1260,10 @@ export function WeeklyScheduleSection({
                               className="w-full border-neon/25 bg-neon/10 text-pearl"
                               data-cta={`schedule-${c.id}-bootcamp-2`}
                             >
-                              兩堂 · 剩 {bootCamp2Availability.remaining}
+                              兩堂 · {getRemainingLabel(
+                                bootCamp2Availability.remaining,
+                                hasLiveData,
+                              )}
                             </Button>
                           ) : (
                             <DisabledCta>兩堂已售完</DisabledCta>
@@ -1144,7 +1276,10 @@ export function WeeklyScheduleSection({
                               className="w-full"
                               data-cta={`schedule-${c.id}-bootcamp-4`}
                             >
-                              四堂 · 剩 {bootCamp4Availability.remaining}
+                              四堂 · {getRemainingLabel(
+                                bootCamp4Availability.remaining,
+                                hasLiveData,
+                              )}
                             </Button>
                           ) : (
                             <DisabledCta>四堂已售完</DisabledCta>
@@ -1158,7 +1293,10 @@ export function WeeklyScheduleSection({
                             className="w-full"
                             data-cta={`schedule-${c.id}-fight-night`}
                           >
-                            購買這一場 · 剩 {sessionAvailability.remaining}
+                            購買這一場 · {getRemainingLabel(
+                              sessionAvailability.remaining,
+                              hasLiveData,
+                            )}
                           </Button>
                         ) : (
                           <DisabledCta>本場已售完</DisabledCta>
