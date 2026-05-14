@@ -356,22 +356,32 @@ export const offersPlanSectionContent = {
 }
 
 export const bootCampCoreContent = {
-  eyebrow: 'BOOT CAMP CORE',
-  title: '先把位置訂下來，改變才有地方發生。',
+  eyebrow: 'BOOT CAMP HOW IT WORKS',
+  title: 'Boot Camp 如何運作？',
   description:
-    '保留接下來四週同一個時間。每週回到場館，讓穩住、釋放、往前的感覺開始留在身體裡。',
+    '職業格鬥選手終其一生都在練習：如何面對恐懼、壓力、打擊，以及重新站起來的能力。',
+  contrast: {
+    fightNight:
+      'Fight Night 先讓你感受到刺激與釋放，確認身體還能被點燃。',
+    bootCamp:
+      'Boot Camp 則借用 Fighter 面對壓力的底層邏輯，把恐懼、壓迫與打擊的應對方式，轉成身體反射記憶。',
+  },
+  keywords: ['恐懼', '壓力', '打擊', '重新站起來'],
   pillars: [
     {
-      title: '察覺壓力',
-      description: '先聽見身體在緊、在亂、在想逃的瞬間。',
+      title: '01 進入壓力',
+      description:
+        '不是把你丟進失控強度，而是在可承受的範圍內，讓身體真的遇到壓力。',
     },
     {
-      title: '回到身體',
-      description: '用呼吸、姿態與教練口令，把注意力拉回可以控制的地方。',
+      title: '02 被教練接住',
+      description:
+        '透過口令、回合與動作節奏，把慌亂拉回呼吸、姿態、重心與下一個動作。',
     },
     {
-      title: '做出下一步',
-      description: '在疲累和壓迫感裡完成動作，留下自己能往前的證據。',
+      title: '03 形成記憶',
+      description:
+        '重複經歷穩住、釋放、往前，讓壓力來的時候，身體多一個可以反應的選項。',
     },
   ],
 }

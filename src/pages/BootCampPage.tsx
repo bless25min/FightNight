@@ -136,9 +136,7 @@ function BootCampHero({
             BOOT CAMP
           </p>
           <h1 className="mt-3 font-heading text-4xl font-black leading-[0.98] text-pearl md:text-6xl">
-            用經驗讓身體與內心成長
-            <br />
-            用習慣改變生活
+            經驗能讓人產生由內至外的蛻變
           </h1>
           <p className="mt-5 max-w-2xl text-base leading-relaxed text-mist/80 md:text-xl">
             買一個讓身體記住正向頻率的習慣
@@ -375,33 +373,72 @@ function BookingSection({
 function BootCampCoreSection() {
   return (
     <SectionWrapper id="boot-camp-core" fullWidth padding="py-10 md:py-20">
-      <div className="mx-auto max-w-6xl border-y border-pearl/10 px-4 py-8 sm:px-8 md:py-12">
-        <div className="max-w-3xl">
-          <p className="font-heading text-xs font-semibold uppercase tracking-[0.28em] text-neon md:text-sm">
-            {bootCampCoreContent.eyebrow}
-          </p>
-          <h2 className="mt-3 font-heading text-3xl font-black leading-tight text-pearl md:text-5xl">
-            {bootCampCoreContent.title}
-          </h2>
-          <p className="mt-4 text-base leading-relaxed text-mist/75 md:text-lg">
-            {bootCampCoreContent.description}
-          </p>
-        </div>
+      <div className="mx-auto max-w-6xl px-3 sm:px-8">
+        <div className="overflow-hidden border-y border-pearl/10 bg-black/28 sm:rounded-3xl sm:border">
+          <div className="grid gap-0 md:grid-cols-[1.05fr_0.95fr]">
+            <div className="border-b border-pearl/10 p-5 sm:p-8 md:border-b-0 md:border-r md:p-10">
+              <p className="font-heading text-xs font-semibold uppercase tracking-[0.28em] text-neon md:text-sm">
+                {bootCampCoreContent.eyebrow}
+              </p>
+              <h2 className="mt-3 font-heading text-4xl font-black leading-tight text-pearl md:text-5xl">
+                {bootCampCoreContent.title}
+              </h2>
+              <p className="mt-5 text-lg font-heading font-bold leading-relaxed text-pearl md:text-2xl">
+                {bootCampCoreContent.description}
+              </p>
 
-        <div className="mt-7 grid grid-cols-1 gap-3 md:grid-cols-3">
-          {bootCampCoreContent.pillars.map((pillar) => (
-            <div
-              key={pillar.title}
-              className="rounded-2xl border border-pearl/10 bg-black/25 p-4 md:p-5"
-            >
-              <p className="font-heading text-base font-semibold text-pearl">
-                {pillar.title}
-              </p>
-              <p className="mt-2 text-sm leading-relaxed text-mist/65">
-                {pillar.description}
-              </p>
+              <div className="mt-5 flex flex-wrap gap-2">
+                {bootCampCoreContent.keywords.map((keyword) => (
+                  <span
+                    key={keyword}
+                    className="rounded-full border border-blaze/25 bg-blaze/10 px-3 py-1.5 text-xs font-heading font-semibold tracking-wide text-blaze"
+                  >
+                    {keyword}
+                  </span>
+                ))}
+              </div>
             </div>
-          ))}
+
+            <div className="grid content-between gap-4 p-5 sm:p-8 md:p-10">
+              <div className="rounded-2xl border border-pearl/10 bg-black/35 p-4">
+                <p className="font-heading text-xs uppercase tracking-[0.22em] text-mist/45">
+                  Fight Night
+                </p>
+                <p className="mt-2 text-sm leading-relaxed text-mist/76 md:text-base">
+                  {bootCampCoreContent.contrast.fightNight}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-neon/25 bg-neon/10 p-4">
+                <p className="font-heading text-xs uppercase tracking-[0.22em] text-neon/80">
+                  Boot Camp
+                </p>
+                <p className="mt-2 text-sm leading-relaxed text-mist/86 md:text-base">
+                  {bootCampCoreContent.contrast.bootCamp}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid border-t border-pearl/10 md:grid-cols-3">
+            {bootCampCoreContent.pillars.map((pillar, index) => (
+              <motion.div
+                key={pillar.title}
+                initial={{ opacity: 0, y: 18 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.55, delay: index * 0.08 }}
+                className="border-b border-pearl/10 p-5 last:border-b-0 md:border-b-0 md:border-r md:p-6 md:last:border-r-0"
+              >
+                <p className="font-heading text-lg font-black text-pearl">
+                  {pillar.title}
+                </p>
+                <p className="mt-2 text-sm leading-relaxed text-mist/68 md:text-base">
+                  {pillar.description}
+                </p>
+              </motion.div>
+            ))}
+          </div>
         </div>
       </div>
     </SectionWrapper>
@@ -434,6 +471,7 @@ export function BootCampPage() {
           onPrimaryAction={() => scrollTo('boot-camp-routes')}
           onExpectationAction={() => scrollTo('boot-camp-expectation')}
         />
+        <BootCampCoreSection />
         <ExpectationSection onBookingAction={() => scrollTo('boot-camp-routes')} />
         <RouteSection
           selectedRoute={selectedRoute}
@@ -443,7 +481,6 @@ export function BootCampPage() {
           selectedRoute={selectedRoute}
           onRouteChange={setSelectedRoute}
         />
-        <BootCampCoreSection />
         <FAQSection
           id="boot-camp-faq"
           title="Boot Camp 常見問題"
