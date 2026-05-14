@@ -51,13 +51,11 @@ const bootCampPackageMeta: Record<
 const coachPricingByTier: Record<
   CoachPricingTier,
   {
-    label: string
     fightNight: number
     bootCamp: Record<2 | 4, number>
   }
 > = {
   'foreign-fighter': {
-    label: '外籍FIGHTER',
     fightNight: 1280,
     bootCamp: {
       2: 2200,
@@ -65,7 +63,6 @@ const coachPricingByTier: Record<
     },
   },
   'domestic-teacher': {
-    label: '國內教師',
     fightNight: 980,
     bootCamp: {
       2: 1800,
@@ -932,7 +929,6 @@ export function WeeklyScheduleSection({
                 })
                 const coachProfile = findCoachProfile(c.coach)
                 const coachPricingTier = getCoachPricingTier(c.coach, coachProfile)
-                const coachPricing = coachPricingByTier[coachPricingTier]
                 const fightNightPriceLabel =
                   getFightNightPriceLabel(coachPricingTier)
                 const bootCampBasePriceLabel = getBootCampPackagePriceLabel(
@@ -989,9 +985,6 @@ export function WeeklyScheduleSection({
                               {routeContent.shortLabel}
                             </span>
                           )}
-                          <span className="rounded-full border border-pearl/10 bg-pearl/5 px-2.5 py-1 text-[11px] font-heading tracking-wide text-mist/75">
-                            {coachPricing.label}
-                          </span>
                           <span
                             className={`rounded-full border px-2.5 py-1 text-[11px] font-heading tracking-wide ${remainingBadgeClass}`}
                           >
@@ -1192,9 +1185,6 @@ export function WeeklyScheduleSection({
                       </p>
                       <p className="inline-flex w-fit rounded-full border border-pearl/10 bg-black/25 px-2.5 py-1 text-[11px] font-heading tracking-wide text-mist/55">
                         {hasLiveData ? '即時更新' : '名額同步中'}
-                      </p>
-                      <p className="inline-flex w-fit rounded-full border border-pearl/10 bg-pearl/5 px-2.5 py-1 text-[11px] font-heading tracking-wide text-mist/75">
-                        {coachPricing.label}
                       </p>
                       {bootCampRouteLabel && (
                         <p className="inline-flex w-fit rounded-full border border-neon/20 bg-neon/10 px-2.5 py-1 text-[11px] font-heading tracking-wide text-neon/90">
