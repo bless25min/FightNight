@@ -41,7 +41,7 @@ export function Button({
   className = '',
   ...props
 }: Props) {
-  const classes = `inline-flex items-center justify-center gap-2 rounded-xl font-heading tracking-wide transition-all duration-300 cursor-pointer ${variantStyles[variant]} ${sizeStyles[size]} ${className}`
+  const classes = `interaction-hint inline-flex items-center justify-center gap-2 rounded-xl font-heading tracking-wide transition-all duration-300 cursor-pointer ${variantStyles[variant]} ${sizeStyles[size]} ${className}`
 
   if (href) {
     return (
@@ -53,6 +53,7 @@ export function Button({
         whileTap={{ scale: 0.97 }}
         className={classes}
         onClick={onClick}
+        data-interaction-hint
         {...props}
       >
         {children}
@@ -66,6 +67,7 @@ export function Button({
       whileHover={{ scale: 1.03 }}
       whileTap={{ scale: 0.97 }}
       className={classes}
+      data-interaction-hint
       {...props}
     >
       {children}

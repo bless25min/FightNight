@@ -47,7 +47,8 @@ export function ZoomableImage({
             type="button"
             aria-label={zoomed ? '適合螢幕' : '放大圖片'}
             onClick={() => setZoomed((value) => !value)}
-            className="rounded-full border border-pearl/20 bg-black/70 px-4 py-2 text-sm font-heading font-semibold text-pearl shadow-lg"
+            data-interaction-hint
+            className="interaction-hint rounded-full border border-pearl/20 bg-black/70 px-4 py-2 text-sm font-heading font-semibold text-pearl shadow-lg"
           >
             {zoomed ? '適合螢幕' : '放大'}
           </button>
@@ -56,7 +57,8 @@ export function ZoomableImage({
             type="button"
             aria-label="關閉圖片"
             onClick={() => setOpen(false)}
-            className="h-11 w-11 rounded-full border border-pearl/20 bg-black/70 text-xl font-heading text-pearl shadow-lg"
+            data-interaction-hint
+            className="interaction-hint h-11 w-11 rounded-full border border-pearl/20 bg-black/70 text-xl font-heading text-pearl shadow-lg"
           >
             x
           </button>
@@ -75,7 +77,8 @@ export function ZoomableImage({
             <button
               type="button"
               onClick={() => setZoomed((value) => !value)}
-              className="cursor-zoom-in appearance-none border-0 bg-transparent p-0"
+              data-interaction-hint
+              className="interaction-hint image-interaction-hint cursor-zoom-in appearance-none border-0 bg-transparent p-0"
               aria-label={zoomed ? '適合螢幕' : '放大圖片'}
             >
               <img
@@ -101,7 +104,8 @@ export function ZoomableImage({
           setZoomed(false)
           setOpen(true)
         }}
-        className="block w-full cursor-zoom-in appearance-none border-0 bg-transparent p-0 text-left"
+        data-interaction-hint
+        className="interaction-hint image-interaction-hint block w-full cursor-zoom-in appearance-none border-0 bg-transparent p-0 text-left"
         aria-label={`放大查看：${alt}`}
       >
         <img src={src} alt={alt} className={className} loading={loading} />

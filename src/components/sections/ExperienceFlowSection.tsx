@@ -28,10 +28,10 @@ export function ExperienceFlowSection() {
       <div className="max-w-6xl mx-auto space-y-3 md:space-y-6">
         <motion.figure
           initial={{ opacity: 0, y: 24 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.7 }}
-          className="overflow-hidden rounded-2xl md:rounded-[2rem] border border-pearl/10 bg-black/40 shadow-[0_30px_80px_rgba(0,0,0,0.35)]"
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.7 }}
+          className="-mx-3 overflow-hidden rounded-none border-y border-pearl/10 bg-black/40 shadow-[0_30px_80px_rgba(0,0,0,0.35)] sm:mx-0 sm:rounded-2xl sm:border md:rounded-[2rem]"
         >
           <ZoomableImage
             src={flowOverviewPoster}
@@ -52,7 +52,7 @@ export function ExperienceFlowSection() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: i * 0.08 }}
-            className="overflow-hidden rounded-2xl md:rounded-[2rem] border border-pearl/10 bg-black/40 shadow-[0_24px_60px_rgba(0,0,0,0.3)]"
+            className="-mx-3 overflow-hidden rounded-none border-y border-pearl/10 bg-black/40 shadow-[0_24px_60px_rgba(0,0,0,0.3)] sm:mx-0 sm:rounded-2xl sm:border md:rounded-[2rem]"
           >
             <ZoomableImage
               src={flowImageMap[step.id]}

@@ -41,7 +41,8 @@ export function StickyActionBar({
           <button
             type="button"
             onClick={onSecondaryAction}
-            className="shrink-0 rounded-xl border border-pearl/15 bg-pearl/5 px-3 py-3 text-xs font-heading font-bold text-pearl"
+            data-interaction-hint
+            className="interaction-hint shrink-0 rounded-xl border border-pearl/15 bg-pearl/5 px-3 py-3 text-xs font-heading font-bold text-pearl"
           >
             {secondaryActionLabel}
           </button>
@@ -49,7 +50,8 @@ export function StickyActionBar({
         <button
           type="button"
           onClick={onAction}
-          className="shrink-0 rounded-xl bg-gradient-to-r from-blaze to-neon px-4 py-3 text-sm font-heading font-bold text-white shadow-lg shadow-blaze/25"
+          data-interaction-hint
+          className="interaction-hint shrink-0 rounded-xl bg-gradient-to-r from-blaze to-neon px-4 py-3 text-sm font-heading font-bold text-white shadow-lg shadow-blaze/25"
         >
           {actionLabel}
         </button>

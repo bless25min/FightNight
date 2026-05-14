@@ -92,7 +92,8 @@ export function PlanCard({
           type="button"
           onClick={() => onScheduleNav!(scheduleCategory!, scheduleRoute)}
           data-cta={`plan-${plan.id}-schedule`}
-          className="mt-3 w-full text-center text-xs md:text-sm font-heading tracking-wide text-mist/75 hover:text-pearl underline-offset-4 hover:underline transition-colors"
+          data-interaction-hint
+          className="interaction-hint mt-3 w-full rounded-xl py-2 text-center text-xs md:text-sm font-heading tracking-wide text-mist/75 hover:text-pearl underline-offset-4 hover:underline transition-colors"
         >
           從可購買場次開始
           {scheduleCount !== undefined && scheduleCount > 0

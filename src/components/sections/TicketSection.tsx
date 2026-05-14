@@ -19,6 +19,7 @@ export function TicketSection() {
   const { gateState, requestGateAccess, loginUrl } =
     useLiffGate()
   const ref = useRef<HTMLDivElement>(null)
+  const titleRef = useRef<HTMLDivElement>(null)
   const isInView = useInView(ref, { once: true })
   const tracked = useRef(false)
 
@@ -39,7 +40,10 @@ export function TicketSection() {
     if (!shouldFocusTicket) return
 
     window.setTimeout(() => {
-      ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      titleRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      })
       window.history.replaceState(null, '', `${window.location.pathname}#ticket`)
     }, 120)
   }, [gateState.status])
@@ -60,10 +64,12 @@ export function TicketSection() {
   return (
     <SectionWrapper id="ticket">
       <div ref={ref}>
-        <SectionHeading
-          title={ticketSectionContent.title}
-          subtitle={ticketSectionContent.subtitle}
-        />
+        <div ref={titleRef} className="scroll-mt-24 md:scroll-mt-28">
+          <SectionHeading
+            title={ticketSectionContent.title}
+            subtitle={ticketSectionContent.subtitle}
+          />
+        </div>
 
         <p className="text-center text-sm md:text-base text-mist/70 max-w-2xl mx-auto -mt-2 mb-8 md:mb-12">
           {ticketSectionContent.description}

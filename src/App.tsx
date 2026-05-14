@@ -52,8 +52,55 @@ function HomePage() {
   )
 }
 
+function useInteractionHintLifecycle() {
+  useEffect(() => {
+    const selector = '[data-interaction-hint], [data-swipe-hint]'
+
+    const markInteracted = (target: EventTarget | Element | null) => {
+      if (!(target instanceof Element)) return
+      const element = target.closest<HTMLElement>(selector)
+      element?.setAttribute('data-interacted', 'true')
+    }
+
+    const handlePointerDown = (event: PointerEvent) => {
+      markInteracted(event.target)
+    }
+
+    const handleFocusIn = (event: FocusEvent) => {
+      markInteracted(event.target)
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (
+        ['Enter', ' ', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(
+          event.key,
+        )
+      ) {
+        markInteracted(document.activeElement)
+      }
+    }
+
+    const handleScroll = (event: Event) => {
+      markInteracted(event.target)
+    }
+
+    document.addEventListener('pointerdown', handlePointerDown, true)
+    document.addEventListener('focusin', handleFocusIn, true)
+    document.addEventListener('keydown', handleKeyDown, true)
+    document.addEventListener('scroll', handleScroll, true)
+
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown, true)
+      document.removeEventListener('focusin', handleFocusIn, true)
+      document.removeEventListener('keydown', handleKeyDown, true)
+      document.removeEventListener('scroll', handleScroll, true)
+    }
+  }, [])
+}
+
 function App() {
   const [pathname, setPathname] = useState(getCurrentRoutePath)
+  useInteractionHintLifecycle()
 
   useEffect(() => {
     const onRouteChange = () => setPathname(getCurrentRoutePath())

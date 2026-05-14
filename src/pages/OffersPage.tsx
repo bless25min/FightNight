@@ -49,6 +49,9 @@ const curriculumPosterMap: Partial<Record<string, string>> = {
   'module-6': bootcampModule6Poster,
 }
 
+const mobileFullBleedImageFrame =
+  '-mx-3 rounded-none border-y border-x-0 sm:mx-0 sm:rounded-2xl sm:border md:rounded-[2rem]'
+
 function PosterFigure({
   src,
   alt,
@@ -70,7 +73,7 @@ function PosterFigure({
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.7, delay }}
-      className={`overflow-hidden rounded-2xl md:rounded-[2rem] border border-pearl/10 bg-black/40 shadow-[0_30px_80px_rgba(0,0,0,0.35)] ${className}`}
+      className={`overflow-hidden border-pearl/10 bg-black/40 shadow-[0_30px_80px_rgba(0,0,0,0.35)] ${mobileFullBleedImageFrame} ${className}`}
     >
       <ZoomableImage src={src} alt={alt} className="w-full h-auto" loading={loading} />
       <figcaption className="sr-only">{children}</figcaption>
@@ -117,7 +120,7 @@ function OffersHero({ gateState }: { gateState: LiffGateState }) {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.2 }}
-          className="mx-auto overflow-hidden rounded-2xl md:rounded-[2rem] border border-pearl/10 bg-black/40 shadow-[0_20px_60px_rgba(0,0,0,0.4)] md:shadow-[0_30px_80px_rgba(0,0,0,0.45)]"
+          className="-mx-3 overflow-hidden rounded-none border-y border-pearl/10 bg-black/40 shadow-[0_20px_60px_rgba(0,0,0,0.4)] sm:mx-auto sm:rounded-2xl sm:border md:rounded-[2rem] md:shadow-[0_30px_80px_rgba(0,0,0,0.45)]"
         >
           <ZoomableImage
             src={offersHeroPoster}

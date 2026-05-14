@@ -305,7 +305,8 @@ function CoachCard({
           <button
             type="button"
             onClick={onOpen}
-            className="shrink-0 rounded-full border border-neon/25 bg-neon/10 px-3 py-1.5 text-xs font-heading font-bold text-neon transition-colors hover:border-neon/45 hover:bg-neon/15"
+            data-interaction-hint
+            className="interaction-hint shrink-0 rounded-full border border-neon/25 bg-neon/10 px-3 py-1.5 text-xs font-heading font-bold text-neon transition-colors hover:border-neon/45 hover:bg-neon/15"
           >
             看介紹
           </button>
@@ -325,6 +326,65 @@ function CoachCard({
   )
 }
 
+type CoachProfileDetailTone = 'pearl' | 'neon' | 'blaze'
+
+function CoachProfileDetailList({
+  title,
+  items,
+  tone = 'pearl',
+}: {
+  title: string
+  items?: string[]
+  tone?: CoachProfileDetailTone
+}) {
+  if (!items?.length) return null
+
+  const toneClasses: Record<
+    CoachProfileDetailTone,
+    { box: string; title: string; dot: string }
+  > = {
+    pearl: {
+      box: 'border-pearl/10 bg-black/22',
+      title: 'text-mist/55',
+      dot: 'bg-mist/65',
+    },
+    neon: {
+      box: 'border-neon/18 bg-neon/8',
+      title: 'text-neon/85',
+      dot: 'bg-neon',
+    },
+    blaze: {
+      box: 'border-blaze/20 bg-blaze/10',
+      title: 'text-blaze/85',
+      dot: 'bg-blaze',
+    },
+  }
+  const classes = toneClasses[tone]
+
+  return (
+    <div className={`rounded-2xl border p-4 ${classes.box}`}>
+      <p
+        className={`text-xs font-heading uppercase tracking-[0.2em] ${classes.title}`}
+      >
+        {title}
+      </p>
+      <div className="mt-3 grid gap-2">
+        {items.map((item) => (
+          <div
+            key={item}
+            className="flex gap-2 text-sm leading-relaxed text-mist/78"
+          >
+            <span
+              className={`mt-2 h-1.5 w-1.5 shrink-0 rounded-full ${classes.dot}`}
+            />
+            <span>{item}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function CoachProfileModal({
   coachName,
   profile,
@@ -338,7 +398,7 @@ function CoachProfileModal({
 
   return createPortal(
     <motion.div
-      className="fixed inset-0 z-[120] flex items-end justify-center bg-black/78 px-3 pb-3 pt-8 backdrop-blur-sm md:items-center md:p-6"
+      className="fixed inset-0 z-[120] flex items-end justify-center bg-black/78 p-0 backdrop-blur-sm md:items-center md:p-6"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -348,13 +408,13 @@ function CoachProfileModal({
       onClick={onClose}
     >
       <motion.div
-        className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-pearl/15 bg-abyss shadow-2xl shadow-black/50"
+        className="max-h-[100dvh] w-full max-w-2xl overflow-y-auto rounded-none border-y border-pearl/15 bg-abyss shadow-2xl shadow-black/50 md:max-h-[92vh] md:rounded-3xl md:border"
         initial={{ opacity: 0, y: 28, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.22 }}
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="relative aspect-square overflow-hidden bg-black">
+        <div className="relative aspect-square w-full overflow-hidden bg-black">
           <img
             src={profile.photo}
             alt={profile.displayName}
@@ -364,7 +424,8 @@ function CoachProfileModal({
           <button
             type="button"
             onClick={onClose}
-            className="absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full border border-pearl/15 bg-black/45 font-heading text-lg font-black text-pearl backdrop-blur transition-colors hover:bg-black/65"
+            data-interaction-hint
+            className="interaction-hint absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full border border-pearl/15 bg-black/45 font-heading text-lg font-black text-pearl backdrop-blur transition-colors hover:bg-black/65"
             aria-label="關閉教練介紹"
           >
             ×
@@ -394,9 +455,18 @@ function CoachProfileModal({
             ))}
           </div>
 
-          <p className="text-base leading-relaxed text-mist/88">
-            {profile.intro}
-          </p>
+          <div className="grid gap-3">
+            {(profile.bio?.length ? profile.bio : [profile.intro]).map(
+              (paragraph) => (
+                <p
+                  key={paragraph}
+                  className="text-base leading-relaxed text-mist/88"
+                >
+                  {paragraph}
+                </p>
+              ),
+            )}
+          </div>
 
           <div className="rounded-2xl border border-pearl/10 bg-black/25 p-4">
             <p className="text-xs font-heading uppercase tracking-[0.2em] text-mist/55">
@@ -415,7 +485,24 @@ function CoachProfileModal({
             </div>
           </div>
 
-          {profile.record && (
+          <CoachProfileDetailList
+            title="資格證明"
+            items={profile.certifications}
+            tone="neon"
+          />
+
+          <CoachProfileDetailList
+            title="教學 / 經歷"
+            items={profile.experience}
+          />
+
+          <CoachProfileDetailList
+            title="比賽成就"
+            items={profile.achievements}
+            tone="blaze"
+          />
+
+          {profile.record && !profile.achievements?.length && (
             <div className="rounded-2xl border border-blaze/20 bg-blaze/10 p-4">
               <p className="text-xs font-heading uppercase tracking-[0.2em] text-blaze/85">
                 經歷
@@ -427,6 +514,12 @@ function CoachProfileModal({
           )}
 
           <div className="grid gap-3 text-sm text-mist/66">
+            {profile.nationality && (
+              <p>
+                <span className="font-heading text-mist/45">國籍：</span>
+                {profile.nationality}
+              </p>
+            )}
             <p>
               <span className="font-heading text-mist/45">館別：</span>
               {profile.venues.join(' / ')}
@@ -770,7 +863,8 @@ export function WeeklyScheduleSection({
                 type="button"
                 aria-selected={active}
                 onClick={() => setActiveCategory(cat)}
-                className={`px-5 py-2.5 rounded-full text-sm md:text-base font-heading font-semibold tracking-[0.15em] transition-colors border ${
+                data-interaction-hint
+                className={`interaction-hint px-5 py-2.5 rounded-full text-sm md:text-base font-heading font-semibold tracking-[0.15em] transition-colors border ${
                   active
                     ? m.tabActiveClass
                     : 'bg-black/30 text-mist border-pearl/15 hover:border-pearl/35 hover:text-pearl'
@@ -819,9 +913,10 @@ export function WeeklyScheduleSection({
             </div>
 
             <div
+              data-swipe-hint={isBootCampBookingMode ? true : undefined}
               className={`mt-3 gap-2 ${
                 isBootCampBookingMode
-                  ? '-mx-1 flex snap-x overflow-x-auto px-1 pb-1'
+                  ? 'swipe-hint -mx-1 flex snap-x overflow-x-auto px-1 pb-1'
                   : 'grid grid-cols-1 md:grid-cols-4'
               }`}
             >
@@ -829,7 +924,8 @@ export function WeeklyScheduleSection({
                 type="button"
                 aria-pressed={activeVenueId === null}
                 onClick={() => setActiveVenueId(null)}
-                className={`rounded-xl border px-3.5 py-3 text-left transition-colors ${
+                data-interaction-hint
+                className={`interaction-hint rounded-xl border px-3.5 py-3 text-left transition-colors ${
                   isBootCampBookingMode ? 'min-w-[8.5rem] snap-start' : ''
                 } ${
                   activeVenueId === null
@@ -851,7 +947,8 @@ export function WeeklyScheduleSection({
                   type="button"
                   aria-pressed={activeVenueId === venue.id}
                   onClick={() => setActiveVenueId(venue.id)}
-                  className={`rounded-xl border px-3.5 py-3 text-left transition-colors ${
+                  data-interaction-hint
+                  className={`interaction-hint rounded-xl border px-3.5 py-3 text-left transition-colors ${
                     isBootCampBookingMode ? 'min-w-[9.5rem] snap-start' : ''
                   } ${
                     activeVenueId === venue.id
@@ -882,7 +979,10 @@ export function WeeklyScheduleSection({
               </p>
             </div>
 
-            <div className="-mx-1 mt-3 flex snap-x gap-2 overflow-x-auto px-1 pb-1">
+            <div
+              data-swipe-hint
+              className="swipe-hint -mx-1 mt-3 flex snap-x gap-2 overflow-x-auto px-1 pb-1"
+            >
               {dateOptions.map((option) => {
                 const active = option.date === activeDateIso
                 const relativeLabel = getRelativeDayLabel(option.date, todayIso)
@@ -893,7 +993,8 @@ export function WeeklyScheduleSection({
                     type="button"
                     aria-pressed={active}
                     onClick={() => setActiveDateIso(option.date)}
-                    className={`min-w-[5.75rem] snap-start rounded-xl border px-3 py-3 text-left transition-colors ${
+                    data-interaction-hint
+                    className={`interaction-hint min-w-[5.75rem] snap-start rounded-xl border px-3 py-3 text-left transition-colors ${
                       active
                         ? 'border-neon/50 bg-neon/15'
                         : 'border-pearl/10 bg-black/25 hover:border-pearl/25'
@@ -937,7 +1038,8 @@ export function WeeklyScheduleSection({
                       type="button"
                       aria-pressed={active}
                       onClick={() => setActiveBootCampRoute(route)}
-                      className={`rounded-xl border px-3.5 py-3 text-left transition-colors ${
+                      data-interaction-hint
+                      className={`interaction-hint rounded-xl border px-3.5 py-3 text-left transition-colors ${
                         active
                           ? 'border-neon/50 bg-neon/15'
                           : 'border-pearl/10 bg-black/25 hover:border-pearl/25'
@@ -971,7 +1073,8 @@ export function WeeklyScheduleSection({
                   type="button"
                   aria-label="上一堂課"
                   onClick={() => scrollSchedule(-1)}
-                  className="h-10 px-3 rounded-full border border-pearl/15 bg-black/35 text-sm font-heading text-mist hover:text-pearl hover:border-pearl/30 transition-colors"
+                  data-interaction-hint
+                  className="interaction-hint h-10 px-3 rounded-full border border-pearl/15 bg-black/35 text-sm font-heading text-mist hover:text-pearl hover:border-pearl/30 transition-colors"
                 >
                   ← 上一堂
                 </button>
@@ -979,7 +1082,8 @@ export function WeeklyScheduleSection({
                   type="button"
                   aria-label="下一堂課"
                   onClick={() => scrollSchedule(1)}
-                  className="h-10 px-3 rounded-full border border-pearl/15 bg-black/35 text-sm font-heading text-mist hover:text-pearl hover:border-pearl/30 transition-colors"
+                  data-interaction-hint
+                  className="interaction-hint h-10 px-3 rounded-full border border-pearl/15 bg-black/35 text-sm font-heading text-mist hover:text-pearl hover:border-pearl/30 transition-colors"
                 >
                   下一堂 →
                 </button>
@@ -988,7 +1092,8 @@ export function WeeklyScheduleSection({
 
             <div
               ref={scrollerRef}
-              className="-mx-3 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-3 pb-4 sm:mx-0 sm:px-0 md:gap-5"
+              data-swipe-hint
+              className="swipe-hint -mx-3 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-3 pb-4 sm:mx-0 sm:px-0 md:gap-5"
             >
               {displayCourses.map((c, i) => {
                 const dayLabel = getRelativeDayLabel(c.date, todayIso)
@@ -1154,7 +1259,10 @@ export function WeeklyScheduleSection({
                                     packageSize,
                                   })
                                 }
+                                data-interaction-hint={soldOut ? undefined : true}
                                 className={`rounded-xl border p-3 text-left transition-colors ${
+                                  soldOut ? '' : 'interaction-hint'
+                                } ${
                                   active
                                     ? 'border-neon/55 bg-neon/15'
                                     : 'border-pearl/10 bg-black/25 hover:border-pearl/25'

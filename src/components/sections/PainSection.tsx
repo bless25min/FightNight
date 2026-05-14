@@ -12,7 +12,7 @@ export function PainSection() {
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
         transition={{ duration: 0.7 }}
-        className="max-w-6xl mx-auto overflow-hidden rounded-2xl md:rounded-[2rem] border border-pearl/10 bg-black/40 shadow-[0_30px_80px_rgba(0,0,0,0.35)]"
+        className="-mx-3 max-w-6xl overflow-hidden rounded-none border-y border-pearl/10 bg-black/40 shadow-[0_30px_80px_rgba(0,0,0,0.35)] sm:mx-auto sm:rounded-2xl sm:border md:rounded-[2rem]"
       >
         <ZoomableImage
           src={painPoster}

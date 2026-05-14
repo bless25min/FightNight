@@ -66,4 +66,149 @@
   .section-divider {
     @apply w-16 h-0.5 bg-gradient-to-r from-neon to-transparent mx-auto;
   }
+
+  .interaction-hint {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+  }
+
+  .interaction-hint:not([data-interacted='true']) {
+    animation: interaction-breathe 2.8s ease-in-out infinite;
+  }
+
+  .interaction-hint:not([data-interacted='true'])::after {
+    content: '';
+    position: absolute;
+    inset: -35%;
+    z-index: 1;
+    pointer-events: none;
+    background: linear-gradient(
+      105deg,
+      transparent 38%,
+      rgba(255, 255, 255, 0.2) 49%,
+      rgba(40, 236, 210, 0.22) 52%,
+      transparent 64%
+    );
+    transform: translateX(-140%) skewX(-18deg);
+    animation: interaction-shine 3.2s ease-in-out 0.55s infinite;
+  }
+
+  .interaction-hint > * {
+    position: relative;
+    z-index: 2;
+  }
+
+  .image-interaction-hint > * {
+    position: static;
+    z-index: auto;
+  }
+
+  .image-interaction-hint:not([data-interacted='true'])::after {
+    z-index: 3;
+  }
+
+  .swipe-hint {
+    position: relative;
+  }
+
+  .swipe-hint:not([data-interacted='true'])::before {
+    content: '';
+    position: absolute;
+    right: 1rem;
+    top: 0.9rem;
+    z-index: 20;
+    width: 4rem;
+    height: 1.9rem;
+    pointer-events: none;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 999px;
+    background:
+      linear-gradient(90deg, transparent, rgba(40, 236, 210, 0.28), transparent),
+      rgba(0, 0, 0, 0.36);
+    box-shadow: 0 0 24px rgba(40, 236, 210, 0.14);
+    animation: swipe-cue 2.4s ease-in-out infinite;
+    backdrop-filter: blur(8px);
+  }
+
+  .swipe-hint:not([data-interacted='true'])::after {
+    content: '';
+    position: absolute;
+    right: 3.2rem;
+    top: 1.35rem;
+    z-index: 21;
+    width: 0.75rem;
+    height: 0.75rem;
+    pointer-events: none;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 0 14px rgba(255, 255, 255, 0.45);
+    animation: swipe-dot 2.4s ease-in-out infinite;
+  }
+
+  @keyframes interaction-shine {
+    0%,
+    42% {
+      transform: translateX(-140%) skewX(-18deg);
+      opacity: 0;
+    }
+    52% {
+      opacity: 1;
+    }
+    78%,
+    100% {
+      transform: translateX(140%) skewX(-18deg);
+      opacity: 0;
+    }
+  }
+
+  @keyframes interaction-breathe {
+    0%,
+    100% {
+      box-shadow: 0 0 0 rgba(40, 236, 210, 0);
+    }
+    50% {
+      box-shadow: 0 0 18px rgba(40, 236, 210, 0.14);
+    }
+  }
+
+  @keyframes swipe-cue {
+    0%,
+    100% {
+      opacity: 0.62;
+      transform: translateX(0);
+    }
+    50% {
+      opacity: 1;
+      transform: translateX(-0.55rem);
+    }
+  }
+
+  @keyframes swipe-dot {
+    0%,
+    100% {
+      transform: translateX(0);
+      opacity: 0.55;
+    }
+    50% {
+      transform: translateX(-1.35rem);
+      opacity: 1;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .interaction-hint,
+    .interaction-hint::after,
+    .swipe-hint::before,
+    .swipe-hint::after {
+      animation: none !important;
+    }
+  }
+
+  @media (min-width: 768px) {
+    .swipe-hint::before,
+    .swipe-hint::after {
+      display: none;
+    }
+  }
 }

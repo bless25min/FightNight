@@ -48,7 +48,8 @@ export function Footer({ onVenueAction }: FooterProps = {}) {
                 <button
                   type="button"
                   onClick={() => onVenueAction(venue.lineUrl)}
-                  className="inline-flex items-center gap-1.5 text-sm font-medium text-neon hover:text-neon/80 transition-colors mt-1"
+                  data-interaction-hint
+                  className="interaction-hint inline-flex w-fit items-center gap-1.5 rounded-lg px-2 py-1 text-sm font-medium text-neon hover:text-neon/80 transition-colors mt-1"
                 >
                   加入好友
                   <span aria-hidden>→</span>
@@ -58,7 +59,8 @@ export function Footer({ onVenueAction }: FooterProps = {}) {
                   href={venue.lineUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-sm font-medium text-neon hover:text-neon/80 transition-colors mt-1"
+                  data-interaction-hint
+                  className="interaction-hint inline-flex w-fit items-center gap-1.5 rounded-lg px-2 py-1 text-sm font-medium text-neon hover:text-neon/80 transition-colors mt-1"
                 >
                   加入好友
                   <span aria-hidden>→</span>

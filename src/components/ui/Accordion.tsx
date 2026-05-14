@@ -13,7 +13,8 @@ export function Accordion({ id, question, answer, isOpen, onToggle }: Props) {
     <div data-faq={id} className="border-b border-pearl/10 last:border-b-0">
       <button
         onClick={onToggle}
-        className="w-full py-5 md:py-6 flex items-center justify-between text-left gap-4 group cursor-pointer"
+        data-interaction-hint
+        className="interaction-hint w-full rounded-xl px-2 py-5 md:py-6 flex items-center justify-between text-left gap-4 group cursor-pointer"
       >
         <span className="text-base md:text-lg font-heading font-medium text-pearl group-hover:text-neon transition-colors duration-300">
           {question}

@@ -30,6 +30,9 @@ const routeImages: Record<BootCampRoute, string> = {
   MUAY_THAI: muayThaiRouteImage,
 }
 
+const mobileFullBleedImageFrame =
+  '-mx-3 rounded-none border-x-0 sm:mx-0 sm:rounded-2xl sm:border-x md:rounded-[2rem]'
+
 const expectationScenes = [
   {
     src: painPoster,
@@ -77,7 +80,7 @@ function VisualPanel({
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.65, delay }}
-      className={`overflow-hidden rounded-2xl border border-pearl/10 bg-black/40 shadow-[0_28px_80px_rgba(0,0,0,0.35)] ${className}`}
+      className={`overflow-hidden border border-pearl/10 bg-black/40 shadow-[0_28px_80px_rgba(0,0,0,0.35)] ${mobileFullBleedImageFrame} ${className}`}
     >
       <ZoomableImage
         src={src}
@@ -113,7 +116,7 @@ function BootCampHero({
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.75 }}
-          className="overflow-hidden rounded-2xl border border-pearl/10 bg-black/40 shadow-[0_30px_90px_rgba(0,0,0,0.42)] md:rounded-[2rem]"
+          className={`overflow-hidden border border-pearl/10 bg-black/40 shadow-[0_30px_90px_rgba(0,0,0,0.42)] ${mobileFullBleedImageFrame}`}
         >
           <ZoomableImage
             src={offersHeroPoster}
@@ -253,7 +256,10 @@ function RouteSection({
         </div>
       </div>
 
-      <div className="-mx-3 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-3 pb-4 md:mx-0 md:grid md:grid-cols-2 md:gap-6 md:overflow-visible md:px-0 md:pb-0">
+      <div
+        data-swipe-hint
+        className="swipe-hint -mx-3 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-3 pb-4 md:mx-0 md:grid md:grid-cols-2 md:gap-6 md:overflow-visible md:px-0 md:pb-0"
+      >
         {routeOrder.map((route, index) => {
           const content = bootCampRouteContent[route]
           const active = selectedRoute === route
