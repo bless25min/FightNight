@@ -6,11 +6,14 @@ import mengyanPhoto from '../assets/coaches/mengyan.jpg'
 import rafaelPhoto from '../assets/coaches/rafael.jpg'
 import simPhoto from '../assets/coaches/sim.jpg'
 
+export type CoachPricingTier = 'foreign-fighter' | 'domestic-teacher'
+
 export type CoachProfile = {
   id: string
   aliases: string[]
   displayName: string
   shortName: string
+  pricingTier: CoachPricingTier
   role: string
   venues: string[]
   specialties: string[]
@@ -27,6 +30,7 @@ export const coachProfiles: CoachProfile[] = [
     aliases: ['UFC GYM 總部 — Andre', 'UFC GYM總部-Andre'],
     displayName: 'UFC GYM 總部 — Andre',
     shortName: 'Andre',
+    pricingTier: 'foreign-fighter',
     role: '泰拳 / MMA 教練',
     venues: ['敦南旗艦館', '內科模範館'],
     specialties: ['泰拳', 'MMA', '拳擊', '踢拳', '巴西柔術'],
@@ -45,6 +49,7 @@ export const coachProfiles: CoachProfile[] = [
     aliases: ['UFC GYM 總部 — Bruno', 'UFC GYM總部-Bruno'],
     displayName: 'UFC GYM 總部 — Bruno',
     shortName: 'Bruno',
+    pricingTier: 'foreign-fighter',
     role: '泰拳 / MMA 教練',
     venues: ['敦南旗艦館', '內科模範館'],
     specialties: ['泰拳', 'MMA', '踢拳', '巴西柔術', '拳擊'],
@@ -60,6 +65,7 @@ export const coachProfiles: CoachProfile[] = [
     aliases: ['UFC GYM 總部 — Got', 'UFC GYM總部-Got'],
     displayName: 'UFC GYM 總部 — Got',
     shortName: 'Got',
+    pricingTier: 'foreign-fighter',
     role: '泰拳 / 踢拳教練',
     venues: ['台中勤美旗艦'],
     specialties: ['泰拳', '踢拳', '職業選手靶師', '團課節奏'],
@@ -78,6 +84,7 @@ export const coachProfiles: CoachProfile[] = [
     aliases: ['UFC GYM 總部 — Mario', 'UFC GYM總部-Mario'],
     displayName: 'UFC GYM 總部 — Mario',
     shortName: 'Mario',
+    pricingTier: 'foreign-fighter',
     role: '巴西柔術 / MMA 教練',
     venues: ['敦南旗艦館', '內科模範館'],
     specialties: ['巴西柔術', 'MMA', '泰拳', '踢拳', '拳擊'],
@@ -92,6 +99,7 @@ export const coachProfiles: CoachProfile[] = [
     aliases: ['UFC GYM 總部 — Rafael', 'UFC GYM總部-Rafael'],
     displayName: 'UFC GYM 總部 — Rafael',
     shortName: 'Rafael',
+    pricingTier: 'foreign-fighter',
     role: '巴西柔術 / MMA 教練',
     venues: ['敦南旗艦館', '內科模範館'],
     specialties: ['巴西柔術', 'MMA', '拳擊', '泰拳', '角力'],
@@ -112,6 +120,7 @@ export const coachProfiles: CoachProfile[] = [
     aliases: ['UFC GYM 總部 — 沈奕全/Sim', 'UFC GYM總部-沈奕全/Sim'],
     displayName: 'UFC GYM 總部 — 沈奕全/Sim',
     shortName: '沈奕全/Sim',
+    pricingTier: 'domestic-teacher',
     role: '柔道 / 綜合格鬥教練',
     venues: ['台中勤美旗艦'],
     specialties: ['柔道', '巴西柔術', '綜合格鬥', '寢技'],
@@ -131,6 +140,7 @@ export const coachProfiles: CoachProfile[] = [
     aliases: ['UFC GYM 總部 — 楊孟諺/孟諺', 'UFC GYM總部-楊孟諺/孟諺'],
     displayName: 'UFC GYM 總部 — 楊孟諺/孟諺',
     shortName: '楊孟諺/孟諺',
+    pricingTier: 'domestic-teacher',
     role: '拳擊 / 戰鬥體適能教練',
     venues: ['敦南旗艦館', '內科模範館'],
     specialties: ['拳擊', '戰鬥體適能', '兒童體適能', '散打'],
@@ -160,6 +170,30 @@ for (const profile of coachProfiles) {
 
 export function findCoachProfile(coachName: string) {
   return coachProfileLookup.get(normalizeCoachName(coachName)) ?? null
+}
+
+const foreignFighterNameKeywords = [
+  'Andre',
+  'Bruno',
+  'Got',
+  'Mario',
+  'Rafael',
+  'Ygor',
+  'Alex Morales',
+]
+
+export function getCoachPricingTier(
+  coachName: string,
+  profile = findCoachProfile(coachName),
+): CoachPricingTier {
+  if (profile) return profile.pricingTier
+
+  const normalized = normalizeCoachName(coachName).toLowerCase()
+  const isForeignFighter = foreignFighterNameKeywords.some((keyword) =>
+    normalized.includes(normalizeCoachName(keyword).toLowerCase()),
+  )
+
+  return isForeignFighter ? 'foreign-fighter' : 'domestic-teacher'
 }
 
 export function getCoachDisplayName(coachName: string) {

@@ -222,16 +222,17 @@ export const ticketSectionContent = {
 }
 
 export const fightNightPassPlan: TicketPlan = {
-  id: 'fight-night-pass-980',
+  id: 'fight-night-pass',
   name: 'Fight Night Pass',
   subtitle: '今晚先讓自己回到有狀態的樣子',
-  teaserCopy: 'NT$980，買的不是內容，是今晚重新被點燃的期待。',
+  teaserCopy: '國內教師 NT$980，外籍FIGHTER NT$1,280。買的不是內容，是今晚重新被點燃的期待。',
   description:
     '適合想先體驗一次 Fight Night 的人。你不是要先學會什麼技術，而是讓身體確認：自己還可以流汗、被帶動、釋放，從日常裡走出來。',
-  price: 'NT$980',
+  price: 'NT$980 / NT$1,280',
   badge: '首頁限定',
   features: [
     '指定日期 Fight Night 入場資格',
+    '依當堂教練顯示實際價格',
     '教練口令、拳套與沙包回合',
     '新手可跟，不對打、不被打',
   ],
@@ -457,12 +458,12 @@ export const planSummaryByCategory: Record<
 > = {
   FIGHT_NIGHT: {
     label: 'Fight Night Pass',
-    price: 'NT$980 / 指定場次',
+    price: 'NT$980 / NT$1,280',
   },
   BOOT_CAMP: {
     label: 'Boot Camp 路徑',
     price: 'NT$1,800 起',
-    hint: '兩堂/四堂路徑',
+    hint: '依教練與堂數',
   },
 }
 
@@ -474,7 +475,7 @@ export const offersPlans: TicketPlan[] = [
     teaserCopy: '用拳擊風格的直接，學 Fighter 在壓力正面靠近時不退開。',
     description:
       '適合總是忍住、退一步、把壓力吞下去的人。兩堂課先讓你感覺自己可以站穩、往前、正面面對，而不是一直被日常推著走。',
-    price: 'NT$1,800',
+    price: '國內教師 NT$1,800 / 外籍FIGHTER NT$2,200',
     features: [
       '向 Fighter 學習正面應對壓力',
       '用拳擊風格找回界線感',
@@ -492,7 +493,7 @@ export const offersPlans: TicketPlan[] = [
     teaserCopy: '用泰拳／踢拳風格的強度，學 Fighter 在壓迫中把慌亂轉成行動。',
     description:
       '適合覺得自己悶太久、壓力塞在身體裡、需要更強烈出口的人。兩堂課先讓你用全身進入狀態，重新感覺自己還有能量。',
-    price: 'NT$1,800',
+    price: '國內教師 NT$1,800 / 外籍FIGHTER NT$2,200',
     features: [
       '向 Fighter 學習高強度壓力應對',
       '用泰拳／踢拳風格釋放卡住的壓力',
@@ -510,7 +511,7 @@ export const offersPlans: TicketPlan[] = [
     teaserCopy: '保留接下來四週同一個時間，學 Fighter 把退縮變成正面面對。',
     description:
       '適合想真正改變自己慣性的人。四堂課不是追求拳擊技術，而是透過固定節奏，向 Fighter 學習壓力正面靠近時如何站穩、往前、把自己收回來。',
-    price: 'NT$3,800',
+    price: '國內教師 NT$2,800 / 外籍FIGHTER NT$3,800',
     badge: '主推路徑',
     features: [
       '職業 Fighter 壓力應對邏輯',
@@ -530,7 +531,7 @@ export const offersPlans: TicketPlan[] = [
     teaserCopy: '保留接下來四週同一個時間，學 Fighter 把壓迫轉成全身行動。',
     description:
       '適合想要更強烈轉換的人。四堂課不是追求泰拳或踢拳技術，而是透過更全身性的主題風格，向 Fighter 學習在高強度壓力裡不僵住、不退縮、重新被點燃。',
-    price: 'NT$3,800',
+    price: '國內教師 NT$2,800 / 外籍FIGHTER NT$3,800',
     badge: '全身路徑',
     features: [
       '職業 Fighter 壓力應對邏輯',

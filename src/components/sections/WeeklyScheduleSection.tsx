@@ -8,6 +8,8 @@ import {
 import {
   findCoachProfile,
   getCoachDisplayName,
+  getCoachPricingTier,
+  type CoachPricingTier,
   type CoachProfile,
 } from '../../data/coachProfiles'
 import {
@@ -34,17 +36,41 @@ const BOOT_CAMP_ROUTE_ORDER: Array<BootCampRoute | null> = [
 
 const bootCampPackageMeta: Record<
   2 | 4,
-  { label: string; price: string; description: string }
+  { label: string; description: string }
 > = {
   2: {
     label: '兩堂',
-    price: 'NT$1,800',
     description: '先確認這條路徑是不是你的出口',
   },
   4: {
     label: '四堂',
-    price: 'NT$3,800',
     description: '保留四週，讓節奏開始留下',
+  },
+}
+
+const coachPricingByTier: Record<
+  CoachPricingTier,
+  {
+    label: string
+    fightNight: number
+    bootCamp: Record<2 | 4, number>
+  }
+> = {
+  'foreign-fighter': {
+    label: '外籍FIGHTER',
+    fightNight: 1280,
+    bootCamp: {
+      2: 2200,
+      4: 3800,
+    },
+  },
+  'domestic-teacher': {
+    label: '國內教師',
+    fightNight: 980,
+    bootCamp: {
+      2: 1800,
+      4: 2800,
+    },
   },
 }
 
@@ -210,6 +236,21 @@ function getRemainingBadgeClass(remaining: number, defaultClass: string) {
   if (remaining <= 0) return 'border-pearl/15 bg-pearl/5 text-mist/45'
   if (remaining <= 2) return 'border-blaze/50 bg-blaze/15 text-blaze'
   return defaultClass
+}
+
+function formatPrice(amount: number) {
+  return `NT$${amount.toLocaleString('en-US')}`
+}
+
+function getFightNightPriceLabel(pricingTier: CoachPricingTier) {
+  return formatPrice(coachPricingByTier[pricingTier].fightNight)
+}
+
+function getBootCampPackagePriceLabel(
+  pricingTier: CoachPricingTier,
+  packageSize: 2 | 4,
+) {
+  return formatPrice(coachPricingByTier[pricingTier].bootCamp[packageSize])
 }
 
 function CoachCard({
@@ -890,6 +931,14 @@ export function WeeklyScheduleSection({
                   seriesDates: bootCampSeries4.map((session) => session.date),
                 })
                 const coachProfile = findCoachProfile(c.coach)
+                const coachPricingTier = getCoachPricingTier(c.coach, coachProfile)
+                const coachPricing = coachPricingByTier[coachPricingTier]
+                const fightNightPriceLabel =
+                  getFightNightPriceLabel(coachPricingTier)
+                const bootCampBasePriceLabel = getBootCampPackagePriceLabel(
+                  coachPricingTier,
+                  2,
+                )
 
                 if (isBootCampBookingMode) {
                   const selectedPackageSize =
@@ -940,6 +989,9 @@ export function WeeklyScheduleSection({
                               {routeContent.shortLabel}
                             </span>
                           )}
+                          <span className="rounded-full border border-pearl/10 bg-pearl/5 px-2.5 py-1 text-[11px] font-heading tracking-wide text-mist/75">
+                            {coachPricing.label}
+                          </span>
                           <span
                             className={`rounded-full border px-2.5 py-1 text-[11px] font-heading tracking-wide ${remainingBadgeClass}`}
                           >
@@ -982,6 +1034,11 @@ export function WeeklyScheduleSection({
                         <div className="grid grid-cols-2 gap-2">
                           {([2, 4] as const).map((packageSize) => {
                             const packageMeta = bootCampPackageMeta[packageSize]
+                            const packagePriceLabel =
+                              getBootCampPackagePriceLabel(
+                                coachPricingTier,
+                                packageSize,
+                              )
                             const availability =
                               packageSize === 2
                                 ? bootCamp2Availability
@@ -1012,7 +1069,7 @@ export function WeeklyScheduleSection({
                                   {packageMeta.label}
                                 </p>
                                 <p className="mt-1 font-heading text-sm font-bold text-neon">
-                                  {packageMeta.price}
+                                  {packagePriceLabel}
                                 </p>
                                 <p className="mt-1 text-xs leading-snug text-mist/62">
                                   {soldOut
@@ -1040,7 +1097,10 @@ export function WeeklyScheduleSection({
                               </p>
                             </div>
                             <p className="font-heading text-base font-black text-neon">
-                              {bootCampPackageMeta[selectedPackageSize].price}
+                              {getBootCampPackagePriceLabel(
+                                coachPricingTier,
+                                selectedPackageSize,
+                              )}
                             </p>
                           </div>
 
@@ -1133,6 +1193,9 @@ export function WeeklyScheduleSection({
                       <p className="inline-flex w-fit rounded-full border border-pearl/10 bg-black/25 px-2.5 py-1 text-[11px] font-heading tracking-wide text-mist/55">
                         {hasLiveData ? '即時更新' : '名額同步中'}
                       </p>
+                      <p className="inline-flex w-fit rounded-full border border-pearl/10 bg-pearl/5 px-2.5 py-1 text-[11px] font-heading tracking-wide text-mist/75">
+                        {coachPricing.label}
+                      </p>
                       {bootCampRouteLabel && (
                         <p className="inline-flex w-fit rounded-full border border-neon/20 bg-neon/10 px-2.5 py-1 text-[11px] font-heading tracking-wide text-neon/90">
                           {routeContent?.badge ?? bootCampRouteLabel}
@@ -1167,7 +1230,9 @@ export function WeeklyScheduleSection({
                         {sessionTitle}
                       </p>
                       <p className="text-sm md:text-base text-pearl/85 tabular-nums">
-                        {planSummary.price}
+                        {activeCategory === 'FIGHT_NIGHT'
+                          ? fightNightPriceLabel
+                          : `${bootCampBasePriceLabel} 起`}
                         {planSummary.hint && (
                           <span className="text-mist/55 text-xs ml-2">
                             {planSummary.hint}
@@ -1245,9 +1310,9 @@ export function WeeklyScheduleSection({
                               className="w-full border-neon/25 bg-neon/10 text-pearl"
                               data-cta={`schedule-${c.id}-bootcamp-2`}
                             >
-                              兩堂 · {getRemainingLabel(
-                                bootCamp2Availability.remaining,
-                                hasLiveData,
+                              兩堂 · {getBootCampPackagePriceLabel(
+                                coachPricingTier,
+                                2,
                               )}
                             </Button>
                           ) : (
@@ -1261,9 +1326,9 @@ export function WeeklyScheduleSection({
                               className="w-full"
                               data-cta={`schedule-${c.id}-bootcamp-4`}
                             >
-                              四堂 · {getRemainingLabel(
-                                bootCamp4Availability.remaining,
-                                hasLiveData,
+                              四堂 · {getBootCampPackagePriceLabel(
+                                coachPricingTier,
+                                4,
                               )}
                             </Button>
                           ) : (
@@ -1278,7 +1343,7 @@ export function WeeklyScheduleSection({
                             className="w-full"
                             data-cta={`schedule-${c.id}-fight-night`}
                           >
-                            購買這一場 · {getRemainingLabel(
+                            購買這一場 · {fightNightPriceLabel} · {getRemainingLabel(
                               sessionAvailability.remaining,
                               hasLiveData,
                             )}

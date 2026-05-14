@@ -64,7 +64,7 @@ export function PlanCard({
       </p>
 
       <div className="mb-5 md:mb-6">
-        <span className="text-3xl md:text-4xl font-heading font-black text-pearl">
+        <span className="block break-words text-2xl font-heading font-black leading-tight text-pearl md:text-4xl">
           {plan.price}
         </span>
       </div>
