@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import {
   bootCampRouteContent,
   planSummaryByCategory,
@@ -253,13 +254,11 @@ function getBootCampPackagePriceLabel(
 function CoachCard({
   coachName,
   profile,
-  expanded,
-  onToggle,
+  onOpen,
 }: {
   coachName: string
   profile: CoachProfile | null
-  expanded: boolean
-  onToggle: () => void
+  onOpen: () => void
 }) {
   const displayName = profile?.shortName ?? getCoachDisplayName(coachName)
   const initials = displayName.slice(0, 1).toUpperCase()
@@ -305,10 +304,10 @@ function CoachCard({
         {profile ? (
           <button
             type="button"
-            onClick={onToggle}
+            onClick={onOpen}
             className="shrink-0 rounded-full border border-neon/25 bg-neon/10 px-3 py-1.5 text-xs font-heading font-bold text-neon transition-colors hover:border-neon/45 hover:bg-neon/15"
           >
-            {expanded ? '收合' : '看教練'}
+            看介紹
           </button>
         ) : (
           <span className="shrink-0 rounded-full border border-pearl/10 bg-pearl/5 px-3 py-1.5 text-xs text-mist/45">
@@ -317,48 +316,132 @@ function CoachCard({
         )}
       </div>
 
-      {expanded && profile && (
-        <motion.div
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: 'auto' }}
-          className="mt-3 overflow-hidden rounded-xl border border-neon/15 bg-neon/8 p-3"
-        >
-          <p className="text-sm leading-relaxed text-mist/82">
-            {profile.intro}
-          </p>
-
-          <div className="mt-3 grid gap-1.5">
-            {profile.trustPoints.map((point) => (
-              <div
-                key={point}
-                className="flex gap-2 text-xs leading-relaxed text-mist/72"
-              >
-                <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-neon" />
-                <span>{point}</span>
-              </div>
-            ))}
-          </div>
-
-          {profile.record && (
-            <p className="mt-3 rounded-lg border border-pearl/10 bg-black/20 px-3 py-2 text-xs leading-relaxed text-mist/70">
-              {profile.record}
-            </p>
-          )}
-
-          {profile.languages && (
-            <p className="mt-2 text-[11px] text-mist/52">
-              語言：{profile.languages.join(' / ')}
-            </p>
-          )}
-        </motion.div>
-      )}
-
       {!profile && (
         <p className="mt-2 text-xs leading-relaxed text-mist/50">
           這位教練的照片與完整介紹之後補上；目前先以課表排定名稱為準。
         </p>
       )}
     </div>
+  )
+}
+
+function CoachProfileModal({
+  coachName,
+  profile,
+  onClose,
+}: {
+  coachName: string
+  profile: CoachProfile
+  onClose: () => void
+}) {
+  const displayName = profile.shortName ?? getCoachDisplayName(coachName)
+
+  return createPortal(
+    <motion.div
+      className="fixed inset-0 z-[120] flex items-end justify-center bg-black/78 px-3 pb-3 pt-8 backdrop-blur-sm md:items-center md:p-6"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${displayName} 教練介紹`}
+      onClick={onClose}
+    >
+      <motion.div
+        className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-pearl/15 bg-abyss shadow-2xl shadow-black/50"
+        initial={{ opacity: 0, y: 28, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.22 }}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="relative aspect-square overflow-hidden bg-black">
+          <img
+            src={profile.photo}
+            alt={profile.displayName}
+            className="h-full w-full object-contain"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-abyss via-abyss/20 to-transparent" />
+          <button
+            type="button"
+            onClick={onClose}
+            className="absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full border border-pearl/15 bg-black/45 font-heading text-lg font-black text-pearl backdrop-blur transition-colors hover:bg-black/65"
+            aria-label="關閉教練介紹"
+          >
+            ×
+          </button>
+          <div className="absolute bottom-4 left-4 right-4">
+            <p className="text-[10px] font-heading uppercase tracking-[0.24em] text-neon/85">
+              當堂教練
+            </p>
+            <h3 className="mt-1 font-heading text-3xl font-black leading-none text-pearl">
+              {displayName}
+            </h3>
+            <p className="mt-2 text-sm font-heading text-mist/78">
+              {profile.role}
+            </p>
+          </div>
+        </div>
+
+        <div className="space-y-5 p-5 md:p-6">
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {profile.specialties.map((tag) => (
+              <span
+                key={tag}
+                className="shrink-0 rounded-full border border-neon/20 bg-neon/10 px-3 py-1 text-xs font-heading tracking-wide text-neon/90"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+
+          <p className="text-base leading-relaxed text-mist/88">
+            {profile.intro}
+          </p>
+
+          <div className="rounded-2xl border border-pearl/10 bg-black/25 p-4">
+            <p className="text-xs font-heading uppercase tracking-[0.2em] text-mist/55">
+              為什麼值得跟他上這堂
+            </p>
+            <div className="mt-3 grid gap-2">
+              {profile.trustPoints.map((point) => (
+                <div
+                  key={point}
+                  className="flex gap-2 text-sm leading-relaxed text-mist/78"
+                >
+                  <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-neon" />
+                  <span>{point}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {profile.record && (
+            <div className="rounded-2xl border border-blaze/20 bg-blaze/10 p-4">
+              <p className="text-xs font-heading uppercase tracking-[0.2em] text-blaze/85">
+                經歷
+              </p>
+              <p className="mt-2 text-sm leading-relaxed text-mist/78">
+                {profile.record}
+              </p>
+            </div>
+          )}
+
+          <div className="grid gap-3 text-sm text-mist/66">
+            <p>
+              <span className="font-heading text-mist/45">館別：</span>
+              {profile.venues.join(' / ')}
+            </p>
+            {profile.languages && (
+              <p>
+                <span className="font-heading text-mist/45">語言：</span>
+                {profile.languages.join(' / ')}
+              </p>
+            )}
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>,
+    document.body,
   )
 }
 
@@ -423,8 +506,10 @@ export function WeeklyScheduleSection({
     courseId: string
     packageSize: 2 | 4
   } | null>(null)
-  const [expandedCoachCourseId, setExpandedCoachCourseId] =
-    useState<string | null>(null)
+  const [selectedCoach, setSelectedCoach] = useState<{
+    coachName: string
+    profile: CoachProfile
+  } | null>(null)
   const isBootCampBookingMode =
     bookingMode === 'bootcamp' && activeCategory === 'BOOT_CAMP'
 
@@ -618,8 +703,26 @@ export function WeeklyScheduleSection({
 
   useEffect(() => {
     setSelectedBooking(null)
-    setExpandedCoachCourseId(null)
+    setSelectedCoach(null)
   }, [activeCategory, activeBootCampRoute, activeVenueId, activeDateIso])
+
+  useEffect(() => {
+    if (!selectedCoach) return undefined
+
+    const originalOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setSelectedCoach(null)
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      document.body.style.overflow = originalOverflow
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [selectedCoach])
 
   useEffect(() => {
     if (!activeBootCampRoute) return
@@ -1005,11 +1108,12 @@ export function WeeklyScheduleSection({
                         <CoachCard
                           coachName={c.coach}
                           profile={coachProfile}
-                          expanded={expandedCoachCourseId === c.id}
-                          onToggle={() =>
-                            setExpandedCoachCourseId((current) =>
-                              current === c.id ? null : c.id,
-                            )
+                          onOpen={() =>
+                            coachProfile &&
+                            setSelectedCoach({
+                              coachName: c.coach,
+                              profile: coachProfile,
+                            })
                           }
                         />
                       </div>
@@ -1203,11 +1307,12 @@ export function WeeklyScheduleSection({
                       <CoachCard
                         coachName={c.coach}
                         profile={coachProfile}
-                        expanded={expandedCoachCourseId === c.id}
-                        onToggle={() =>
-                          setExpandedCoachCourseId((current) =>
-                            current === c.id ? null : c.id,
-                          )
+                        onOpen={() =>
+                          coachProfile &&
+                          setSelectedCoach({
+                            coachName: c.coach,
+                            profile: coachProfile,
+                          })
                         }
                       />
                     </div>
@@ -1354,6 +1459,14 @@ export function WeeklyScheduleSection({
       <p className="text-center text-xs md:text-sm text-mist/50 max-w-2xl mx-auto mt-8 md:mt-12">
         {weeklyScheduleSectionContent.footnote}
       </p>
+
+      {selectedCoach && (
+        <CoachProfileModal
+          coachName={selectedCoach.coachName}
+          profile={selectedCoach.profile}
+          onClose={() => setSelectedCoach(null)}
+        />
+      )}
     </>
   )
 
