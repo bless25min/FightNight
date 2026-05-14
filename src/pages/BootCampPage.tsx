@@ -17,6 +17,7 @@ import {
 } from '../data/landingContent'
 import type { BootCampRoute } from '../types'
 import boxingRouteImage from '../assets/generated/bootcamp-route-boxing-poster.jpg'
+import bootCampCorePressureMemoryImage from '../assets/generated/bootcamp-core-pressure-memory.jpg'
 import muayThaiRouteImage from '../assets/generated/bootcamp-route-muaythai-poster.jpg'
 import painPoster from '../assets/landing/pain-poster.jpg'
 import bootcampModule2Poster from '../assets/offers/bootcamp-module-2-poster.jpg'
@@ -375,16 +376,26 @@ function BootCampCoreSection() {
     <SectionWrapper id="boot-camp-core" fullWidth padding="py-8 md:py-16">
       <div className="mx-auto max-w-6xl px-3 sm:px-8">
         <div className="overflow-hidden border-y border-pearl/10 bg-black/28 sm:rounded-3xl sm:border">
-          <div className="p-5 sm:p-8 md:p-10">
-            <p className="font-heading text-xs font-semibold uppercase tracking-[0.28em] text-neon md:text-sm">
-              {bootCampCoreContent.eyebrow}
-            </p>
-            <h2 className="mt-3 max-w-3xl font-heading text-4xl font-black leading-tight text-pearl md:text-5xl">
-              {bootCampCoreContent.title}
-            </h2>
-            <p className="mt-4 max-w-3xl text-base leading-relaxed text-mist/78 md:text-xl">
-              {bootCampCoreContent.description}
-            </p>
+          <div className="grid md:grid-cols-[0.95fr_1.05fr]">
+            <div className="order-2 p-5 sm:p-8 md:order-1 md:p-10">
+              <p className="font-heading text-xs font-semibold uppercase tracking-[0.28em] text-neon md:text-sm">
+                {bootCampCoreContent.eyebrow}
+              </p>
+              <h2 className="mt-3 font-heading text-4xl font-black leading-tight text-pearl md:text-5xl">
+                {bootCampCoreContent.title}
+              </h2>
+              <p className="mt-4 text-base leading-relaxed text-mist/78 md:text-xl">
+                {bootCampCoreContent.description}
+              </p>
+            </div>
+
+            <div className="order-1 border-b border-pearl/10 md:order-2 md:border-b-0 md:border-l">
+              <ZoomableImage
+                src={bootCampCorePressureMemoryImage}
+                alt="教練在 UFC GYM 場館內用手靶引導學員面對壓力"
+                className="h-auto w-full md:h-full md:min-h-[23rem] md:object-cover"
+              />
+            </div>
           </div>
 
           <div className="grid border-t border-pearl/10 md:grid-cols-3">

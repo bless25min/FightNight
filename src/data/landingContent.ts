@@ -357,21 +357,21 @@ export const offersPlanSectionContent = {
 
 export const bootCampCoreContent = {
   eyebrow: 'BOOT CAMP CORE',
-  title: '把壓力練成身體記憶。',
+  title: '面對壓力的技巧變成身體記憶',
   description:
-    '向 Fighter 學的不是招式，是恐懼來時仍能穩住、反應、再站起來。',
+    '職業格鬥選手終其一生都在練習：如何面對恐懼、壓力、打擊，以及重新站起來的能力。',
   pillars: [
     {
       title: '進入壓力',
-      description: '可承受地遇到強度。',
+      description: '可承受範圍內面對壓力。',
     },
     {
       title: '被教練接住',
-      description: '用口令和回合找回節奏。',
+      description: '用技術反應找回節奏。',
     },
     {
       title: '形成記憶',
-      description: '每週重複，讓反應留下來。',
+      description: '讓習慣，變成身體反應留下來。',
     },
   ],
 }
