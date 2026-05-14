@@ -1147,25 +1147,16 @@ export function WeeklyScheduleSection({
                       <p className="text-xs md:text-sm text-mist/55 font-heading tracking-wide">
                         {c.nameEn}
                       </p>
-                      {activeCategory === 'BOOT_CAMP' ? (
-                        <div className="mt-3 rounded-xl border border-pearl/10 bg-black/25 p-3">
-                          <p className="text-[10px] md:text-xs font-heading tracking-[0.18em] text-mist/55">
-                            本梯教練
-                          </p>
-                          <p className="mt-1 font-heading text-lg font-black text-pearl">
-                            {c.coach}
-                          </p>
-                          <p className="mt-1 text-xs md:text-sm leading-relaxed text-mist/66">
-                            {routeContent
-                              ? `帶你進入「${routeContent.badge}」路徑`
-                              : '帶你進入這一梯 Boot Camp'}
-                          </p>
-                        </div>
-                      ) : (
-                        <p className="text-xs md:text-sm text-mist/65 mt-1.5">
-                          教練 {c.coach}
-                        </p>
-                      )}
+                      <CoachCard
+                        coachName={c.coach}
+                        profile={coachProfile}
+                        expanded={expandedCoachCourseId === c.id}
+                        onToggle={() =>
+                          setExpandedCoachCourseId((current) =>
+                            current === c.id ? null : c.id,
+                          )
+                        }
+                      />
                     </div>
 
                     <div className="border-t border-pearl/10 pt-3">
