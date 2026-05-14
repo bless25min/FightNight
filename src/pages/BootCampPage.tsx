@@ -15,6 +15,7 @@ import {
   bootCampFaqItems,
   bootCampRouteContent,
 } from '../data/landingContent'
+import { useTracking } from '../hooks/useTracking'
 import type { BootCampRoute } from '../types'
 import boxingRouteImage from '../assets/generated/bootcamp-route-boxing-poster.jpg'
 import bootCampCorePressureMemoryImage from '../assets/generated/bootcamp-core-pressure-memory.jpg'
@@ -425,6 +426,7 @@ function BootCampCoreSection() {
 
 export function BootCampPage() {
   const [selectedRoute, setSelectedRoute] = useState<BootCampRoute | null>(null)
+  const { track } = useTracking()
 
   const scrollTo = useCallback((id: string) => {
     document.getElementById(id)?.scrollIntoView({
@@ -436,9 +438,18 @@ export function BootCampPage() {
   const selectRouteAndScroll = useCallback(
     (route: BootCampRoute) => {
       setSelectedRoute(route)
+      track({
+        event: 'bootcamp_route_select',
+        params: {
+          route,
+          route_label: bootCampRouteContent[route].label,
+        },
+        metaStandardEvent: 'ViewContent',
+        lineEventName: 'RouteSelect',
+      })
       window.setTimeout(() => scrollTo('boot-camp-booking'), 80)
     },
-    [scrollTo],
+    [scrollTo, track],
   )
 
   return (
@@ -446,11 +457,37 @@ export function BootCampPage() {
       <Header />
       <main>
         <BootCampHero
-          onPrimaryAction={() => scrollTo('boot-camp-routes')}
-          onExpectationAction={() => scrollTo('boot-camp-expectation')}
+          onPrimaryAction={() => {
+            track({
+              event: 'bootcamp_hero_cta_click',
+              params: { target: 'routes' },
+              metaStandardEvent: 'Lead',
+              lineEventName: 'LeadClick',
+            })
+            scrollTo('boot-camp-routes')
+          }}
+          onExpectationAction={() => {
+            track({
+              event: 'bootcamp_expectation_click',
+              params: { target: 'expectation' },
+              metaStandardEvent: 'ViewContent',
+              lineEventName: 'BootcampView',
+            })
+            scrollTo('boot-camp-expectation')
+          }}
         />
         <BootCampCoreSection />
-        <ExpectationSection onBookingAction={() => scrollTo('boot-camp-routes')} />
+        <ExpectationSection
+          onBookingAction={() => {
+            track({
+              event: 'bootcamp_expectation_booking_click',
+              params: { target: 'routes' },
+              metaStandardEvent: 'Lead',
+              lineEventName: 'LeadClick',
+            })
+            scrollTo('boot-camp-routes')
+          }}
+        />
         <RouteSection
           selectedRoute={selectedRoute}
           onSelectRoute={selectRouteAndScroll}
@@ -472,9 +509,26 @@ export function BootCampPage() {
         title="保留你的 Boot Camp 梯次"
         detail={selectedRoute ? bootCampRouteContent[selectedRoute].shortLabel : '先選路徑與第一堂'}
         actionLabel={selectedRoute ? '看梯次' : '選路徑'}
-        onAction={() => scrollTo(selectedRoute ? 'boot-camp-booking' : 'boot-camp-routes')}
+        onAction={() => {
+          track({
+            event: 'bootcamp_sticky_action_click',
+            params: {
+              target: selectedRoute ? 'booking' : 'routes',
+              route: selectedRoute ?? 'none',
+            },
+            metaStandardEvent: 'Lead',
+            lineEventName: 'LeadClick',
+          })
+          scrollTo(selectedRoute ? 'boot-camp-booking' : 'boot-camp-routes')
+        }}
         secondaryActionLabel="路徑"
-        onSecondaryAction={() => scrollTo('boot-camp-routes')}
+        onSecondaryAction={() => {
+          track({
+            event: 'bootcamp_sticky_secondary_click',
+            params: { target: 'routes' },
+          })
+          scrollTo('boot-camp-routes')
+        }}
       />
     </div>
   )

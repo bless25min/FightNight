@@ -15,7 +15,12 @@ import { StickyActionBar } from '../ui/StickyActionBar'
 import { WeeklyScheduleSection } from './WeeklyScheduleSection'
 
 export function TicketSection() {
-  const { trackTicketView, trackTicketCta } = useTracking()
+  const {
+    trackTicketView,
+    trackTicketCta,
+    trackGateAccess,
+    trackSecondaryCta,
+  } = useTracking()
   const { gateState, requestGateAccess, loginUrl } =
     useLiffGate()
   const ref = useRef<HTMLDivElement>(null)
@@ -52,6 +57,10 @@ export function TicketSection() {
     document
       .getElementById('fight-night-schedule')
       ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+  const handleGateAction = () => {
+    trackGateAccess('ticket_section', gateState.status)
+    if (!loginUrl) void requestGateAccess()
   }
   const bootCampHref =
     typeof window !== 'undefined' &&
@@ -93,7 +102,7 @@ export function TicketSection() {
               title="登入後查看可購買場次"
               description="登入後可查看可購買日期與即時剩餘名額。"
               loginUrl={loginUrl}
-              onGateAction={() => void requestGateAccess()}
+              onGateAction={handleGateAction}
             >
               <div>
                 <WeeklyScheduleSection
@@ -114,6 +123,7 @@ export function TicketSection() {
                 <Button
                   variant="ghost"
                   href={bootCampHref}
+                  onClick={() => trackSecondaryCta()}
                   data-cta="ticket-bootcamp-entry"
                 >
                   了解 Boot Camp 方案

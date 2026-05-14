@@ -23,6 +23,7 @@ import {
 } from '../data/landingContent'
 import type { LiffGateState } from '../hooks/useLiffGate'
 import { useLiffGate } from '../hooks/useLiffGate'
+import { useTracking } from '../hooks/useTracking'
 import type { BootCampRoute, CourseCategory } from '../types'
 import { Footer } from '../components/layout/Footer'
 import { Header } from '../components/layout/Header'
@@ -541,6 +542,7 @@ const scheduleCountByCategory: Record<CourseCategory, number> = {
 export function OffersPage() {
   const { gateState, requestGateAccess, openWhenUnlocked, loginUrl } =
     useLiffGate()
+  const { track, trackGateAccess } = useTracking()
 
   const [scheduleCategory, setScheduleCategory] =
     useState<CourseCategory>('BOOT_CAMP')
@@ -566,20 +568,41 @@ export function OffersPage() {
     }
   }, [])
 
-  const navigateToSchedule = useCallback((
-    category: CourseCategory,
-    route?: BootCampRoute,
-  ) => {
-    setScheduleCategory(category)
-    setScheduleRoute(category === 'BOOT_CAMP' ? route ?? null : null)
-    const el = document.getElementById('weekly-schedule')
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    }
-  }, [])
+  const navigateToSchedule = useCallback(
+    (category: CourseCategory, route?: BootCampRoute) => {
+      track({
+        event: 'offer_schedule_nav_click',
+        params: {
+          category,
+          route: route ?? 'none',
+        },
+        metaStandardEvent: 'Lead',
+        lineEventName: 'LeadClick',
+      })
+      setScheduleCategory(category)
+      setScheduleRoute(category === 'BOOT_CAMP' ? route ?? null : null)
+      const el = document.getElementById('weekly-schedule')
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }
+    },
+    [track],
+  )
+
+  const handleGateAction = useCallback(() => {
+    trackGateAccess('offers_page', gateState.status)
+    if (!loginUrl) void requestGateAccess()
+  }, [gateState.status, loginUrl, requestGateAccess, trackGateAccess])
 
   const handlePlanCta = useCallback(
     (url: string, planId: string) => {
+      track({
+        event: 'plan_cta_click',
+        params: { plan_id: planId },
+        metaStandardEvent: 'Lead',
+        lineEventName: 'LeadClick',
+      })
+
       if (planId === fightNightPassPlan.id) {
         navigateToSchedule('FIGHT_NIGHT')
         return
@@ -593,7 +616,7 @@ export function OffersPage() {
 
       void openWhenUnlocked(url)
     },
-    [navigateToSchedule, openWhenUnlocked],
+    [navigateToSchedule, openWhenUnlocked, track],
   )
 
   const scrollToFightNightPlan = useCallback(() => {
@@ -620,7 +643,7 @@ export function OffersPage() {
         <IdentitySection />
         <OffersFightNightPlan
           gateState={gateState}
-          onGateAction={() => void requestGateAccess()}
+          onGateAction={handleGateAction}
           onCtaAction={handlePlanCta}
           onScheduleNav={navigateToSchedule}
           scheduleCountByCategory={scheduleCountByCategory}
@@ -643,7 +666,7 @@ export function OffersPage() {
         <OffersOutcomeSummary />
         <OffersPlans
           gateState={gateState}
-          onGateAction={() => void requestGateAccess()}
+          onGateAction={handleGateAction}
           onCtaAction={handlePlanCta}
           onScheduleNav={navigateToSchedule}
           scheduleCountByCategory={scheduleCountByCategory}

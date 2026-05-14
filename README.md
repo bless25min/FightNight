@@ -95,3 +95,37 @@ VITE_META_PIXEL_ID=1234567890
 - Tailwind CSS v3
 - Framer Motion
 - Zustand
+
+## Advertising Tracking
+
+Production tracking is controlled by Vite environment variables:
+
+```
+VITE_GA_MEASUREMENT_ID=G-XXXXXXXXXX
+VITE_META_PIXEL_ID=1234567890
+VITE_LINE_TAG_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+VITE_LINE_TAG_CUSTOMER_TYPE=lap
+```
+
+Primary conversion events:
+
+| Event | Purpose |
+| --- | --- |
+| `ticket_view` | User reaches the unlocked offer area. |
+| `gate_access_click` | User starts LINE Login / unlock flow. |
+| `bootcamp_route_select` | User selects Boxing or Muay Thai / Kickboxing path. |
+| `bootcamp_package_select` | User selects 2-session or 4-session Boot Camp package. |
+| `course_purchase_click` | User clicks a concrete session purchase button. Sent as Meta `InitiateCheckout`. |
+| `line_cta_click` | User clicks LINE CTA. |
+| `scroll_25/50/75/100` | Page-depth signals. |
+
+Recommended ad-platform conversion setup:
+
+| Platform signal | Use as |
+| --- | --- |
+| Meta `InitiateCheckout` from `course_purchase_click` | Primary conversion until real payment confirmation exists. |
+| Meta `Lead` from `gate_access_click`, `ticket_cta_click`, and plan CTAs | Secondary conversion / retargeting audience. |
+| Meta `ViewContent` from ticket and Boot Camp route/package interest | Funnel audience, not the main optimization event. |
+| Future `Purchase` | Fire only after payment succeeds, ideally from server/webhook. |
+
+Meta Pixel events include `eventID` so a future Conversions API implementation can deduplicate browser and server events.

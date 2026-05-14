@@ -64,6 +64,7 @@ export function LockedContent({
               className="mt-6"
               href={loginUrl}
               target="_self"
+              onClick={onGateAction}
               data-cta="liff-gate-link"
             >
               {actionLabel}

@@ -1,33 +1,125 @@
-// 事件追蹤 hook — 預留 GA4 / Meta Pixel / LINE Tag 接口
-import type { TrackingParams } from '../lib/analytics'
+import { useCallback } from 'react'
+import {
+  trackAnalyticsEvent,
+  type MetaStandardEvent,
+  type TrackingParams,
+} from '../lib/analytics'
 
 type TrackingEvent = {
   event: string
   params?: TrackingParams
+  metaStandardEvent?: MetaStandardEvent
+  lineEventName?: string
+}
+
+export type CoursePurchaseTrackingParams = TrackingParams & {
+  course_id: string
+  course_name: string
+  category: string
+  venue_id: string
+  venue_name: string
+  date: string
+  start_time: string
+  coach: string
+  package_size: number
+  value: number
+  currency: 'TWD'
+  remaining: number
 }
 
 export function useTracking() {
-  const track = ({ event, params }: TrackingEvent) => {
-    // 開發模式列印
-    if (import.meta.env.DEV) {
-      console.log('[Track]', event, params)
-    }
+  const track = useCallback(
+    ({
+      event,
+      params,
+      metaStandardEvent,
+      lineEventName,
+    }: TrackingEvent) => {
+      if (import.meta.env.DEV) {
+        console.log('[Track]', event, params)
+      }
 
-    // GA4
-    window.gtag?.('event', event, params)
+      trackAnalyticsEvent(event, params, {
+        metaStandardEvent,
+        lineEventName,
+      })
+    },
+    [],
+  )
 
-    // Meta Pixel
-    window.fbq?.('trackCustom', event, params)
-  }
+  const trackHeroCta = useCallback(
+    () =>
+      track({
+        event: 'hero_cta_click',
+        metaStandardEvent: 'Lead',
+        lineEventName: 'LeadClick',
+      }),
+    [track],
+  )
 
-  const trackHeroCta = () => track({ event: 'hero_cta_click' })
-  const trackSecondaryCta = () => track({ event: 'secondary_cta_click' })
-  const trackTicketView = () => track({ event: 'ticket_view' })
-  const trackTicketCta = (ticketId: string) =>
-    track({ event: 'ticket_cta_click', params: { ticket_id: ticketId } })
-  const trackFaqExpand = (faqId: string) =>
-    track({ event: 'faq_expand', params: { faq_id: faqId } })
-  const trackLineCta = () => track({ event: 'line_cta_click' })
+  const trackSecondaryCta = useCallback(
+    () => track({ event: 'secondary_cta_click' }),
+    [track],
+  )
+
+  const trackTicketView = useCallback(
+    () =>
+      track({
+        event: 'ticket_view',
+        metaStandardEvent: 'ViewContent',
+        lineEventName: 'TicketView',
+      }),
+    [track],
+  )
+
+  const trackTicketCta = useCallback(
+    (ticketId: string) =>
+      track({
+        event: 'ticket_cta_click',
+        params: { ticket_id: ticketId },
+        metaStandardEvent: 'Lead',
+        lineEventName: 'LeadClick',
+      }),
+    [track],
+  )
+
+  const trackFaqExpand = useCallback(
+    (faqId: string) =>
+      track({ event: 'faq_expand', params: { faq_id: faqId } }),
+    [track],
+  )
+
+  const trackLineCta = useCallback(
+    () =>
+      track({
+        event: 'line_cta_click',
+        metaStandardEvent: 'Lead',
+        lineEventName: 'LineClick',
+      }),
+    [track],
+  )
+
+  const trackGateAccess = useCallback(
+    (surface: string, status: string) =>
+      track({
+        event: 'gate_access_click',
+        params: { surface, status },
+        metaStandardEvent: 'Lead',
+        lineEventName: 'LeadClick',
+      }),
+    [track],
+  )
+
+  const trackCoursePurchaseClick = useCallback(
+    (params: CoursePurchaseTrackingParams) =>
+      track({
+        event: 'course_purchase_click',
+        params,
+        metaStandardEvent: 'InitiateCheckout',
+        lineEventName: 'CheckoutClick',
+      }),
+    [track],
+  )
 
   return {
     track,
@@ -37,5 +129,7 @@ export function useTracking() {
     trackTicketCta,
     trackFaqExpand,
     trackLineCta,
+    trackGateAccess,
+    trackCoursePurchaseClick,
   }
 }

@@ -22,6 +22,7 @@ import {
   weeklyScheduleSectionContent,
 } from '../../data/weeklySchedule'
 import { useSessionAvailability } from '../../hooks/useSessionAvailability'
+import { useTracking } from '../../hooks/useTracking'
 import type { BootCampRoute, CourseCategory, WeeklyCourse } from '../../types'
 import { Button } from '../ui/Button'
 import { SectionHeading } from '../ui/SectionHeading'
@@ -244,11 +245,22 @@ function getFightNightPriceLabel(pricingTier: CoachPricingTier) {
   return formatPrice(coachPricingByTier[pricingTier].fightNight)
 }
 
+function getFightNightPriceAmount(pricingTier: CoachPricingTier) {
+  return coachPricingByTier[pricingTier].fightNight
+}
+
 function getBootCampPackagePriceLabel(
   pricingTier: CoachPricingTier,
   packageSize: 2 | 4,
 ) {
   return formatPrice(coachPricingByTier[pricingTier].bootCamp[packageSize])
+}
+
+function getBootCampPackagePriceAmount(
+  pricingTier: CoachPricingTier,
+  packageSize: 2 | 4,
+) {
+  return coachPricingByTier[pricingTier].bootCamp[packageSize]
 }
 
 function CoachCard({
@@ -571,6 +583,7 @@ export function WeeklyScheduleSection({
   bookingMode = 'standard',
   className = '',
 }: Props = {}) {
+  const { track, trackCoursePurchaseClick } = useTracking()
   const fallbackCategory = categories[0] ?? 'FIGHT_NIGHT'
   const [internalCategory, setInternalCategory] =
     useState<CourseCategory>(fallbackCategory)
@@ -739,6 +752,79 @@ export function WeeklyScheduleSection({
 
   const { getAvailability, hasLiveData } =
     useSessionAvailability(availabilitySessionIds)
+
+  const buildCourseTrackingParams = useCallback(
+    (
+      course: WeeklyCourse,
+      packageSize: 1 | 2 | 4,
+      remaining: number,
+      value: number,
+      pricingTier: CoachPricingTier,
+    ) => ({
+      course_id: course.id,
+      course_name: course.name,
+      category: course.category,
+      venue_id: course.venueId,
+      venue_name: course.venueName,
+      date: course.date,
+      start_time: course.startTime,
+      coach: course.coach,
+      coach_pricing_tier: pricingTier,
+      package_size: packageSize,
+      value,
+      currency: 'TWD' as const,
+      remaining,
+      route: getBootCampRoute(course) ?? 'none',
+      booking_mode: bookingMode,
+      has_live_data: hasLiveData,
+    }),
+    [bookingMode, hasLiveData],
+  )
+
+  const trackBootCampPackageSelect = useCallback(
+    (
+      course: WeeklyCourse,
+      packageSize: 2 | 4,
+      remaining: number,
+      value: number,
+      pricingTier: CoachPricingTier,
+    ) => {
+      track({
+        event: 'bootcamp_package_select',
+        params: buildCourseTrackingParams(
+          course,
+          packageSize,
+          remaining,
+          value,
+          pricingTier,
+        ),
+        metaStandardEvent: 'ViewContent',
+        lineEventName: 'PackageSelect',
+      })
+    },
+    [buildCourseTrackingParams, track],
+  )
+
+  const trackCoursePurchase = useCallback(
+    (
+      course: WeeklyCourse,
+      packageSize: 1 | 2 | 4,
+      remaining: number,
+      value: number,
+      pricingTier: CoachPricingTier,
+    ) => {
+      trackCoursePurchaseClick(
+        buildCourseTrackingParams(
+          course,
+          packageSize,
+          remaining,
+          value,
+          pricingTier,
+        ),
+      )
+    },
+    [buildCourseTrackingParams, trackCoursePurchaseClick],
+  )
 
   const getPackageAvailability = useCallback(
     (course: WeeklyCourse, count: 1 | 2 | 4) => {
@@ -1241,6 +1327,11 @@ export function WeeklyScheduleSection({
                                 coachPricingTier,
                                 packageSize,
                               )
+                            const packagePriceAmount =
+                              getBootCampPackagePriceAmount(
+                                coachPricingTier,
+                                packageSize,
+                              )
                             const availability =
                               packageSize === 2
                                 ? bootCamp2Availability
@@ -1253,12 +1344,19 @@ export function WeeklyScheduleSection({
                                 key={packageSize}
                                 type="button"
                                 disabled={soldOut}
-                                onClick={() =>
+                                onClick={() => {
                                   setSelectedBooking({
                                     courseId: c.id,
                                     packageSize,
                                   })
-                                }
+                                  trackBootCampPackageSelect(
+                                    c,
+                                    packageSize,
+                                    availability.remaining,
+                                    packagePriceAmount,
+                                    coachPricingTier,
+                                  )
+                                }}
                                 data-interaction-hint={soldOut ? undefined : true}
                                 className={`rounded-xl border p-3 text-left transition-colors ${
                                   soldOut ? '' : 'interaction-hint'
@@ -1330,6 +1428,18 @@ export function WeeklyScheduleSection({
                               href={selectedBookingUrl ?? undefined}
                               variant="primary"
                               className="mt-4 w-full"
+                              onClick={() =>
+                                trackCoursePurchase(
+                                  c,
+                                  selectedPackageSize,
+                                  selectedPackageAvailability.remaining,
+                                  getBootCampPackagePriceAmount(
+                                    coachPricingTier,
+                                    selectedPackageSize,
+                                  ),
+                                  coachPricingTier,
+                                )
+                              }
                               data-cta={`schedule-${c.id}-bootcamp-${selectedPackageSize}`}
                             >
                               購買這個位置 · {getRemainingLabel(
@@ -1511,6 +1621,18 @@ export function WeeklyScheduleSection({
                               variant="secondary"
                               size="sm"
                               className="w-full border-neon/25 bg-neon/10 text-pearl"
+                              onClick={() =>
+                                trackCoursePurchase(
+                                  c,
+                                  2,
+                                  bootCamp2Availability.remaining,
+                                  getBootCampPackagePriceAmount(
+                                    coachPricingTier,
+                                    2,
+                                  ),
+                                  coachPricingTier,
+                                )
+                              }
                               data-cta={`schedule-${c.id}-bootcamp-2`}
                             >
                               兩堂 · {getBootCampPackagePriceLabel(
@@ -1527,6 +1649,18 @@ export function WeeklyScheduleSection({
                               variant="primary"
                               size="sm"
                               className="w-full"
+                              onClick={() =>
+                                trackCoursePurchase(
+                                  c,
+                                  4,
+                                  bootCamp4Availability.remaining,
+                                  getBootCampPackagePriceAmount(
+                                    coachPricingTier,
+                                    4,
+                                  ),
+                                  coachPricingTier,
+                                )
+                              }
                               data-cta={`schedule-${c.id}-bootcamp-4`}
                             >
                               四堂 · {getBootCampPackagePriceLabel(
@@ -1544,6 +1678,15 @@ export function WeeklyScheduleSection({
                             href={bookingUrl ?? undefined}
                             variant="primary"
                             className="w-full"
+                            onClick={() =>
+                              trackCoursePurchase(
+                                c,
+                                1,
+                                sessionAvailability.remaining,
+                                getFightNightPriceAmount(coachPricingTier),
+                                coachPricingTier,
+                              )
+                            }
                             data-cta={`schedule-${c.id}-fight-night`}
                           >
                             購買這一場 · {fightNightPriceLabel} · {getRemainingLabel(

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Header } from './components/layout/Header'
 import { HeroSection } from './components/sections/HeroSection'
 import { PainSection } from './components/sections/PainSection'
@@ -14,6 +14,7 @@ import { Footer } from './components/layout/Footer'
 import { BootCampPage } from './pages/BootCampPage'
 import { OffersPage } from './pages/OffersPage'
 import { useScrollProgress } from './hooks/useScrollProgress'
+import { trackPageView } from './lib/analytics'
 
 function getCurrentRoutePath() {
   if (typeof window === 'undefined') return '/'
@@ -100,7 +101,17 @@ function useInteractionHintLifecycle() {
 
 function App() {
   const [pathname, setPathname] = useState(getCurrentRoutePath)
+  const trackedInitialPageView = useRef(false)
   useInteractionHintLifecycle()
+
+  useEffect(() => {
+    if (!trackedInitialPageView.current) {
+      trackedInitialPageView.current = true
+      return
+    }
+
+    trackPageView(`${window.location.pathname}${window.location.search}${window.location.hash}`)
+  }, [pathname])
 
   useEffect(() => {
     const onRouteChange = () => setPathname(getCurrentRoutePath())
