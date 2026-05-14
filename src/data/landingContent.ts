@@ -214,9 +214,9 @@ export const audiencePoints: AudiencePoint[] = [
 // ── 票種區（首頁 teaser + 登入後完整資訊共用資料） ─────
 export const ticketSectionContent = {
   title: 'Fight Night Pass',
-  subtitle: '先替今晚的自己留一個出口，確認你還能不能被點燃。',
+  subtitle: '先替今晚的自己留一個出口。',
   description:
-    '如果你只想先嘗試一次，這張 pass 就是最直接的入口。你買的不是一堂拳擊課，而是一個今晚不再照常滑掉、真的走進場裡的可能。',
+    '如果你只想先嘗試一次，直接選一個方便到場的場次，把今晚留下來。',
   unifiedCtaLabel: '選日期購買',
   previewItems: ['目前可購買場次', '指定日期保留', '今晚重新進入狀態'],
 }

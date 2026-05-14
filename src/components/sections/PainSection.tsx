@@ -1,5 +1,5 @@
-import { motion } from 'framer-motion'
-import painPoster from '../../assets/landing/pain-poster.png'
+﻿import { motion } from 'framer-motion'
+import painPoster from '../../assets/landing/pain-poster.jpg'
 import { painPoints, painSectionContent } from '../../data/landingContent'
 import { SectionWrapper } from '../ui/SectionWrapper'
 import { ZoomableImage } from '../ui/ZoomableImage'

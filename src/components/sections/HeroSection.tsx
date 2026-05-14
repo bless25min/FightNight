@@ -1,5 +1,5 @@
-import { motion } from 'framer-motion'
-import heroPoster from '../../assets/landing/hero-poster.png'
+﻿import { motion } from 'framer-motion'
+import heroPoster from '../../assets/landing/hero-poster.jpg'
 import { heroContent } from '../../data/landingContent'
 import { ZoomableImage } from '../ui/ZoomableImage'
 

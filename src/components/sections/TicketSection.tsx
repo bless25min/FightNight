@@ -9,7 +9,6 @@ import { useLiffGate } from '../../hooks/useLiffGate'
 import { useTracking } from '../../hooks/useTracking'
 import { Button } from '../ui/Button'
 import { LockedContent } from '../ui/LockedContent'
-import { PlanCard } from '../ui/PlanCard'
 import { SectionHeading } from '../ui/SectionHeading'
 import { SectionWrapper } from '../ui/SectionWrapper'
 import { StickyActionBar } from '../ui/StickyActionBar'
@@ -85,35 +84,22 @@ export function TicketSection() {
           <div className="relative">
             <LockedContent
               gateState={gateState}
-              title="登入後查看完整費用資訊"
-              description="登入後可查看可購買日期、即時剩餘名額與價格。"
+              title="登入後查看可購買場次"
+              description="登入後可查看可購買日期與即時剩餘名額。"
               loginUrl={loginUrl}
               onGateAction={() => void requestGateAccess()}
             >
               <div>
-                <div>
-                  <div className="mx-auto max-w-xl">
-                    <PlanCard
-                      plan={fightNightPassPlan}
-                      onCtaAction={(_url, planId) => {
-                        trackTicketCta(planId)
-                        scrollToSchedule()
-                      }}
-                    />
-                  </div>
-                </div>
-                <div className="mt-9 md:mt-12">
-                  <WeeklyScheduleSection
-                    id="fight-night-schedule"
-                    activeCategory="FIGHT_NIGHT"
-                    categories={['FIGHT_NIGHT']}
-                    showCategoryTabs={false}
-                    showVenueFilter
-                    title="目前可購買的 Fight Night 名額"
-                    subtitle="先選你方便到場的館別，再購買指定日期與時段的名額。"
-                    embedded
-                  />
-                </div>
+                <WeeklyScheduleSection
+                  id="fight-night-schedule"
+                  activeCategory="FIGHT_NIGHT"
+                  categories={['FIGHT_NIGHT']}
+                  showCategoryTabs={false}
+                  showVenueFilter
+                  title="選一堂 Fight Night"
+                  subtitle="先選你方便到場的館別、日期與時段。"
+                  embedded
+                />
               </div>
             </LockedContent>
 

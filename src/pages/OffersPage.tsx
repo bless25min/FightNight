@@ -1,12 +1,12 @@
-import { motion } from 'framer-motion'
+﻿import { motion } from 'framer-motion'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
-import bootcampModule2Poster from '../assets/offers/bootcamp-module-2-poster.png'
-import bootcampModule3Poster from '../assets/offers/bootcamp-module-3-poster.png'
-import bootcampModule5Poster from '../assets/offers/bootcamp-module-5-poster.png'
-import bootcampModule6Poster from '../assets/offers/bootcamp-module-6-poster.png'
-import offersHeroPoster from '../assets/offers/offers-hero-octagon-poster.png'
-import offersPlansTransitionPoster from '../assets/offers/offers-plans-transition-poster.png'
+import bootcampModule2Poster from '../assets/offers/bootcamp-module-2-poster.jpg'
+import bootcampModule3Poster from '../assets/offers/bootcamp-module-3-poster.jpg'
+import bootcampModule5Poster from '../assets/offers/bootcamp-module-5-poster.jpg'
+import bootcampModule6Poster from '../assets/offers/bootcamp-module-6-poster.jpg'
+import offersHeroPoster from '../assets/offers/offers-hero-octagon-poster.jpg'
+import offersPlansTransitionPoster from '../assets/offers/offers-plans-transition-poster.jpg'
 import {
   bootCampCoreContent,
   bootCampFaqItems,

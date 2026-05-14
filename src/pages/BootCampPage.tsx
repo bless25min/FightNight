@@ -1,4 +1,4 @@
-import { motion } from 'framer-motion'
+﻿import { motion } from 'framer-motion'
 import { useCallback, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Header } from '../components/layout/Header'
@@ -16,12 +16,12 @@ import {
   bootCampRouteContent,
 } from '../data/landingContent'
 import type { BootCampRoute } from '../types'
-import boxingRouteImage from '../assets/generated/bootcamp-route-boxing-poster.png'
-import muayThaiRouteImage from '../assets/generated/bootcamp-route-muaythai-poster.png'
-import painPoster from '../assets/landing/pain-poster.png'
-import bootcampModule2Poster from '../assets/offers/bootcamp-module-2-poster.png'
-import bootcampModule5Poster from '../assets/offers/bootcamp-module-5-poster.png'
-import offersHeroPoster from '../assets/offers/offers-hero-octagon-poster.png'
+import boxingRouteImage from '../assets/generated/bootcamp-route-boxing-poster.jpg'
+import muayThaiRouteImage from '../assets/generated/bootcamp-route-muaythai-poster.jpg'
+import painPoster from '../assets/landing/pain-poster.jpg'
+import bootcampModule2Poster from '../assets/offers/bootcamp-module-2-poster.jpg'
+import bootcampModule5Poster from '../assets/offers/bootcamp-module-5-poster.jpg'
+import offersHeroPoster from '../assets/offers/offers-hero-octagon-poster.jpg'
 
 const routeOrder: BootCampRoute[] = ['BOXING', 'MUAY_THAI']
 

@@ -1,5 +1,5 @@
-import { motion } from 'framer-motion'
-import trainDifferentPoster from '../../assets/landing/train-different-poster.png'
+﻿import { motion } from 'framer-motion'
+import trainDifferentPoster from '../../assets/landing/train-different-poster.jpg'
 import { newModelContent } from '../../data/landingContent'
 import { SectionWrapper } from '../ui/SectionWrapper'
 import { ZoomableImage } from '../ui/ZoomableImage'

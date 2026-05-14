@@ -1,5 +1,5 @@
-import { motion } from 'framer-motion'
-import formulaPoster from '../../assets/landing/formula-poster.png'
+﻿import { motion } from 'framer-motion'
+import formulaPoster from '../../assets/landing/formula-poster.jpg'
 import { SectionWrapper } from '../ui/SectionWrapper'
 import { ZoomableImage } from '../ui/ZoomableImage'
 
