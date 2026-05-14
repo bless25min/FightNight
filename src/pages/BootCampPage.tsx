@@ -372,52 +372,19 @@ function BookingSection({
 
 function BootCampCoreSection() {
   return (
-    <SectionWrapper id="boot-camp-core" fullWidth padding="py-10 md:py-20">
+    <SectionWrapper id="boot-camp-core" fullWidth padding="py-8 md:py-16">
       <div className="mx-auto max-w-6xl px-3 sm:px-8">
         <div className="overflow-hidden border-y border-pearl/10 bg-black/28 sm:rounded-3xl sm:border">
-          <div className="grid gap-0 md:grid-cols-[1.05fr_0.95fr]">
-            <div className="border-b border-pearl/10 p-5 sm:p-8 md:border-b-0 md:border-r md:p-10">
-              <p className="font-heading text-xs font-semibold uppercase tracking-[0.28em] text-neon md:text-sm">
-                {bootCampCoreContent.eyebrow}
-              </p>
-              <h2 className="mt-3 font-heading text-4xl font-black leading-tight text-pearl md:text-5xl">
-                {bootCampCoreContent.title}
-              </h2>
-              <p className="mt-5 text-lg font-heading font-bold leading-relaxed text-pearl md:text-2xl">
-                {bootCampCoreContent.description}
-              </p>
-
-              <div className="mt-5 flex flex-wrap gap-2">
-                {bootCampCoreContent.keywords.map((keyword) => (
-                  <span
-                    key={keyword}
-                    className="rounded-full border border-blaze/25 bg-blaze/10 px-3 py-1.5 text-xs font-heading font-semibold tracking-wide text-blaze"
-                  >
-                    {keyword}
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            <div className="grid content-between gap-4 p-5 sm:p-8 md:p-10">
-              <div className="rounded-2xl border border-pearl/10 bg-black/35 p-4">
-                <p className="font-heading text-xs uppercase tracking-[0.22em] text-mist/45">
-                  Fight Night
-                </p>
-                <p className="mt-2 text-sm leading-relaxed text-mist/76 md:text-base">
-                  {bootCampCoreContent.contrast.fightNight}
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-neon/25 bg-neon/10 p-4">
-                <p className="font-heading text-xs uppercase tracking-[0.22em] text-neon/80">
-                  Boot Camp
-                </p>
-                <p className="mt-2 text-sm leading-relaxed text-mist/86 md:text-base">
-                  {bootCampCoreContent.contrast.bootCamp}
-                </p>
-              </div>
-            </div>
+          <div className="p-5 sm:p-8 md:p-10">
+            <p className="font-heading text-xs font-semibold uppercase tracking-[0.28em] text-neon md:text-sm">
+              {bootCampCoreContent.eyebrow}
+            </p>
+            <h2 className="mt-3 max-w-3xl font-heading text-4xl font-black leading-tight text-pearl md:text-5xl">
+              {bootCampCoreContent.title}
+            </h2>
+            <p className="mt-4 max-w-3xl text-base leading-relaxed text-mist/78 md:text-xl">
+              {bootCampCoreContent.description}
+            </p>
           </div>
 
           <div className="grid border-t border-pearl/10 md:grid-cols-3">
