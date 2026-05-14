@@ -309,13 +309,13 @@ export const bootCampFaqItems: FAQItem[] = [
     id: 'bootcamp-faq-1',
     question: 'Boot Camp 和 Fight Night 差在哪？',
     answer:
-      'Fight Night 是單次進場，適合先確認這種狀態是不是你的出口。Boot Camp 會把同一個時段延伸成兩堂或四堂，讓壓力釋放、穩住反應與行動感開始累積。',
+      'Fight Night 是單次入場，體驗這種高能量的運動娛樂，如何觸動你的情緒。Boot Camp 則會用固定的頻率、習慣、系統化的課程編排，由內到外的改變你。',
   },
   {
     id: 'bootcamp-faq-2',
     question: '四堂課會不會只是重複上同一套？',
     answer:
-      '會固定同一個時間與同一條路徑。價值在於每週回到同一個承諾，讓身體一次比一次更容易進入狀態。',
+      '不會，系統化的訓練能保障你每一次課程循序漸進。每週固定頻率，讓身體一次比一次更容易進入狀態。',
   },
   {
     id: 'bootcamp-faq-3',
@@ -327,13 +327,13 @@ export const bootCampFaqItems: FAQItem[] = [
     id: 'bootcamp-faq-4',
     question: '拳擊 Boot Camp 和泰拳／踢拳 Boot Camp 怎麼選？',
     answer:
-      '兩條路徑都在學 Fighter 的壓力應對。常把壓力往裡收、需要界線感，選拳擊。悶太久、想用全身打開狀態，選泰拳／踢拳。',
+      '常把壓力往肚裡吞、需要邊界感，選拳擊。悶太久、想點燃全身打開狀態，選泰拳／踢拳。',
   },
   {
     id: 'bootcamp-faq-5',
     question: '沒有拳擊基礎，適合直接選 Boot Camp 嗎？',
     answer:
-      '可以，但要看你的目標。如果你只是想先體驗一次，先選單次會更輕鬆；如果你已經知道自己想建立一套更完整的訓練節奏，Boot Camp 會比單次更適合。',
+      '可以，我們建議從【體適能 / 基礎】開始，隨著進度可以升階至【技巧】以上的課程。',
   },
   {
     id: 'bootcamp-faq-6',
@@ -345,14 +345,14 @@ export const bootCampFaqItems: FAQItem[] = [
     id: 'bootcamp-faq-7',
     question: '教練是固定同一位嗎？',
     answer:
-      '不同課程可能由不同教練帶領，所以購買前會以你選到的梯次為準，顯示該堂教練、館別、時間與路徑。你保留的是某一梯次的位置。',
+      '是的，你選擇的課程教練，就如同課程卡片中所描述，詳細資訊可見教練介紹。',
   },
 ]
 
 export const offersPlanSectionContent = {
   title: '選擇你想留下的改變路徑',
   subtitle: '所有 Boot Camp 都是向職業 Fighter 學習應對壓力；拳擊與泰拳只是兩種不同的期待入口。',
-  footnote: '每堂線上只開放 6 席，剩餘名額會依線上訂單即時更新。',
+  footnote: '剩餘名額會依線上訂單即時更新；售完後該場次就不再開放線上購買。',
 }
 
 export const bootCampCoreContent = {
@@ -479,7 +479,7 @@ export const offersPlans: TicketPlan[] = [
       '向 Fighter 學習正面應對壓力',
       '用拳擊風格找回界線感',
       '練習把退縮轉成下一步',
-      '每堂線上小班預留 6 席',
+      '線上剩餘名額即時更新',
     ],
     checkoutUrl: siteConfig.lineUrl,
     ctaLabel: '選拳擊兩堂場次',
@@ -497,7 +497,7 @@ export const offersPlans: TicketPlan[] = [
       '向 Fighter 學習高強度壓力應對',
       '用泰拳／踢拳風格釋放卡住的壓力',
       '練習把慌亂轉成全身行動',
-      '每堂線上小班預留 6 席',
+      '線上剩餘名額即時更新',
     ],
     checkoutUrl: siteConfig.lineUrl,
     ctaLabel: '選泰拳／踢拳兩堂場次',
@@ -516,7 +516,7 @@ export const offersPlans: TicketPlan[] = [
       '職業 Fighter 壓力應對邏輯',
       '同館同時段，保留四週正面面對的節奏',
       '讓界線感、主動感與穩定感留在身體裡',
-      '每堂線上小班預留 6 席',
+      '線上剩餘名額即時更新',
     ],
     highlight: true,
     checkoutUrl: siteConfig.lineUrl,
@@ -536,7 +536,7 @@ export const offersPlans: TicketPlan[] = [
       '職業 Fighter 壓力應對邏輯',
       '同館同時段，保留四週全身釋放的節奏',
       '讓爆發感、釋放感與行動能量被重新點燃',
-      '每堂線上小班預留 6 席',
+      '線上剩餘名額即時更新',
     ],
     checkoutUrl: siteConfig.lineUrl,
     ctaLabel: '選泰拳／踢拳四堂場次',
@@ -619,7 +619,7 @@ export const faqItems: FAQItem[] = [
     id: 'faq-7',
     question: '場次日期和名額是真的嗎？',
     answer:
-      '頁面只顯示目前可線上購買的課程。每堂線上開放 6 席，剩餘數字會依線上訂單即時更新；售完後該場次就不再開放購買。',
+      '頁面只顯示目前可線上購買的課程。剩餘數字會依線上訂單即時更新；售完後該場次就不再開放購買。',
   },
   {
     id: 'faq-8',

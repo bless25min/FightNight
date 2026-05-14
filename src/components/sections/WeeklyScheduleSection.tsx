@@ -948,9 +948,6 @@ export function WeeklyScheduleSection({
                               hasLiveData,
                             )}
                           </span>
-                          <span className="rounded-full border border-pearl/10 bg-pearl/5 px-2.5 py-1 text-[11px] font-heading tracking-wide text-mist/70">
-                            每堂 6 席
-                          </span>
                         </div>
 
                         <h3 className="mt-3 font-heading text-xl font-black leading-tight text-pearl">
@@ -1125,9 +1122,6 @@ export function WeeklyScheduleSection({
                     </div>
 
                     <div className="flex flex-wrap gap-2">
-                      <p className="inline-flex w-fit rounded-full border border-pearl/10 bg-pearl/5 px-2.5 py-1 text-[11px] font-heading tracking-wide text-mist/75">
-                        線上限量 {displayAvailability.capacity} 席
-                      </p>
                       <p
                         className={`inline-flex w-fit rounded-full px-2.5 py-1 text-[11px] font-heading tracking-wide border ${remainingBadgeClass}`}
                       >
