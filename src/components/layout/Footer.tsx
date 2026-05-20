@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
 import { siteConfig, venues } from '../../data/landingContent'
+import { seoGuides } from '../../data/seoGuides'
 import logo from '../../assets/ufcgymtaiwan_logo.svg'
 
 type FooterProps = {
@@ -68,6 +69,31 @@ export function Footer({ onVenueAction }: FooterProps = {}) {
               )}
             </motion.div>
           ))}
+        </div>
+
+        <div
+          id="footer-guides"
+          className="mt-10 md:mt-14 border-t border-pearl/5 pt-6"
+        >
+          <p className="font-heading text-xs uppercase tracking-[0.28em] text-mist/50">
+            搜尋指南
+          </p>
+          <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-4">
+            {seoGuides.map((guide) => (
+              <a
+                key={guide.slug}
+                href={`/guides/${guide.slug}`}
+                className="rounded-xl border border-pearl/10 bg-black/20 p-4 transition-colors hover:border-neon/30 hover:bg-neon/10"
+              >
+                <span className="font-heading text-sm font-semibold text-pearl">
+                  {guide.footerLabel}
+                </span>
+                <span className="mt-2 block text-xs leading-relaxed text-mist/58">
+                  {guide.footerDescription}
+                </span>
+              </a>
+            ))}
+          </div>
         </div>
 
         <div className="mt-10 md:mt-14 pt-6 border-t border-pearl/5 text-center text-xs text-mist/50">

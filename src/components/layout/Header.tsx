@@ -7,11 +7,15 @@ import logo from '../../assets/ufcgymtaiwan_logo.svg'
 export function Header() {
   const [scrolled, setScrolled] = useState(false)
   const pathname =
-    typeof window !== 'undefined' ? window.location.pathname : '/'
+    typeof window !== 'undefined'
+      ? window.location.hash.replace(/^#/, '') || window.location.pathname
+      : '/'
   const isOffersPage =
     pathname.startsWith('/offers')
   const isBootCampPage =
     pathname.startsWith('/boot-camp')
+  const isGuidePage =
+    pathname.startsWith('/guides/')
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 50)
@@ -27,13 +31,15 @@ export function Header() {
     ? '選路徑與梯次'
     : isOffersPage
       ? '選 Boot Camp 場次'
-      : '選日期購買'
+      : isGuidePage
+        ? '查看 Boot Camp 計畫'
+        : '選日期購買'
   const ctaTargetId = isBootCampPage
     ? 'boot-camp-routes'
     : isOffersPage
       ? 'offers-plans'
       : 'ticket'
-  const ctaHref = `#${ctaTargetId}`
+  const ctaHref = isGuidePage ? '/boot-camp' : `#${ctaTargetId}`
 
   return (
     <motion.header
@@ -46,9 +52,9 @@ export function Header() {
     >
       <div className="max-w-6xl mx-auto px-3 sm:px-8 flex items-center justify-between">
         <a
-          href={isOffersPage || isBootCampPage ? '/' : '#hero'}
+          href={isOffersPage || isBootCampPage || isGuidePage ? '/' : '#hero'}
           onClick={(e) => {
-            if (!isOffersPage && !isBootCampPage) {
+            if (!isOffersPage && !isBootCampPage && !isGuidePage) {
               e.preventDefault()
               scrollTo('hero')
             }
@@ -66,7 +72,9 @@ export function Header() {
           <Button
             size="sm"
             href={ctaHref}
-            onClick={() => scrollTo(ctaTargetId)}
+            onClick={() => {
+              if (!isGuidePage) scrollTo(ctaTargetId)
+            }}
             data-cta="header-cta"
           >
             {ctaLabel}
@@ -75,7 +83,9 @@ export function Header() {
           <Button
             size="sm"
             href={ctaHref}
-            onClick={() => scrollTo(ctaTargetId)}
+            onClick={() => {
+              if (!isGuidePage) scrollTo(ctaTargetId)
+            }}
             data-cta="header-cta"
           >
             {ctaLabel}

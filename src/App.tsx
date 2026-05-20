@@ -15,6 +15,7 @@ import { BootCampPage } from './pages/BootCampPage'
 import { OffersPage } from './pages/OffersPage'
 import { PaymentResultPage } from './pages/PaymentResultPage'
 import { AdminPage } from './pages/AdminPage'
+import { SeoGuidePage } from './pages/SeoGuidePage'
 import { useScrollProgress } from './hooks/useScrollProgress'
 import { trackPageView } from './lib/analytics'
 
@@ -25,7 +26,9 @@ function getCurrentRoutePath() {
   if (
     hashPath.startsWith('/offers') ||
     hashPath.startsWith('/boot-camp') ||
-    hashPath.startsWith('/admin')
+    hashPath.startsWith('/payment/success') ||
+    hashPath.startsWith('/admin') ||
+    hashPath.startsWith('/guides/')
   ) {
     return hashPath
   }
@@ -142,6 +145,11 @@ function App() {
 
   if (pathname.startsWith('/payment/success')) {
     return <PaymentResultPage />
+  }
+
+  if (pathname.startsWith('/guides/')) {
+    const slug = pathname.replace(/^\/guides\//, '').split('/')[0]
+    return <SeoGuidePage slug={decodeURIComponent(slug)} />
   }
 
   if (pathname.startsWith('/admin')) {

@@ -35,6 +35,29 @@ if (-not (Test-Path -LiteralPath $PreviewDir)) {
   exit 1
 }
 
+$IndexHtml = Join-Path $PreviewDir 'index.html'
+if (Test-Path -LiteralPath $IndexHtml) {
+  Copy-Item -LiteralPath $IndexHtml -Destination (Join-Path $PreviewDir 'boot-camp.html') -Force
+
+  $GuideSlugs = @(
+    'taipei-boxing-muay-thai-classes',
+    'taichung-boxing-muay-thai-classes',
+    'beginner-combat-fitness',
+    'stress-release-after-workout'
+  )
+
+  foreach ($Slug in $GuideSlugs) {
+    $GuideDir = Join-Path $PreviewDir (Join-Path 'guides' $Slug)
+    $GuideHtml = Join-Path $GuideDir 'index.html'
+    New-Item -ItemType Directory -Force -Path $GuideDir | Out-Null
+    Copy-Item -LiteralPath $IndexHtml -Destination $GuideHtml -Force
+
+    $GuideContent = Get-Content -LiteralPath $GuideHtml -Raw
+    $GuideContent = $GuideContent -replace '\./assets/', '../../assets/'
+    Set-Content -LiteralPath $GuideHtml -Value $GuideContent -Encoding utf8
+  }
+}
+
 $Python = Get-Command python -ErrorAction SilentlyContinue
 if (-not $Python) {
   Write-Host "Python was not found." -ForegroundColor Red

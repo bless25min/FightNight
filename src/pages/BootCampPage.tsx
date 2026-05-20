@@ -4,6 +4,7 @@ import type { ReactNode } from 'react'
 import { Header } from '../components/layout/Header'
 import { Footer } from '../components/layout/Footer'
 import { FAQSection } from '../components/sections/FAQSection'
+import { Seo } from '../components/Seo'
 import { WeeklyScheduleSection } from '../components/sections/WeeklyScheduleSection'
 import { Button } from '../components/ui/Button'
 import { SectionHeading } from '../components/ui/SectionHeading'
@@ -14,8 +15,11 @@ import {
   bootCampCoreContent,
   bootCampFaqItems,
   bootCampRouteContent,
+  siteConfig,
+  venues,
 } from '../data/landingContent'
 import { useTracking } from '../hooks/useTracking'
+import { toAbsoluteUrl } from '../lib/url'
 import type { BootCampRoute } from '../types'
 import boxingRouteImage from '../assets/generated/bootcamp-route-boxing-poster.jpg'
 import bootCampCorePressureMemoryImage from '../assets/generated/bootcamp-core-pressure-memory.jpg'
@@ -30,6 +34,76 @@ const routeOrder: BootCampRoute[] = ['BOXING', 'MUAY_THAI']
 const routeImages: Record<BootCampRoute, string> = {
   BOXING: boxingRouteImage,
   MUAY_THAI: muayThaiRouteImage,
+}
+
+const bootCampSeoKeywords = [
+  'Boot Camp 拳擊課程',
+  'Boot Camp 泰拳課程',
+  '台北拳擊課程',
+  '台北泰拳課程',
+  '台中拳擊課程',
+  '台中泰拳課程',
+  '格鬥健身初學者',
+  '下班後運動',
+  '壓力釋放運動',
+  'UFCGYM TAIWAN',
+]
+
+function buildBootCampStructuredData() {
+  const url = toAbsoluteUrl('/boot-camp')
+
+  return [
+    {
+      '@type': 'WebPage',
+      '@id': `${url}#webpage`,
+      url,
+      name: 'Boot Camp 拳擊/泰拳課程',
+      description:
+        'UFCGYM TAIWAN Boot Camp 提供台北、台中拳擊與泰拳訓練計畫，適合想從單次體驗進入固定運動節奏的初學者。',
+      inLanguage: 'zh-Hant',
+      isPartOf: {
+        '@type': 'WebSite',
+        name: siteConfig.brandName,
+        url: toAbsoluteUrl('/'),
+      },
+      primaryImageOfPage: {
+        '@type': 'ImageObject',
+        url: toAbsoluteUrl(offersHeroPoster),
+      },
+      about: bootCampSeoKeywords,
+    },
+    {
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        {
+          '@type': 'ListItem',
+          position: 1,
+          name: '首頁',
+          item: toAbsoluteUrl('/'),
+        },
+        {
+          '@type': 'ListItem',
+          position: 2,
+          name: 'Boot Camp',
+          item: url,
+        },
+      ],
+    },
+    {
+      '@type': 'ItemList',
+      name: 'UFCGYM TAIWAN Boot Camp 場館',
+      itemListElement: venues.map((venue, index) => ({
+        '@type': 'ListItem',
+        position: index + 1,
+        item: {
+          '@type': 'SportsActivityLocation',
+          name: venue.name,
+          address: venue.address,
+          description: venue.transit,
+        },
+      })),
+    },
+  ]
 }
 
 const mobileFullBleedImageFrame =
@@ -454,6 +528,14 @@ export function BootCampPage() {
 
   return (
     <div className="relative w-full overflow-x-hidden bg-abyss pb-24 md:pb-0">
+      <Seo
+        title="Boot Camp 拳擊/泰拳課程｜台北台中 UFCGYM 初學者訓練計畫"
+        description="想找台北或台中拳擊、泰拳、踢拳課程？UFCGYM TAIWAN Boot Camp 幫你選場館、第一堂日期與兩堂或四堂訓練節奏，適合初學者建立固定運動習慣。"
+        canonicalPath="/boot-camp"
+        keywords={bootCampSeoKeywords}
+        image={offersHeroPoster}
+        structuredData={buildBootCampStructuredData()}
+      />
       <Header />
       <main>
         <BootCampHero
