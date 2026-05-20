@@ -11,6 +11,8 @@ type Props = {
   href?: string
   target?: string
   rel?: string
+  type?: 'button' | 'submit' | 'reset'
+  disabled?: boolean
   className?: string
   'data-cta'?: string
   'data-ticket'?: string
@@ -38,10 +40,12 @@ export function Button({
   href,
   target,
   rel,
+  type = 'button',
+  disabled = false,
   className = '',
   ...props
 }: Props) {
-  const classes = `interaction-hint inline-flex items-center justify-center gap-2 rounded-xl font-heading tracking-wide transition-all duration-300 cursor-pointer ${variantStyles[variant]} ${sizeStyles[size]} ${className}`
+  const classes = `interaction-hint inline-flex items-center justify-center gap-2 rounded-xl font-heading tracking-wide transition-all duration-300 cursor-pointer disabled:cursor-not-allowed disabled:opacity-55 ${variantStyles[variant]} ${sizeStyles[size]} ${className}`
 
   if (href) {
     return (
@@ -54,6 +58,7 @@ export function Button({
         className={classes}
         onClick={onClick}
         data-interaction-hint
+        aria-disabled={disabled || undefined}
         {...props}
       >
         {children}
@@ -63,6 +68,8 @@ export function Button({
 
   return (
     <motion.button
+      type={type}
+      disabled={disabled}
       onClick={onClick}
       whileHover={{ scale: 1.03 }}
       whileTap={{ scale: 0.97 }}

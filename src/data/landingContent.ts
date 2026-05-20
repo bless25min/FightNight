@@ -16,7 +16,7 @@ export const siteConfig = {
   brandName: 'UFCGYM TAIWAN',
   eventName: 'Fight Night',
   lineUrl: 'https://page.line.me/340uxvgb',
-  // TODO: 正式付款連結完成後，將各 plan.checkoutUrl 從 LINE fallback 換成付款 URL。
+  // 方案卡負責帶到可購買場次；指定場次付款由 SHOPLINE checkout session 建立。
   ticketUrl: '#ticket',
   offersUrl: '/offers',
   bootCampUrl: '/boot-camp',

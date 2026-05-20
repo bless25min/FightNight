@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import type { FormEvent } from 'react'
 import { createPortal } from 'react-dom'
 import {
   bootCampRouteContent,
@@ -14,7 +15,6 @@ import {
   type CoachProfile,
 } from '../../data/coachProfiles'
 import {
-  buildCourseBookingUrl,
   ONLINE_BOOKING_START_OFFSET_DAYS,
   ONLINE_SALES_SEAT_LIMIT,
   SCHEDULE_DISPLAY_LIMIT,
@@ -550,6 +550,168 @@ function CoachProfileModal({
   )
 }
 
+type CheckoutBuyer = {
+  name: string
+  phone: string
+  email: string
+}
+
+type PendingCheckout = {
+  course: WeeklyCourse
+  packageSize: 1 | 2 | 4
+  remaining: number
+  value: number
+  pricingTier: CoachPricingTier
+  sessionIds: string[]
+  seriesDates: string[]
+  route: BootCampRoute | null
+}
+
+function CheckoutContactModal({
+  pending,
+  error,
+  isSubmitting,
+  onClose,
+  onSubmit,
+}: {
+  pending: PendingCheckout
+  error: string | null
+  isSubmitting: boolean
+  onClose: () => void
+  onSubmit: (buyer: CheckoutBuyer) => void
+}) {
+  const [name, setName] = useState('')
+  const [phone, setPhone] = useState('')
+  const [email, setEmail] = useState('')
+  const packageLabel =
+    pending.course.category === 'BOOT_CAMP'
+      ? `${pending.packageSize} 堂 Boot Camp`
+      : 'Fight Night Pass'
+  const routeLabel = pending.route
+    ? bootCampRouteContent[pending.route].shortLabel
+    : null
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    onSubmit({
+      name: name.trim(),
+      phone: phone.trim(),
+      email: email.trim(),
+    })
+  }
+
+  return createPortal(
+    <motion.div
+      className="fixed inset-0 z-[130] flex items-end justify-center bg-black/78 p-0 backdrop-blur-sm md:items-center md:p-6"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      role="dialog"
+      aria-modal="true"
+      aria-label="SHOPLINE 付款資訊"
+      onClick={isSubmitting ? undefined : onClose}
+    >
+      <motion.form
+        className="w-full max-w-lg rounded-none border-y border-pearl/15 bg-abyss p-5 shadow-2xl shadow-black/50 md:rounded-3xl md:border md:p-6"
+        initial={{ opacity: 0, y: 28, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.22 }}
+        onClick={(event) => event.stopPropagation()}
+        onSubmit={handleSubmit}
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="font-heading text-xs uppercase tracking-[0.24em] text-neon/80">
+              SHOPLINE CHECKOUT
+            </p>
+            <h3 className="mt-2 font-heading text-2xl font-black leading-tight text-pearl">
+              確認付款資訊
+            </h3>
+          </div>
+          <button
+            type="button"
+            disabled={isSubmitting}
+            onClick={onClose}
+            data-interaction-hint
+            className="interaction-hint flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-pearl/15 bg-black/35 font-heading text-lg font-black text-pearl transition-colors hover:bg-black/55 disabled:cursor-not-allowed disabled:opacity-45"
+            aria-label="關閉付款資訊"
+          >
+            ×
+          </button>
+        </div>
+
+        <div className="mt-5 rounded-2xl border border-neon/15 bg-neon/8 p-4">
+          <p className="font-heading text-sm font-black text-pearl">
+            {packageLabel}
+            {routeLabel ? ` · ${routeLabel}` : ''}
+          </p>
+          <p className="mt-1 text-sm text-mist/70">
+            {pending.course.venueName} · {formatShortDate(pending.course.date)} 週
+            {pending.course.weekday} {pending.course.startTime}
+          </p>
+          <p className="mt-2 font-heading text-lg font-black text-neon">
+            NT${pending.value.toLocaleString('en-US')}
+          </p>
+        </div>
+
+        <div className="mt-5 grid gap-3">
+          <label className="grid gap-1.5 text-sm font-heading text-mist/72">
+            姓名
+            <input
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              required
+              autoComplete="name"
+              className="rounded-xl border border-pearl/12 bg-black/35 px-4 py-3 text-base text-pearl outline-none transition-colors placeholder:text-mist/35 focus:border-neon/45"
+              placeholder="王小明"
+            />
+          </label>
+          <label className="grid gap-1.5 text-sm font-heading text-mist/72">
+            手機
+            <input
+              value={phone}
+              onChange={(event) => setPhone(event.target.value)}
+              required
+              inputMode="tel"
+              autoComplete="tel"
+              className="rounded-xl border border-pearl/12 bg-black/35 px-4 py-3 text-base text-pearl outline-none transition-colors placeholder:text-mist/35 focus:border-neon/45"
+              placeholder="0912345678"
+            />
+          </label>
+          <label className="grid gap-1.5 text-sm font-heading text-mist/72">
+            Email
+            <input
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              type="email"
+              autoComplete="email"
+              className="rounded-xl border border-pearl/12 bg-black/35 px-4 py-3 text-base text-pearl outline-none transition-colors placeholder:text-mist/35 focus:border-neon/45"
+              placeholder="name@example.com"
+            />
+          </label>
+        </div>
+
+        {error && (
+          <p className="mt-4 rounded-xl border border-blaze/30 bg-blaze/10 px-4 py-3 text-sm leading-relaxed text-blaze">
+            {error}
+          </p>
+        )}
+
+        <Button
+          className="mt-5 w-full"
+          size="lg"
+          type="submit"
+          disabled={isSubmitting}
+          data-cta="shopline-checkout-submit"
+        >
+          {isSubmitting ? '建立付款中...' : '前往 SHOPLINE 付款'}
+        </Button>
+      </motion.form>
+    </motion.div>,
+    document.body,
+  )
+}
+
 type Props = {
   id?: string
   activeCategory?: CourseCategory
@@ -616,6 +778,10 @@ export function WeeklyScheduleSection({
     coachName: string
     profile: CoachProfile
   } | null>(null)
+  const [pendingCheckout, setPendingCheckout] =
+    useState<PendingCheckout | null>(null)
+  const [checkoutError, setCheckoutError] = useState<string | null>(null)
+  const [isCheckoutSubmitting, setIsCheckoutSubmitting] = useState(false)
   const isBootCampBookingMode =
     bookingMode === 'bootcamp' && activeCategory === 'BOOT_CAMP'
 
@@ -824,6 +990,112 @@ export function WeeklyScheduleSection({
       )
     },
     [buildCourseTrackingParams, trackCoursePurchaseClick],
+  )
+
+  const openShoplineCheckout = useCallback(
+    (
+      course: WeeklyCourse,
+      packageSize: 1 | 2 | 4,
+      remaining: number,
+      value: number,
+      pricingTier: CoachPricingTier,
+    ) => {
+      const series =
+        packageSize === 1
+          ? [
+              {
+                id: getSessionInventoryId(course),
+                date: course.date,
+              },
+            ]
+          : getBootCampSeries(course, packageSize)
+
+      setCheckoutError(null)
+      setPendingCheckout({
+        course,
+        packageSize,
+        remaining,
+        value,
+        pricingTier,
+        sessionIds: series.map((session) => session.id),
+        seriesDates: series.map((session) => session.date),
+        route: getBootCampRoute(course),
+      })
+      trackCoursePurchase(course, packageSize, remaining, value, pricingTier)
+    },
+    [trackCoursePurchase],
+  )
+
+  const submitShoplineCheckout = useCallback(
+    async (buyer: CheckoutBuyer) => {
+      if (!pendingCheckout) return
+
+      const phoneDigits = buyer.phone.replace(/[^\d+]/g, '')
+      if (phoneDigits.length < 8) {
+        setCheckoutError('請留下可聯絡的手機號碼。')
+        return
+      }
+
+      setIsCheckoutSubmitting(true)
+      setCheckoutError(null)
+
+      try {
+        track({
+          event: 'shopline_checkout_submit',
+          params: buildCourseTrackingParams(
+            pendingCheckout.course,
+            pendingCheckout.packageSize,
+            pendingCheckout.remaining,
+            pendingCheckout.value,
+            pendingCheckout.pricingTier,
+          ),
+          lineEventName: 'CheckoutSubmit',
+        })
+
+        const response = await fetch('/api/shopline/checkout-session', {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+          },
+          body: JSON.stringify({
+            buyer,
+            course: pendingCheckout.course,
+            packageSize: pendingCheckout.packageSize,
+            route: pendingCheckout.route,
+            sessionIds: pendingCheckout.sessionIds,
+            seriesDates: pendingCheckout.seriesDates,
+            client: {
+              screenWidth: String(window.screen.width),
+              screenHeight: String(window.screen.height),
+              timeZoneOffset: String(new Date().getTimezoneOffset()),
+              transactionWebSite: window.location.origin,
+              userAgent: window.navigator.userAgent,
+              language: window.navigator.language,
+              colorDepth: String(window.screen.colorDepth),
+            },
+            sourcePath: `${window.location.pathname}${window.location.search}${window.location.hash}`,
+          }),
+        })
+
+        const data = (await response.json().catch(() => null)) as
+          | { sessionUrl?: string; error?: string }
+          | null
+
+        if (!response.ok || !data?.sessionUrl) {
+          throw new Error(data?.error || 'SHOPLINE 付款建立失敗，請稍後再試。')
+        }
+
+        window.location.href = data.sessionUrl
+      } catch (error) {
+        setCheckoutError(
+          error instanceof Error
+            ? error.message
+            : 'SHOPLINE 付款建立失敗，請稍後再試。',
+        )
+        setIsCheckoutSubmitting(false)
+      }
+    },
+    [buildCourseTrackingParams, pendingCheckout, track],
   )
 
   const getPackageAvailability = useCallback(
@@ -1209,18 +1481,6 @@ export function WeeklyScheduleSection({
                   displayAvailability.remaining,
                   meta.badgeClass,
                 )
-                const bookingUrl = buildCourseBookingUrl(c, {
-                  packageSize: 1,
-                  seriesDates: [c.date],
-                })
-                const bookingUrl2 = buildCourseBookingUrl(c, {
-                  packageSize: 2,
-                  seriesDates: bootCampSeries2.map((session) => session.date),
-                })
-                const bookingUrl4 = buildCourseBookingUrl(c, {
-                  packageSize: 4,
-                  seriesDates: bootCampSeries4.map((session) => session.date),
-                })
                 const coachProfile = findCoachProfile(c.coach)
                 const coachPricingTier = getCoachPricingTier(c.coach, coachProfile)
                 const fightNightPriceLabel =
@@ -1241,8 +1501,6 @@ export function WeeklyScheduleSection({
                     selectedPackageSize === 2
                       ? bootCamp2Availability
                       : bootCamp4Availability
-                  const selectedBookingUrl =
-                    selectedPackageSize === 2 ? bookingUrl2 : bookingUrl4
 
                   return (
                     <motion.article
@@ -1425,11 +1683,10 @@ export function WeeklyScheduleSection({
 
                           {selectedPackageAvailability.remaining > 0 ? (
                             <Button
-                              href={selectedBookingUrl ?? undefined}
                               variant="primary"
                               className="mt-4 w-full"
                               onClick={() =>
-                                trackCoursePurchase(
+                                openShoplineCheckout(
                                   c,
                                   selectedPackageSize,
                                   selectedPackageAvailability.remaining,
@@ -1617,12 +1874,11 @@ export function WeeklyScheduleSection({
                         <div className="grid grid-cols-2 gap-2">
                           {bootCamp2Availability.remaining > 0 ? (
                             <Button
-                              href={bookingUrl2 ?? undefined}
                               variant="secondary"
                               size="sm"
                               className="w-full border-neon/25 bg-neon/10 text-pearl"
                               onClick={() =>
-                                trackCoursePurchase(
+                                openShoplineCheckout(
                                   c,
                                   2,
                                   bootCamp2Availability.remaining,
@@ -1645,12 +1901,11 @@ export function WeeklyScheduleSection({
                           )}
                           {bootCamp4Availability.remaining > 0 ? (
                             <Button
-                              href={bookingUrl4 ?? undefined}
                               variant="primary"
                               size="sm"
                               className="w-full"
                               onClick={() =>
-                                trackCoursePurchase(
+                                openShoplineCheckout(
                                   c,
                                   4,
                                   bootCamp4Availability.remaining,
@@ -1675,11 +1930,10 @@ export function WeeklyScheduleSection({
                       ) : (
                         sessionAvailability.remaining > 0 ? (
                           <Button
-                            href={bookingUrl ?? undefined}
                             variant="primary"
                             className="w-full"
                             onClick={() =>
-                              trackCoursePurchase(
+                              openShoplineCheckout(
                                 c,
                                 1,
                                 sessionAvailability.remaining,
@@ -1716,6 +1970,20 @@ export function WeeklyScheduleSection({
           coachName={selectedCoach.coachName}
           profile={selectedCoach.profile}
           onClose={() => setSelectedCoach(null)}
+        />
+      )}
+
+      {pendingCheckout && (
+        <CheckoutContactModal
+          pending={pendingCheckout}
+          error={checkoutError}
+          isSubmitting={isCheckoutSubmitting}
+          onClose={() => {
+            if (isCheckoutSubmitting) return
+            setPendingCheckout(null)
+            setCheckoutError(null)
+          }}
+          onSubmit={(buyer) => void submitShoplineCheckout(buyer)}
         />
       )}
     </>

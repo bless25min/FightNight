@@ -119,15 +119,33 @@ export function TicketSection() {
             </LockedContent>
 
             {gateState.status === 'unlocked' && (
-              <div className="mt-6 flex justify-center">
-                <Button
-                  variant="ghost"
-                  href={bootCampHref}
-                  onClick={() => trackSecondaryCta()}
-                  data-cta="ticket-bootcamp-entry"
-                >
-                  了解 Boot Camp 方案
-                </Button>
+              <div className="mt-8 border-y border-neon/20 bg-neon/8 px-4 py-5 md:mt-10 md:flex md:items-center md:justify-between md:gap-6 md:px-6 md:py-6">
+                <div className="max-w-xl">
+                  <p className="font-heading text-xs uppercase tracking-[0.26em] text-neon/80">
+                    不只想試一次？
+                  </p>
+                  <p className="mt-2 font-heading text-2xl font-black leading-tight text-pearl md:text-3xl">
+                    把這一晚，變成接下來幾週真的會出現的節奏。
+                  </p>
+                  <p className="mt-3 text-sm leading-relaxed text-mist/72 md:text-base">
+                    如果你想要的不只是進場體驗，Boot Camp 會把同館同時段、兩堂或四堂的訓練先替你排好。
+                  </p>
+                </div>
+                <div className="mt-5 md:mt-0 md:w-64">
+                  <Button
+                    variant="primary"
+                    size="lg"
+                    href={bootCampHref}
+                    className="w-full"
+                    onClick={() => trackSecondaryCta()}
+                    data-cta="ticket-bootcamp-entry"
+                  >
+                    直接看 Boot Camp 梯次
+                  </Button>
+                  <p className="mt-2 text-center text-xs text-mist/55">
+                    拳擊 / 泰拳 · 兩堂 / 四堂
+                  </p>
+                </div>
               </div>
             )}
           </div>

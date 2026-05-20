@@ -1,0 +1,559 @@
+const DEFAULT_CAPACITY = 6
+const CURRENCY = 'TWD'
+
+const coachPricingByTier = {
+  'foreign-fighter': {
+    fightNight: 1280,
+    bootCamp: {
+      2: 2200,
+      4: 3800,
+    },
+  },
+  'domestic-teacher': {
+    fightNight: 980,
+    bootCamp: {
+      2: 1800,
+      4: 2800,
+    },
+  },
+}
+
+const foreignFighterNameKeywords = [
+  'Andre',
+  'Bruno',
+  'Got',
+  'Mario',
+  'Rafael',
+  'Ygor',
+  'Alex Morales',
+]
+
+function json(data, init = {}) {
+  return new Response(JSON.stringify(data), {
+    ...init,
+    headers: {
+      'content-type': 'application/json; charset=utf-8',
+      'cache-control': 'no-store',
+      ...init.headers,
+    },
+  })
+}
+
+function normalizeCoachName(value) {
+  return String(value || '')
+    .normalize('NFKC')
+    .replace(/\s+/g, '')
+    .replace(/[—－–-]/g, '-')
+    .trim()
+}
+
+function getCoachPricingTier(coachName) {
+  const normalized = normalizeCoachName(coachName).toLowerCase()
+  const isForeignFighter = foreignFighterNameKeywords.some((keyword) =>
+    normalized.includes(normalizeCoachName(keyword).toLowerCase()),
+  )
+
+  return isForeignFighter ? 'foreign-fighter' : 'domestic-teacher'
+}
+
+function getPriceAmount(course, packageSize) {
+  const tier = getCoachPricingTier(course.coach)
+  const prices = coachPricingByTier[tier]
+
+  if (course.category === 'FIGHT_NIGHT') {
+    return {
+      value: prices.fightNight,
+      pricingTier: tier,
+    }
+  }
+
+  if (course.category === 'BOOT_CAMP' && (packageSize === 2 || packageSize === 4)) {
+    return {
+      value: prices.bootCamp[packageSize],
+      pricingTier: tier,
+    }
+  }
+
+  throw new Error('Invalid course package')
+}
+
+function addDays(iso, days) {
+  const d = new Date(`${iso}T00:00:00`)
+  d.setDate(d.getDate() + days)
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+function getSessionInventoryId(course, date = course.date) {
+  if (date === course.date) return course.id
+  const dynamicDateSuffix = /-\d{4}-\d{2}-\d{2}$/
+  const baseId = course.id.replace(dynamicDateSuffix, '')
+  return `${baseId}-${date}`
+}
+
+function buildSessionIds(course, packageSize) {
+  if (packageSize === 1) {
+    return {
+      sessionIds: [getSessionInventoryId(course)],
+      seriesDates: [course.date],
+    }
+  }
+
+  const seriesDates = Array.from({ length: packageSize }, (_, index) =>
+    addDays(course.date, index * 7),
+  )
+
+  return {
+    sessionIds: seriesDates.map((date) => getSessionInventoryId(course, date)),
+    seriesDates,
+  }
+}
+
+function getBootCampRoute(course, submittedRoute) {
+  if (submittedRoute === 'BOXING' || submittedRoute === 'MUAY_THAI') {
+    return submittedRoute
+  }
+
+  const name = String(course.name || '')
+  if (name.includes('泰拳') || name.includes('踢拳')) return 'MUAY_THAI'
+  if (name.includes('拳擊')) return 'BOXING'
+  return null
+}
+
+function normalizePhone(phone) {
+  const cleaned = String(phone || '').replace(/[^\d+]/g, '')
+  if (cleaned.startsWith('+')) return cleaned
+  if (cleaned.startsWith('0')) return `+886${cleaned.slice(1)}`
+  return cleaned
+}
+
+function splitName(name) {
+  const trimmed = String(name || '').trim()
+  if (!trimmed) {
+    return { firstName: 'Fight Night', lastName: 'Guest' }
+  }
+
+  const parts = trimmed.split(/\s+/)
+  if (parts.length === 1) {
+    return { firstName: trimmed.slice(0, 32), lastName: '-' }
+  }
+
+  return {
+    firstName: parts.slice(0, -1).join(' ').slice(0, 32),
+    lastName: parts.at(-1).slice(0, 32),
+  }
+}
+
+function randomHex(bytes = 8) {
+  const buffer = new Uint8Array(bytes)
+  crypto.getRandomValues(buffer)
+  return Array.from(buffer, (byte) => byte.toString(16).padStart(2, '0')).join('')
+}
+
+function createReferenceId() {
+  return `FN${Date.now().toString(36).toUpperCase()}${randomHex(5).toUpperCase()}`.slice(0, 32)
+}
+
+function parsePaymentMethods(env) {
+  const raw = env.SHOPLINE_PAYMENT_METHODS || 'CreditCard,ApplePay,LinePay'
+  return raw
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+}
+
+function cleanObject(value) {
+  if (Array.isArray(value)) {
+    const cleaned = value.map(cleanObject).filter((entry) => entry !== undefined)
+    return cleaned.length ? cleaned : undefined
+  }
+  if (value && typeof value === 'object') {
+    const cleanedEntries = Object.entries(value)
+      .map(([key, entryValue]) => [key, cleanObject(entryValue)])
+      .filter(
+        ([, entryValue]) =>
+          entryValue !== undefined && entryValue !== null && entryValue !== '',
+      )
+
+    return cleanedEntries.length ? Object.fromEntries(cleanedEntries) : undefined
+  }
+  return value
+}
+
+async function ensureTables(env) {
+  await env.DB.prepare(
+    `CREATE TABLE IF NOT EXISTS session_inventory (
+      session_id TEXT PRIMARY KEY,
+      capacity INTEGER NOT NULL DEFAULT 6,
+      sold INTEGER NOT NULL DEFAULT 0,
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      CHECK (capacity >= 0),
+      CHECK (sold >= 0),
+      CHECK (sold <= capacity)
+    )`,
+  ).run()
+  await env.DB.prepare(
+    `CREATE TABLE IF NOT EXISTS course_orders (
+      reference_id TEXT PRIMARY KEY,
+      status TEXT NOT NULL DEFAULT 'pending',
+      shopline_session_id TEXT,
+      shopline_trade_order_id TEXT,
+      event_id TEXT,
+      course_id TEXT NOT NULL,
+      course_name TEXT NOT NULL,
+      category TEXT NOT NULL,
+      venue_id TEXT NOT NULL,
+      venue_name TEXT NOT NULL,
+      coach TEXT NOT NULL,
+      coach_pricing_tier TEXT NOT NULL,
+      route TEXT,
+      package_size INTEGER NOT NULL,
+      quantity INTEGER NOT NULL DEFAULT 1,
+      amount_value INTEGER NOT NULL,
+      currency TEXT NOT NULL DEFAULT 'TWD',
+      session_ids_json TEXT NOT NULL,
+      series_dates_json TEXT NOT NULL,
+      buyer_name TEXT NOT NULL,
+      buyer_phone TEXT NOT NULL,
+      buyer_email TEXT,
+      source_path TEXT,
+      return_url TEXT NOT NULL,
+      shopline_session_url TEXT,
+      raw_request_json TEXT,
+      raw_session_json TEXT,
+      raw_webhook_json TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      paid_at TEXT
+    )`,
+  ).run()
+  await env.DB.prepare(
+    `CREATE INDEX IF NOT EXISTS idx_course_orders_status
+     ON course_orders (status, updated_at)`,
+  ).run()
+}
+
+async function ensureInventoryRows(env, sessionIds) {
+  for (const sessionId of sessionIds) {
+    await env.DB.prepare(
+      `INSERT OR IGNORE INTO session_inventory
+       (session_id, capacity, sold, updated_at)
+       VALUES (?, ?, 0, datetime('now'))`,
+    )
+      .bind(sessionId, DEFAULT_CAPACITY)
+      .run()
+  }
+}
+
+async function getAvailability(env, sessionIds) {
+  const placeholders = sessionIds.map(() => '?').join(',')
+  const { results } = await env.DB.prepare(
+    `SELECT session_id, capacity, sold
+     FROM session_inventory
+     WHERE session_id IN (${placeholders})`,
+  )
+    .bind(...sessionIds)
+    .all()
+
+  const rowsById = new Map((results || []).map((row) => [row.session_id, row]))
+  return sessionIds.map((sessionId) => {
+    const row = rowsById.get(sessionId)
+    const capacity = Math.max(0, Number(row?.capacity ?? DEFAULT_CAPACITY))
+    const sold = Math.max(0, Number(row?.sold ?? 0))
+    return {
+      sessionId,
+      capacity,
+      sold,
+      remaining: Math.max(0, capacity - sold),
+    }
+  })
+}
+
+function assertCourse(course) {
+  if (!course || typeof course !== 'object') {
+    throw new Error('Missing course')
+  }
+  const required = ['id', 'category', 'venueId', 'venueName', 'name', 'coach', 'date', 'startTime', 'endTime']
+  for (const key of required) {
+    if (!String(course[key] || '').trim()) throw new Error(`Missing course.${key}`)
+  }
+  if (!['FIGHT_NIGHT', 'BOOT_CAMP'].includes(course.category)) {
+    throw new Error('Invalid course category')
+  }
+}
+
+function buildShoplinePayload({
+  referenceId,
+  body,
+  buyer,
+  course,
+  packageSize,
+  route,
+  seriesDates,
+  amountValue,
+  returnUrl,
+  productUrl,
+  env,
+  request,
+}) {
+  const amount = {
+    value: amountValue * 100,
+    currency: CURRENCY,
+  }
+  const personalInfo = {
+    ...splitName(buyer.name),
+    phone: buyer.phone,
+    email: buyer.email,
+  }
+  const shippingAddress = {
+    countryCode: 'TW',
+    street: `${course.venueName} 現場課程`,
+  }
+  const productName =
+    course.category === 'BOOT_CAMP'
+      ? `Boot Camp ${packageSize}堂｜${course.name}`
+      : `Fight Night Pass｜${course.name}`
+
+  return cleanObject({
+    referenceId,
+    mode: 'regular',
+    language: env.SHOPLINE_LANGUAGE,
+    amount,
+    expireTime: Number(env.SHOPLINE_SESSION_EXPIRE_MINUTES || 60),
+    returnUrl,
+    allowPaymentMethodList: parsePaymentMethods(env),
+    paymentMethodOptions: {
+      CreditCard: {
+        installmentCounts: String(env.SHOPLINE_CREDIT_CARD_INSTALLMENTS || '')
+          .split(',')
+          .map((item) => item.trim())
+          .filter(Boolean),
+      },
+    },
+    order: {
+      products: [
+        {
+          amount,
+          quantity: 1,
+          id: `${course.id}-${packageSize}`.slice(0, 64),
+          name: productName.slice(0, 120),
+        },
+      ],
+      shipping: {
+        personalInfo,
+        address: shippingAddress,
+        shippingMethod: '現場報到',
+        carrier: 'UFCGYM TAIWAN',
+      },
+    },
+    customer: {
+      referenceCustomerId: `${referenceId}-${buyer.phone}`.slice(0, 64),
+      personalInfo,
+    },
+    client: {
+      ...body.client,
+      ip:
+        request.headers.get('CF-Connecting-IP') ||
+        request.headers.get('x-forwarded-for') ||
+        '127.0.0.1',
+    },
+    billing: {
+      personalInfo,
+      address: shippingAddress,
+    },
+    additionalData: {
+      courseId: course.id,
+      packageSize,
+      route,
+      seriesDates: seriesDates.join(','),
+      productUrl,
+    },
+  })
+}
+
+async function createShoplineSession(env, payload) {
+  const apiBaseUrl =
+    env.SHOPLINE_API_BASE_URL || 'https://api-sandbox.shoplinepayments.com'
+  const requestId = `RQ${Date.now().toString(36).toUpperCase()}${randomHex(4).toUpperCase()}`.slice(0, 32)
+  const headers = {
+    'content-type': 'application/json',
+    merchantId: env.SHOPLINE_MERCHANT_ID,
+    apiKey: env.SHOPLINE_API_KEY,
+    requestId,
+  }
+
+  if (env.SHOPLINE_API_VERSION) {
+    headers.apiVersion = env.SHOPLINE_API_VERSION
+  }
+
+  const response = await fetch(
+    `${apiBaseUrl.replace(/\/$/, '')}/api/v1/trade/sessions/create`,
+    {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload),
+    },
+  )
+  const data = await response.json().catch(() => null)
+
+  if (!response.ok || !data?.sessionUrl) {
+    throw new Error(data?.msg || data?.message || 'SHOPLINE session create failed')
+  }
+
+  return data
+}
+
+export async function onRequestPost({ request, env }) {
+  if (!env.DB) {
+    return json({ error: 'Missing D1 binding DB' }, { status: 503 })
+  }
+
+  if (!env.SHOPLINE_MERCHANT_ID || !env.SHOPLINE_API_KEY) {
+    return json({ error: 'Missing SHOPLINE payment configuration' }, { status: 503 })
+  }
+
+  const body = await request.json().catch(() => null)
+
+  try {
+    const course = body?.course
+    assertCourse(course)
+
+    const packageSize = Math.max(1, Math.min(4, Number(body?.packageSize || 1)))
+    if (course.category === 'FIGHT_NIGHT' && packageSize !== 1) {
+      throw new Error('Fight Night can only be purchased as one session')
+    }
+    if (course.category === 'BOOT_CAMP' && ![2, 4].includes(packageSize)) {
+      throw new Error('Boot Camp must be purchased as 2 or 4 sessions')
+    }
+
+    const buyer = {
+      name: String(body?.buyer?.name || '').trim(),
+      phone: normalizePhone(body?.buyer?.phone),
+      email: String(body?.buyer?.email || '').trim(),
+    }
+    if (!buyer.name || buyer.phone.length < 8) {
+      throw new Error('Missing buyer contact')
+    }
+
+    await ensureTables(env)
+
+    const referenceId = createReferenceId()
+    const { value: amountValue, pricingTier } = getPriceAmount(course, packageSize)
+    const { sessionIds, seriesDates } = buildSessionIds(course, packageSize)
+    const availability = await getAvailability(env, sessionIds)
+    if (availability.some((record) => record.remaining <= 0)) {
+      return json(
+        {
+          error: 'Selected session is sold out',
+          availability,
+        },
+        { status: 409 },
+      )
+    }
+
+    const url = new URL(request.url)
+    const returnUrl = `${url.origin}/payment/success?referenceId=${encodeURIComponent(referenceId)}`
+    const productUrl = `${url.origin}${body?.sourcePath || '/offers'}`
+    const route = getBootCampRoute(course, body?.route)
+    const shoplinePayload = buildShoplinePayload({
+      referenceId,
+      body,
+      buyer,
+      course,
+      packageSize,
+      route,
+      seriesDates,
+      amountValue,
+      returnUrl,
+      productUrl,
+      env,
+      request,
+    })
+
+    await env.DB.prepare(
+      `INSERT INTO course_orders (
+        reference_id, status, event_id, course_id, course_name, category,
+        venue_id, venue_name, coach, coach_pricing_tier, route, package_size,
+        quantity, amount_value, currency, session_ids_json, series_dates_json,
+        buyer_name, buyer_phone, buyer_email, source_path, return_url,
+        raw_request_json
+      ) VALUES (?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+      .bind(
+        referenceId,
+        `purchase.${referenceId}`,
+        course.id,
+        course.name,
+        course.category,
+        course.venueId,
+        course.venueName,
+        course.coach,
+        pricingTier,
+        route,
+        packageSize,
+        amountValue,
+        CURRENCY,
+        JSON.stringify(sessionIds),
+        JSON.stringify(seriesDates),
+        buyer.name,
+        buyer.phone,
+        buyer.email || null,
+        body?.sourcePath || null,
+        returnUrl,
+        JSON.stringify(shoplinePayload),
+      )
+      .run()
+
+    await ensureInventoryRows(env, sessionIds)
+
+    let session
+    try {
+      session = await createShoplineSession(env, shoplinePayload)
+    } catch (error) {
+      await env.DB.prepare(
+        `UPDATE course_orders
+         SET status = 'session_failed',
+             updated_at = datetime('now')
+         WHERE reference_id = ?`,
+      )
+        .bind(referenceId)
+        .run()
+      throw error
+    }
+
+    await env.DB.prepare(
+      `UPDATE course_orders
+       SET shopline_session_id = ?,
+           shopline_session_url = ?,
+           raw_session_json = ?,
+           updated_at = datetime('now')
+       WHERE reference_id = ?`,
+    )
+      .bind(
+        session.sessionId || null,
+        session.sessionUrl,
+        JSON.stringify(session),
+        referenceId,
+      )
+      .run()
+
+    return json({
+      ok: true,
+      referenceId,
+      sessionId: session.sessionId,
+      sessionUrl: session.sessionUrl,
+    })
+  } catch (error) {
+    return json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : 'SHOPLINE checkout session failed',
+      },
+      { status: 400 },
+    )
+  }
+}

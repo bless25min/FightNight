@@ -129,3 +129,46 @@ Recommended ad-platform conversion setup:
 | Future `Purchase` | Fire only after payment succeeds, ideally from server/webhook. |
 
 Meta Pixel events include `eventID` so a future Conversions API implementation can deduplicate browser and server events.
+
+## SHOPLINE Payments
+
+Course purchase buttons now create a SHOPLINE Payments redirect checkout session through Cloudflare Pages Functions:
+
+| Route | Purpose |
+| --- | --- |
+| `POST /api/shopline/checkout-session` | Creates a pending local order and requests a SHOPLINE checkout `sessionUrl`. |
+| `POST /api/shopline/webhook` | Verifies SHOPLINE webhook signature and marks successful payments as paid. |
+| `GET /api/shopline/order-status?referenceId=...` | Reads the local order state for `/payment/success`. |
+
+Required production secrets:
+
+```
+SHOPLINE_MERCHANT_ID=your_merchant_id
+SHOPLINE_API_KEY=your_api_key
+SHOPLINE_WEBHOOK_SIGN_KEY=your_sign_key
+SHOPLINE_API_BASE_URL=https://api.shoplinepayments.com
+SHOPLINE_PAYMENT_METHODS=CreditCard,ApplePay,LinePay
+```
+
+Optional:
+
+```
+SHOPLINE_LANGUAGE=zh-TW
+SHOPLINE_SESSION_EXPIRE_MINUTES=60
+SHOPLINE_CREDIT_CARD_INSTALLMENTS=3,6
+SHOPLINE_WEBHOOK_TOLERANCE_MS=900000
+SHOPLINE_API_VERSION=V1.2
+```
+
+Database setup:
+
+```bash
+wrangler d1 execute <database_name> --remote --file database/session_inventory.sql
+wrangler d1 execute <database_name> --remote --file database/shopline_orders.sql
+```
+
+Webhook URL to configure in SHOPLINE Payments:
+
+```
+https://<your-domain>/api/shopline/webhook
+```

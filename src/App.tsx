@@ -13,6 +13,7 @@ import { FinalCTASection } from './components/sections/FinalCTASection'
 import { Footer } from './components/layout/Footer'
 import { BootCampPage } from './pages/BootCampPage'
 import { OffersPage } from './pages/OffersPage'
+import { PaymentResultPage } from './pages/PaymentResultPage'
 import { useScrollProgress } from './hooks/useScrollProgress'
 import { trackPageView } from './lib/analytics'
 
@@ -131,6 +132,10 @@ function App() {
 
   if (pathname.startsWith('/boot-camp')) {
     return <BootCampPage />
+  }
+
+  if (pathname.startsWith('/payment/success')) {
+    return <PaymentResultPage />
   }
 
   return <HomePage />

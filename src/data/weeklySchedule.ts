@@ -1,48 +1,5 @@
 import type { WeeklyCourse } from '../types'
 
-// 暫用 BookFast 各分店搜尋頁取代正式付款頁。
-// 目前先帶入場館、日期與時間，讓使用者落在最接近「指定場次」的搜尋結果。
-const venueBookfastStoreId: Record<string, string> = {
-  'venue-dunnan': '9qa53QGE3W',
-  'venue-neihu': '0rmRDN8ny6',
-  'venue-taichung': 'VkB5d8p5j3',
-}
-
-type BookingUrlOptions = {
-  packageSize?: 1 | 2 | 4
-  seriesDates?: string[]
-}
-
-export function buildCourseBookingUrl(
-  course: WeeklyCourse,
-  options: BookingUrlOptions = {},
-): string | null {
-  const storeId = venueBookfastStoreId[course.venueId]
-  if (!storeId) return null
-
-  const params = new URLSearchParams({
-    storeIds: JSON.stringify([storeId]),
-    courseType: JSON.stringify([]),
-    queryWeeks: JSON.stringify([]),
-    queryDates: JSON.stringify([course.date]),
-    teacherIds: JSON.stringify([]),
-    courseIds: JSON.stringify([]),
-    startTime: course.startTime,
-    endTime: course.endTime,
-    minPrice: '0',
-    maxPrice: '0',
-    pageNumber: '1',
-    orderType: 'startTime',
-    orderDirection: 'ASC',
-    fnSessionId: course.id,
-    fnCourseName: course.name,
-    fnPackageSize: String(options.packageSize ?? 1),
-    fnSeriesDates: JSON.stringify(options.seriesDates ?? [course.date]),
-  })
-
-  return `https://ec.bookfastpos.com/GbARqWPnjP/search/result?${params.toString()}`
-}
-
 export const SCHEDULE_DISPLAY_LIMIT = 12
 export const ONLINE_SALES_SEAT_LIMIT = 6
 export const ONLINE_BOOKING_START_OFFSET_DAYS = 8
