@@ -125,10 +125,7 @@ export function TicketSection() {
                     不只想試一次？
                   </p>
                   <p className="mt-2 font-heading text-2xl font-black leading-tight text-pearl md:text-3xl">
-                    把這一晚，變成接下來幾週真的會出現的節奏。
-                  </p>
-                  <p className="mt-3 text-sm leading-relaxed text-mist/72 md:text-base">
-                    如果你想要的不只是進場體驗，Boot Camp 會把同館同時段、兩堂或四堂的訓練先替你排好。
+                    用一個習慣，讓自己產生蛻變
                   </p>
                 </div>
                 <div className="mt-5 md:mt-0 md:w-64">
@@ -140,11 +137,8 @@ export function TicketSection() {
                     onClick={() => trackSecondaryCta()}
                     data-cta="ticket-bootcamp-entry"
                   >
-                    直接看 Boot Camp 梯次
+                    查看 Boot Camp 計畫
                   </Button>
-                  <p className="mt-2 text-center text-xs text-mist/55">
-                    拳擊 / 泰拳 · 兩堂 / 四堂
-                  </p>
                 </div>
               </div>
             )}
