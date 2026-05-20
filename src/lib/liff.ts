@@ -16,6 +16,7 @@ export type LiffInstance = {
   }) => Promise<void>
   isLoggedIn: () => boolean
   login: (config?: { redirectUri?: string }) => void
+  getAccessToken?: () => string | null
   getProfile: () => Promise<LiffProfile>
   getFriendship: () => Promise<LiffFriendship>
   requestFriendship: () => Promise<void>

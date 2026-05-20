@@ -14,6 +14,7 @@ import { Footer } from './components/layout/Footer'
 import { BootCampPage } from './pages/BootCampPage'
 import { OffersPage } from './pages/OffersPage'
 import { PaymentResultPage } from './pages/PaymentResultPage'
+import { AdminPage } from './pages/AdminPage'
 import { useScrollProgress } from './hooks/useScrollProgress'
 import { trackPageView } from './lib/analytics'
 
@@ -21,13 +22,18 @@ function getCurrentRoutePath() {
   if (typeof window === 'undefined') return '/'
 
   const hashPath = window.location.hash.replace(/^#/, '')
-  if (hashPath.startsWith('/offers') || hashPath.startsWith('/boot-camp')) {
+  if (
+    hashPath.startsWith('/offers') ||
+    hashPath.startsWith('/boot-camp') ||
+    hashPath.startsWith('/admin')
+  ) {
     return hashPath
   }
 
   const pathname = window.location.pathname
   if (pathname.endsWith('/offers.html')) return '/offers'
   if (pathname.endsWith('/boot-camp.html')) return '/boot-camp'
+  if (pathname.endsWith('/admin.html')) return '/admin'
 
   return pathname
 }
@@ -136,6 +142,10 @@ function App() {
 
   if (pathname.startsWith('/payment/success')) {
     return <PaymentResultPage />
+  }
+
+  if (pathname.startsWith('/admin')) {
+    return <AdminPage />
   }
 
   return <HomePage />

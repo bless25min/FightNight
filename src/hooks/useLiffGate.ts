@@ -31,6 +31,36 @@ function isMobileDevice() {
   return /Android|iPhone|iPad|iPod|Line/i.test(userAgent) || mobileViewport
 }
 
+function getSourcePath() {
+  if (typeof window === 'undefined') return ''
+  return `${window.location.pathname}${window.location.search}${window.location.hash}`
+}
+
+function getLiffPlacement() {
+  const sourcePath = getSourcePath()
+  if (sourcePath.includes('boot-camp')) return 'boot_camp_gate'
+  if (sourcePath.includes('offers')) return 'offers_gate'
+  return 'ticket_gate'
+}
+
+function recordLiffAccess(accessToken: string | null | undefined, friendFlag: boolean) {
+  if (!accessToken) return
+
+  void fetch('/api/liff/record-access', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      accessToken,
+      friendFlag,
+      placement: getLiffPlacement(),
+      sourcePath: getSourcePath(),
+    }),
+    keepalive: true,
+  }).catch(() => undefined)
+}
+
 export function useLiffGate() {
   const [gateState, setGateState] = useState<LiffGateState>({
     status: 'loading',
@@ -68,6 +98,7 @@ export function useLiffGate() {
         liff.getProfile(),
         liff.getFriendship(),
       ])
+      recordLiffAccess(liff.getAccessToken?.(), friendship.friendFlag)
 
       if (friendship.friendFlag) {
         setGateState({

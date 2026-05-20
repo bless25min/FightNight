@@ -130,6 +130,8 @@ Recommended ad-platform conversion setup:
 
 Meta Pixel events include `eventID` so a future Conversions API implementation can deduplicate browser and server events.
 
+The same browser events are also posted to `POST /api/events` and stored in D1 as first-party anonymous funnel data. This lets `/admin` show page views, route/package selections, checkout starts, and other behavior without relying only on ad-platform dashboards.
+
 ## SHOPLINE Payments
 
 Course purchase buttons now create a SHOPLINE Payments redirect checkout session through Cloudflare Pages Functions:
@@ -165,6 +167,7 @@ Database setup:
 ```bash
 wrangler d1 execute <database_name> --remote --file database/session_inventory.sql
 wrangler d1 execute <database_name> --remote --file database/shopline_orders.sql
+wrangler d1 execute <database_name> --remote --file database/customer_tracking.sql
 ```
 
 Webhook URL to configure in SHOPLINE Payments:
@@ -172,3 +175,29 @@ Webhook URL to configure in SHOPLINE Payments:
 ```
 https://<your-domain>/api/shopline/webhook
 ```
+
+## Customer Tracking Admin
+
+The admin dashboard is available at:
+
+```
+https://<your-domain>/admin
+```
+
+Required secret:
+
+```
+ADMIN_TOKEN=your_private_admin_token
+```
+
+Admin APIs:
+
+| Route | Purpose |
+| --- | --- |
+| `GET /api/admin/summary` | Revenue, pending orders, attention statuses, 7-day event and LINE summary. |
+| `GET /api/admin/orders` | SHOPLINE checkout customers and order status. |
+| `GET /api/admin/inventory` | Per-session capacity, sold, and remaining seats. |
+| `GET /api/admin/events` | Anonymous first-party funnel events written by `/api/events`. |
+| `GET /api/admin/line-customers` | LINE users verified through LIFF access token and their access counts. |
+
+The dashboard reads `ADMIN_TOKEN` from the browser input and sends it as `x-admin-token`. Do not expose this token in client-side environment variables.

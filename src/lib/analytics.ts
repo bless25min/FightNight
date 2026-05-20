@@ -34,6 +34,9 @@ type MetaPixelFunction = ((...args: MetaPixelArguments) => void) & {
 
 type LineTagFunction = (...args: unknown[]) => void
 
+const anonymousIdKey = 'fightnight_anonymous_id'
+const sessionIdKey = 'fightnight_session_id'
+
 declare global {
   interface Window {
     dataLayer?: GtagArguments[]
@@ -83,6 +86,98 @@ function createEventId(event: string) {
   }
 
   return `${event}.${Date.now()}.${Math.random().toString(36).slice(2)}`
+}
+
+function createClientId(prefix: string) {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+    return `${prefix}.${crypto.randomUUID()}`
+  }
+
+  return `${prefix}.${Date.now()}.${Math.random().toString(36).slice(2)}`
+}
+
+function getStoredClientId(
+  storage: Storage | undefined,
+  key: string,
+  prefix: string,
+) {
+  if (!storage) return createClientId(prefix)
+
+  try {
+    const existing = storage.getItem(key)
+    if (existing) return existing
+
+    const next = createClientId(prefix)
+    storage.setItem(key, next)
+    return next
+  } catch {
+    return createClientId(prefix)
+  }
+}
+
+function getAnonymousId() {
+  if (typeof window === 'undefined') return createClientId('anon')
+  return getStoredClientId(window.localStorage, anonymousIdKey, 'anon')
+}
+
+function getSessionId() {
+  if (typeof window === 'undefined') return createClientId('session')
+  return getStoredClientId(window.sessionStorage, sessionIdKey, 'session')
+}
+
+function getRoutePath() {
+  if (typeof window === 'undefined') return ''
+  return `${window.location.pathname}${window.location.search}${window.location.hash}`
+}
+
+function isPrivateAnalyticsPath(path: string) {
+  return (
+    path.startsWith('/admin') ||
+    path.startsWith('/admin.html') ||
+    path.includes('#/admin')
+  )
+}
+
+function isPrivateAnalyticsRoute() {
+  return isPrivateAnalyticsPath(getRoutePath())
+}
+
+function postServerEvent(
+  event: string,
+  params: TrackingParams | undefined,
+  eventId: string,
+) {
+  if (typeof window === 'undefined') return
+
+  const payload = JSON.stringify({
+    event,
+    params: params ?? {},
+    eventId,
+    anonymousId: getAnonymousId(),
+    sessionId: getSessionId(),
+    eventValue: params?.value ?? params?.event_value,
+    currency: params?.currency ?? 'TWD',
+    sourceUrl: window.location.href,
+    referrer: document.referrer,
+    routePath: getRoutePath(),
+  })
+
+  if (navigator.sendBeacon) {
+    const sent = navigator.sendBeacon(
+      '/api/events',
+      new Blob([payload], { type: 'application/json' }),
+    )
+    if (sent) return
+  }
+
+  void fetch('/api/events', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+    },
+    body: payload,
+    keepalive: true,
+  }).catch(() => undefined)
 }
 
 export function initGA4() {
@@ -159,19 +254,30 @@ export function initLineTag() {
 }
 
 export function initAnalytics() {
+  if (isPrivateAnalyticsRoute()) return
+
   initGA4()
   initMetaPixel()
   initLineTag()
+  postServerEvent(
+    'page_view',
+    { page_path: getRoutePath() },
+    createEventId('page_view'),
+  )
 }
 
 export function trackPageView(path: string) {
+  if (isPrivateAnalyticsPath(path)) return
+
   const params = normalizeParams({ page_path: path })
+  const eventId = createEventId('page_view')
   const gaId = getGaMeasurementId()
   const lineTagId = getLineTagId()
 
   if (gaId) window.gtag?.('config', gaId, params)
   window.fbq?.('track', 'PageView')
   if (lineTagId) window._lt?.('send', 'pv', [lineTagId])
+  postServerEvent('page_view', params, eventId)
 }
 
 export function trackAnalyticsEvent(
@@ -182,6 +288,8 @@ export function trackAnalyticsEvent(
     lineEventName?: string
   } = {},
 ) {
+  if (isPrivateAnalyticsRoute()) return
+
   const eventId =
     typeof params?.event_id === 'string' ? params.event_id : createEventId(event)
   const normalizedParams = normalizeParams({
@@ -208,4 +316,6 @@ export function trackAnalyticsEvent(
       [lineTagId],
     )
   }
+
+  postServerEvent(event, normalizedParams, eventId)
 }
