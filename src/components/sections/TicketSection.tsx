@@ -130,10 +130,10 @@ export function TicketSection() {
                 </div>
                 <div className="mt-5 md:mt-0 md:w-64">
                   <Button
-                    variant="primary"
+                    variant="secondary"
                     size="lg"
                     href={bootCampHref}
-                    className="w-full"
+                    className="w-full border-neon/35 bg-neon/8 text-neon hover:border-neon/55 hover:bg-neon/14 hover:text-pearl"
                     onClick={() => trackSecondaryCta()}
                     data-cta="ticket-bootcamp-entry"
                   >
