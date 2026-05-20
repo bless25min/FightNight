@@ -39,6 +39,15 @@ $IndexHtml = Join-Path $PreviewDir 'index.html'
 if (Test-Path -LiteralPath $IndexHtml) {
   Copy-Item -LiteralPath $IndexHtml -Destination (Join-Path $PreviewDir 'boot-camp.html') -Force
 
+  $PrivacyDir = Join-Path $PreviewDir 'privacy-policy'
+  $PrivacyHtml = Join-Path $PrivacyDir 'index.html'
+  New-Item -ItemType Directory -Force -Path $PrivacyDir | Out-Null
+  Copy-Item -LiteralPath $IndexHtml -Destination $PrivacyHtml -Force
+
+  $PrivacyContent = Get-Content -LiteralPath $PrivacyHtml -Raw
+  $PrivacyContent = $PrivacyContent -replace '\./assets/', '../assets/'
+  Set-Content -LiteralPath $PrivacyHtml -Value $PrivacyContent -Encoding utf8
+
   $GuideSlugs = @(
     'taipei-boxing-muay-thai-classes',
     'taichung-boxing-muay-thai-classes',

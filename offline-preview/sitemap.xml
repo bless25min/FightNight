@@ -13,6 +13,10 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://fightnight.25min.co/privacy-policy</loc>
+    <priority>0.4</priority>
+  </url>
+  <url>
     <loc>https://fightnight.25min.co/guides/taipei-boxing-muay-thai-classes</loc>
     <priority>0.75</priority>
   </url>

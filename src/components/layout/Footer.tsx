@@ -96,8 +96,26 @@ export function Footer({ onVenueAction }: FooterProps = {}) {
           </div>
         </div>
 
-        <div className="mt-10 md:mt-14 pt-6 border-t border-pearl/5 text-center text-xs text-mist/50">
-          © {new Date().getFullYear()} {siteConfig.brandName}. All rights reserved.
+        <div className="mt-10 flex flex-col gap-3 border-t border-pearl/5 pt-6 text-xs text-mist/50 md:mt-14 md:flex-row md:items-center md:justify-between">
+          <p>
+            © {new Date().getFullYear()} {siteConfig.brandName}. All rights reserved.
+          </p>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <a
+              href="/privacy-policy"
+              className="transition-colors hover:text-neon"
+            >
+              隱私政策
+            </a>
+            <a
+              href="https://blessliao.25min.co/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="transition-colors hover:text-neon"
+            >
+              作者資訊：廖天佑
+            </a>
+          </div>
         </div>
       </div>
     </footer>

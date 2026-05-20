@@ -16,6 +16,7 @@ import { OffersPage } from './pages/OffersPage'
 import { PaymentResultPage } from './pages/PaymentResultPage'
 import { AdminPage } from './pages/AdminPage'
 import { SeoGuidePage } from './pages/SeoGuidePage'
+import { PrivacyPolicyPage } from './pages/PrivacyPolicyPage'
 import { useScrollProgress } from './hooks/useScrollProgress'
 import { trackPageView } from './lib/analytics'
 
@@ -28,6 +29,7 @@ function getCurrentRoutePath() {
     hashPath.startsWith('/boot-camp') ||
     hashPath.startsWith('/payment/success') ||
     hashPath.startsWith('/admin') ||
+    hashPath.startsWith('/privacy-policy') ||
     hashPath.startsWith('/guides/')
   ) {
     return hashPath
@@ -37,6 +39,7 @@ function getCurrentRoutePath() {
   if (pathname.endsWith('/offers.html')) return '/offers'
   if (pathname.endsWith('/boot-camp.html')) return '/boot-camp'
   if (pathname.endsWith('/admin.html')) return '/admin'
+  if (pathname.endsWith('/privacy-policy.html')) return '/privacy-policy'
 
   return pathname
 }
@@ -154,6 +157,10 @@ function App() {
 
   if (pathname.startsWith('/admin')) {
     return <AdminPage />
+  }
+
+  if (pathname.startsWith('/privacy-policy')) {
+    return <PrivacyPolicyPage />
   }
 
   return <HomePage />

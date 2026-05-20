@@ -16,6 +16,8 @@ export function Header() {
     pathname.startsWith('/boot-camp')
   const isGuidePage =
     pathname.startsWith('/guides/')
+  const isUtilityPage =
+    isGuidePage || pathname.startsWith('/privacy-policy')
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 50)
@@ -31,7 +33,7 @@ export function Header() {
     ? '選路徑與梯次'
     : isOffersPage
       ? '選 Boot Camp 場次'
-      : isGuidePage
+      : isUtilityPage
         ? '查看 Boot Camp 計畫'
         : '選日期購買'
   const ctaTargetId = isBootCampPage
@@ -39,7 +41,7 @@ export function Header() {
     : isOffersPage
       ? 'offers-plans'
       : 'ticket'
-  const ctaHref = isGuidePage ? '/boot-camp' : `#${ctaTargetId}`
+  const ctaHref = isUtilityPage ? '/boot-camp' : `#${ctaTargetId}`
 
   return (
     <motion.header
@@ -52,9 +54,9 @@ export function Header() {
     >
       <div className="max-w-6xl mx-auto px-3 sm:px-8 flex items-center justify-between">
         <a
-          href={isOffersPage || isBootCampPage || isGuidePage ? '/' : '#hero'}
+          href={isOffersPage || isBootCampPage || isUtilityPage ? '/' : '#hero'}
           onClick={(e) => {
-            if (!isOffersPage && !isBootCampPage && !isGuidePage) {
+            if (!isOffersPage && !isBootCampPage && !isUtilityPage) {
               e.preventDefault()
               scrollTo('hero')
             }
@@ -73,7 +75,7 @@ export function Header() {
             size="sm"
             href={ctaHref}
             onClick={() => {
-              if (!isGuidePage) scrollTo(ctaTargetId)
+              if (!isUtilityPage) scrollTo(ctaTargetId)
             }}
             data-cta="header-cta"
           >
@@ -84,7 +86,7 @@ export function Header() {
             size="sm"
             href={ctaHref}
             onClick={() => {
-              if (!isGuidePage) scrollTo(ctaTargetId)
+              if (!isUtilityPage) scrollTo(ctaTargetId)
             }}
             data-cta="header-cta"
           >
