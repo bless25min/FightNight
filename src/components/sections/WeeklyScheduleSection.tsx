@@ -769,6 +769,7 @@ export function WeeklyScheduleSection({
   }, [onBootCampRouteChange])
   const scrollerRef = useRef<HTMLDivElement>(null)
   const [activeVenueId, setActiveVenueId] = useState<string | null>(null)
+  const [hasTouchedVenueFilter, setHasTouchedVenueFilter] = useState(false)
   const [activeDateIso, setActiveDateIso] = useState<string | null>(null)
   const [selectedBooking, setSelectedBooking] = useState<{
     courseId: string
@@ -1125,6 +1126,10 @@ export function WeeklyScheduleSection({
   }, [activeCategory, activeBootCampRoute, activeVenueId])
 
   useEffect(() => {
+    setHasTouchedVenueFilter(false)
+  }, [activeCategory, activeBootCampRoute, isBootCampBookingMode])
+
+  useEffect(() => {
     if (!activeVenueId) return
     const stillAvailable = venueOptions.some(
       (option) => option.venue.id === activeVenueId,
@@ -1185,6 +1190,8 @@ export function WeeklyScheduleSection({
 
   const meta = categoryMeta[activeCategory]
   const planSummary = planSummaryByCategory[activeCategory]
+  const venueSelectionPending =
+    showVenueFilter && upcomingCourses.length > 0 && !hasTouchedVenueFilter
   const purchaseSteps =
     isBootCampBookingMode
       ? ['1 選路徑', '2 選場館日期', '3 確認堂數']
@@ -1260,7 +1267,13 @@ export function WeeklyScheduleSection({
 
       <div className="max-w-6xl mx-auto">
         {showVenueFilter && upcomingCourses.length > 0 && (
-          <div className="mb-5 md:mb-6 rounded-2xl border border-pearl/10 bg-black/25 p-4 md:p-5">
+          <div
+            className={`relative mb-5 overflow-hidden rounded-2xl border bg-black/25 p-4 transition-all duration-300 md:mb-6 md:p-5 ${
+              hasTouchedVenueFilter
+                ? 'border-pearl/10'
+                : 'venue-step-focus border-neon/35 shadow-[0_0_0_1px_rgba(191,90,242,0.12),0_22px_70px_rgba(191,90,242,0.10)]'
+            }`}
+          >
             <div className="flex items-center justify-between gap-3">
               <p className="text-xs md:text-sm font-heading tracking-[0.22em] text-neon/80 uppercase">
                 1 選上課地點
@@ -1280,48 +1293,67 @@ export function WeeklyScheduleSection({
             >
               <button
                 type="button"
-                aria-pressed={activeVenueId === null}
-                onClick={() => setActiveVenueId(null)}
-                data-interaction-hint
-                className={`interaction-hint rounded-xl border px-3.5 py-3 text-left transition-colors ${
+                aria-pressed={hasTouchedVenueFilter && activeVenueId === null}
+                onClick={() => {
+                  setHasTouchedVenueFilter(true)
+                  setActiveVenueId(null)
+                }}
+                className={`relative min-h-[5.75rem] overflow-hidden rounded-xl border px-3.5 py-3 text-left transition-all duration-300 ${
                   isBootCampBookingMode ? 'min-w-[8.5rem] snap-start' : ''
                 } ${
-                  activeVenueId === null
-                    ? 'border-neon/50 bg-neon/15'
-                    : 'border-pearl/10 bg-black/25 hover:border-pearl/25'
+                  hasTouchedVenueFilter && activeVenueId === null
+                    ? 'venue-option-selected border-neon/60 bg-neon/15 shadow-[0_0_30px_rgba(191,90,242,0.16)]'
+                    : hasTouchedVenueFilter
+                    ? 'border-pearl/10 bg-black/25 hover:border-pearl/25 hover:bg-pearl/5'
+                    : 'venue-option-pending border-pearl/14 bg-black/32 hover:border-neon/35 hover:bg-neon/8'
                 }`}
               >
                 <p className="text-sm font-heading font-semibold text-pearl">
                   全部場館
                 </p>
-                <p className="mt-1 text-xs text-mist/70">
+                <p className="venue-location-chip mt-2 inline-flex w-fit items-center rounded-full border border-pearl/10 bg-pearl/[0.04] px-2.5 py-1 text-xs text-mist/75">
                   {upcomingCourses.length} 場可購買
                 </p>
               </button>
 
-              {venueOptions.map(({ venue, count }) => (
+              {venueOptions.map(({ venue, count }) => {
+                const active =
+                  hasTouchedVenueFilter && activeVenueId === venue.id
+
+                return (
                 <button
                   key={venue.id}
                   type="button"
-                  aria-pressed={activeVenueId === venue.id}
-                  onClick={() => setActiveVenueId(venue.id)}
-                  data-interaction-hint
-                  className={`interaction-hint rounded-xl border px-3.5 py-3 text-left transition-colors ${
+                  aria-pressed={active}
+                  onClick={() => {
+                    setHasTouchedVenueFilter(true)
+                    setActiveVenueId(venue.id)
+                  }}
+                  className={`relative min-h-[5.75rem] overflow-hidden rounded-xl border px-3.5 py-3 text-left transition-all duration-300 ${
                     isBootCampBookingMode ? 'min-w-[9.5rem] snap-start' : ''
                   } ${
-                    activeVenueId === venue.id
-                      ? 'border-neon/50 bg-neon/15'
-                      : 'border-pearl/10 bg-black/25 hover:border-pearl/25'
+                    active
+                      ? 'venue-option-selected border-neon/60 bg-neon/15 shadow-[0_0_30px_rgba(191,90,242,0.16)]'
+                      : hasTouchedVenueFilter
+                      ? 'border-pearl/10 bg-black/25 hover:border-pearl/25 hover:bg-pearl/5'
+                      : 'venue-option-pending border-pearl/14 bg-black/32 hover:border-neon/35 hover:bg-neon/8'
                   }`}
                 >
                   <p className="text-sm font-heading font-semibold text-pearl">
                     {venueShortLookup[venue.id] ?? venue.name}
                   </p>
-                  <p className="mt-1 text-xs text-mist/70">
+                  <p
+                    className={`venue-location-chip mt-2 inline-flex w-fit items-center rounded-full border px-2.5 py-1 text-xs ${
+                      active
+                        ? 'border-neon/30 bg-neon/10 text-neon'
+                        : 'border-pearl/10 bg-pearl/[0.04] text-mist/75'
+                    }`}
+                  >
                     {venueLandmarks[venue.id] ?? venue.transit} · {count} 場可購買
                   </p>
                 </button>
-              ))}
+                )
+              })}
             </div>
           </div>
         )}
@@ -1421,7 +1453,11 @@ export function WeeklyScheduleSection({
             這個條件目前沒有可購買場次，換一個場館或路徑看看。
           </p>
         ) : (
-          <>
+          <div
+            className={`transition-all duration-300 ${
+              venueSelectionPending ? 'venue-results-pending' : ''
+            }`}
+          >
             <div className="mb-4 flex items-center justify-between gap-3">
               <p className="text-xs md:text-sm font-heading tracking-[0.18em] text-mist/55 uppercase">
                 {displayCourses.length} 場目前可購買
@@ -1450,8 +1486,8 @@ export function WeeklyScheduleSection({
 
             <div
               ref={scrollerRef}
-              data-swipe-hint
-              className="swipe-hint -mx-3 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-3 pb-4 sm:mx-0 sm:px-0 md:gap-5"
+              data-swipe-hint={hasTouchedVenueFilter ? true : undefined}
+              className={`${hasTouchedVenueFilter ? 'swipe-hint' : ''} -mx-3 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-3 pb-4 sm:mx-0 sm:px-0 md:gap-5`}
             >
               {displayCourses.map((c, i) => {
                 const dayLabel = getRelativeDayLabel(c.date, todayIso)
@@ -1504,7 +1540,7 @@ export function WeeklyScheduleSection({
 
                   return (
                     <motion.article
-                      key={c.id}
+                      key={`${hasTouchedVenueFilter ? activeVenueId ?? 'all' : 'venue'}-${c.id}`}
                       aria-label={`${sessionTitle}，${formatShortDate(c.date)} 週${c.weekday} ${c.startTime}–${c.endTime}，${c.venueName}`}
                       data-schedule-card
                       initial={{ opacity: 0, y: 16 }}
@@ -1525,7 +1561,7 @@ export function WeeklyScheduleSection({
                             {formatShortDate(c.date)} 週{c.weekday} · {c.startTime}–{c.endTime}
                           </p>
                         </div>
-                        <span className={`shrink-0 rounded-md border px-2 py-1 text-xs font-heading tracking-wide ${meta.badgeClass}`}>
+                        <span className={`venue-location-chip shrink-0 rounded-md border px-2 py-1 text-xs font-heading tracking-wide ${meta.badgeClass}`}>
                           {venueShortLookup[c.venueId] ?? c.venueName}
                         </span>
                       </div>
@@ -1550,7 +1586,7 @@ export function WeeklyScheduleSection({
                         <h3 className="mt-3 font-heading text-xl font-black leading-tight text-pearl">
                           {c.name}
                         </h3>
-                        <p className="mt-1 text-sm text-mist/58">
+                        <p className="venue-location-chip mt-2 inline-flex w-fit items-center rounded-full border border-pearl/10 bg-pearl/[0.04] px-2.5 py-1 text-xs text-mist/70">
                           {venueLandmarks[c.venueId] ?? c.venueName}
                         </p>
 
@@ -1721,7 +1757,7 @@ export function WeeklyScheduleSection({
 
                 return (
                   <motion.article
-                    key={c.id}
+                    key={`${hasTouchedVenueFilter ? activeVenueId ?? 'all' : 'venue'}-${c.id}`}
                     aria-label={`${sessionTitle}，${formatShortDate(c.date)} 週${c.weekday} ${c.startTime}–${c.endTime}，${c.venueName}`}
                     data-schedule-card
                     initial={{ opacity: 0, y: 16 }}
@@ -1735,7 +1771,7 @@ export function WeeklyScheduleSection({
                         {dayLabel ?? `週${c.weekday}`}
                       </span>
                       <span
-                        className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded-md text-[10px] md:text-xs font-heading font-medium tracking-wide border ${meta.badgeClass}`}
+                        className={`venue-location-chip shrink-0 inline-flex items-center px-2 py-0.5 rounded-md text-[10px] md:text-xs font-heading font-medium tracking-wide border ${meta.badgeClass}`}
                       >
                         {venueShortLookup[c.venueId] ?? c.venueName}
                       </span>
@@ -1748,7 +1784,7 @@ export function WeeklyScheduleSection({
                       <p className="text-sm md:text-base text-mist/70 font-heading tabular-nums">
                         {formatShortDate(c.date)} 週{c.weekday} · {c.startTime}–{c.endTime}
                       </p>
-                      <p className="mt-1 text-xs md:text-sm text-mist/60">
+                      <p className="venue-location-chip mt-2 inline-flex w-fit items-center rounded-full border border-pearl/10 bg-pearl/[0.04] px-2.5 py-1 text-xs text-mist/70 md:text-sm">
                         {venueLandmarks[c.venueId] ?? c.venueName}
                       </p>
                     </div>
@@ -1957,7 +1993,7 @@ export function WeeklyScheduleSection({
                 )
               })}
             </div>
-          </>
+          </div>
         )}
       </div>
 
