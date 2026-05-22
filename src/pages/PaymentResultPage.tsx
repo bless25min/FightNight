@@ -13,6 +13,8 @@ type OrderStatus =
   | 'cancelled'
   | 'paid_over_capacity'
   | 'payment_amount_mismatch'
+  | 'refund_processing'
+  | 'refunded'
   | string
 
 type OrderStatusResponse = {
@@ -82,6 +84,18 @@ const statusCopy: Record<
     title: '付款金額需要人工確認。',
     description: 'SHOPLINE 回傳的付款金額和課程金額不一致，請加入 LINE 讓工作人員協助確認。',
     tone: 'border-blaze/35 bg-blaze/10 text-blaze',
+  },
+  refund_processing: {
+    eyebrow: 'REFUND PROCESSING',
+    title: '退款同步中。',
+    description: 'SHOPLINE 已送出退款通知，系統正在同步訂單與名額狀態。',
+    tone: 'border-pearl/15 bg-pearl/5 text-mist',
+  },
+  refunded: {
+    eyebrow: 'REFUNDED',
+    title: '退款已完成。',
+    description: '這筆訂單已完成退款，原本保留的名額已釋出。',
+    tone: 'border-pearl/15 bg-pearl/5 text-mist',
   },
 }
 

@@ -683,7 +683,7 @@ export function OffersPage() {
           onBootCamp={scrollToBootCampPlans}
         />
       </main>
-      <Footer onVenueAction={(url) => void openWhenUnlocked(url)} />
+      <Footer />
       {gateState.status === 'unlocked' && (
         <StickyActionBar
           eyebrow="方案入口"

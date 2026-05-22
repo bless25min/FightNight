@@ -206,6 +206,30 @@ function splitName(name) {
   }
 }
 
+function trimText(value, maxLength) {
+  return String(value || '').trim().slice(0, maxLength)
+}
+
+function normalizeClientInfo(client, request) {
+  const sourceIp =
+    request.headers.get('CF-Connecting-IP') ||
+    request.headers.get('x-forwarded-for') ||
+    '127.0.0.1'
+
+  return cleanObject({
+    ip: trimText(sourceIp, 32) || '127.0.0.1',
+    screenWidth: trimText(client?.screenWidth, 16),
+    screenHeight: trimText(client?.screenHeight, 16),
+    javaEnabled: trimText(client?.javaEnabled, 16),
+    timeZoneOffset: trimText(client?.timeZoneOffset, 16),
+    transactionWebSite: trimText(client?.transactionWebSite, 512),
+    userAgent: trimText(client?.userAgent, 128),
+    language: trimText(client?.language, 32),
+    colorDepth: trimText(client?.colorDepth, 16),
+    accept: trimText(request.headers.get('accept') || client?.accept, 128),
+  })
+}
+
 function randomHex(bytes = 8) {
   const buffer = new Uint8Array(bytes)
   crypto.getRandomValues(buffer)
@@ -415,13 +439,7 @@ function buildShoplinePayload({
       referenceCustomerId: `${referenceId}-${buyer.phone}`.slice(0, 32),
       personalInfo,
     },
-    client: {
-      ...body.client,
-      ip:
-        request.headers.get('CF-Connecting-IP') ||
-        request.headers.get('x-forwarded-for') ||
-        '127.0.0.1',
-    },
+    client: normalizeClientInfo(body.client, request),
     billing: {
       personalInfo,
       address: shippingAddress,

@@ -5,6 +5,8 @@ const LOCKED_PAID_STATUSES = [
   'paid',
   'payment_amount_mismatch',
   'paid_over_capacity',
+  'refund_processing',
+  'refunded',
 ]
 
 function json(data, init = {}) {
@@ -162,6 +164,21 @@ function isPaidEvent(event) {
   return event?.type === 'session.succeeded' || event?.type === 'trade.succeeded' || status === 'SUCCEEDED'
 }
 
+function isRefundSucceededEvent(event) {
+  const type = String(event?.type || '').toLowerCase()
+  const status = String(event?.data?.status || '').toUpperCase()
+  return (
+    type === 'refund.succeeded' ||
+    type === 'trade.refund.succeeded' ||
+    (type.includes('refund') && status === 'SUCCEEDED')
+  )
+}
+
+function getRefundAmountValue(event) {
+  const data = event?.data || {}
+  return Number(data.amount?.value || data.refundAmount?.value || 0)
+}
+
 function mapNonPaidStatus(event) {
   if (event?.type === 'session.expired' || event?.type === 'trade.expired') {
     return 'expired'
@@ -215,7 +232,7 @@ async function markNonPaidStatus(env, referenceId, status, event, rawBody) {
          raw_webhook_json = ?,
          updated_at = datetime('now')
      WHERE reference_id = ?
-       AND status NOT IN ('paid', 'payment_processing', 'payment_amount_mismatch', 'paid_over_capacity')`,
+       AND status NOT IN ('paid', 'payment_processing', 'payment_amount_mismatch', 'paid_over_capacity', 'refund_processing', 'refunded')`,
   )
     .bind(
       status,
@@ -236,11 +253,33 @@ async function claimOrderForPayment(env, referenceId, event, rawBody) {
          raw_webhook_json = ?,
          updated_at = datetime('now')
      WHERE reference_id = ?
-       AND status NOT IN ('paid', 'payment_amount_mismatch', 'paid_over_capacity')
+       AND status NOT IN ('paid', 'payment_amount_mismatch', 'paid_over_capacity', 'refund_processing', 'refunded')
        AND (
          status != 'payment_processing'
          OR datetime(updated_at) <= datetime('now', '-5 minutes')
        )`,
+  )
+    .bind(
+      getSessionId(event),
+      getTradeOrderId(event),
+      rawBody,
+      referenceId,
+    )
+    .run()
+
+  return Boolean(result.meta?.changes)
+}
+
+async function claimOrderForRefund(env, referenceId, event, rawBody) {
+  const result = await env.DB.prepare(
+    `UPDATE course_orders
+     SET status = 'refund_processing',
+         shopline_session_id = COALESCE(?, shopline_session_id),
+         shopline_trade_order_id = COALESCE(?, shopline_trade_order_id),
+         raw_webhook_json = ?,
+         updated_at = datetime('now')
+     WHERE reference_id = ?
+       AND status = 'paid'`,
   )
     .bind(
       getSessionId(event),
@@ -284,6 +323,18 @@ async function incrementPaidSeats(env, sessionIds, quantity) {
   return true
 }
 
+async function releasePaidSeats(env, sessionIds, quantity) {
+  for (const sessionId of sessionIds) {
+    await env.DB.prepare(
+      `UPDATE session_inventory
+       SET sold = MAX(0, sold - ?), updated_at = datetime('now')
+       WHERE session_id = ?`,
+    )
+      .bind(quantity, sessionId)
+      .run()
+  }
+}
+
 export async function onRequestPost({ request, env }) {
   if (!env.DB) {
     return json({ error: 'Missing D1 binding DB' }, { status: 503 })
@@ -318,6 +369,43 @@ export async function onRequestPost({ request, env }) {
 
   if (!order) {
     return json({ error: 'Order not found' }, { status: 404 })
+  }
+
+  if (isRefundSucceededEvent(event)) {
+    if (order.status === 'refunded') {
+      return json({ ok: true, status: 'refunded' })
+    }
+
+    const refundAmount = getRefundAmountValue(event)
+    const isFullRefund =
+      !refundAmount || refundAmount >= Number(order.amount_value) * 100
+
+    if (!isFullRefund) {
+      return json({ ok: true, status: order.status, refund: 'partial' })
+    }
+
+    const sessionIds = JSON.parse(order.session_ids_json || '[]')
+    const quantity = Math.max(1, Math.min(6, Number(order.quantity || 1)))
+
+    if (order.status === 'paid') {
+      const claimed = await claimOrderForRefund(env, referenceId, event, rawBody)
+      if (!claimed) {
+        const currentOrder = await env.DB.prepare(
+          `SELECT status
+           FROM course_orders
+           WHERE reference_id = ?`,
+        )
+          .bind(referenceId)
+          .first()
+
+        return json({ ok: true, status: currentOrder?.status || order.status })
+      }
+
+      await releasePaidSeats(env, sessionIds, quantity)
+    }
+
+    await markOrderStatus(env, referenceId, 'refunded', event, rawBody)
+    return json({ ok: true, status: 'refunded' })
   }
 
   if (!isPaidEvent(event)) {
