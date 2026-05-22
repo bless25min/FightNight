@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 
 const adminTokenKey = 'fightnight_admin_token'
 
-type AdminTab = 'orders' | 'inventory' | 'events' | 'line'
+type AdminTab = 'traffic' | 'journeys' | 'orders' | 'inventory' | 'events' | 'line'
 
 type AdminOrder = {
   referenceId: string
@@ -41,6 +41,23 @@ type TrackingEventRow = {
   eventValue?: number | null
   currency: string
   routePath?: string | null
+  landingPath?: string | null
+  sourceChannel?: string | null
+  utmSource?: string | null
+  utmMedium?: string | null
+  utmCampaign?: string | null
+  deviceType?: string | null
+  durationMs?: number | null
+  scrollDepth?: number | null
+  maxScrollDepth?: number | null
+  interactionCount?: number | null
+  isBounce?: boolean
+  sectionId?: string | null
+  ctaId?: string | null
+  targetText?: string | null
+  country?: string | null
+  region?: string | null
+  city?: string | null
   sourceUrl?: string | null
   referrer?: string | null
   createdAt: string
@@ -80,12 +97,121 @@ type AdminSummary = {
   }
 }
 
+type TrafficSource = {
+  sourceChannel: string
+  sessions: number
+  visitors: number
+  pageViews: number
+  actions: number
+  checkoutIntents: number
+  exits: number
+  bounces: number
+  avgDurationMs: number
+  avgScrollDepth: number
+}
+
+type TrafficCampaign = {
+  utmSource: string
+  utmMedium: string
+  utmCampaign: string
+  clickIdType?: string | null
+  sessions: number
+  actions: number
+  checkoutIntents: number
+}
+
+type TrafficPage = {
+  routePath: string
+  sessions: number
+  pageViews: number
+  actions: number
+  checkoutIntents: number
+  exits: number
+  bounces: number
+  avgDurationMs: number
+  avgScrollDepth: number
+}
+
+type TrafficExit = {
+  routePath: string
+  exits: number
+  bounces: number
+  avgDurationMs: number
+  avgScrollDepth: number
+  lastAt?: string | null
+}
+
+type TrafficSection = {
+  sectionId: string
+  views: number
+  sessions: number
+  clicks: number
+  lastAt?: string | null
+}
+
+type TrafficDevice = {
+  deviceType: string
+  sessions: number
+  checkoutIntents: number
+  avgScrollDepth: number
+}
+
+type TrafficGeo = {
+  country: string
+  region?: string | null
+  city?: string | null
+  sessions: number
+  checkoutIntents: number
+}
+
+type TrafficData = {
+  sources: TrafficSource[]
+  campaigns: TrafficCampaign[]
+  pages: TrafficPage[]
+  sections: TrafficSection[]
+  exits: TrafficExit[]
+  devices: TrafficDevice[]
+  geography: TrafficGeo[]
+}
+
+type JourneyEvent = {
+  eventName: string
+  routePath?: string | null
+  sectionId?: string | null
+  ctaId?: string | null
+  targetText?: string | null
+  scrollDepth?: number | null
+  maxScrollDepth?: number | null
+  durationMs?: number | null
+  isBounce?: boolean
+  createdAt: string
+}
+
+type Journey = {
+  sessionId: string
+  anonymousId: string
+  startedAt: string
+  lastAt: string
+  sourceChannel: string
+  landingPath?: string | null
+  deviceType?: string | null
+  country?: string | null
+  region?: string | null
+  city?: string | null
+  maxScrollDepth: number
+  durationMs: number
+  eventCount: number
+  events: JourneyEvent[]
+}
+
 type AdminData = {
   summary?: AdminSummary
+  traffic?: TrafficData
   orders: AdminOrder[]
   inventory: InventoryRecord[]
   events: TrackingEventRow[]
   customers: LineCustomer[]
+  journeys: Journey[]
 }
 
 type ApiError = {
@@ -97,6 +223,7 @@ const initialData: AdminData = {
   inventory: [],
   events: [],
   customers: [],
+  journeys: [],
 }
 
 const statusLabels: Record<string, string> = {
@@ -111,6 +238,8 @@ const statusLabels: Record<string, string> = {
 }
 
 const tabs: Array<{ id: AdminTab; label: string }> = [
+  { id: 'traffic', label: '流量優化' },
+  { id: 'journeys', label: '用戶歷程' },
   { id: 'orders', label: '訂單客戶' },
   { id: 'inventory', label: '課程庫存' },
   { id: 'events', label: '匿名漏斗' },
@@ -148,6 +277,25 @@ function formatDateTime(value?: string | null) {
     hour: '2-digit',
     minute: '2-digit',
   }).format(date)
+}
+
+function formatDuration(ms?: number | null) {
+  const totalSeconds = Math.round((ms || 0) / 1000)
+  if (totalSeconds <= 0) return '-'
+  const minutes = Math.floor(totalSeconds / 60)
+  const seconds = totalSeconds % 60
+  if (minutes <= 0) return `${seconds}s`
+  return `${minutes}m ${seconds}s`
+}
+
+function formatPercent(value?: number | null) {
+  if (!value) return '0%'
+  return `${Math.max(0, Math.min(100, Math.round(value)))}%`
+}
+
+function bounceRate(bounces: number, exits: number) {
+  if (!exits) return '0%'
+  return `${Math.round((bounces / exits) * 100)}%`
 }
 
 function statusLabel(status: string) {
@@ -361,9 +509,32 @@ function EventsTable({ events }: { events: TrackingEventRow[] }) {
                 {event.anonymousId}
               </td>
               <td className="max-w-[240px] px-4 py-4 text-mist/55">
-                <span className="line-clamp-3 break-all">
-                  {event.referrer || event.sourceUrl || '-'}
-                </span>
+                <p className="font-heading text-pearl/85">
+                  {event.sourceChannel || 'direct'}
+                  {event.deviceType ? ` · ${event.deviceType}` : ''}
+                </p>
+                {(event.city || event.country) && (
+                  <p className="mt-1 text-xs text-mist/55">
+                    {[event.city, event.region, event.country].filter(Boolean).join(' / ')}
+                  </p>
+                )}
+                {(event.utmCampaign || event.utmSource) && (
+                  <p className="mt-1 line-clamp-2 break-all text-xs text-mist/45">
+                    {[event.utmSource, event.utmMedium, event.utmCampaign]
+                      .filter(Boolean)
+                      .join(' / ')}
+                  </p>
+                )}
+                {event.sectionId && (
+                  <p className="mt-1 text-xs text-neon/75">
+                    #{event.sectionId}
+                  </p>
+                )}
+                {event.ctaId && (
+                  <p className="mt-1 line-clamp-2 break-all text-xs text-gold/75">
+                    CTA {event.ctaId}
+                  </p>
+                )}
               </td>
               <td className="px-4 py-4 text-mist/65">
                 {formatDateTime(event.createdAt)}
@@ -424,10 +595,271 @@ function LineCustomersTable({ customers }: { customers: LineCustomer[] }) {
   )
 }
 
+function TrafficDashboard({ traffic }: { traffic?: TrafficData }) {
+  if (!traffic) return <EmptyState>流量資料讀取中。</EmptyState>
+
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        {traffic.sources.slice(0, 4).map((source) => (
+          <MetricCard
+            key={source.sourceChannel}
+            label={source.sourceChannel}
+            value={`${source.sessions}`}
+            detail={`訪客 ${source.visitors} · CTA ${source.actions} · 結帳意圖 ${source.checkoutIntents}`}
+          />
+        ))}
+      </div>
+
+      <section className="rounded-lg border border-pearl/10 bg-black/24 p-4">
+        <p className="font-heading text-sm tracking-[0.18em] text-mist/60">
+          來源與跳出
+        </p>
+        <div className="mt-3 overflow-x-auto">
+          <table className="min-w-[860px] w-full text-left text-sm">
+            <thead className="font-heading text-xs tracking-[0.16em] text-mist/55">
+              <tr>
+                <th className="py-2 pr-4">來源</th>
+                <th className="py-2 pr-4">Sessions</th>
+                <th className="py-2 pr-4">CTA</th>
+                <th className="py-2 pr-4">結帳意圖</th>
+                <th className="py-2 pr-4">平均停留</th>
+                <th className="py-2 pr-4">平均滾動</th>
+                <th className="py-2 pr-4">跳出率</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-pearl/8">
+              {traffic.sources.map((source) => (
+                <tr key={source.sourceChannel}>
+                  <td className="py-3 pr-4 font-heading text-pearl">
+                    {source.sourceChannel}
+                  </td>
+                  <td className="py-3 pr-4 text-mist/75">{source.sessions}</td>
+                  <td className="py-3 pr-4 text-mist/75">{source.actions}</td>
+                  <td className="py-3 pr-4 text-neon">{source.checkoutIntents}</td>
+                  <td className="py-3 pr-4 text-mist/75">
+                    {formatDuration(source.avgDurationMs)}
+                  </td>
+                  <td className="py-3 pr-4 text-mist/75">
+                    {formatPercent(source.avgScrollDepth)}
+                  </td>
+                  <td className="py-3 pr-4 text-mist/75">
+                    {bounceRate(source.bounces, source.exits)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section className="rounded-lg border border-pearl/10 bg-black/24 p-4">
+        <p className="font-heading text-sm tracking-[0.18em] text-mist/60">
+          頁面表現
+        </p>
+        <div className="mt-3 overflow-x-auto">
+          <table className="min-w-[940px] w-full text-left text-sm">
+            <thead className="font-heading text-xs tracking-[0.16em] text-mist/55">
+              <tr>
+                <th className="py-2 pr-4">頁面</th>
+                <th className="py-2 pr-4">Sessions</th>
+                <th className="py-2 pr-4">PV</th>
+                <th className="py-2 pr-4">CTA</th>
+                <th className="py-2 pr-4">結帳意圖</th>
+                <th className="py-2 pr-4">平均停留</th>
+                <th className="py-2 pr-4">平均滾動</th>
+                <th className="py-2 pr-4">跳出率</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-pearl/8">
+              {traffic.pages.map((page) => (
+                <tr key={page.routePath}>
+                  <td className="max-w-[280px] py-3 pr-4">
+                    <span className="line-clamp-2 break-all font-heading text-pearl">
+                      {page.routePath}
+                    </span>
+                  </td>
+                  <td className="py-3 pr-4 text-mist/75">{page.sessions}</td>
+                  <td className="py-3 pr-4 text-mist/75">{page.pageViews}</td>
+                  <td className="py-3 pr-4 text-mist/75">{page.actions}</td>
+                  <td className="py-3 pr-4 text-neon">{page.checkoutIntents}</td>
+                  <td className="py-3 pr-4 text-mist/75">
+                    {formatDuration(page.avgDurationMs)}
+                  </td>
+                  <td className="py-3 pr-4 text-mist/75">
+                    {formatPercent(page.avgScrollDepth)}
+                  </td>
+                  <td className="py-3 pr-4 text-mist/75">
+                    {bounceRate(page.bounces, page.exits)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section className="grid gap-4 lg:grid-cols-2">
+        <div className="rounded-lg border border-pearl/10 bg-black/24 p-4">
+          <p className="font-heading text-sm tracking-[0.18em] text-mist/60">
+            區塊停留訊號
+          </p>
+          <div className="mt-3 grid gap-2">
+            {traffic.sections.slice(0, 14).map((section) => (
+              <div
+                key={section.sectionId}
+                className="flex items-center justify-between gap-3 rounded-lg border border-pearl/8 bg-black/24 px-3 py-2"
+              >
+                <span className="min-w-0 truncate font-heading text-pearl">
+                  #{section.sectionId}
+                </span>
+                <span className="shrink-0 text-sm text-mist/70">
+                  看見 {section.views} · 點擊 {section.clicks}
+                </span>
+              </div>
+            ))}
+            {traffic.sections.length === 0 && (
+              <p className="text-sm text-mist/55">尚無區塊曝光資料。</p>
+            )}
+          </div>
+        </div>
+
+        <div className="rounded-lg border border-pearl/10 bg-black/24 p-4">
+          <p className="font-heading text-sm tracking-[0.18em] text-mist/60">
+            裝置與區域
+          </p>
+          <div className="mt-3 grid gap-2">
+            {traffic.devices.map((device) => (
+              <div
+                key={device.deviceType}
+                className="flex items-center justify-between gap-3 rounded-lg border border-pearl/8 bg-black/24 px-3 py-2"
+              >
+                <span className="font-heading text-pearl">{device.deviceType}</span>
+                <span className="text-sm text-mist/70">
+                  {device.sessions} sessions · 滾動 {formatPercent(device.avgScrollDepth)}
+                </span>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 grid gap-2">
+            {traffic.geography.slice(0, 8).map((geo) => (
+              <div
+                key={`${geo.country}-${geo.region}-${geo.city}`}
+                className="flex items-center justify-between gap-3 rounded-lg border border-pearl/8 bg-black/24 px-3 py-2"
+              >
+                <span className="min-w-0 truncate text-mist/80">
+                  {[geo.city, geo.region, geo.country].filter(Boolean).join(' / ')}
+                </span>
+                <span className="shrink-0 text-sm text-neon">
+                  {geo.sessions}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {traffic.campaigns.length > 0 && (
+        <section className="rounded-lg border border-pearl/10 bg-black/24 p-4">
+          <p className="font-heading text-sm tracking-[0.18em] text-mist/60">
+            UTM / 廣告活動
+          </p>
+          <div className="mt-3 grid gap-2 md:grid-cols-2">
+            {traffic.campaigns.map((campaign) => (
+              <div
+                key={`${campaign.utmSource}-${campaign.utmMedium}-${campaign.utmCampaign}-${campaign.clickIdType}`}
+                className="rounded-lg border border-pearl/8 bg-black/24 p-3"
+              >
+                <p className="font-heading text-pearl">
+                  {campaign.utmCampaign || campaign.clickIdType || '(none)'}
+                </p>
+                <p className="mt-1 text-sm text-mist/60">
+                  {campaign.utmSource} / {campaign.utmMedium}
+                </p>
+                <p className="mt-2 text-sm text-mist/75">
+                  {campaign.sessions} sessions · CTA {campaign.actions} · 結帳 {campaign.checkoutIntents}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+    </div>
+  )
+}
+
+function JourneysPanel({ journeys }: { journeys: Journey[] }) {
+  if (journeys.length === 0) return <EmptyState>目前還沒有可檢視的用戶歷程。</EmptyState>
+
+  return (
+    <div className="grid gap-4">
+      {journeys.map((journey) => (
+        <article
+          key={journey.sessionId}
+          className="rounded-lg border border-pearl/10 bg-black/24 p-4"
+        >
+          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div className="min-w-0">
+              <p className="font-heading text-sm text-pearl">
+                {journey.sourceChannel} · {journey.deviceType || 'unknown'}
+              </p>
+              <p className="mt-1 break-all font-mono text-[11px] text-mist/45">
+                {journey.sessionId}
+              </p>
+              <p className="mt-2 text-sm text-mist/65">
+                入口 {journey.landingPath || '-'} · {[journey.city, journey.region, journey.country]
+                  .filter(Boolean)
+                  .join(' / ') || '區域未知'}
+              </p>
+            </div>
+            <div className="grid grid-cols-3 gap-2 text-center text-xs md:min-w-[18rem]">
+              <div className="rounded-lg border border-pearl/8 bg-black/24 p-2">
+                <p className="font-heading text-mist/45">停留</p>
+                <p className="mt-1 text-pearl">{formatDuration(journey.durationMs)}</p>
+              </div>
+              <div className="rounded-lg border border-pearl/8 bg-black/24 p-2">
+                <p className="font-heading text-mist/45">滾動</p>
+                <p className="mt-1 text-pearl">{formatPercent(journey.maxScrollDepth)}</p>
+              </div>
+              <div className="rounded-lg border border-pearl/8 bg-black/24 p-2">
+                <p className="font-heading text-mist/45">事件</p>
+                <p className="mt-1 text-pearl">{journey.eventCount}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 grid gap-2 border-t border-pearl/10 pt-4">
+            {journey.events.map((event, index) => (
+              <div
+                key={`${journey.sessionId}-${index}-${event.createdAt}`}
+                className="grid gap-2 rounded-lg border border-pearl/8 bg-black/20 px-3 py-2 text-sm md:grid-cols-[7rem_1fr_7rem]"
+              >
+                <span className="font-heading text-neon/85">
+                  {event.eventName}
+                </span>
+                <span className="min-w-0 text-mist/72">
+                  {event.sectionId ? `#${event.sectionId}` : event.routePath || '-'}
+                  {event.ctaId ? ` · CTA ${event.ctaId}` : ''}
+                  {event.targetText ? ` · ${event.targetText}` : ''}
+                  {event.scrollDepth ? ` · ${event.scrollDepth}%` : ''}
+                  {event.durationMs ? ` · ${formatDuration(event.durationMs)}` : ''}
+                </span>
+                <span className="text-right text-mist/45">
+                  {formatDateTime(event.createdAt)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </article>
+      ))}
+    </div>
+  )
+}
+
 export function AdminPage() {
   const [token, setToken] = useState(getStoredToken)
   const [tokenInput, setTokenInput] = useState(getStoredToken)
-  const [activeTab, setActiveTab] = useState<AdminTab>('orders')
+  const [activeTab, setActiveTab] = useState<AdminTab>('traffic')
   const [data, setData] = useState<AdminData>(initialData)
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -445,9 +877,19 @@ export function AdminPage() {
     setError('')
 
     try {
-      const [summaryResponse, ordersResponse, inventoryResponse, eventsResponse, lineResponse] =
+      const [
+        summaryResponse,
+        trafficResponse,
+        journeysResponse,
+        ordersResponse,
+        inventoryResponse,
+        eventsResponse,
+        lineResponse,
+      ] =
         await Promise.all([
           fetchAdmin<{ summary: AdminSummary }>('/api/admin/summary', token),
+          fetchAdmin<{ traffic: TrafficData }>('/api/admin/traffic', token),
+          fetchAdmin<{ journeys: Journey[] }>('/api/admin/journeys?limit=40', token),
           fetchAdmin<{ orders: AdminOrder[] }>('/api/admin/orders?limit=80', token),
           fetchAdmin<{ inventory: InventoryRecord[] }>(
             '/api/admin/inventory?limit=120',
@@ -462,6 +904,8 @@ export function AdminPage() {
 
       setData({
         summary: summaryResponse.summary,
+        traffic: trafficResponse.traffic,
+        journeys: journeysResponse.journeys,
         orders: ordersResponse.orders,
         inventory: inventoryResponse.inventory,
         events: eventsResponse.events,
@@ -650,6 +1094,8 @@ export function AdminPage() {
         </nav>
 
         <section className="mt-5 pb-12">
+          {activeTab === 'traffic' && <TrafficDashboard traffic={data.traffic} />}
+          {activeTab === 'journeys' && <JourneysPanel journeys={data.journeys} />}
           {activeTab === 'orders' && <OrdersTable orders={data.orders} />}
           {activeTab === 'inventory' && (
             <InventoryTable inventory={data.inventory} />

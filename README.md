@@ -56,7 +56,7 @@ src/
 ## CTA 串接
 
 - **購票連結**：修改 `siteConfig.ticketUrl`
-- **LINE 官方帳號**：修改 `siteConfig.lineUrl`（目前指向 `https://page.line.me/340uxvgb`）
+- **LINE 官方帳號**：修改 `siteConfig.lineUrl`（目前指向 `https://page.line.me/488ujlbg`，官方帳號 `@488ujlbg`）
 
 ## 追蹤埋點
 

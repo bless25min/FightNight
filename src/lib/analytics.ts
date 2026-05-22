@@ -1,4 +1,7 @@
-export type TrackingParams = Record<string, string | number | boolean>
+export type TrackingParams = Record<
+  string,
+  string | number | boolean | undefined | null
+>
 
 export type MetaStandardEvent =
   | 'PageView'
@@ -43,8 +46,37 @@ type RuntimeAnalyticsConfig = {
 
 const anonymousIdKey = 'fightnight_anonymous_id'
 const sessionIdKey = 'fightnight_session_id'
+const attributionKey = 'fightnight_attribution'
 let runtimeConfig: RuntimeAnalyticsConfig = {}
 let runtimeConfigPromise: Promise<RuntimeAnalyticsConfig> | undefined
+let behaviorTrackingStarted = false
+
+type StoredAttribution = {
+  landingPath: string
+  landingUrl: string
+  referrer: string
+  sourceChannel: string
+  createdAt: string
+  utmSource?: string
+  utmMedium?: string
+  utmCampaign?: string
+  utmContent?: string
+  utmTerm?: string
+  clickIdType?: string
+}
+
+type PageState = {
+  path: string
+  startedAt: number
+  maxScrollDepth: number
+  interactions: number
+  firedScrollDepths: Set<number>
+  viewedSections: Set<string>
+  engagementSentAt: number
+}
+
+let pageState: PageState | undefined
+let sectionObserver: IntersectionObserver | undefined
 
 declare global {
   interface Window {
@@ -136,7 +168,7 @@ function normalizeParams(params?: TrackingParams): TrackingParams | undefined {
   if (!params) return undefined
 
   return Object.entries(params).reduce<TrackingParams>((acc, [key, value]) => {
-    acc[key] = value
+    if (value !== undefined && value !== null && value !== '') acc[key] = value
     return acc
   }, {})
 }
@@ -196,6 +228,11 @@ function getRoutePath() {
   return `${window.location.pathname}${window.location.search}${window.location.hash}`
 }
 
+function getPathOnly() {
+  if (typeof window === 'undefined') return ''
+  return `${window.location.pathname}${window.location.hash}`
+}
+
 function isPrivateAnalyticsPath(path: string) {
   return (
     path.startsWith('/admin') ||
@@ -208,6 +245,176 @@ function isPrivateAnalyticsRoute() {
   return isPrivateAnalyticsPath(getRoutePath())
 }
 
+function readStorageJson<T>(storage: Storage | undefined, key: string): T | null {
+  if (!storage) return null
+
+  try {
+    const raw = storage.getItem(key)
+    return raw ? (JSON.parse(raw) as T) : null
+  } catch {
+    return null
+  }
+}
+
+function writeStorageJson<T>(storage: Storage | undefined, key: string, value: T) {
+  if (!storage) return
+
+  try {
+    storage.setItem(key, JSON.stringify(value))
+  } catch {
+    // Analytics should never block the page.
+  }
+}
+
+function getClickIdType(searchParams: URLSearchParams) {
+  if (searchParams.get('fbclid')) return 'fbclid'
+  if (searchParams.get('gclid')) return 'gclid'
+  if (searchParams.get('gbraid')) return 'gbraid'
+  if (searchParams.get('wbraid')) return 'wbraid'
+  if (searchParams.get('msclkid')) return 'msclkid'
+  if (searchParams.get('ttclid')) return 'ttclid'
+  if (searchParams.get('li_fat_id')) return 'line'
+  return ''
+}
+
+function getReferrerHost(referrer: string) {
+  try {
+    return referrer ? new URL(referrer).hostname.replace(/^www\./, '') : ''
+  } catch {
+    return ''
+  }
+}
+
+function inferSourceChannel(searchParams: URLSearchParams, referrer: string) {
+  const medium = (searchParams.get('utm_medium') || '').toLowerCase()
+  const source = (searchParams.get('utm_source') || '').toLowerCase()
+  const clickId = getClickIdType(searchParams)
+  const host = getReferrerHost(referrer).toLowerCase()
+
+  if (clickId) return clickId === 'line' ? 'paid_line' : 'paid'
+  if (/(cpc|ppc|paid|ads?|display|retarget|remarketing)/i.test(medium)) return 'paid'
+  if (/email|newsletter/.test(medium)) return 'email'
+  if (/line/.test(source) || /line/.test(host)) return 'line'
+  if (/facebook|instagram|threads|meta|tiktok|youtube/.test(source)) return 'social'
+  if (/facebook|instagram|threads|tiktok|youtube|x\.com|twitter/.test(host)) return 'social'
+  if (/google|bing|yahoo|duckduckgo|baidu/.test(host)) return 'organic_search'
+  if (host) return 'referral'
+  return 'direct'
+}
+
+function buildAttributionFromLocation(): StoredAttribution {
+  const url = new URL(window.location.href)
+  const referrer = document.referrer || ''
+  const searchParams = url.searchParams
+  return {
+    landingPath: getPathOnly() || '/',
+    landingUrl: window.location.href,
+    referrer,
+    sourceChannel: inferSourceChannel(searchParams, referrer),
+    createdAt: new Date().toISOString(),
+    utmSource: searchParams.get('utm_source') || undefined,
+    utmMedium: searchParams.get('utm_medium') || undefined,
+    utmCampaign: searchParams.get('utm_campaign') || undefined,
+    utmContent: searchParams.get('utm_content') || undefined,
+    utmTerm: searchParams.get('utm_term') || undefined,
+    clickIdType: getClickIdType(searchParams) || undefined,
+  }
+}
+
+function getAttribution() {
+  if (typeof window === 'undefined') return null
+
+  const current = buildAttributionFromLocation()
+  const stored = readStorageJson<StoredAttribution>(
+    window.localStorage,
+    attributionKey,
+  )
+
+  if (!stored) {
+    writeStorageJson(window.localStorage, attributionKey, current)
+    return {
+      first: current,
+      current,
+    }
+  }
+
+  return {
+    first: stored,
+    current,
+  }
+}
+
+function getDeviceType() {
+  if (typeof window === 'undefined') return 'unknown'
+
+  const userAgent = window.navigator.userAgent
+  if (/bot|crawler|spider|crawling/i.test(userAgent)) return 'bot'
+  if (/iPad|Tablet|Android(?!.*Mobile)/i.test(userAgent)) return 'tablet'
+  if (/Mobi|Android|iPhone|iPod/i.test(userAgent)) return 'mobile'
+  return 'desktop'
+}
+
+function getTrackingContextParams(): TrackingParams {
+  if (typeof window === 'undefined') return {}
+
+  const attribution = getAttribution()
+  const first = attribution?.first
+  const current = attribution?.current
+
+  return normalizeParams({
+    page_path: getRoutePath(),
+    landing_path: first?.landingPath || getPathOnly(),
+    source_channel: current?.sourceChannel || 'direct',
+    first_source_channel: first?.sourceChannel || 'direct',
+    first_landing_path: first?.landingPath || getPathOnly(),
+    referrer_host: getReferrerHost(document.referrer || first?.referrer || ''),
+    utm_source: current?.utmSource || first?.utmSource || '',
+    utm_medium: current?.utmMedium || first?.utmMedium || '',
+    utm_campaign: current?.utmCampaign || first?.utmCampaign || '',
+    utm_content: current?.utmContent || first?.utmContent || '',
+    utm_term: current?.utmTerm || first?.utmTerm || '',
+    click_id_type: current?.clickIdType || first?.clickIdType || '',
+    device_type: getDeviceType(),
+    browser_language: window.navigator.language || '',
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || '',
+    viewport_width: window.innerWidth,
+    viewport_height: window.innerHeight,
+    screen_width: window.screen?.width || 0,
+    screen_height: window.screen?.height || 0,
+  }) ?? {}
+}
+
+function getScrollDepth() {
+  if (typeof window === 'undefined') return 0
+
+  const total = document.documentElement.scrollHeight - window.innerHeight
+  if (total <= 0) return 100
+
+  return Math.max(0, Math.min(100, Math.round((window.scrollY / total) * 100)))
+}
+
+function getPageState() {
+  const path = getRoutePath()
+  if (!pageState || pageState.path !== path) {
+    pageState = {
+      path,
+      startedAt: Date.now(),
+      maxScrollDepth: getScrollDepth(),
+      interactions: 0,
+      firedScrollDepths: new Set(),
+      viewedSections: new Set(),
+      engagementSentAt: 0,
+    }
+  }
+
+  return pageState
+}
+
+function markInteraction() {
+  if (isPrivateAnalyticsRoute()) return
+  getPageState().interactions += 1
+}
+
 function postServerEvent(
   event: string,
   params: TrackingParams | undefined,
@@ -215,14 +422,18 @@ function postServerEvent(
 ) {
   if (typeof window === 'undefined') return
 
+  const mergedParams = normalizeParams({
+    ...getTrackingContextParams(),
+    ...(params ?? {}),
+  })
   const payload = JSON.stringify({
     event,
-    params: params ?? {},
+    params: mergedParams ?? {},
     eventId,
     anonymousId: getAnonymousId(),
     sessionId: getSessionId(),
-    eventValue: params?.value ?? params?.event_value,
-    currency: params?.currency ?? 'TWD',
+    eventValue: mergedParams?.value ?? mergedParams?.event_value,
+    currency: mergedParams?.currency ?? 'TWD',
     sourceUrl: window.location.href,
     referrer: document.referrer,
     routePath: getRoutePath(),
@@ -244,6 +455,154 @@ function postServerEvent(
     body: payload,
     keepalive: true,
   }).catch(() => undefined)
+}
+
+function flushPageEngagement(eventName = 'page_exit') {
+  if (typeof window === 'undefined' || isPrivateAnalyticsRoute() || !pageState) return
+
+  const state = pageState
+  const now = Date.now()
+  const durationMs = Math.max(0, now - state.startedAt)
+
+  if (eventName !== 'page_exit' && now - state.engagementSentAt < 20_000) return
+  state.engagementSentAt = now
+  state.maxScrollDepth = Math.max(state.maxScrollDepth, getScrollDepth())
+
+  postServerEvent(
+    eventName,
+    {
+      page_path: state.path,
+      duration_ms: durationMs,
+      max_scroll_depth: state.maxScrollDepth,
+      interaction_count: state.interactions,
+      is_bounce: state.interactions === 0 && state.maxScrollDepth < 25,
+    },
+    createEventId(eventName),
+  )
+}
+
+function resetPageState(path = getRoutePath()) {
+  pageState = {
+    path,
+    startedAt: Date.now(),
+    maxScrollDepth: getScrollDepth(),
+    interactions: 0,
+    firedScrollDepths: new Set(),
+    viewedSections: new Set(),
+    engagementSentAt: 0,
+  }
+}
+
+function refreshSectionObserver() {
+  if (typeof window === 'undefined' || isPrivateAnalyticsRoute()) return
+  sectionObserver?.disconnect()
+
+  const state = getPageState()
+  const sections = Array.from(
+    document.querySelectorAll<HTMLElement>('[data-section], section[id]'),
+  ).filter((section) => section.dataset.section || section.id)
+
+  if (sections.length === 0 || typeof IntersectionObserver === 'undefined') return
+
+  sectionObserver = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting || entry.intersectionRatio < 0.35) continue
+        const target = entry.target as HTMLElement
+        const sectionId = target.dataset.section || target.id
+        if (!sectionId || state.viewedSections.has(sectionId)) continue
+
+        state.viewedSections.add(sectionId)
+        postServerEvent(
+          'section_view',
+          {
+            section_id: sectionId,
+            section_index: sections.indexOf(target) + 1,
+            visible_ratio: Number(entry.intersectionRatio.toFixed(2)),
+          },
+          createEventId('section_view'),
+        )
+      }
+    },
+    { threshold: [0.35, 0.6] },
+  )
+
+  sections.forEach((section) => sectionObserver?.observe(section))
+}
+
+function setupSectionObserverSoon() {
+  window.setTimeout(refreshSectionObserver, 250)
+  window.setTimeout(refreshSectionObserver, 1200)
+}
+
+function handleScrollDepth() {
+  if (isPrivateAnalyticsRoute()) return
+  const state = getPageState()
+  const depth = getScrollDepth()
+  state.maxScrollDepth = Math.max(state.maxScrollDepth, depth)
+
+  for (const checkpoint of [25, 50, 75, 90, 100]) {
+    if (depth >= checkpoint && !state.firedScrollDepths.has(checkpoint)) {
+      state.firedScrollDepths.add(checkpoint)
+      postServerEvent(
+        'scroll_depth',
+        {
+          scroll_depth: checkpoint,
+          max_scroll_depth: depth,
+        },
+        createEventId(`scroll_${checkpoint}`),
+      )
+    }
+  }
+}
+
+function getElementText(element: Element) {
+  return (element.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 80)
+}
+
+function setupDelegatedClickTracking() {
+  document.addEventListener(
+    'click',
+    (event) => {
+      if (isPrivateAnalyticsRoute() || !(event.target instanceof Element)) return
+
+      const element = event.target.closest<HTMLElement>('[data-cta], a[href]')
+      if (!element) return
+
+      markInteraction()
+      const section = element.closest<HTMLElement>('[data-section], section[id]')
+      const href = element instanceof HTMLAnchorElement ? element.href : ''
+      const ctaId = element.dataset.cta || ''
+
+      postServerEvent(
+        'ui_click',
+        {
+          cta_id: ctaId || href || element.tagName.toLowerCase(),
+          target_tag: element.tagName.toLowerCase(),
+          target_text: getElementText(element),
+          href,
+          section_id: section?.dataset.section || section?.id || '',
+        },
+        createEventId('ui_click'),
+      )
+    },
+    true,
+  )
+}
+
+function setupBehaviorTracking() {
+  if (typeof window === 'undefined' || behaviorTrackingStarted) return
+  behaviorTrackingStarted = true
+  resetPageState()
+  setupSectionObserverSoon()
+
+  window.addEventListener('scroll', handleScrollDepth, { passive: true })
+  window.addEventListener('pagehide', () => flushPageEngagement('page_exit'))
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') flushPageEngagement('page_exit')
+  })
+  window.setInterval(() => flushPageEngagement('page_engagement'), 30_000)
+  setupDelegatedClickTracking()
 }
 
 export function initGA4() {
@@ -322,6 +681,7 @@ export function initLineTag() {
 export function initAnalytics() {
   if (isPrivateAnalyticsRoute()) return
 
+  setupBehaviorTracking()
   initGA4()
   initMetaPixel()
   initLineTag()
@@ -339,6 +699,10 @@ export function initAnalytics() {
 
 export function trackPageView(path: string) {
   if (isPrivateAnalyticsPath(path)) return
+
+  flushPageEngagement('page_exit')
+  resetPageState(path)
+  setupSectionObserverSoon()
 
   const params = normalizeParams({ page_path: path })
   const eventId = createEventId('page_view')

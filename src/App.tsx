@@ -17,7 +17,6 @@ import { PaymentResultPage } from './pages/PaymentResultPage'
 import { AdminPage } from './pages/AdminPage'
 import { SeoGuidePage } from './pages/SeoGuidePage'
 import { PrivacyPolicyPage } from './pages/PrivacyPolicyPage'
-import { useScrollProgress } from './hooks/useScrollProgress'
 import { trackPageView } from './lib/analytics'
 
 function getCurrentRoutePath() {
@@ -45,7 +44,6 @@ function getCurrentRoutePath() {
 }
 
 function HomePage() {
-  useScrollProgress()
   return (
     <div className="overflow-x-hidden w-full relative">
       <Header />

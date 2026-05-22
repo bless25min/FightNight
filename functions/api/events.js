@@ -33,6 +33,36 @@ async function ensureTables(env) {
         source_url TEXT,
         referrer TEXT,
         route_path TEXT,
+        landing_path TEXT,
+        source_channel TEXT,
+        first_source_channel TEXT,
+        utm_source TEXT,
+        utm_medium TEXT,
+        utm_campaign TEXT,
+        utm_content TEXT,
+        utm_term TEXT,
+        click_id_type TEXT,
+        device_type TEXT,
+        browser_language TEXT,
+        timezone TEXT,
+        viewport_width INTEGER,
+        viewport_height INTEGER,
+        screen_width INTEGER,
+        screen_height INTEGER,
+        duration_ms INTEGER,
+        scroll_depth INTEGER,
+        max_scroll_depth INTEGER,
+        interaction_count INTEGER,
+        is_bounce INTEGER,
+        section_id TEXT,
+        cta_id TEXT,
+        target_text TEXT,
+        cf_country TEXT,
+        cf_region TEXT,
+        cf_city TEXT,
+        cf_continent TEXT,
+        cf_timezone TEXT,
+        cf_colo TEXT,
         payload_json TEXT,
         user_agent TEXT,
         created_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -55,11 +85,89 @@ async function ensureTables(env) {
        ON tracking_events (anonymous_id, created_at)`,
     ),
   ])
+
+  await ensureColumns(env)
+  await env.DB.batch([
+    env.DB.prepare(
+      `CREATE INDEX IF NOT EXISTS idx_tracking_events_source_created
+       ON tracking_events (source_channel, created_at)`,
+    ),
+    env.DB.prepare(
+      `CREATE INDEX IF NOT EXISTS idx_tracking_events_route_created
+       ON tracking_events (route_path, created_at)`,
+    ),
+  ])
+}
+
+async function ensureColumns(env) {
+  const columns = [
+    ['landing_path', 'TEXT'],
+    ['source_channel', 'TEXT'],
+    ['first_source_channel', 'TEXT'],
+    ['utm_source', 'TEXT'],
+    ['utm_medium', 'TEXT'],
+    ['utm_campaign', 'TEXT'],
+    ['utm_content', 'TEXT'],
+    ['utm_term', 'TEXT'],
+    ['click_id_type', 'TEXT'],
+    ['device_type', 'TEXT'],
+    ['browser_language', 'TEXT'],
+    ['timezone', 'TEXT'],
+    ['viewport_width', 'INTEGER'],
+    ['viewport_height', 'INTEGER'],
+    ['screen_width', 'INTEGER'],
+    ['screen_height', 'INTEGER'],
+    ['duration_ms', 'INTEGER'],
+    ['scroll_depth', 'INTEGER'],
+    ['max_scroll_depth', 'INTEGER'],
+    ['interaction_count', 'INTEGER'],
+    ['is_bounce', 'INTEGER'],
+    ['section_id', 'TEXT'],
+    ['cta_id', 'TEXT'],
+    ['target_text', 'TEXT'],
+    ['cf_country', 'TEXT'],
+    ['cf_region', 'TEXT'],
+    ['cf_city', 'TEXT'],
+    ['cf_continent', 'TEXT'],
+    ['cf_timezone', 'TEXT'],
+    ['cf_colo', 'TEXT'],
+  ]
+
+  for (const [name, type] of columns) {
+    try {
+      await env.DB.prepare(
+        `ALTER TABLE tracking_events ADD COLUMN ${name} ${type}`,
+      ).run()
+    } catch (error) {
+      if (!(error instanceof Error) || !/duplicate column/i.test(error.message)) {
+        throw error
+      }
+    }
+  }
 }
 
 function readNumber(value) {
   const number = Number(value)
   return Number.isFinite(number) ? number : null
+}
+
+function readInteger(value) {
+  const number = Number(value)
+  return Number.isFinite(number) ? Math.round(number) : null
+}
+
+function readBooleanInteger(value) {
+  if (value === true || value === 1 || value === '1' || value === 'true') return 1
+  if (value === false || value === 0 || value === '0' || value === 'false') return 0
+  return null
+}
+
+function readParamText(params, key, maxLength = 240) {
+  return trimText(params?.[key], maxLength) || null
+}
+
+function readCfText(request, key, maxLength = 120) {
+  return trimText(request.cf?.[key], maxLength) || null
 }
 
 export async function onRequestPost({ request, env }) {
@@ -97,8 +205,14 @@ export async function onRequestPost({ request, env }) {
   await env.DB.prepare(
     `INSERT OR IGNORE INTO tracking_events (
       anonymous_id, session_id, event_name, event_id, event_value, currency,
-      source_url, referrer, route_path, payload_json, user_agent
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      source_url, referrer, route_path, landing_path, source_channel,
+      first_source_channel, utm_source, utm_medium, utm_campaign, utm_content,
+      utm_term, click_id_type, device_type, browser_language, timezone,
+      viewport_width, viewport_height, screen_width, screen_height, duration_ms,
+      scroll_depth, max_scroll_depth, interaction_count, is_bounce, section_id,
+      cta_id, target_text, cf_country, cf_region, cf_city, cf_continent,
+      cf_timezone, cf_colo, payload_json, user_agent
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   )
     .bind(
       anonymousId,
@@ -110,6 +224,36 @@ export async function onRequestPost({ request, env }) {
       trimText(body?.sourceUrl, 1200) || null,
       trimText(body?.referrer, 1200) || null,
       trimText(body?.routePath, 400) || null,
+      readParamText(params, 'landing_path', 400),
+      readParamText(params, 'source_channel', 80),
+      readParamText(params, 'first_source_channel', 80),
+      readParamText(params, 'utm_source', 160),
+      readParamText(params, 'utm_medium', 160),
+      readParamText(params, 'utm_campaign', 240),
+      readParamText(params, 'utm_content', 240),
+      readParamText(params, 'utm_term', 240),
+      readParamText(params, 'click_id_type', 60),
+      readParamText(params, 'device_type', 40),
+      readParamText(params, 'browser_language', 40),
+      readParamText(params, 'timezone', 120),
+      readInteger(params.viewport_width),
+      readInteger(params.viewport_height),
+      readInteger(params.screen_width),
+      readInteger(params.screen_height),
+      readInteger(params.duration_ms),
+      readInteger(params.scroll_depth),
+      readInteger(params.max_scroll_depth),
+      readInteger(params.interaction_count),
+      readBooleanInteger(params.is_bounce),
+      readParamText(params, 'section_id', 160),
+      readParamText(params, 'cta_id', 240),
+      readParamText(params, 'target_text', 240),
+      trimText(request.headers.get('cf-ipcountry'), 20) || readCfText(request, 'country', 20),
+      readCfText(request, 'region', 120) || readCfText(request, 'regionCode', 80),
+      readCfText(request, 'city', 120),
+      readCfText(request, 'continent', 20),
+      readCfText(request, 'timezone', 120),
+      readCfText(request, 'colo', 20),
       JSON.stringify(params).slice(0, MAX_PAYLOAD_BYTES),
       trimText(request.headers.get('user-agent'), 800) || null,
     )

@@ -9,6 +9,36 @@ CREATE TABLE IF NOT EXISTS tracking_events (
   source_url TEXT,
   referrer TEXT,
   route_path TEXT,
+  landing_path TEXT,
+  source_channel TEXT,
+  first_source_channel TEXT,
+  utm_source TEXT,
+  utm_medium TEXT,
+  utm_campaign TEXT,
+  utm_content TEXT,
+  utm_term TEXT,
+  click_id_type TEXT,
+  device_type TEXT,
+  browser_language TEXT,
+  timezone TEXT,
+  viewport_width INTEGER,
+  viewport_height INTEGER,
+  screen_width INTEGER,
+  screen_height INTEGER,
+  duration_ms INTEGER,
+  scroll_depth INTEGER,
+  max_scroll_depth INTEGER,
+  interaction_count INTEGER,
+  is_bounce INTEGER,
+  section_id TEXT,
+  cta_id TEXT,
+  target_text TEXT,
+  cf_country TEXT,
+  cf_region TEXT,
+  cf_city TEXT,
+  cf_continent TEXT,
+  cf_timezone TEXT,
+  cf_colo TEXT,
   payload_json TEXT,
   user_agent TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -25,6 +55,12 @@ ON tracking_events (event_name, created_at);
 
 CREATE INDEX IF NOT EXISTS idx_tracking_events_anonymous
 ON tracking_events (anonymous_id, created_at);
+
+CREATE INDEX IF NOT EXISTS idx_tracking_events_source_created
+ON tracking_events (source_channel, created_at);
+
+CREATE INDEX IF NOT EXISTS idx_tracking_events_route_created
+ON tracking_events (route_path, created_at);
 
 CREATE TABLE IF NOT EXISTS line_customers (
   line_user_id TEXT PRIMARY KEY,
