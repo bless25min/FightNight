@@ -14,7 +14,6 @@ type Props = {
 }
 
 function getActionLabel(gateState: LiffGateState) {
-  if (gateState.status === 'missing-config') return null
   if (gateState.status === 'not-friend') return '加入 LINE 好友解鎖'
   if (gateState.status === 'error') return '重新驗證'
   return 'LINE 快速登入'
@@ -30,7 +29,7 @@ export function LockedContent({
   lockedEyebrow = 'LINE 會員專屬內容',
   className = '',
 }: Props) {
-  if (gateState.status === 'unlocked') {
+  if (gateState.status === 'unlocked' || gateState.status === 'missing-config') {
     return <>{children}</>
   }
 

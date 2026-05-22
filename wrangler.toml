@@ -2,6 +2,12 @@ name = "fightnight"
 compatibility_date = "2026-05-22"
 pages_build_output_dir = "dist"
 
+[vars]
+VITE_LINE_LIFF_ID = "2009987027-Bg2WJN7H"
+LINE_LIFF_ID = "2009987027-Bg2WJN7H"
+VITE_META_PIXEL_ID = "1979180472685310"
+VITE_LINE_TAG_CUSTOMER_TYPE = "lap"
+
 [[d1_databases]]
 binding = "DB"
 database_name = "fightnight"

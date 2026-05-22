@@ -214,3 +214,13 @@ Admin APIs:
 | `GET /api/admin/line-customers` | LINE users verified through LIFF access token and their access counts. |
 
 The dashboard reads `ADMIN_TOKEN` from the browser input and sends it as `x-admin-token`. Do not expose this token in client-side environment variables.
+
+## LINE LIFF Gate
+
+The offer cards use LIFF login to unlock member-only content. The frontend first uses `VITE_LINE_LIFF_ID` from the Vite build, then falls back to `GET /api/config`, which reads the Cloudflare Pages runtime variable:
+
+```
+LINE_LIFF_ID=your_liff_id
+```
+
+This fallback prevents a local `wrangler pages deploy dist` from accidentally shipping a bundle with no LIFF ID.

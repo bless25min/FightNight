@@ -87,9 +87,6 @@ function OffersHero({ gateState }: { gateState: LiffGateState }) {
     if (gateState.status === 'not-friend') {
       return '你已完成 LINE 登入，下一步加入官方帳號後，就能解鎖完整會員內容。'
     }
-    if (gateState.status === 'missing-config') {
-      return 'LIFF 設定尚未完成，請先補上正式環境變數。'
-    }
     if (gateState.status === 'error') {
       return gateState.message || 'LIFF 驗證失敗，請稍後再試。'
     }
@@ -135,9 +132,7 @@ function OffersHero({ gateState }: { gateState: LiffGateState }) {
           </figcaption>
         </motion.figure>
 
-        {['missing-config', 'not-friend', 'error'].includes(
-          gateState.status,
-        ) && (
+        {['not-friend', 'error'].includes(gateState.status) && (
           <p className="mt-4 text-center text-sm md:text-base text-mist/70 max-w-2xl mx-auto">
             {helperMessage}
           </p>

@@ -15,7 +15,8 @@ export type LiffGateState = {
   profileName?: string
 }
 
-const missingConfigMessage = '找不到 VITE_LINE_LIFF_ID，請先補上正式環境變數。'
+const buildTimeLiffId = import.meta.env.VITE_LINE_LIFF_ID
+const missingConfigMessage = '找不到 LINE LIFF ID，請先補上正式環境變數。'
 const liffErrorMessage = 'LIFF 驗證失敗，請稍後再試。'
 
 function getErrorMessage(error: unknown) {
@@ -43,6 +44,12 @@ function getLiffPlacement() {
   return 'ticket_gate'
 }
 
+function getRuntimeLiffId(data: unknown) {
+  if (!data || typeof data !== 'object') return undefined
+  const value = (data as { lineLiffId?: unknown }).lineLiffId
+  return typeof value === 'string' && value.trim() ? value.trim() : undefined
+}
+
 function recordLiffAccess(accessToken: string | null | undefined, friendFlag: boolean) {
   if (!accessToken) return
 
@@ -65,14 +72,45 @@ export function useLiffGate() {
   const [gateState, setGateState] = useState<LiffGateState>({
     status: 'loading',
   })
-  const liffId = import.meta.env.VITE_LINE_LIFF_ID
+  const [runtimeLiffId, setRuntimeLiffId] = useState<string | undefined>()
+  const [isConfigLoaded, setIsConfigLoaded] = useState(Boolean(buildTimeLiffId))
+  const liffId = buildTimeLiffId || runtimeLiffId
   const liffUrl = liffId
     ? `https://line.me/R/app/${liffId}`
     : undefined
   const loginUrl = isMobileDevice() ? liffUrl : undefined
 
+  useEffect(() => {
+    if (buildTimeLiffId) return
+
+    let active = true
+
+    fetch('/api/config', {
+      headers: { accept: 'application/json' },
+    })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => {
+        if (!active) return
+        setRuntimeLiffId(getRuntimeLiffId(data))
+      })
+      .catch(() => {
+        if (!active) return
+        setRuntimeLiffId(undefined)
+      })
+      .finally(() => {
+        if (!active) return
+        setIsConfigLoaded(true)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [])
+
   const runGateCheck = useCallback(async () => {
     await Promise.resolve()
+
+    if (!isConfigLoaded) return
 
     if (!liffId) {
       setGateState({
@@ -115,17 +153,24 @@ export function useLiffGate() {
     } catch (error) {
       setGateState({ status: 'error', message: getErrorMessage(error) })
     }
-  }, [liffId])
+  }, [isConfigLoaded, liffId])
 
   useEffect(() => {
+    if (!isConfigLoaded) return
+
     const checkId = window.setTimeout(() => {
       void runGateCheck()
     }, 0)
 
     return () => window.clearTimeout(checkId)
-  }, [runGateCheck])
+  }, [isConfigLoaded, runGateCheck])
 
   const requestGateAccess = useCallback(async () => {
+    if (!isConfigLoaded) {
+      setGateState({ status: 'loading' })
+      return false
+    }
+
     if (!liffId) {
       setGateState({
         status: 'missing-config',
@@ -159,7 +204,7 @@ export function useLiffGate() {
       setGateState({ status: 'error', message: getErrorMessage(error) })
       return false
     }
-  }, [liffId, runGateCheck])
+  }, [isConfigLoaded, liffId, runGateCheck])
 
   const openWhenUnlocked = useCallback(
     async (redirectUrl: string) => {

@@ -34,8 +34,17 @@ type MetaPixelFunction = ((...args: MetaPixelArguments) => void) & {
 
 type LineTagFunction = (...args: unknown[]) => void
 
+type RuntimeAnalyticsConfig = {
+  gaMeasurementId?: string
+  lineTagCustomerType?: string
+  lineTagId?: string
+  metaPixelId?: string
+}
+
 const anonymousIdKey = 'fightnight_anonymous_id'
 const sessionIdKey = 'fightnight_session_id'
+let runtimeConfig: RuntimeAnalyticsConfig = {}
+let runtimeConfigPromise: Promise<RuntimeAnalyticsConfig> | undefined
 
 declare global {
   interface Window {
@@ -48,21 +57,78 @@ declare global {
   }
 }
 
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === 'string' && value.trim().length > 0
+}
+
+function readRuntimeConfigValue(key: keyof RuntimeAnalyticsConfig) {
+  const value = runtimeConfig[key]
+  return isNonEmptyString(value) ? value.trim() : undefined
+}
+
+function applyRuntimeConfig(data: unknown) {
+  if (!data || typeof data !== 'object') return runtimeConfig
+
+  const next = data as RuntimeAnalyticsConfig
+  runtimeConfig = {
+    gaMeasurementId: isNonEmptyString(next.gaMeasurementId)
+      ? next.gaMeasurementId.trim()
+      : runtimeConfig.gaMeasurementId,
+    lineTagCustomerType: isNonEmptyString(next.lineTagCustomerType)
+      ? next.lineTagCustomerType.trim()
+      : runtimeConfig.lineTagCustomerType,
+    lineTagId: isNonEmptyString(next.lineTagId)
+      ? next.lineTagId.trim()
+      : runtimeConfig.lineTagId,
+    metaPixelId: isNonEmptyString(next.metaPixelId)
+      ? next.metaPixelId.trim()
+      : runtimeConfig.metaPixelId,
+  }
+
+  return runtimeConfig
+}
+
+function loadRuntimeConfig() {
+  if (typeof window === 'undefined') {
+    return Promise.resolve(runtimeConfig)
+  }
+
+  runtimeConfigPromise ??= fetch('/api/config', {
+    headers: { accept: 'application/json' },
+  })
+    .then((response) => (response.ok ? response.json() : null))
+    .then(applyRuntimeConfig)
+    .catch(() => runtimeConfig)
+
+  return runtimeConfigPromise
+}
+
 function getGaMeasurementId() {
-  return import.meta.env.VITE_GA_MEASUREMENT_ID as string | undefined
+  return (
+    (import.meta.env.VITE_GA_MEASUREMENT_ID as string | undefined) ||
+    readRuntimeConfigValue('gaMeasurementId')
+  )
 }
 
 function getMetaPixelId() {
-  return import.meta.env.VITE_META_PIXEL_ID as string | undefined
+  return (
+    (import.meta.env.VITE_META_PIXEL_ID as string | undefined) ||
+    readRuntimeConfigValue('metaPixelId')
+  )
 }
 
 function getLineTagId() {
-  return import.meta.env.VITE_LINE_TAG_ID as string | undefined
+  return (
+    (import.meta.env.VITE_LINE_TAG_ID as string | undefined) ||
+    readRuntimeConfigValue('lineTagId')
+  )
 }
 
 function getLineCustomerType() {
   return (
-    (import.meta.env.VITE_LINE_TAG_CUSTOMER_TYPE as string | undefined) || 'lap'
+    (import.meta.env.VITE_LINE_TAG_CUSTOMER_TYPE as string | undefined) ||
+    readRuntimeConfigValue('lineTagCustomerType') ||
+    'lap'
   )
 }
 
@@ -259,6 +325,11 @@ export function initAnalytics() {
   initGA4()
   initMetaPixel()
   initLineTag()
+  void loadRuntimeConfig().then(() => {
+    initGA4()
+    initMetaPixel()
+    initLineTag()
+  })
   postServerEvent(
     'page_view',
     { page_path: getRoutePath() },
