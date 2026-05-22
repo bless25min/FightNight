@@ -1,7 +1,12 @@
 import { getShoplineConfigForVenue } from './config.js'
+import {
+  ONLINE_BOOKING_START_OFFSET_DAYS,
+  weeklyCourses,
+} from '../../../src/data/weeklySchedule.ts'
 
 const DEFAULT_CAPACITY = 6
 const CURRENCY = 'TWD'
+const WEEKDAY_LABELS = ['日', '一', '二', '三', '四', '五', '六']
 
 const coachPricingByTier = {
   'foreign-fighter': {
@@ -88,6 +93,59 @@ function addDays(iso, days) {
   return `${y}-${m}-${day}`
 }
 
+function getTodayLocal() {
+  const d = new Date()
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+function getWeekdayLabel(iso) {
+  const d = new Date(`${iso}T00:00:00`)
+  return WEEKDAY_LABELS[d.getDay()] || ''
+}
+
+function getCourseIdParts(courseId) {
+  const normalized = String(courseId || '').trim()
+  const match = normalized.match(/^(.*)-(\d{4}-\d{2}-\d{2})$/)
+  if (!match) return { baseId: normalized, date: null }
+  return { baseId: match[1], date: match[2] }
+}
+
+function isValidWeeklyOccurrence(baseDate, occurrenceDate) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(occurrenceDate)) return false
+  if (occurrenceDate < baseDate) return false
+
+  const start = new Date(`${baseDate}T00:00:00`)
+  const target = new Date(`${occurrenceDate}T00:00:00`)
+  const diffDays = Math.round((target.getTime() - start.getTime()) / 86400000)
+  return diffDays % 7 === 0
+}
+
+function resolveCourseFromCatalog(submittedCourse) {
+  const { baseId, date } = getCourseIdParts(submittedCourse?.id)
+  const baseCourse = weeklyCourses.find((course) => course.id === baseId)
+  if (!baseCourse) {
+    throw new Error('Course is not available for online checkout')
+  }
+
+  const courseDate = date || baseCourse.date
+  const bookableFromIso = addDays(getTodayLocal(), ONLINE_BOOKING_START_OFFSET_DAYS)
+  if (!isValidWeeklyOccurrence(baseCourse.date, courseDate) || courseDate < bookableFromIso) {
+    throw new Error('Course date is not available for online checkout')
+  }
+
+  if (date === baseCourse.date || !date) return baseCourse
+
+  return {
+    ...baseCourse,
+    id: `${baseCourse.id}-${date}`,
+    date,
+    weekday: getWeekdayLabel(date),
+  }
+}
+
 function getSessionInventoryId(course, date = course.date) {
   if (date === course.date) return course.id
   const dynamicDateSuffix = /-\d{4}-\d{2}-\d{2}$/
@@ -159,7 +217,10 @@ function createReferenceId() {
 }
 
 function parsePaymentMethods(env) {
-  const raw = env.SHOPLINE_PAYMENT_METHODS || 'CreditCard'
+  const raw = String(
+    env.SHOPLINE_PAYMENT_METHODS || 'CreditCard,ApplePay,LinePay',
+  ).trim()
+
   return raw
     .split(',')
     .map((item) => item.trim())
@@ -351,7 +412,7 @@ function buildShoplinePayload({
       },
     },
     customer: {
-      referenceCustomerId: `${referenceId}-${buyer.phone}`.slice(0, 64),
+      referenceCustomerId: `${referenceId}-${buyer.phone}`.slice(0, 32),
       personalInfo,
     },
     client: {
@@ -377,7 +438,7 @@ function buildShoplinePayload({
 
 async function createShoplineSession(env, payload, shoplineConfig) {
   const apiBaseUrl =
-    env.SHOPLINE_API_BASE_URL || 'https://api-sandbox.shoplinepayments.com'
+    env.SHOPLINE_API_BASE_URL || 'https://api.shoplinepayments.com'
   const requestId = `RQ${Date.now().toString(36).toUpperCase()}${randomHex(4).toUpperCase()}`.slice(0, 32)
   const headers = {
     'content-type': 'application/json',
@@ -386,8 +447,9 @@ async function createShoplineSession(env, payload, shoplineConfig) {
     requestId,
   }
 
-  if (env.SHOPLINE_API_VERSION) {
-    headers.apiVersion = env.SHOPLINE_API_VERSION
+  const apiVersion = env.SHOPLINE_API_VERSION || 'V1.2'
+  if (apiVersion) {
+    headers.apiVersion = apiVersion
   }
 
   const response = await fetch(
@@ -401,7 +463,17 @@ async function createShoplineSession(env, payload, shoplineConfig) {
   const data = await response.json().catch(() => null)
 
   if (!response.ok || !data?.sessionUrl) {
-    throw new Error(data?.msg || data?.message || 'SHOPLINE session create failed')
+    const code = data?.code || data?.errCode || data?.errorCode || data?.status
+    const message =
+      data?.msg ||
+      data?.message ||
+      data?.error ||
+      'SHOPLINE session create failed'
+    const details = code ? `${message} (${code})` : message
+    const error = new Error(details)
+    error.shoplineStatus = response.status
+    error.shoplineResponse = data
+    throw error
   }
 
   return data
@@ -415,7 +487,7 @@ export async function onRequestPost({ request, env }) {
   const body = await request.json().catch(() => null)
 
   try {
-    const course = body?.course
+    const course = resolveCourseFromCatalog(body?.course)
     assertCourse(course)
     const shoplineConfig = getShoplineConfigForVenue(env, course.venueId)
 
@@ -560,6 +632,8 @@ export async function onRequestPost({ request, env }) {
           error instanceof Error
             ? error.message
             : 'SHOPLINE checkout session failed',
+        shoplineStatus: error?.shoplineStatus,
+        shoplineResponse: error?.shoplineResponse,
       },
       { status: 400 },
     )

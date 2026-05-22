@@ -165,13 +165,15 @@ SHOPLINE_MERCHANT_ID_NEIHU=7511230868669859116
 Optional:
 
 ```
-SHOPLINE_PAYMENT_METHODS=CreditCard
+SHOPLINE_PAYMENT_METHODS=CreditCard,ApplePay,LinePay
 SHOPLINE_LANGUAGE=zh-TW
 SHOPLINE_SESSION_EXPIRE_MINUTES=60
 SHOPLINE_CREDIT_CARD_INSTALLMENTS=3,6
 SHOPLINE_WEBHOOK_TOLERANCE_MS=900000
 SHOPLINE_API_VERSION=V1.2
 ```
+
+`allowPaymentMethodList` is required by the SHOPLINE session API. If `SHOPLINE_PAYMENT_METHODS` is unset, the checkout uses `CreditCard,ApplePay,LinePay` by default. All three methods were verified by creating live SHOPLINE checkout sessions before launch.
 
 Database setup:
 

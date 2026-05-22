@@ -17,14 +17,17 @@ function readVenueEnv(env, venueId, key) {
 }
 
 export function getShoplineConfigForVenue(env, venueId) {
+  const hasVenueMerchant = Boolean(DEFAULT_MERCHANT_IDS_BY_VENUE[venueId])
   const merchantId =
     readVenueEnv(env, venueId, 'MERCHANT_ID') ||
     DEFAULT_MERCHANT_IDS_BY_VENUE[venueId] ||
     env.SHOPLINE_MERCHANT_ID
-  const apiKey = readVenueEnv(env, venueId, 'API_KEY') || env.SHOPLINE_API_KEY
+  const apiKey =
+    readVenueEnv(env, venueId, 'API_KEY') ||
+    (hasVenueMerchant ? undefined : env.SHOPLINE_API_KEY)
   const signKey =
     readVenueEnv(env, venueId, 'WEBHOOK_SIGN_KEY') ||
-    env.SHOPLINE_WEBHOOK_SIGN_KEY
+    (hasVenueMerchant ? undefined : env.SHOPLINE_WEBHOOK_SIGN_KEY)
 
   return {
     venueId,

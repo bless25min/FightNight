@@ -1,18 +1,8 @@
-[build]
-command = "npm run build"
-publish = "dist"
+name = "fightnight"
+compatibility_date = "2026-05-22"
+pages_build_output_dir = "dist"
 
-[[headers]]
-for = "/assets/*"
-[headers.values]
-Cache-Control = "public, max-age=31536000, immutable"
-
-[[headers]]
-for = "/*.js"
-[headers.values]
-Content-Type = "application/javascript; charset=utf-8"
-
-[[headers]]
-for = "/*.css"
-[headers.values]
-Content-Type = "text/css; charset=utf-8"
+[[d1_databases]]
+binding = "DB"
+database_name = "fightnight"
+database_id = "cf7a0050-4d76-4a31-b344-2fbc380dfdb0"
