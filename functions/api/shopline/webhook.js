@@ -1,6 +1,11 @@
 import { getShoplineConfigForMerchant, getShoplineConfigs } from './config.js'
 
 const DEFAULT_CAPACITY = 6
+const LOCKED_PAID_STATUSES = [
+  'paid',
+  'payment_amount_mismatch',
+  'paid_over_capacity',
+]
 
 function json(data, init = {}) {
   return new Response(JSON.stringify(data), {
@@ -201,6 +206,53 @@ async function markOrderStatus(env, referenceId, status, event, rawBody) {
     .run()
 }
 
+async function markNonPaidStatus(env, referenceId, status, event, rawBody) {
+  await env.DB.prepare(
+    `UPDATE course_orders
+     SET status = ?,
+         shopline_session_id = COALESCE(?, shopline_session_id),
+         shopline_trade_order_id = COALESCE(?, shopline_trade_order_id),
+         raw_webhook_json = ?,
+         updated_at = datetime('now')
+     WHERE reference_id = ?
+       AND status NOT IN ('paid', 'payment_processing', 'payment_amount_mismatch', 'paid_over_capacity')`,
+  )
+    .bind(
+      status,
+      getSessionId(event),
+      getTradeOrderId(event),
+      rawBody,
+      referenceId,
+    )
+    .run()
+}
+
+async function claimOrderForPayment(env, referenceId, event, rawBody) {
+  const result = await env.DB.prepare(
+    `UPDATE course_orders
+     SET status = 'payment_processing',
+         shopline_session_id = COALESCE(?, shopline_session_id),
+         shopline_trade_order_id = COALESCE(?, shopline_trade_order_id),
+         raw_webhook_json = ?,
+         updated_at = datetime('now')
+     WHERE reference_id = ?
+       AND status NOT IN ('paid', 'payment_amount_mismatch', 'paid_over_capacity')
+       AND (
+         status != 'payment_processing'
+         OR datetime(updated_at) <= datetime('now', '-5 minutes')
+       )`,
+  )
+    .bind(
+      getSessionId(event),
+      getTradeOrderId(event),
+      rawBody,
+      referenceId,
+    )
+    .run()
+
+  return Boolean(result.meta?.changes)
+}
+
 async function incrementPaidSeats(env, sessionIds, quantity) {
   const touched = []
 
@@ -269,21 +321,41 @@ export async function onRequestPost({ request, env }) {
   }
 
   if (!isPaidEvent(event)) {
+    if (
+      LOCKED_PAID_STATUSES.includes(order.status) ||
+      order.status === 'payment_processing'
+    ) {
+      return json({ ok: true, status: order.status })
+    }
+
     const nextStatus = mapNonPaidStatus(event)
     if (nextStatus) {
-      await markOrderStatus(env, referenceId, nextStatus, event, rawBody)
+      await markNonPaidStatus(env, referenceId, nextStatus, event, rawBody)
     }
     return json({ ok: true, status: nextStatus || order.status })
   }
 
-  if (order.status === 'paid') {
-    return json({ ok: true, status: 'paid' })
+  if (LOCKED_PAID_STATUSES.includes(order.status)) {
+    return json({ ok: true, status: order.status })
   }
 
   const paidAmount = getPaidAmountValue(event)
   if (paidAmount && paidAmount < Number(order.amount_value) * 100) {
     await markOrderStatus(env, referenceId, 'payment_amount_mismatch', event, rawBody)
     return json({ ok: true, status: 'payment_amount_mismatch' })
+  }
+
+  const claimed = await claimOrderForPayment(env, referenceId, event, rawBody)
+  if (!claimed) {
+    const currentOrder = await env.DB.prepare(
+      `SELECT status
+       FROM course_orders
+       WHERE reference_id = ?`,
+    )
+      .bind(referenceId)
+      .first()
+
+    return json({ ok: true, status: currentOrder?.status || order.status })
   }
 
   const sessionIds = JSON.parse(order.session_ids_json || '[]')

@@ -79,6 +79,8 @@ export async function onRequestPost({ request, env }) {
       .run()
   }
 
+  const touched = []
+
   for (const sessionId of sessionIds) {
     const result = await env.DB.prepare(
       `UPDATE session_inventory
@@ -89,6 +91,16 @@ export async function onRequestPost({ request, env }) {
       .run()
 
     if (!result.meta?.changes) {
+      for (const touchedSessionId of touched) {
+        await env.DB.prepare(
+          `UPDATE session_inventory
+           SET sold = MAX(0, sold - ?), updated_at = datetime('now')
+           WHERE session_id = ?`,
+        )
+          .bind(quantity, touchedSessionId)
+          .run()
+      }
+
       return json(
         {
           error: 'Sold out',
@@ -97,6 +109,8 @@ export async function onRequestPost({ request, env }) {
         { status: 409 },
       )
     }
+
+    touched.push(sessionId)
   }
 
   return json({

@@ -6,6 +6,7 @@ import { siteConfig } from '../data/landingContent'
 
 type OrderStatus =
   | 'pending'
+  | 'payment_processing'
   | 'paid'
   | 'expired'
   | 'failed'

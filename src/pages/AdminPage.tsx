@@ -228,6 +228,7 @@ const initialData: AdminData = {
 
 const statusLabels: Record<string, string> = {
   pending: '待付款',
+  payment_processing: '付款處理中',
   paid: '已付款',
   session_failed: '建立付款失敗',
   payment_amount_mismatch: '金額異常',

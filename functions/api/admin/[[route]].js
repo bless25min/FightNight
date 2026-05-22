@@ -1,4 +1,5 @@
 const ATTENTION_STATUSES = [
+  'payment_processing',
   'session_failed',
   'payment_amount_mismatch',
   'paid_over_capacity',

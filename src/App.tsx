@@ -19,6 +19,8 @@ import { SeoGuidePage } from './pages/SeoGuidePage'
 import { PrivacyPolicyPage } from './pages/PrivacyPolicyPage'
 import { trackPageView } from './lib/analytics'
 
+const CLIENT_BUILD_MARK = 'inventory-guard-20260522a'
+
 function getCurrentRoutePath() {
   if (typeof window === 'undefined') return '/'
 
@@ -114,6 +116,10 @@ function App() {
   const [pathname, setPathname] = useState(getCurrentRoutePath)
   const trackedInitialPageView = useRef(false)
   useInteractionHintLifecycle()
+
+  useEffect(() => {
+    document.documentElement.dataset.clientBuild = CLIENT_BUILD_MARK
+  }, [])
 
   useEffect(() => {
     if (!trackedInitialPageView.current) {
