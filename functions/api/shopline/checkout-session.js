@@ -1,3 +1,5 @@
+import { getShoplineConfigForVenue } from './config.js'
+
 const DEFAULT_CAPACITY = 6
 const CURRENCY = 'TWD'
 
@@ -157,7 +159,7 @@ function createReferenceId() {
 }
 
 function parsePaymentMethods(env) {
-  const raw = env.SHOPLINE_PAYMENT_METHODS || 'CreditCard,ApplePay,LinePay'
+  const raw = env.SHOPLINE_PAYMENT_METHODS || 'CreditCard'
   return raw
     .split(',')
     .map((item) => item.trim())
@@ -373,14 +375,14 @@ function buildShoplinePayload({
   })
 }
 
-async function createShoplineSession(env, payload) {
+async function createShoplineSession(env, payload, shoplineConfig) {
   const apiBaseUrl =
     env.SHOPLINE_API_BASE_URL || 'https://api-sandbox.shoplinepayments.com'
   const requestId = `RQ${Date.now().toString(36).toUpperCase()}${randomHex(4).toUpperCase()}`.slice(0, 32)
   const headers = {
     'content-type': 'application/json',
-    merchantId: env.SHOPLINE_MERCHANT_ID,
-    apiKey: env.SHOPLINE_API_KEY,
+    merchantId: shoplineConfig.merchantId,
+    apiKey: shoplineConfig.apiKey,
     requestId,
   }
 
@@ -410,15 +412,21 @@ export async function onRequestPost({ request, env }) {
     return json({ error: 'Missing D1 binding DB' }, { status: 503 })
   }
 
-  if (!env.SHOPLINE_MERCHANT_ID || !env.SHOPLINE_API_KEY) {
-    return json({ error: 'Missing SHOPLINE payment configuration' }, { status: 503 })
-  }
-
   const body = await request.json().catch(() => null)
 
   try {
     const course = body?.course
     assertCourse(course)
+    const shoplineConfig = getShoplineConfigForVenue(env, course.venueId)
+
+    if (!shoplineConfig.merchantId || !shoplineConfig.apiKey) {
+      return json(
+        {
+          error: `Missing SHOPLINE payment configuration for ${course.venueId}`,
+        },
+        { status: 503 },
+      )
+    }
 
     const packageSize = Math.max(1, Math.min(4, Number(body?.packageSize || 1)))
     if (course.category === 'FIGHT_NIGHT' && packageSize !== 1) {
@@ -510,7 +518,7 @@ export async function onRequestPost({ request, env }) {
 
     let session
     try {
-      session = await createShoplineSession(env, shoplinePayload)
+      session = await createShoplineSession(env, shoplinePayload, shoplineConfig)
     } catch (error) {
       await env.DB.prepare(
         `UPDATE course_orders

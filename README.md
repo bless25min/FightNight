@@ -145,16 +145,27 @@ Course purchase buttons now create a SHOPLINE Payments redirect checkout session
 Required production secrets:
 
 ```
-SHOPLINE_MERCHANT_ID=your_merchant_id
-SHOPLINE_API_KEY=your_api_key
-SHOPLINE_WEBHOOK_SIGN_KEY=your_sign_key
+SHOPLINE_API_KEY_DUNNAN=your_dunnan_api_key
+SHOPLINE_WEBHOOK_SIGN_KEY_DUNNAN=your_dunnan_sign_key
+SHOPLINE_API_KEY_TAICHUNG=your_taichung_api_key
+SHOPLINE_WEBHOOK_SIGN_KEY_TAICHUNG=your_taichung_sign_key
+SHOPLINE_API_KEY_NEIHU=your_neihu_api_key
+SHOPLINE_WEBHOOK_SIGN_KEY_NEIHU=your_neihu_sign_key
 SHOPLINE_API_BASE_URL=https://api.shoplinepayments.com
-SHOPLINE_PAYMENT_METHODS=CreditCard,ApplePay,LinePay
+```
+
+Venue merchant IDs are mapped in code and can be overridden by env vars:
+
+```
+SHOPLINE_MERCHANT_ID_DUNNAN=7510215296725291122
+SHOPLINE_MERCHANT_ID_TAICHUNG=7510218907366723700
+SHOPLINE_MERCHANT_ID_NEIHU=7511230868669859116
 ```
 
 Optional:
 
 ```
+SHOPLINE_PAYMENT_METHODS=CreditCard
 SHOPLINE_LANGUAGE=zh-TW
 SHOPLINE_SESSION_EXPIRE_MINUTES=60
 SHOPLINE_CREDIT_CARD_INSTALLMENTS=3,6

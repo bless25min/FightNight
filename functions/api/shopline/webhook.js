@@ -1,3 +1,5 @@
+import { getShoplineConfigForMerchant, getShoplineConfigs } from './config.js'
+
 const DEFAULT_CAPACITY = 6
 
 function json(data, init = {}) {
@@ -43,9 +45,6 @@ async function hmacSha256Hex(payload, secret) {
 }
 
 async function verifyWebhook(request, rawBody, env) {
-  const signKey = env.SHOPLINE_WEBHOOK_SIGN_KEY
-  if (!signKey) return false
-
   const timestamp = request.headers.get('timestamp')
   const sign = request.headers.get('sign')
   if (!timestamp || !sign) return false
@@ -56,8 +55,17 @@ async function verifyWebhook(request, rawBody, env) {
     if (!Number.isFinite(age) || age > toleranceMs) return false
   }
 
-  const expected = await hmacSha256Hex(`${timestamp}.${rawBody}`, signKey)
-  return timingSafeEqual(sign, expected)
+  const merchantId = request.headers.get('merchantId')
+  const merchantConfig = getShoplineConfigForMerchant(env, merchantId)
+  const configs = merchantConfig ? [merchantConfig] : getShoplineConfigs(env)
+
+  for (const config of configs) {
+    if (!config.signKey) continue
+    const expected = await hmacSha256Hex(`${timestamp}.${rawBody}`, config.signKey)
+    if (timingSafeEqual(sign, expected)) return true
+  }
+
+  return false
 }
 
 async function ensureTables(env) {
