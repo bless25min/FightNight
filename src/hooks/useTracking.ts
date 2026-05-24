@@ -115,7 +115,6 @@ export function useTracking() {
       track({
         event: 'course_purchase_click',
         params,
-        metaStandardEvent: 'InitiateCheckout',
         lineEventName: 'CheckoutClick',
       }),
     [track],

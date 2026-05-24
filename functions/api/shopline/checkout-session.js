@@ -311,6 +311,11 @@ async function ensureTables(env) {
       raw_request_json TEXT,
       raw_session_json TEXT,
       raw_webhook_json TEXT,
+      meta_purchase_event_id TEXT,
+      meta_purchase_sent_at TEXT,
+      meta_capi_status TEXT,
+      meta_capi_response_json TEXT,
+      meta_capi_error TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now')),
       paid_at TEXT
@@ -320,6 +325,29 @@ async function ensureTables(env) {
     `CREATE INDEX IF NOT EXISTS idx_course_orders_status
      ON course_orders (status, updated_at)`,
   ).run()
+  await ensureOrderTrackingColumns(env)
+}
+
+async function ensureOrderTrackingColumns(env) {
+  const columns = [
+    ['meta_purchase_event_id', 'TEXT'],
+    ['meta_purchase_sent_at', 'TEXT'],
+    ['meta_capi_status', 'TEXT'],
+    ['meta_capi_response_json', 'TEXT'],
+    ['meta_capi_error', 'TEXT'],
+  ]
+
+  for (const [name, type] of columns) {
+    try {
+      await env.DB.prepare(
+        `ALTER TABLE course_orders ADD COLUMN ${name} ${type}`,
+      ).run()
+    } catch (error) {
+      if (!(error instanceof Error) || !/duplicate column/i.test(error.message)) {
+        throw error
+      }
+    }
+  }
 }
 
 async function ensureInventoryRows(env, sessionIds) {
@@ -569,6 +597,12 @@ export async function onRequestPost({ request, env }) {
       env,
       request,
     })
+    const localOrderRequest = {
+      shoplinePayload,
+      tracking:
+        body?.tracking && typeof body.tracking === 'object' ? body.tracking : {},
+      client: shoplinePayload.client,
+    }
 
     await env.DB.prepare(
       `INSERT INTO course_orders (
@@ -600,7 +634,7 @@ export async function onRequestPost({ request, env }) {
         buyer.email || null,
         body?.sourcePath || null,
         returnUrl,
-        JSON.stringify(shoplinePayload),
+        JSON.stringify(localOrderRequest),
       )
       .run()
 

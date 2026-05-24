@@ -19,6 +19,10 @@ type AdminOrder = {
   buyerPhone: string
   buyerEmail?: string | null
   sourcePath?: string | null
+  metaPurchaseEventId?: string | null
+  metaPurchaseSentAt?: string | null
+  metaCapiStatus?: string | null
+  metaCapiError?: string | null
   seriesDates: string[]
   createdAt: string
   updatedAt?: string | null
@@ -60,6 +64,24 @@ type TrackingEventRow = {
   city?: string | null
   sourceUrl?: string | null
   referrer?: string | null
+  referrerHost?: string | null
+  firstLandingPath?: string | null
+  firstSourceChannel?: string | null
+  utmContent?: string | null
+  utmTerm?: string | null
+  clickIdType?: string | null
+  clickIdValue?: string | null
+  browserName?: string | null
+  osName?: string | null
+  inAppBrowser?: string | null
+  browserLanguage?: string | null
+  timezone?: string | null
+  visitorType?: string | null
+  sessionIndex?: number | null
+  colo?: string | null
+  cfAsn?: number | null
+  cfAsOrganization?: string | null
+  cfRay?: string | null
   createdAt: string
 }
 
@@ -101,6 +123,8 @@ type TrafficSource = {
   sourceChannel: string
   sessions: number
   visitors: number
+  newSessions: number
+  returningSessions: number
   pageViews: number
   actions: number
   checkoutIntents: number
@@ -156,6 +180,23 @@ type TrafficDevice = {
   avgScrollDepth: number
 }
 
+type TrafficBrowser = {
+  browserName: string
+  osName: string
+  inAppBrowser?: string | null
+  sessions: number
+  checkoutIntents: number
+  avgScrollDepth: number
+}
+
+type TrafficNetwork = {
+  asOrganization: string
+  asn: number
+  colo?: string | null
+  sessions: number
+  checkoutIntents: number
+}
+
 type TrafficGeo = {
   country: string
   region?: string | null
@@ -171,6 +212,8 @@ type TrafficData = {
   sections: TrafficSection[]
   exits: TrafficExit[]
   devices: TrafficDevice[]
+  browsers: TrafficBrowser[]
+  networks: TrafficNetwork[]
   geography: TrafficGeo[]
 }
 
@@ -184,6 +227,11 @@ type JourneyEvent = {
   maxScrollDepth?: number | null
   durationMs?: number | null
   isBounce?: boolean
+  sourceChannel?: string | null
+  utmSource?: string | null
+  utmMedium?: string | null
+  utmCampaign?: string | null
+  clickIdType?: string | null
   createdAt: string
 }
 
@@ -194,10 +242,19 @@ type Journey = {
   lastAt: string
   sourceChannel: string
   landingPath?: string | null
+  firstLandingPath?: string | null
   deviceType?: string | null
+  browserName?: string | null
+  osName?: string | null
+  inAppBrowser?: string | null
+  visitorType?: string | null
+  sessionIndex?: number | null
   country?: string | null
   region?: string | null
   city?: string | null
+  asOrganization?: string | null
+  asn?: number | null
+  colo?: string | null
   maxScrollDepth: number
   durationMs: number
   eventCount: number
@@ -305,6 +362,15 @@ function statusLabel(status: string) {
   return statusLabels[status] || status
 }
 
+function metaCapiLabel(status?: string | null) {
+  if (!status) return 'CAPI 未觸發'
+  if (status === 'sent') return 'CAPI 已送出'
+  if (status === 'skipped') return 'CAPI 未設定'
+  if (status === 'failed') return 'CAPI 失敗'
+  if (status === 'exception') return 'CAPI 例外'
+  return `CAPI ${status}`
+}
+
 function statusClass(status: string) {
   if (status === 'paid') return 'border-neon/30 bg-neon/10 text-neon'
   if (status === 'pending') return 'border-gold/35 bg-gold/10 text-gold'
@@ -385,6 +451,14 @@ function OrdersTable({ orders }: { orders: AdminOrder[] }) {
                 <p className="mt-2 font-mono text-[11px] text-mist/45">
                   {order.referenceId}
                 </p>
+                <p className="mt-2 text-[11px] text-mist/45">
+                  {metaCapiLabel(order.metaCapiStatus)}
+                </p>
+                {order.metaCapiError && (
+                  <p className="mt-1 max-w-[180px] truncate text-[11px] text-coral/70">
+                    {order.metaCapiError}
+                  </p>
+                )}
               </td>
               <td className="px-4 py-4">
                 <p className="font-medium text-pearl">{order.buyerName}</p>
@@ -516,9 +590,30 @@ function EventsTable({ events }: { events: TrackingEventRow[] }) {
                   {event.sourceChannel || 'direct'}
                   {event.deviceType ? ` · ${event.deviceType}` : ''}
                 </p>
+                {(event.browserName || event.osName || event.inAppBrowser) && (
+                  <p className="mt-1 text-xs text-mist/55">
+                    {[event.browserName, event.osName, event.inAppBrowser]
+                      .filter(Boolean)
+                      .join(' / ')}
+                  </p>
+                )}
+                {(event.visitorType || event.sessionIndex) && (
+                  <p className="mt-1 text-xs text-mist/45">
+                    {[event.visitorType, event.sessionIndex ? `S${event.sessionIndex}` : '']
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </p>
+                )}
                 {(event.city || event.country) && (
                   <p className="mt-1 text-xs text-mist/55">
                     {[event.city, event.region, event.country].filter(Boolean).join(' / ')}
+                  </p>
+                )}
+                {(event.cfAsOrganization || event.colo) && (
+                  <p className="mt-1 line-clamp-2 text-xs text-mist/45">
+                    {[event.cfAsOrganization, event.cfAsn ? `AS${event.cfAsn}` : '', event.colo]
+                      .filter(Boolean)
+                      .join(' / ')}
                   </p>
                 )}
                 {(event.utmCampaign || event.utmSource) && (
@@ -536,6 +631,11 @@ function EventsTable({ events }: { events: TrackingEventRow[] }) {
                 {event.ctaId && (
                   <p className="mt-1 line-clamp-2 break-all text-xs text-gold/75">
                     CTA {event.ctaId}
+                  </p>
+                )}
+                {event.sourceUrl && (
+                  <p className="mt-1 line-clamp-2 break-all text-[11px] text-mist/35">
+                    {event.sourceUrl}
                   </p>
                 )}
               </td>
@@ -609,7 +709,7 @@ function TrafficDashboard({ traffic }: { traffic?: TrafficData }) {
             key={source.sourceChannel}
             label={source.sourceChannel}
             value={`${source.sessions}`}
-            detail={`訪客 ${source.visitors} · CTA ${source.actions} · 結帳意圖 ${source.checkoutIntents}`}
+            detail={`新 ${source.newSessions} · 回訪 ${source.returningSessions} · 結帳 ${source.checkoutIntents}`}
           />
         ))}
       </div>
@@ -762,6 +862,60 @@ function TrafficDashboard({ traffic }: { traffic?: TrafficData }) {
         </div>
       </section>
 
+      <section className="grid gap-4 lg:grid-cols-2">
+        <div className="rounded-lg border border-pearl/10 bg-black/24 p-4">
+          <p className="font-heading text-sm tracking-[0.18em] text-mist/60">
+            瀏覽器與系統
+          </p>
+          <div className="mt-3 grid gap-2">
+            {traffic.browsers.slice(0, 12).map((browser) => (
+              <div
+                key={`${browser.browserName}-${browser.osName}-${browser.inAppBrowser || 'browser'}`}
+                className="flex items-center justify-between gap-3 rounded-lg border border-pearl/8 bg-black/24 px-3 py-2"
+              >
+                <span className="min-w-0 truncate text-mist/80">
+                  {[browser.browserName, browser.osName, browser.inAppBrowser]
+                    .filter(Boolean)
+                    .join(' / ')}
+                </span>
+                <span className="shrink-0 text-sm text-neon">
+                  {browser.sessions}
+                </span>
+              </div>
+            ))}
+            {traffic.browsers.length === 0 && (
+              <p className="text-sm text-mist/55">尚無瀏覽器資料。</p>
+            )}
+          </div>
+        </div>
+
+        <div className="rounded-lg border border-pearl/10 bg-black/24 p-4">
+          <p className="font-heading text-sm tracking-[0.18em] text-mist/60">
+            網路與 Cloudflare 節點
+          </p>
+          <div className="mt-3 grid gap-2">
+            {traffic.networks.slice(0, 12).map((network) => (
+              <div
+                key={`${network.asOrganization}-${network.asn}-${network.colo || ''}`}
+                className="flex items-center justify-between gap-3 rounded-lg border border-pearl/8 bg-black/24 px-3 py-2"
+              >
+                <span className="min-w-0 truncate text-mist/80">
+                  {[network.asOrganization, network.asn ? `AS${network.asn}` : '', network.colo]
+                    .filter(Boolean)
+                    .join(' / ')}
+                </span>
+                <span className="shrink-0 text-sm text-neon">
+                  {network.sessions}
+                </span>
+              </div>
+            ))}
+            {traffic.networks.length === 0 && (
+              <p className="text-sm text-mist/55">尚無網路資料。</p>
+            )}
+          </div>
+        </div>
+      </section>
+
       {traffic.campaigns.length > 0 && (
         <section className="rounded-lg border border-pearl/10 bg-black/24 p-4">
           <p className="font-heading text-sm tracking-[0.18em] text-mist/60">
@@ -804,7 +958,10 @@ function JourneysPanel({ journeys }: { journeys: Journey[] }) {
           <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
             <div className="min-w-0">
               <p className="font-heading text-sm text-pearl">
-                {journey.sourceChannel} · {journey.deviceType || 'unknown'}
+                {journey.sourceChannel} · {journey.deviceType || 'unknown'} ·{' '}
+                {[journey.browserName, journey.osName, journey.inAppBrowser]
+                  .filter(Boolean)
+                  .join(' / ') || 'browser unknown'}
               </p>
               <p className="mt-1 break-all font-mono text-[11px] text-mist/45">
                 {journey.sessionId}
@@ -813,6 +970,11 @@ function JourneysPanel({ journeys }: { journeys: Journey[] }) {
                 入口 {journey.landingPath || '-'} · {[journey.city, journey.region, journey.country]
                   .filter(Boolean)
                   .join(' / ') || '區域未知'}
+              </p>
+              <p className="mt-1 text-xs text-mist/45">
+                {[journey.visitorType, journey.sessionIndex ? `第 ${journey.sessionIndex} 次 session` : '', journey.asOrganization, journey.colo]
+                  .filter(Boolean)
+                  .join(' · ')}
               </p>
             </div>
             <div className="grid grid-cols-3 gap-2 text-center text-xs md:min-w-[18rem]">
@@ -846,6 +1008,8 @@ function JourneysPanel({ journeys }: { journeys: Journey[] }) {
                   {event.targetText ? ` · ${event.targetText}` : ''}
                   {event.scrollDepth ? ` · ${event.scrollDepth}%` : ''}
                   {event.durationMs ? ` · ${formatDuration(event.durationMs)}` : ''}
+                  {event.utmCampaign ? ` · ${event.utmCampaign}` : ''}
+                  {event.clickIdType ? ` · ${event.clickIdType}` : ''}
                 </span>
                 <span className="text-right text-mist/45">
                   {formatDateTime(event.createdAt)}

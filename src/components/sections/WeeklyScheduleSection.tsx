@@ -556,6 +556,32 @@ type CheckoutBuyer = {
   email: string
 }
 
+function readCookie(name: string) {
+  if (typeof document === 'undefined') return ''
+  const match = document.cookie
+    .split('; ')
+    .find((row) => row.startsWith(`${encodeURIComponent(name)}=`))
+  return match ? decodeURIComponent(match.split('=').slice(1).join('=')) : ''
+}
+
+function buildFacebookClickCookie() {
+  if (typeof window === 'undefined') return ''
+  const fbclid = new URLSearchParams(window.location.search).get('fbclid')
+  if (!fbclid) return ''
+  return `fb.1.${Date.now()}.${fbclid}`
+}
+
+function getCheckoutTrackingContext() {
+  if (typeof window === 'undefined') return {}
+
+  return {
+    fbp: readCookie('_fbp'),
+    fbc: readCookie('_fbc') || buildFacebookClickCookie(),
+    sourceUrl: window.location.href,
+    referrer: document.referrer,
+  }
+}
+
 type PendingCheckout = {
   course: WeeklyCourse
   packageSize: 1 | 2 | 4
@@ -1041,18 +1067,6 @@ export function WeeklyScheduleSection({
       setCheckoutError(null)
 
       try {
-        track({
-          event: 'shopline_checkout_submit',
-          params: buildCourseTrackingParams(
-            pendingCheckout.course,
-            pendingCheckout.packageSize,
-            pendingCheckout.remaining,
-            pendingCheckout.value,
-            pendingCheckout.pricingTier,
-          ),
-          lineEventName: 'CheckoutSubmit',
-        })
-
         const response = await fetch('/api/shopline/checkout-session', {
           method: 'POST',
           headers: {
@@ -1074,17 +1088,34 @@ export function WeeklyScheduleSection({
               language: window.navigator.language,
               colorDepth: String(window.screen.colorDepth),
             },
+            tracking: getCheckoutTrackingContext(),
             sourcePath: `${window.location.pathname}${window.location.search}${window.location.hash}`,
           }),
         })
 
         const data = (await response.json().catch(() => null)) as
-          | { sessionUrl?: string; error?: string }
+          | { referenceId?: string; sessionUrl?: string; error?: string }
           | null
 
         if (!response.ok || !data?.sessionUrl) {
           throw new Error(data?.error || 'SHOPLINE 付款建立失敗，請稍後再試。')
         }
+
+        track({
+          event: 'shopline_checkout_submit',
+          params: {
+            ...buildCourseTrackingParams(
+              pendingCheckout.course,
+              pendingCheckout.packageSize,
+              pendingCheckout.remaining,
+              pendingCheckout.value,
+              pendingCheckout.pricingTier,
+            ),
+            reference_id: data.referenceId,
+          },
+          metaStandardEvent: 'InitiateCheckout',
+          lineEventName: 'CheckoutSubmit',
+        })
 
         window.location.href = data.sessionUrl
       } catch (error) {

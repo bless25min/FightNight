@@ -93,8 +93,10 @@ async function ensureCustomerTrackingTables(env) {
         currency TEXT DEFAULT 'TWD',
         source_url TEXT,
         referrer TEXT,
+        referrer_host TEXT,
         route_path TEXT,
         landing_path TEXT,
+        first_landing_path TEXT,
         source_channel TEXT,
         first_source_channel TEXT,
         utm_source TEXT,
@@ -103,9 +105,15 @@ async function ensureCustomerTrackingTables(env) {
         utm_content TEXT,
         utm_term TEXT,
         click_id_type TEXT,
+        click_id_value TEXT,
         device_type TEXT,
+        browser_name TEXT,
+        os_name TEXT,
+        in_app_browser TEXT,
         browser_language TEXT,
         timezone TEXT,
+        visitor_type TEXT,
+        session_index INTEGER,
         viewport_width INTEGER,
         viewport_height INTEGER,
         screen_width INTEGER,
@@ -124,6 +132,11 @@ async function ensureCustomerTrackingTables(env) {
         cf_continent TEXT,
         cf_timezone TEXT,
         cf_colo TEXT,
+        cf_asn INTEGER,
+        cf_as_organization TEXT,
+        cf_ray TEXT,
+        cf_http_protocol TEXT,
+        cf_tls_version TEXT,
         payload_json TEXT,
         user_agent TEXT,
         created_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -195,11 +208,14 @@ async function ensureCustomerTrackingTables(env) {
        ON tracking_events (route_path, created_at)`,
     ),
   ])
+  await ensureOrderTrackingColumns(env)
 }
 
 async function ensureTrackingColumns(env) {
   const columns = [
     ['landing_path', 'TEXT'],
+    ['first_landing_path', 'TEXT'],
+    ['referrer_host', 'TEXT'],
     ['source_channel', 'TEXT'],
     ['first_source_channel', 'TEXT'],
     ['utm_source', 'TEXT'],
@@ -208,9 +224,15 @@ async function ensureTrackingColumns(env) {
     ['utm_content', 'TEXT'],
     ['utm_term', 'TEXT'],
     ['click_id_type', 'TEXT'],
+    ['click_id_value', 'TEXT'],
     ['device_type', 'TEXT'],
+    ['browser_name', 'TEXT'],
+    ['os_name', 'TEXT'],
+    ['in_app_browser', 'TEXT'],
     ['browser_language', 'TEXT'],
     ['timezone', 'TEXT'],
+    ['visitor_type', 'TEXT'],
+    ['session_index', 'INTEGER'],
     ['viewport_width', 'INTEGER'],
     ['viewport_height', 'INTEGER'],
     ['screen_width', 'INTEGER'],
@@ -229,6 +251,11 @@ async function ensureTrackingColumns(env) {
     ['cf_continent', 'TEXT'],
     ['cf_timezone', 'TEXT'],
     ['cf_colo', 'TEXT'],
+    ['cf_asn', 'INTEGER'],
+    ['cf_as_organization', 'TEXT'],
+    ['cf_ray', 'TEXT'],
+    ['cf_http_protocol', 'TEXT'],
+    ['cf_tls_version', 'TEXT'],
   ]
 
   for (const [name, type] of columns) {
@@ -240,6 +267,32 @@ async function ensureTrackingColumns(env) {
       if (!(error instanceof Error) || !/duplicate column/i.test(error.message)) {
         throw error
       }
+    }
+  }
+}
+
+async function ensureOrderTrackingColumns(env) {
+  const columns = [
+    ['meta_purchase_event_id', 'TEXT'],
+    ['meta_purchase_sent_at', 'TEXT'],
+    ['meta_capi_status', 'TEXT'],
+    ['meta_capi_response_json', 'TEXT'],
+    ['meta_capi_error', 'TEXT'],
+  ]
+
+  for (const [name, type] of columns) {
+    try {
+      await env.DB.prepare(
+        `ALTER TABLE course_orders ADD COLUMN ${name} ${type}`,
+      ).run()
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        (/duplicate column/i.test(error.message) || /no such table/i.test(error.message))
+      ) {
+        continue
+      }
+      throw error
     }
   }
 }
@@ -266,6 +319,10 @@ function normalizeOrder(row) {
     buyerPhone: row.buyer_phone,
     buyerEmail: row.buyer_email,
     sourcePath: row.source_path,
+    metaPurchaseEventId: row.meta_purchase_event_id,
+    metaPurchaseSentAt: row.meta_purchase_sent_at,
+    metaCapiStatus: row.meta_capi_status,
+    metaCapiError: row.meta_capi_error,
     sessionIds: parseJson(row.session_ids_json, []),
     seriesDates: parseJson(row.series_dates_json, []),
     createdAt: row.created_at,
@@ -311,7 +368,8 @@ async function listOrders(env, url) {
             coach_pricing_tier, route, package_size, quantity, amount_value,
             currency, session_ids_json, series_dates_json, buyer_name,
             buyer_phone, buyer_email, source_path, created_at, updated_at,
-            paid_at
+            paid_at, meta_purchase_event_id, meta_purchase_sent_at,
+            meta_capi_status, meta_capi_error
      FROM course_orders
      ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
      ORDER BY datetime(COALESCE(paid_at, updated_at, created_at)) DESC
@@ -330,7 +388,8 @@ async function getOrder(env, referenceId) {
             coach_pricing_tier, route, package_size, quantity, amount_value,
             currency, session_ids_json, series_dates_json, buyer_name,
             buyer_phone, buyer_email, source_path, created_at, updated_at,
-            paid_at
+            paid_at, meta_purchase_event_id, meta_purchase_sent_at,
+            meta_capi_status, meta_capi_error
      FROM course_orders
      WHERE reference_id = ?`,
     [referenceId],
@@ -376,14 +435,18 @@ async function listEvents(env, url) {
   const rows = await safeAll(
     env,
     `SELECT id, anonymous_id, session_id, event_name, event_id, event_value,
-            currency, source_url, referrer, route_path, landing_path,
+            currency, source_url, referrer, referrer_host, route_path, landing_path,
+            first_landing_path,
             source_channel, first_source_channel, utm_source, utm_medium,
-            utm_campaign, utm_content, utm_term, click_id_type, device_type,
-            browser_language, timezone, viewport_width, viewport_height,
+            utm_campaign, utm_content, utm_term, click_id_type, click_id_value,
+            device_type, browser_name, os_name, in_app_browser,
+            browser_language, timezone, visitor_type, session_index,
+            viewport_width, viewport_height,
             screen_width, screen_height, duration_ms, scroll_depth,
             max_scroll_depth, interaction_count, is_bounce, section_id,
             cta_id, target_text, cf_country, cf_region, cf_city, cf_continent,
-            cf_timezone, cf_colo, payload_json, user_agent, created_at
+            cf_timezone, cf_colo, cf_asn, cf_as_organization, cf_ray,
+            cf_http_protocol, cf_tls_version, payload_json, user_agent, created_at
      FROM tracking_events
      ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
      ORDER BY datetime(created_at) DESC
@@ -401,8 +464,10 @@ async function listEvents(env, url) {
     currency: row.currency || 'TWD',
     sourceUrl: row.source_url,
     referrer: row.referrer,
+    referrerHost: row.referrer_host,
     routePath: row.route_path,
     landingPath: row.landing_path,
+    firstLandingPath: row.first_landing_path,
     sourceChannel: row.source_channel,
     firstSourceChannel: row.first_source_channel,
     utmSource: row.utm_source,
@@ -411,9 +476,15 @@ async function listEvents(env, url) {
     utmContent: row.utm_content,
     utmTerm: row.utm_term,
     clickIdType: row.click_id_type,
+    clickIdValue: row.click_id_value,
     deviceType: row.device_type,
+    browserName: row.browser_name,
+    osName: row.os_name,
+    inAppBrowser: row.in_app_browser,
     browserLanguage: row.browser_language,
     timezone: row.timezone,
+    visitorType: row.visitor_type,
+    sessionIndex: row.session_index,
     viewportWidth: row.viewport_width,
     viewportHeight: row.viewport_height,
     screenWidth: row.screen_width,
@@ -432,6 +503,11 @@ async function listEvents(env, url) {
     continent: row.cf_continent,
     cfTimezone: row.cf_timezone,
     colo: row.cf_colo,
+    cfAsn: row.cf_asn,
+    cfAsOrganization: row.cf_as_organization,
+    cfRay: row.cf_ray,
+    cfHttpProtocol: row.cf_http_protocol,
+    cfTlsVersion: row.cf_tls_version,
     payload: parseJson(row.payload_json, {}),
     userAgent: row.user_agent,
     createdAt: row.created_at,
@@ -509,9 +585,11 @@ async function getTraffic(env) {
     `SELECT COALESCE(source_channel, 'direct') AS source_channel,
             COUNT(DISTINCT session_id) AS sessions,
             COUNT(DISTINCT anonymous_id) AS visitors,
+            COUNT(DISTINCT CASE WHEN visitor_type = 'new' THEN session_id ELSE NULL END) AS new_sessions,
+            COUNT(DISTINCT CASE WHEN visitor_type = 'returning' THEN session_id ELSE NULL END) AS returning_sessions,
             COALESCE(SUM(CASE WHEN event_name = 'page_view' THEN 1 ELSE 0 END), 0) AS page_views,
-            COALESCE(SUM(CASE WHEN event_name IN ('ui_click', 'hero_cta_click', 'ticket_cta_click', 'plan_cta_click', 'course_purchase_click', 'line_cta_click', 'gate_access_click') THEN 1 ELSE 0 END), 0) AS actions,
-            COALESCE(SUM(CASE WHEN event_name = 'course_purchase_click' THEN 1 ELSE 0 END), 0) AS checkout_intents,
+            COALESCE(SUM(CASE WHEN event_name IN ('ui_click', 'hero_cta_click', 'ticket_cta_click', 'plan_cta_click', 'course_purchase_click', 'shopline_checkout_submit', 'line_cta_click', 'gate_access_click') THEN 1 ELSE 0 END), 0) AS actions,
+            COALESCE(SUM(CASE WHEN event_name IN ('course_purchase_click', 'shopline_checkout_submit') THEN 1 ELSE 0 END), 0) AS checkout_intents,
             COALESCE(SUM(CASE WHEN event_name = 'page_exit' AND is_bounce = 1 THEN 1 ELSE 0 END), 0) AS bounces,
             COALESCE(SUM(CASE WHEN event_name = 'page_exit' THEN 1 ELSE 0 END), 0) AS exits,
             ROUND(AVG(CASE WHEN event_name = 'page_exit' THEN duration_ms END)) AS avg_duration_ms,
@@ -530,7 +608,7 @@ async function getTraffic(env) {
             COALESCE(utm_campaign, '(none)') AS utm_campaign,
             COALESCE(click_id_type, '') AS click_id_type,
             COUNT(DISTINCT session_id) AS sessions,
-            COALESCE(SUM(CASE WHEN event_name = 'course_purchase_click' THEN 1 ELSE 0 END), 0) AS checkout_intents,
+            COALESCE(SUM(CASE WHEN event_name IN ('course_purchase_click', 'shopline_checkout_submit') THEN 1 ELSE 0 END), 0) AS checkout_intents,
             COALESCE(SUM(CASE WHEN event_name IN ('ui_click', 'hero_cta_click', 'ticket_cta_click', 'plan_cta_click', 'line_cta_click') THEN 1 ELSE 0 END), 0) AS actions
      FROM tracking_events
      WHERE created_at >= datetime('now', '-14 days')
@@ -549,7 +627,7 @@ async function getTraffic(env) {
     `SELECT COALESCE(route_path, '(unknown)') AS route_path,
             COUNT(DISTINCT session_id) AS sessions,
             COALESCE(SUM(CASE WHEN event_name = 'page_view' THEN 1 ELSE 0 END), 0) AS page_views,
-            COALESCE(SUM(CASE WHEN event_name = 'course_purchase_click' THEN 1 ELSE 0 END), 0) AS checkout_intents,
+            COALESCE(SUM(CASE WHEN event_name IN ('course_purchase_click', 'shopline_checkout_submit') THEN 1 ELSE 0 END), 0) AS checkout_intents,
             COALESCE(SUM(CASE WHEN event_name IN ('ui_click', 'hero_cta_click', 'ticket_cta_click', 'plan_cta_click', 'line_cta_click') THEN 1 ELSE 0 END), 0) AS actions,
             COALESCE(SUM(CASE WHEN event_name = 'page_exit' THEN 1 ELSE 0 END), 0) AS exits,
             COALESCE(SUM(CASE WHEN event_name = 'page_exit' AND is_bounce = 1 THEN 1 ELSE 0 END), 0) AS bounces,
@@ -597,12 +675,41 @@ async function getTraffic(env) {
     env,
     `SELECT COALESCE(device_type, 'unknown') AS device_type,
             COUNT(DISTINCT session_id) AS sessions,
-            COALESCE(SUM(CASE WHEN event_name = 'course_purchase_click' THEN 1 ELSE 0 END), 0) AS checkout_intents,
+            COALESCE(SUM(CASE WHEN event_name IN ('course_purchase_click', 'shopline_checkout_submit') THEN 1 ELSE 0 END), 0) AS checkout_intents,
             ROUND(AVG(CASE WHEN event_name = 'page_exit' THEN max_scroll_depth END)) AS avg_scroll_depth
      FROM tracking_events
      WHERE created_at >= datetime('now', '-14 days')
      GROUP BY COALESCE(device_type, 'unknown')
      ORDER BY sessions DESC`,
+  )
+
+  const browserRows = await safeAll(
+    env,
+    `SELECT COALESCE(browser_name, 'unknown') AS browser_name,
+            COALESCE(os_name, 'unknown') AS os_name,
+            COALESCE(in_app_browser, '') AS in_app_browser,
+            COUNT(DISTINCT session_id) AS sessions,
+            COALESCE(SUM(CASE WHEN event_name IN ('course_purchase_click', 'shopline_checkout_submit') THEN 1 ELSE 0 END), 0) AS checkout_intents,
+            ROUND(AVG(CASE WHEN event_name = 'page_exit' THEN max_scroll_depth END)) AS avg_scroll_depth
+     FROM tracking_events
+     WHERE created_at >= datetime('now', '-14 days')
+     GROUP BY COALESCE(browser_name, 'unknown'), COALESCE(os_name, 'unknown'), COALESCE(in_app_browser, '')
+     ORDER BY sessions DESC
+     LIMIT 20`,
+  )
+
+  const networkRows = await safeAll(
+    env,
+    `SELECT COALESCE(cf_as_organization, 'unknown') AS as_organization,
+            COALESCE(cf_asn, 0) AS asn,
+            COALESCE(cf_colo, '') AS colo,
+            COUNT(DISTINCT session_id) AS sessions,
+            COALESCE(SUM(CASE WHEN event_name IN ('course_purchase_click', 'shopline_checkout_submit') THEN 1 ELSE 0 END), 0) AS checkout_intents
+     FROM tracking_events
+     WHERE created_at >= datetime('now', '-14 days')
+     GROUP BY COALESCE(cf_as_organization, 'unknown'), COALESCE(cf_asn, 0), COALESCE(cf_colo, '')
+     ORDER BY sessions DESC
+     LIMIT 20`,
   )
 
   const geographyRows = await safeAll(
@@ -611,7 +718,7 @@ async function getTraffic(env) {
             COALESCE(cf_region, '') AS region,
             COALESCE(cf_city, '') AS city,
             COUNT(DISTINCT session_id) AS sessions,
-            COALESCE(SUM(CASE WHEN event_name = 'course_purchase_click' THEN 1 ELSE 0 END), 0) AS checkout_intents
+            COALESCE(SUM(CASE WHEN event_name IN ('course_purchase_click', 'shopline_checkout_submit') THEN 1 ELSE 0 END), 0) AS checkout_intents
      FROM tracking_events
      WHERE created_at >= datetime('now', '-14 days')
      GROUP BY COALESCE(cf_country, 'unknown'), COALESCE(cf_region, ''), COALESCE(cf_city, '')
@@ -624,6 +731,8 @@ async function getTraffic(env) {
       sourceChannel: row.source_channel,
       sessions: toNumber(row.sessions),
       visitors: toNumber(row.visitors),
+      newSessions: toNumber(row.new_sessions),
+      returningSessions: toNumber(row.returning_sessions),
       pageViews: toNumber(row.page_views),
       actions: toNumber(row.actions),
       checkoutIntents: toNumber(row.checkout_intents),
@@ -673,6 +782,21 @@ async function getTraffic(env) {
       checkoutIntents: toNumber(row.checkout_intents),
       avgScrollDepth: toNumber(row.avg_scroll_depth),
     })),
+    browsers: browserRows.map((row) => ({
+      browserName: row.browser_name,
+      osName: row.os_name,
+      inAppBrowser: row.in_app_browser,
+      sessions: toNumber(row.sessions),
+      checkoutIntents: toNumber(row.checkout_intents),
+      avgScrollDepth: toNumber(row.avg_scroll_depth),
+    })),
+    networks: networkRows.map((row) => ({
+      asOrganization: row.as_organization,
+      asn: toNumber(row.asn),
+      colo: row.colo,
+      sessions: toNumber(row.sessions),
+      checkoutIntents: toNumber(row.checkout_intents),
+    })),
     geography: geographyRows.map((row) => ({
       country: row.country,
       region: row.region,
@@ -693,10 +817,19 @@ async function listJourneys(env, url) {
             MAX(created_at) AS last_at,
             COALESCE(MAX(source_channel), 'direct') AS source_channel,
             COALESCE(MAX(landing_path), '') AS landing_path,
+            COALESCE(MAX(first_landing_path), '') AS first_landing_path,
             COALESCE(MAX(device_type), 'unknown') AS device_type,
+            COALESCE(MAX(browser_name), 'unknown') AS browser_name,
+            COALESCE(MAX(os_name), 'unknown') AS os_name,
+            COALESCE(MAX(in_app_browser), '') AS in_app_browser,
+            COALESCE(MAX(visitor_type), '') AS visitor_type,
+            MAX(session_index) AS session_index,
             COALESCE(MAX(cf_country), '') AS country,
             COALESCE(MAX(cf_region), '') AS region,
             COALESCE(MAX(cf_city), '') AS city,
+            COALESCE(MAX(cf_as_organization), '') AS as_organization,
+            MAX(cf_asn) AS asn,
+            COALESCE(MAX(cf_colo), '') AS colo,
             MAX(max_scroll_depth) AS max_scroll_depth,
             MAX(duration_ms) AS duration_ms,
             COUNT(*) AS event_count
@@ -715,7 +848,9 @@ async function listJourneys(env, url) {
   const events = await safeAll(
     env,
     `SELECT session_id, event_name, route_path, section_id, cta_id, target_text,
-            scroll_depth, max_scroll_depth, duration_ms, is_bounce, created_at
+            scroll_depth, max_scroll_depth, duration_ms, is_bounce,
+            source_channel, utm_source, utm_medium, utm_campaign, click_id_type,
+            created_at
      FROM tracking_events
      WHERE session_id IN (${placeholders})
      ORDER BY datetime(created_at) ASC, id ASC`,
@@ -735,6 +870,11 @@ async function listJourneys(env, url) {
       maxScrollDepth: event.max_scroll_depth,
       durationMs: event.duration_ms,
       isBounce: Boolean(event.is_bounce),
+      sourceChannel: event.source_channel,
+      utmSource: event.utm_source,
+      utmMedium: event.utm_medium,
+      utmCampaign: event.utm_campaign,
+      clickIdType: event.click_id_type,
       createdAt: event.created_at,
     })
     eventsBySession.set(event.session_id, list)
@@ -747,10 +887,19 @@ async function listJourneys(env, url) {
     lastAt: session.last_at,
     sourceChannel: session.source_channel,
     landingPath: session.landing_path,
+    firstLandingPath: session.first_landing_path,
     deviceType: session.device_type,
+    browserName: session.browser_name,
+    osName: session.os_name,
+    inAppBrowser: session.in_app_browser,
+    visitorType: session.visitor_type,
+    sessionIndex: toNumber(session.session_index),
     country: session.country,
     region: session.region,
     city: session.city,
+    asOrganization: session.as_organization,
+    asn: toNumber(session.asn),
+    colo: session.colo,
     maxScrollDepth: toNumber(session.max_scroll_depth),
     durationMs: toNumber(session.duration_ms),
     eventCount: toNumber(session.event_count),

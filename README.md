@@ -98,11 +98,14 @@ VITE_META_PIXEL_ID=1234567890
 
 ## Advertising Tracking
 
-Production tracking is controlled by Vite environment variables:
+Production browser tracking and server-side Meta CAPI are controlled by these variables:
 
 ```
 VITE_GA_MEASUREMENT_ID=G-XXXXXXXXXX
 VITE_META_PIXEL_ID=1234567890
+META_CAPI_ACCESS_TOKEN=EA...
+META_GRAPH_API_VERSION=v21.0
+META_TEST_EVENT_CODE=optional-meta-test-code
 VITE_LINE_TAG_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 VITE_LINE_TAG_CUSTOMER_TYPE=lap
 ```
@@ -115,7 +118,8 @@ Primary conversion events:
 | `gate_access_click` | User starts LINE Login / unlock flow. |
 | `bootcamp_route_select` | User selects Boxing or Muay Thai / Kickboxing path. |
 | `bootcamp_package_select` | User selects 2-session or 4-session Boot Camp package. |
-| `course_purchase_click` | User clicks a concrete session purchase button. Sent as Meta `InitiateCheckout`. |
+| `course_purchase_click` | User clicks a concrete session purchase button. First-party/custom intent event. |
+| `shopline_checkout_submit` | SHOPLINE checkout session is created successfully. Sent as Meta `InitiateCheckout`. |
 | `line_cta_click` | User clicks LINE CTA. |
 | `scroll_25/50/75/100` | Page-depth signals. |
 
@@ -123,12 +127,12 @@ Recommended ad-platform conversion setup:
 
 | Platform signal | Use as |
 | --- | --- |
-| Meta `InitiateCheckout` from `course_purchase_click` | Primary conversion until real payment confirmation exists. |
+| Meta `InitiateCheckout` from `shopline_checkout_submit` | Checkout-start optimization; fires only after SHOPLINE returns a usable checkout URL. |
+| Meta CAPI `Purchase` from `POST /api/shopline/webhook` | Primary conversion after SHOPLINE confirms payment success. Requires `META_CAPI_ACCESS_TOKEN`. |
 | Meta `Lead` from `gate_access_click`, `ticket_cta_click`, and plan CTAs | Secondary conversion / retargeting audience. |
 | Meta `ViewContent` from ticket and Boot Camp route/package interest | Funnel audience, not the main optimization event. |
-| Future `Purchase` | Fire only after payment succeeds, ideally from server/webhook. |
 
-Meta Pixel events include `eventID` so a future Conversions API implementation can deduplicate browser and server events.
+Meta Pixel events include `eventID`. Purchases use the local order `event_id` (`purchase.<referenceId>`) from the SHOPLINE webhook source of truth.
 
 The same browser events are also posted to `POST /api/events` and stored in D1 as first-party anonymous funnel data. This lets `/admin` show page views, route/package selections, checkout starts, and other behavior without relying only on ad-platform dashboards.
 
@@ -165,6 +169,9 @@ SHOPLINE_MERCHANT_ID_NEIHU=7511230868669859116
 Optional:
 
 ```
+META_CAPI_ACCESS_TOKEN=EA...
+META_GRAPH_API_VERSION=v21.0
+META_TEST_EVENT_CODE=optional-meta-test-code
 SHOPLINE_PAYMENT_METHODS=CreditCard,ApplePay,LinePay
 SHOPLINE_LANGUAGE=zh-TW
 SHOPLINE_SESSION_EXPIRE_MINUTES=60
@@ -214,6 +221,8 @@ Admin APIs:
 | `GET /api/admin/line-customers` | LINE users verified through LIFF access token and their access counts. |
 
 The dashboard reads `ADMIN_TOKEN` from the browser input and sends it as `x-admin-token`. Do not expose this token in client-side environment variables.
+
+Tracked first-party traffic attributes include source URL, referrer host, UTM parameters, ad click ID type/value, first landing path, new/returning session state, device type, browser, operating system, in-app browser, viewport/screen size, scroll depth, page duration, bounce state, section exposure, CTA clicks, Cloudflare country/region/city/colo, ASN, AS organization, HTTP protocol, and TLS version. These are trend and behavior signals for landing-page optimization, not person-level demographic identity.
 
 ## LINE LIFF Gate
 

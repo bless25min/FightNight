@@ -1,4 +1,5 @@
 import { getShoplineConfigForMerchant, getShoplineConfigs } from './config.js'
+import { sendMetaPurchaseEvent } from './meta-capi.js'
 
 const DEFAULT_CAPACITY = 6
 const LOCKED_PAID_STATUSES = [
@@ -117,11 +118,39 @@ async function ensureTables(env) {
       raw_request_json TEXT,
       raw_session_json TEXT,
       raw_webhook_json TEXT,
+      meta_purchase_event_id TEXT,
+      meta_purchase_sent_at TEXT,
+      meta_capi_status TEXT,
+      meta_capi_response_json TEXT,
+      meta_capi_error TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now')),
       paid_at TEXT
     )`,
   ).run()
+  await ensureOrderTrackingColumns(env)
+}
+
+async function ensureOrderTrackingColumns(env) {
+  const columns = [
+    ['meta_purchase_event_id', 'TEXT'],
+    ['meta_purchase_sent_at', 'TEXT'],
+    ['meta_capi_status', 'TEXT'],
+    ['meta_capi_response_json', 'TEXT'],
+    ['meta_capi_error', 'TEXT'],
+  ]
+
+  for (const [name, type] of columns) {
+    try {
+      await env.DB.prepare(
+        `ALTER TABLE course_orders ADD COLUMN ${name} ${type}`,
+      ).run()
+    } catch (error) {
+      if (!(error instanceof Error) || !/duplicate column/i.test(error.message)) {
+        throw error
+      }
+    }
+  }
 }
 
 function getReferenceId(event) {
@@ -218,6 +247,34 @@ async function markOrderStatus(env, referenceId, status, event, rawBody) {
       getSessionId(event),
       getTradeOrderId(event),
       rawBody,
+      referenceId,
+    )
+    .run()
+}
+
+async function recordMetaCapiResult(env, referenceId, result) {
+  const status = String(result?.status || 'unknown').slice(0, 40)
+  const responseJson = result?.response
+    ? JSON.stringify(result.response).slice(0, 8000)
+    : null
+  const error = result?.error ? String(result.error).slice(0, 1000) : null
+
+  await env.DB.prepare(
+    `UPDATE course_orders
+     SET meta_purchase_event_id = COALESCE(?, meta_purchase_event_id),
+         meta_purchase_sent_at = CASE WHEN ? = 'sent' THEN datetime('now') ELSE meta_purchase_sent_at END,
+         meta_capi_status = ?,
+         meta_capi_response_json = ?,
+         meta_capi_error = ?,
+         updated_at = datetime('now')
+     WHERE reference_id = ?`,
+  )
+    .bind(
+      result?.eventId || null,
+      status,
+      status,
+      responseJson,
+      error,
       referenceId,
     )
     .run()
@@ -360,7 +417,10 @@ export async function onRequestPost({ request, env }) {
   await ensureTables(env)
 
   const order = await env.DB.prepare(
-    `SELECT reference_id, status, amount_value, session_ids_json, quantity
+    `SELECT reference_id, status, event_id, course_id, course_name, category,
+            venue_id, venue_name, package_size, quantity, amount_value, currency,
+            session_ids_json, buyer_phone, buyer_email, source_path, return_url,
+            raw_request_json
      FROM course_orders
      WHERE reference_id = ?`,
   )
@@ -473,6 +533,29 @@ export async function onRequestPost({ request, env }) {
       referenceId,
     )
     .run()
+
+  try {
+    const metaResult = await sendMetaPurchaseEvent({
+      env,
+      request,
+      order: {
+        ...order,
+        status: 'paid',
+      },
+    })
+    await recordMetaCapiResult(env, referenceId, metaResult)
+  } catch (error) {
+    await recordMetaCapiResult(env, referenceId, {
+      status: 'exception',
+      eventId: order.event_id || `purchase.${referenceId}`,
+      ok: false,
+      skipped: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Meta CAPI purchase send failed',
+    })
+  }
 
   return json({ ok: true, status: 'paid' })
 }

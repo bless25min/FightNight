@@ -47,6 +47,7 @@ type RuntimeAnalyticsConfig = {
 const anonymousIdKey = 'fightnight_anonymous_id'
 const sessionIdKey = 'fightnight_session_id'
 const attributionKey = 'fightnight_attribution'
+const visitorProfileKey = 'fightnight_visitor_profile'
 let runtimeConfig: RuntimeAnalyticsConfig = {}
 let runtimeConfigPromise: Promise<RuntimeAnalyticsConfig> | undefined
 let behaviorTrackingStarted = false
@@ -63,6 +64,13 @@ type StoredAttribution = {
   utmContent?: string
   utmTerm?: string
   clickIdType?: string
+  clickIdValue?: string
+}
+
+type StoredVisitorProfile = {
+  firstSeenAt: string
+  lastSessionId?: string
+  sessionIndex: number
 }
 
 type PageState = {
@@ -277,6 +285,22 @@ function getClickIdType(searchParams: URLSearchParams) {
   return ''
 }
 
+function getClickIdValue(searchParams: URLSearchParams) {
+  for (const key of [
+    'fbclid',
+    'gclid',
+    'gbraid',
+    'wbraid',
+    'msclkid',
+    'ttclid',
+    'li_fat_id',
+  ]) {
+    const value = searchParams.get(key)
+    if (value) return value
+  }
+  return ''
+}
+
 function getReferrerHost(referrer: string) {
   try {
     return referrer ? new URL(referrer).hostname.replace(/^www\./, '') : ''
@@ -318,6 +342,7 @@ function buildAttributionFromLocation(): StoredAttribution {
     utmContent: searchParams.get('utm_content') || undefined,
     utmTerm: searchParams.get('utm_term') || undefined,
     clickIdType: getClickIdType(searchParams) || undefined,
+    clickIdValue: getClickIdValue(searchParams) || undefined,
   }
 }
 
@@ -354,12 +379,82 @@ function getDeviceType() {
   return 'desktop'
 }
 
+function getBrowserName() {
+  if (typeof window === 'undefined') return 'unknown'
+  const ua = window.navigator.userAgent
+
+  if (/Line\//i.test(ua)) return 'LINE'
+  if (/Instagram/i.test(ua)) return 'Instagram'
+  if (/FBAN|FBAV|FBIOS|FB_IAB/i.test(ua)) return 'Facebook'
+  if (/TikTok/i.test(ua)) return 'TikTok'
+  if (/Edg\//i.test(ua)) return 'Edge'
+  if (/CriOS|Chrome\//i.test(ua)) return 'Chrome'
+  if (/FxiOS|Firefox\//i.test(ua)) return 'Firefox'
+  if (/Safari\//i.test(ua)) return 'Safari'
+  return 'other'
+}
+
+function getOsName() {
+  if (typeof window === 'undefined') return 'unknown'
+  const ua = window.navigator.userAgent
+  const platform = window.navigator.platform || ''
+
+  if (/Android/i.test(ua)) return 'Android'
+  if (/iPhone|iPad|iPod/i.test(ua) || (/Mac/i.test(platform) && 'ontouchend' in document)) {
+    return 'iOS'
+  }
+  if (/Windows/i.test(ua)) return 'Windows'
+  if (/Mac OS X|Macintosh/i.test(ua)) return 'macOS'
+  if (/CrOS/i.test(ua)) return 'ChromeOS'
+  if (/Linux/i.test(ua)) return 'Linux'
+  return 'other'
+}
+
+function getInAppBrowser() {
+  if (typeof window === 'undefined') return ''
+  const ua = window.navigator.userAgent
+
+  if (/Line\//i.test(ua)) return 'LINE'
+  if (/Instagram/i.test(ua)) return 'Instagram'
+  if (/FBAN|FBAV|FBIOS|FB_IAB/i.test(ua)) return 'Facebook'
+  if (/TikTok/i.test(ua)) return 'TikTok'
+  if (/MicroMessenger/i.test(ua)) return 'WeChat'
+  return ''
+}
+
+function getVisitorProfile() {
+  if (typeof window === 'undefined') {
+    return { visitorType: 'unknown', sessionIndex: 0 }
+  }
+
+  const sessionId = getSessionId()
+  const existing = readStorageJson<StoredVisitorProfile>(
+    window.localStorage,
+    visitorProfileKey,
+  )
+  const profile: StoredVisitorProfile = existing
+    ? { ...existing }
+    : { firstSeenAt: new Date().toISOString(), sessionIndex: 0 }
+
+  if (profile.lastSessionId !== sessionId) {
+    profile.sessionIndex = Math.max(0, profile.sessionIndex || 0) + 1
+    profile.lastSessionId = sessionId
+    writeStorageJson(window.localStorage, visitorProfileKey, profile)
+  }
+
+  return {
+    visitorType: profile.sessionIndex <= 1 ? 'new' : 'returning',
+    sessionIndex: profile.sessionIndex,
+  }
+}
+
 function getTrackingContextParams(): TrackingParams {
   if (typeof window === 'undefined') return {}
 
   const attribution = getAttribution()
   const first = attribution?.first
   const current = attribution?.current
+  const visitor = getVisitorProfile()
 
   return normalizeParams({
     page_path: getRoutePath(),
@@ -374,9 +469,15 @@ function getTrackingContextParams(): TrackingParams {
     utm_content: current?.utmContent || first?.utmContent || '',
     utm_term: current?.utmTerm || first?.utmTerm || '',
     click_id_type: current?.clickIdType || first?.clickIdType || '',
+    click_id_value: current?.clickIdValue || first?.clickIdValue || '',
     device_type: getDeviceType(),
+    browser_name: getBrowserName(),
+    os_name: getOsName(),
+    in_app_browser: getInAppBrowser(),
     browser_language: window.navigator.language || '',
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || '',
+    visitor_type: visitor.visitorType,
+    session_index: visitor.sessionIndex,
     viewport_width: window.innerWidth,
     viewport_height: window.innerHeight,
     screen_width: window.screen?.width || 0,
