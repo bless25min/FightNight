@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1080" viewBox="0 0 1080 1080">
+  <title>Fight Night Pass ad 04 - first rhythm</title>
+  <defs>
+    <linearGradient id="leftShade" x1="0" x2="1" y1="0" y2="0">
+      <stop offset="0" stop-color="#020202" stop-opacity="0.96"/>
+      <stop offset="0.46" stop-color="#020202" stop-opacity="0.7"/>
+      <stop offset="0.76" stop-color="#020202" stop-opacity="0.16"/>
+      <stop offset="1" stop-color="#020202" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="bottomShade" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#020202" stop-opacity="0"/>
+      <stop offset="1" stop-color="#020202" stop-opacity="0.88"/>
+    </linearGradient>
+    <style>
+      .sans { font-family: "Noto Sans TC", "Microsoft JhengHei", Arial, sans-serif; }
+      .headline { font-weight: 950; font-size: 78px; letter-spacing: 0; fill: #fff; }
+      .sub { font-weight: 650; font-size: 30px; letter-spacing: 0; fill: #f5eeee; }
+      .micro { font-weight: 850; font-size: 22px; letter-spacing: 0; fill: #e71921; }
+      .cta { font-weight: 900; font-size: 28px; letter-spacing: 0; fill: #fff; }
+    </style>
+  </defs>
+  <rect width="1080" height="1080" fill="#030303"/>
+  <image href="../../src/assets/landing/flow-step-3.jpg" x="-720" y="0" width="1920" height="1080" preserveAspectRatio="xMidYMid slice"/>
+  <rect width="1080" height="1080" fill="url(#leftShade)"/>
+  <rect width="1080" height="1080" fill="url(#bottomShade)"/>
+  <path d="M0 0 h472 c-74 226 -78 626 0 1080 h-472z" fill="#030303" opacity="0.82"/>
+  <path d="M74 96 h76" stroke="#e71921" stroke-width="10"/>
+  <text class="sans micro" x="74" y="164">第一次，也能進入狀態</text>
+  <text class="sans headline" x="70" y="316">跟著節奏</text>
+  <text class="sans headline" x="70" y="426">你會自然<tspan fill="#e71921">進場</tspan></text>
+  <text class="sans sub" x="74" y="522">教練帶拍，全班同步。</text>
+  <text class="sans sub" x="74" y="572">不用很會，也會被帶起來。</text>
+  <g transform="translate(74 895)">
+    <rect x="0" y="0" width="376" height="72" rx="36" fill="#e71921"/>
+    <text class="sans cta" x="30" y="47">看新手可進場場次</text>
+  </g>
+  <text class="sans micro" x="74" y="1018" fill="#fff">UFC GYM TAIWAN</text>
+</svg>

@@ -113,7 +113,7 @@ export function Footer({ onVenueAction }: FooterProps = {}) {
               rel="noopener noreferrer"
               className="transition-colors hover:text-neon"
             >
-              作者資訊：廖天佑
+              專案維護：廖天佑
             </a>
           </div>
         </div>

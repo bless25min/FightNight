@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1080" viewBox="0 0 1080 1080">
+  <title>Fight Night Pass ad 03 - release pressure</title>
+  <defs>
+    <radialGradient id="focus" cx="73%" cy="45%" r="75%">
+      <stop offset="0" stop-color="#000" stop-opacity="0"/>
+      <stop offset="0.62" stop-color="#000" stop-opacity="0.16"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0.84"/>
+    </radialGradient>
+    <linearGradient id="copyShade" x1="0" x2="1" y1="0" y2="0">
+      <stop offset="0" stop-color="#030303" stop-opacity="0.98"/>
+      <stop offset="0.36" stop-color="#030303" stop-opacity="0.82"/>
+      <stop offset="0.72" stop-color="#030303" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#030303" stop-opacity="0"/>
+    </linearGradient>
+    <style>
+      .sans { font-family: "Noto Sans TC", "Microsoft JhengHei", Arial, sans-serif; }
+      .headline { font-weight: 950; font-size: 88px; letter-spacing: 0; fill: #fff; }
+      .sub { font-weight: 650; font-size: 31px; letter-spacing: 0; fill: #f4eeee; }
+      .micro { font-weight: 850; font-size: 22px; letter-spacing: 0; fill: #e71921; }
+      .cta { font-weight: 900; font-size: 28px; letter-spacing: 0; fill: #fff; }
+    </style>
+  </defs>
+  <rect width="1080" height="1080" fill="#030303"/>
+  <image href="../../src/assets/landing/flow-step-4.jpg" x="-835" y="0" width="1920" height="1080" preserveAspectRatio="xMidYMid slice"/>
+  <rect width="1080" height="1080" fill="url(#focus)"/>
+  <rect width="1080" height="1080" fill="url(#copyShade)"/>
+  <path d="M78 96 h88" stroke="#e71921" stroke-width="11"/>
+  <path d="M78 756 h156" stroke="#e71921" stroke-width="8"/>
+  <path d="M78 784 h52" stroke="#e71921" stroke-width="8"/>
+  <text class="sans micro" x="78" y="162">壓力釋放場</text>
+  <text class="sans headline" x="74" y="314">把今天的</text>
+  <text class="sans headline" x="74" y="430"><tspan fill="#e71921">悶</tspan> 打出去</text>
+  <text class="sans sub" x="78" y="522">不是變兇，</text>
+  <text class="sans sub" x="78" y="572">是把自己拉回來。</text>
+  <g transform="translate(78 895)">
+    <rect x="0" y="0" width="346" height="72" rx="36" fill="#e71921"/>
+    <text class="sans cta" x="30" y="47">預約釋放場</text>
+  </g>
+  <text class="sans micro" x="78" y="1018" fill="#fff">FIGHT NIGHT PASS</text>
+</svg>

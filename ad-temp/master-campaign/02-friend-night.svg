@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1080" viewBox="0 0 1080 1080">
+  <title>Fight Night Pass ad 02 - friend night</title>
+  <defs>
+    <linearGradient id="leftShade" x1="0" x2="1" y1="0" y2="0">
+      <stop offset="0" stop-color="#020202" stop-opacity="0.96"/>
+      <stop offset="0.38" stop-color="#020202" stop-opacity="0.8"/>
+      <stop offset="0.68" stop-color="#020202" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#020202" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="bottomShade" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#020202" stop-opacity="0"/>
+      <stop offset="1" stop-color="#020202" stop-opacity="0.9"/>
+    </linearGradient>
+    <style>
+      .sans { font-family: "Noto Sans TC", "Microsoft JhengHei", Arial, sans-serif; }
+      .headline { font-weight: 900; font-size: 86px; letter-spacing: 0; fill: #fff; }
+      .sub { font-weight: 650; font-size: 31px; letter-spacing: 0; fill: #f7f3f3; }
+      .micro { font-weight: 850; font-size: 22px; letter-spacing: 0; fill: #e71921; }
+      .cta { font-weight: 900; font-size: 28px; letter-spacing: 0; fill: #fff; }
+    </style>
+  </defs>
+  <rect width="1080" height="1080" fill="#040404"/>
+  <image href="../../src/assets/landing/audience-poster.jpg" x="-760" y="0" width="1920" height="1080" preserveAspectRatio="xMidYMid slice"/>
+  <rect width="1080" height="1080" fill="url(#leftShade)"/>
+  <rect width="1080" height="1080" fill="url(#bottomShade)"/>
+  <path d="M0 0 h455 c-90 250 -98 585 0 1080 h-455z" fill="#050505" opacity="0.78"/>
+  <path d="M72 94 h62" stroke="#e71921" stroke-width="10"/>
+  <path d="M72 124 h32" stroke="#e71921" stroke-width="10"/>
+  <text class="sans micro" x="72" y="182">今晚，把朋友揪進來</text>
+  <text class="sans headline" x="68" y="328">不要只約</text>
+  <text class="sans headline" x="68" y="444"><tspan fill="#e71921">吃飯</tspan></text>
+  <text class="sans sub" x="72" y="540">約一場打完會一直笑的。</text>
+  <text class="sans sub" x="72" y="590">比聊天更快進入同一個頻率。</text>
+  <g transform="translate(72 895)">
+    <rect x="0" y="0" width="364" height="72" rx="36" fill="#e71921"/>
+    <text class="sans cta" x="30" y="47">揪朋友看場次</text>
+  </g>
+  <text class="sans micro" x="72" y="1018" fill="#fff">FIGHT NIGHT PASS</text>
+</svg>
