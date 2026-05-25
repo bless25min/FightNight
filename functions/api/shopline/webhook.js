@@ -327,9 +327,31 @@ function isRefundSucceededEvent(event) {
   )
 }
 
+function isPaidCancellationRefundEvent(event, order) {
+  if (!['paid', 'refund_processing'].includes(order?.status)) return false
+
+  const type = String(event?.type || '').toLowerCase()
+  const status = String(event?.data?.status || '').toUpperCase()
+  const refundLikeTypes = ['trade.cancelled', 'trade.canceled', 'trade.voided', 'trade.reversed']
+  const refundLikeStatuses = ['CANCELLED', 'CANCELED', 'VOIDED', 'REVERSED', 'REFUNDED']
+
+  return (
+    refundLikeTypes.includes(type) ||
+    type.includes('void') ||
+    type.includes('reverse') ||
+    refundLikeStatuses.includes(status)
+  )
+}
+
 function getRefundAmountValue(event) {
   const data = event?.data || {}
-  return Number(data.amount?.value || data.refundAmount?.value || 0)
+  return Number(
+    data.refundAmount?.value ||
+      data.refundedAmount?.value ||
+      data.totalRefundAmount?.value ||
+      data.amount?.value ||
+      0,
+  )
 }
 
 function mapNonPaidStatus(event) {
@@ -580,7 +602,7 @@ export async function onRequestPost({ request, env }) {
     return json({ error: 'Order not found' }, { status: 404 })
   }
 
-  if (isRefundSucceededEvent(event)) {
+  if (isRefundSucceededEvent(event) || isPaidCancellationRefundEvent(event, order)) {
     if (order.status === 'refunded') {
       await finishWebhookAttempt(env, attemptId, {
         verificationStatus: 'verified',

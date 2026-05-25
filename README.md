@@ -145,7 +145,7 @@ Course purchase buttons now create a SHOPLINE Payments redirect checkout session
 | `POST /api/shopline/checkout-session` | Creates a pending local order and requests a SHOPLINE checkout `sessionUrl`. |
 | `POST /api/shopline/webhook` | Verifies SHOPLINE webhook signature and marks successful payments as paid. |
 | `GET /api/shopline/order-status?referenceId=...` | Reads local order state and queries SHOPLINE as a fallback when the order is still pending. |
-| `POST /api/shopline/reconcile-pending` | Admin-only compensation job. Scans recent pending checkout sessions, queries SHOPLINE, and reconciles paid/expired/failed/cancelled orders. |
+| `POST /api/shopline/reconcile-pending` | Admin-only compensation job. Scans recent pending/payment-processing/session-failed/paid/refund-processing orders, queries SHOPLINE, and reconciles paid/expired/failed/cancelled/refunded orders. |
 
 Required production secrets:
 
@@ -182,6 +182,7 @@ SHOPLINE_WEBHOOK_TOLERANCE_MS=900000
 SHOPLINE_API_VERSION=V1.2
 SHOPLINE_RECONCILE_LIMIT=40
 SHOPLINE_RECONCILE_LOOKBACK_HOURS=48
+SHOPLINE_REFUND_RECONCILE_LOOKBACK_HOURS=720
 SHOPLINE_RECONCILE_MIN_AGE_SECONDS=90
 ```
 
@@ -201,7 +202,7 @@ Webhook URL to configure in SHOPLINE Payments:
 https://<your-domain>/api/shopline/webhook
 ```
 
-Each SHOPLINE Payments merchant should point to the same webhook URL and use the matching per-venue sign key. Subscribe to both checkout-session and trade events, at minimum `session.succeeded` and `trade.succeeded`; also include expired, failed, cancelled, pending/processing, and refund events when available.
+Each SHOPLINE Payments merchant should point to the same webhook URL and use the matching per-venue sign key. Subscribe to both checkout-session and trade events, at minimum `session.succeeded` and `trade.succeeded`; also include expired, failed, cancelled, pending/processing, void/reversal, and refund events when available. If SHOPLINE sends a refund/void/reversal event for a paid order, the webhook marks the order `refunded` and releases the seat.
 
 Manual reconciliation:
 
@@ -210,7 +211,7 @@ curl -X POST https://<your-domain>/api/shopline/reconcile-pending \
   -H "x-admin-token: <ADMIN_TOKEN>"
 ```
 
-Run this after changing SHOPLINE webhook event settings, or schedule an external/Worker cron to call it every 3-5 minutes. It is idempotent: already paid/refunded/locked orders are not double-counted, and seat increments are claimed before the order is finalized as paid.
+Run this after changing SHOPLINE webhook event settings, or schedule an external/Worker cron to call it every 3-5 minutes. It is idempotent: already paid/refunded/locked orders are not double-counted. Seat increments are claimed before the order is finalized as paid, and full refunds discovered during reconciliation release the seat and mark the order as `refunded`.
 
 Payment-complete LINE reservation cards:
 

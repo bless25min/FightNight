@@ -24,6 +24,9 @@ function getOptions(request, env) {
     lookbackHours:
       Number(url.searchParams.get('lookbackHours')) ||
       Number(env.SHOPLINE_RECONCILE_LOOKBACK_HOURS || 48),
+    refundLookbackHours:
+      Number(url.searchParams.get('refundLookbackHours')) ||
+      Number(env.SHOPLINE_REFUND_RECONCILE_LOOKBACK_HOURS || 720),
     minAgeSeconds:
       Number(url.searchParams.get('minAgeSeconds')) ||
       Number(env.SHOPLINE_RECONCILE_MIN_AGE_SECONDS || 90),

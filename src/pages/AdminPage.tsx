@@ -1419,11 +1419,11 @@ export function AdminPage() {
 
     try {
       const response = await postAdmin<ReconcileResponse>(
-        '/api/shopline/reconcile-pending',
+        '/api/shopline/reconcile-pending?limit=100&refundLookbackHours=720',
         token,
       )
       setReconcileResult(
-        `已檢查 ${response.checked} 筆 pending 訂單，更新 ${response.changed} 筆。`,
+        `已檢查 ${response.checked} 筆可補對帳訂單，更新 ${response.changed} 筆。`,
       )
       await loadAdminData()
     } catch (reconcileError) {

@@ -15,6 +15,7 @@ export const RECONCILABLE_STATUSES = [
   'payment_processing',
   'session_failed',
 ]
+const REFUND_RECONCILABLE_STATUSES = ['paid', 'refund_processing']
 
 function randomHex(bytes = 8) {
   const buffer = new Uint8Array(bytes)
@@ -40,6 +41,73 @@ function getProviderAmountValue(data) {
   return Number(data?.amount?.value || data?.order?.amount?.value || 0)
 }
 
+function getProviderRefundAmountValue(data) {
+  const paymentDetail = getPrimaryPaymentDetail(data)
+  return Number(
+    data?.refundAmount?.value ||
+      data?.refundedAmount?.value ||
+      data?.totalRefundAmount?.value ||
+      paymentDetail?.refundAmount?.value ||
+      paymentDetail?.refundedAmount?.value ||
+      0,
+  )
+}
+
+function hasRefundStatus(data) {
+  const paymentDetail = getPrimaryPaymentDetail(data)
+  const values = [
+    data?.status,
+    data?.refundStatus,
+    data?.tradeStatus,
+    data?.paymentStatus,
+    paymentDetail?.status,
+    paymentDetail?.refundStatus,
+    paymentDetail?.tradeStatus,
+    paymentDetail?.paymentStatus,
+  ]
+  const refundTokens = ['REFUND', 'REFUNDED', 'REVERSED', 'VOIDED']
+  const successTokens = ['SUCCEEDED', 'SUCCESS', 'COMPLETED', 'DONE', 'REFUNDED']
+  const failedTokens = ['FAILED', 'FAILURE', 'REJECTED', 'DECLINED']
+  const inProgressTokens = ['PENDING', 'PROCESSING', 'REFUNDING']
+
+  return values.some((value) => {
+    const normalized = normalizeStatus(value)
+    if (!normalized) return false
+    if (failedTokens.some((token) => normalized.includes(token))) return false
+    if (
+      inProgressTokens.some((token) => normalized.includes(token)) &&
+      !successTokens.some((token) => normalized.includes(token))
+    ) {
+      return false
+    }
+    if (normalized === 'REFUNDED') return true
+    return (
+      refundTokens.some((token) => normalized.includes(token)) &&
+      (successTokens.some((token) => normalized.includes(token)) ||
+        !normalized.includes('PENDING'))
+    )
+  })
+}
+
+function hasPartialRefundStatus(data) {
+  const paymentDetail = getPrimaryPaymentDetail(data)
+  const values = [
+    data?.status,
+    data?.refundStatus,
+    data?.tradeStatus,
+    data?.paymentStatus,
+    paymentDetail?.status,
+    paymentDetail?.refundStatus,
+    paymentDetail?.tradeStatus,
+    paymentDetail?.paymentStatus,
+  ]
+
+  return values.some((value) => {
+    const normalized = normalizeStatus(value)
+    return normalized.includes('PARTIAL') && normalized.includes('REFUND')
+  })
+}
+
 function classifyProviderStatus(data, localStatus) {
   const sessionStatus = normalizeStatus(data?.status)
   const paymentDetail = getPrimaryPaymentDetail(data)
@@ -49,6 +117,13 @@ function classifyProviderStatus(data, localStatus) {
   const paidTokens = ['SUCCEEDED', 'SUCCESS', 'PAID', 'CAPTURED', 'SETTLED']
   const failedTokens = ['FAILED', 'FAILURE', 'DECLINED', 'REJECTED']
   const cancelledTokens = ['CANCELLED', 'CANCELED', 'CANCEL']
+  const refundAmountValue = getProviderRefundAmountValue(data)
+
+  if (hasRefundStatus(data)) {
+    return hasPartialRefundStatus(data)
+      ? 'provider_partially_refunded'
+      : 'provider_refunded'
+  }
 
   if (
     paidTokens.includes(sessionStatus) ||
@@ -71,6 +146,9 @@ function classifyProviderStatus(data, localStatus) {
     cancelledTokens.includes(sessionStatus) ||
     cancelledTokens.includes(paymentStatus)
   ) {
+    if (localStatus === 'paid' || localStatus === 'refund_processing') {
+      return 'provider_paid_cancelled'
+    }
     return 'provider_payment_cancelled'
   }
   if (sessionStatus === 'CREATED' || sessionStatus === 'PENDING') {
@@ -130,6 +208,7 @@ export async function queryShoplineSession(env, order) {
     ok: true,
     diagnosis: classifyProviderStatus(data, order.status),
     amountValue: getProviderAmountValue(data),
+    refundAmountValue: getProviderRefundAmountValue(data),
     sessionStatus: data.status || null,
     paymentStatus: paymentDetail?.status || null,
     paymentMethod: paymentDetail?.paymentMethod || null,
@@ -182,6 +261,18 @@ async function incrementPaidSeats(env, sessionIds, quantity) {
   return true
 }
 
+async function releasePaidSeats(env, sessionIds, quantity) {
+  for (const sessionId of sessionIds) {
+    await env.DB.prepare(
+      `UPDATE session_inventory
+       SET sold = MAX(0, sold - ?), updated_at = datetime('now')
+       WHERE session_id = ?`,
+    )
+      .bind(quantity, sessionId)
+      .run()
+  }
+}
+
 async function markProviderTerminalStatus(env, order, provider) {
   const nextStatus = providerTerminalStatus(provider)
   if (!nextStatus) return null
@@ -200,7 +291,61 @@ async function markProviderTerminalStatus(env, order, provider) {
   return result.meta?.changes ? nextStatus : null
 }
 
+async function reconcileRefundedOrder(env, order, provider) {
+  if (
+    provider?.diagnosis !== 'provider_refunded' &&
+    provider?.diagnosis !== 'provider_paid_cancelled'
+  ) {
+    return null
+  }
+  if (order.status === 'refunded') return null
+
+  const expectedAmount = Number(order.amount_value || 0) * 100
+  if (
+    provider.refundAmountValue &&
+    expectedAmount &&
+    provider.refundAmountValue < expectedAmount
+  ) {
+    return null
+  }
+
+  const sessionIds = JSON.parse(order.session_ids_json || '[]')
+  const quantity = Math.max(1, Math.min(6, Number(order.quantity || 1)))
+  await ensureInventoryRows(env, sessionIds)
+
+  const claim = await env.DB.prepare(
+    `UPDATE course_orders
+     SET status = 'refund_processing',
+         shopline_trade_order_id = COALESCE(?, shopline_trade_order_id),
+         updated_at = datetime('now')
+     WHERE reference_id = ?
+       AND status = 'paid'`,
+  )
+    .bind(provider.tradeOrderId || null, order.reference_id)
+    .run()
+
+  if (claim.meta?.changes) {
+    await releasePaidSeats(env, sessionIds, quantity)
+  }
+
+  const result = await env.DB.prepare(
+    `UPDATE course_orders
+     SET status = 'refunded',
+         shopline_trade_order_id = COALESCE(?, shopline_trade_order_id),
+         updated_at = datetime('now')
+     WHERE reference_id = ?
+       AND status IN ('paid', 'refund_processing')`,
+  )
+    .bind(provider.tradeOrderId || null, order.reference_id)
+    .run()
+
+  return result.meta?.changes ? 'refunded' : null
+}
+
 export async function reconcileProviderOrder(env, order, provider) {
+  const refundedStatus = await reconcileRefundedOrder(env, order, provider)
+  if (refundedStatus) return refundedStatus
+
   const terminalStatus = await markProviderTerminalStatus(env, order, provider)
   if (terminalStatus) return terminalStatus
 
@@ -268,24 +413,45 @@ export async function reconcileProviderOrder(env, order, provider) {
 export async function listReconciliationCandidates(env, options = {}) {
   const limit = Math.max(1, Math.min(100, Number(options.limit || 40)))
   const lookbackHours = Math.max(1, Math.min(168, Number(options.lookbackHours || 48)))
+  const refundLookbackHours = Math.max(
+    1,
+    Math.min(2160, Number(options.refundLookbackHours || 720)),
+  )
   const minAgeSeconds = Math.max(0, Math.min(3600, Number(options.minAgeSeconds || 90)))
+  const pendingPlaceholders = RECONCILABLE_STATUSES.map(() => '?').join(',')
+  const refundPlaceholders = REFUND_RECONCILABLE_STATUSES.map(() => '?').join(',')
 
   const rows = await env.DB.prepare(
     `SELECT reference_id, status, shopline_session_id, shopline_trade_order_id,
             course_name, category, venue_id, venue_name, amount_value, currency,
             session_ids_json, quantity, created_at, updated_at, paid_at
      FROM course_orders
-     WHERE status IN (${RECONCILABLE_STATUSES.map(() => '?').join(',')})
-       AND shopline_session_id IS NOT NULL
-       AND datetime(created_at) >= datetime('now', ?)
-       AND datetime(created_at) <= datetime('now', ?)
-     ORDER BY datetime(created_at) ASC
+     WHERE shopline_session_id IS NOT NULL
+       AND (
+         (
+           status IN (${pendingPlaceholders})
+           AND datetime(created_at) >= datetime('now', ?)
+           AND datetime(created_at) <= datetime('now', ?)
+         )
+         OR (
+           status IN (${refundPlaceholders})
+           AND datetime(created_at) >= datetime('now', ?)
+         )
+       )
+     ORDER BY CASE
+                WHEN status IN (${pendingPlaceholders}) THEN 0
+                ELSE 1
+              END,
+              datetime(COALESCE(updated_at, paid_at, created_at)) DESC
      LIMIT ?`,
   )
     .bind(
       ...RECONCILABLE_STATUSES,
       `-${lookbackHours} hours`,
       `-${minAgeSeconds} seconds`,
+      ...REFUND_RECONCILABLE_STATUSES,
+      `-${refundLookbackHours} hours`,
+      ...RECONCILABLE_STATUSES,
       limit,
     )
     .all()
