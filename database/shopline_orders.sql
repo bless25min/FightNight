@@ -21,6 +21,11 @@ CREATE TABLE IF NOT EXISTS course_orders (
   buyer_name TEXT NOT NULL,
   buyer_phone TEXT NOT NULL,
   buyer_email TEXT,
+  line_user_id TEXT,
+  line_display_name TEXT,
+  line_picture_url TEXT,
+  line_is_friend INTEGER,
+  line_context_json TEXT,
   source_path TEXT,
   return_url TEXT NOT NULL,
   shopline_session_url TEXT,
@@ -40,3 +45,6 @@ ON course_orders (status, updated_at);
 
 CREATE INDEX IF NOT EXISTS idx_course_orders_shopline_session
 ON course_orders (shopline_session_id);
+
+CREATE INDEX IF NOT EXISTS idx_course_orders_line_user
+ON course_orders (line_user_id, updated_at);

@@ -556,6 +556,39 @@ type CheckoutBuyer = {
   email: string
 }
 
+type CheckoutLineContext = {
+  lineUserId: string
+  displayName?: string
+  pictureUrl?: string
+  isFriend?: boolean
+  accessToken?: string
+}
+
+const lineContextKey = 'fightnight_line_context'
+
+function getCheckoutLineContext(): CheckoutLineContext | null {
+  if (typeof window === 'undefined') return null
+
+  try {
+    const raw = window.localStorage.getItem(lineContextKey)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as Partial<CheckoutLineContext>
+    if (!parsed.lineUserId || typeof parsed.lineUserId !== 'string') return null
+
+    return {
+      lineUserId: parsed.lineUserId,
+      displayName:
+        typeof parsed.displayName === 'string' ? parsed.displayName : undefined,
+      pictureUrl:
+        typeof parsed.pictureUrl === 'string' ? parsed.pictureUrl : undefined,
+      isFriend: parsed.isFriend === true,
+      accessToken: window.liff?.getAccessToken?.() || undefined,
+    }
+  } catch {
+    return null
+  }
+}
+
 function readCookie(name: string) {
   if (typeof document === 'undefined') return ''
   const match = document.cookie
@@ -1074,6 +1107,7 @@ export function WeeklyScheduleSection({
           },
           body: JSON.stringify({
             buyer,
+            lineContext: getCheckoutLineContext(),
             course: pendingCheckout.course,
             packageSize: pendingCheckout.packageSize,
             route: pendingCheckout.route,

@@ -144,7 +144,8 @@ Course purchase buttons now create a SHOPLINE Payments redirect checkout session
 | --- | --- |
 | `POST /api/shopline/checkout-session` | Creates a pending local order and requests a SHOPLINE checkout `sessionUrl`. |
 | `POST /api/shopline/webhook` | Verifies SHOPLINE webhook signature and marks successful payments as paid. |
-| `GET /api/shopline/order-status?referenceId=...` | Reads the local order state for `/payment/success`. |
+| `GET /api/shopline/order-status?referenceId=...` | Reads local order state and queries SHOPLINE as a fallback when the order is still pending. |
+| `POST /api/shopline/reconcile-pending` | Admin-only compensation job. Scans recent pending checkout sessions, queries SHOPLINE, and reconciles paid/expired/failed/cancelled orders. |
 
 Required production secrets:
 
@@ -178,6 +179,9 @@ SHOPLINE_SESSION_EXPIRE_MINUTES=60
 SHOPLINE_CREDIT_CARD_INSTALLMENTS=3,6
 SHOPLINE_WEBHOOK_TOLERANCE_MS=900000
 SHOPLINE_API_VERSION=V1.2
+SHOPLINE_RECONCILE_LIMIT=40
+SHOPLINE_RECONCILE_LOOKBACK_HOURS=48
+SHOPLINE_RECONCILE_MIN_AGE_SECONDS=90
 ```
 
 `allowPaymentMethodList` is required by the SHOPLINE session API. If `SHOPLINE_PAYMENT_METHODS` is unset, the checkout uses `CreditCard,ApplePay,LinePay` by default. All three methods were verified by creating live SHOPLINE checkout sessions before launch.
@@ -195,6 +199,17 @@ Webhook URL to configure in SHOPLINE Payments:
 ```
 https://<your-domain>/api/shopline/webhook
 ```
+
+Each SHOPLINE Payments merchant should point to the same webhook URL and use the matching per-venue sign key. Subscribe to both checkout-session and trade events, at minimum `session.succeeded` and `trade.succeeded`; also include expired, failed, cancelled, pending/processing, and refund events when available.
+
+Manual reconciliation:
+
+```bash
+curl -X POST https://<your-domain>/api/shopline/reconcile-pending \
+  -H "x-admin-token: <ADMIN_TOKEN>"
+```
+
+Run this after changing SHOPLINE webhook event settings, or schedule an external/Worker cron to call it every 3-5 minutes. It is idempotent: already paid/refunded/locked orders are not double-counted, and seat increments are claimed before the order is finalized as paid.
 
 ## Customer Tracking Admin
 
@@ -215,10 +230,10 @@ Admin APIs:
 | Route | Purpose |
 | --- | --- |
 | `GET /api/admin/summary` | Revenue, pending orders, attention statuses, 7-day event and LINE summary. |
-| `GET /api/admin/orders` | SHOPLINE checkout customers and order status. |
+| `GET /api/admin/orders` | SHOPLINE checkout customers, linked LINE user, and order status. |
 | `GET /api/admin/inventory` | Per-session capacity, sold, and remaining seats. |
 | `GET /api/admin/events` | Anonymous first-party funnel events written by `/api/events`. |
-| `GET /api/admin/line-customers` | LINE users verified through LIFF access token and their access counts. |
+| `GET /api/admin/line-customers` | LINE users verified through LIFF access token, access counts, and linked payment status. |
 
 The dashboard reads `ADMIN_TOKEN` from the browser input and sends it as `x-admin-token`. Do not expose this token in client-side environment variables.
 
@@ -233,3 +248,5 @@ LINE_LIFF_ID=your_liff_id
 ```
 
 This fallback prevents a local `wrangler pages deploy dist` from accidentally shipping a bundle with no LIFF ID.
+
+When a logged-in LIFF user starts checkout, the browser sends the LINE user context with the SHOPLINE session request. New `course_orders` rows store `line_user_id`, LINE display name, picture URL, friend flag, and raw line context so the admin dashboard can connect the paid order back to the LINE user. Orders created before this field existed may remain unlinked unless they are manually associated later.

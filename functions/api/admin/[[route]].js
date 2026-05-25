@@ -278,6 +278,11 @@ async function ensureOrderTrackingColumns(env) {
     ['meta_capi_status', 'TEXT'],
     ['meta_capi_response_json', 'TEXT'],
     ['meta_capi_error', 'TEXT'],
+    ['line_user_id', 'TEXT'],
+    ['line_display_name', 'TEXT'],
+    ['line_picture_url', 'TEXT'],
+    ['line_is_friend', 'INTEGER'],
+    ['line_context_json', 'TEXT'],
   ]
 
   for (const [name, type] of columns) {
@@ -318,6 +323,10 @@ function normalizeOrder(row) {
     buyerName: row.buyer_name,
     buyerPhone: row.buyer_phone,
     buyerEmail: row.buyer_email,
+    lineUserId: row.line_user_id,
+    lineDisplayName: row.line_display_name,
+    linePictureUrl: row.line_picture_url,
+    lineIsFriend: row.line_is_friend == null ? null : Boolean(row.line_is_friend),
     sourcePath: row.source_path,
     metaPurchaseEventId: row.meta_purchase_event_id,
     metaPurchaseSentAt: row.meta_purchase_sent_at,
@@ -353,10 +362,10 @@ async function listOrders(env, url) {
 
   if (query) {
     where.push(
-      `(reference_id LIKE ? OR buyer_name LIKE ? OR buyer_phone LIKE ? OR buyer_email LIKE ? OR course_name LIKE ?)`,
+      `(reference_id LIKE ? OR buyer_name LIKE ? OR buyer_phone LIKE ? OR buyer_email LIKE ? OR course_name LIKE ? OR line_user_id LIKE ? OR line_display_name LIKE ?)`,
     )
     const like = `%${query}%`
-    bindings.push(like, like, like, like, like)
+    bindings.push(like, like, like, like, like, like, like)
   }
 
   bindings.push(limit)
@@ -367,7 +376,8 @@ async function listOrders(env, url) {
             course_id, course_name, category, venue_id, venue_name, coach,
             coach_pricing_tier, route, package_size, quantity, amount_value,
             currency, session_ids_json, series_dates_json, buyer_name,
-            buyer_phone, buyer_email, source_path, created_at, updated_at,
+            buyer_phone, buyer_email, line_user_id, line_display_name,
+            line_picture_url, line_is_friend, source_path, created_at, updated_at,
             paid_at, meta_purchase_event_id, meta_purchase_sent_at,
             meta_capi_status, meta_capi_error
      FROM course_orders
@@ -387,7 +397,8 @@ async function getOrder(env, referenceId) {
             course_id, course_name, category, venue_id, venue_name, coach,
             coach_pricing_tier, route, package_size, quantity, amount_value,
             currency, session_ids_json, series_dates_json, buyer_name,
-            buyer_phone, buyer_email, source_path, created_at, updated_at,
+            buyer_phone, buyer_email, line_user_id, line_display_name,
+            line_picture_url, line_is_friend, source_path, created_at, updated_at,
             paid_at, meta_purchase_event_id, meta_purchase_sent_at,
             meta_capi_status, meta_capi_error
      FROM course_orders
@@ -516,10 +527,137 @@ async function listEvents(env, url) {
 
 async function listLineCustomers(env, url) {
   const limit = getLimit(url, 80, 200)
+  const hasOrdersTable = Boolean(
+    await safeFirst(
+      env,
+      `SELECT name FROM sqlite_master
+       WHERE type = 'table' AND name = 'course_orders'`,
+    ),
+  )
+
+  if (!hasOrdersTable) {
+    const rows = await safeAll(
+      env,
+      `SELECT line_user_id, display_name, picture_url, status_message,
+              is_friend, access_count, first_seen_at, last_seen_at
+       FROM line_customers
+       ORDER BY datetime(last_seen_at) DESC
+       LIMIT ?`,
+      [limit],
+    )
+
+    return rows.map((row) => ({
+      lineUserId: row.line_user_id,
+      displayName: row.display_name,
+      pictureUrl: row.picture_url,
+      statusMessage: row.status_message,
+      isFriend: Boolean(row.is_friend),
+      accessCount: toNumber(row.access_count),
+      firstSeenAt: row.first_seen_at,
+      lastSeenAt: row.last_seen_at,
+      totalOrders: 0,
+      paidOrders: 0,
+      pendingOrders: 0,
+      paidRevenue: 0,
+    }))
+  }
+
   const rows = await safeAll(
     env,
     `SELECT line_user_id, display_name, picture_url, status_message,
-            is_friend, access_count, first_seen_at, last_seen_at
+            is_friend, access_count, first_seen_at, last_seen_at,
+            COALESCE((
+              SELECT COUNT(*)
+              FROM course_orders co
+              WHERE co.line_user_id = line_customers.line_user_id
+            ), 0) AS total_orders,
+            COALESCE((
+              SELECT SUM(CASE WHEN co.status = 'paid' THEN 1 ELSE 0 END)
+              FROM course_orders co
+              WHERE co.line_user_id = line_customers.line_user_id
+            ), 0) AS paid_orders,
+            COALESCE((
+              SELECT SUM(CASE WHEN co.status IN ('pending', 'payment_processing', 'session_failed') THEN 1 ELSE 0 END)
+              FROM course_orders co
+              WHERE co.line_user_id = line_customers.line_user_id
+            ), 0) AS pending_orders,
+            COALESCE((
+              SELECT SUM(CASE WHEN co.status = 'paid' THEN co.amount_value ELSE 0 END)
+              FROM course_orders co
+              WHERE co.line_user_id = line_customers.line_user_id
+            ), 0) AS paid_revenue,
+            (
+              SELECT co.reference_id
+              FROM course_orders co
+              WHERE co.line_user_id = line_customers.line_user_id
+              ORDER BY datetime(COALESCE(co.paid_at, co.updated_at, co.created_at)) DESC,
+                       co.reference_id DESC
+              LIMIT 1
+            ) AS latest_order_reference_id,
+            (
+              SELECT co.status
+              FROM course_orders co
+              WHERE co.line_user_id = line_customers.line_user_id
+              ORDER BY datetime(COALESCE(co.paid_at, co.updated_at, co.created_at)) DESC,
+                       co.reference_id DESC
+              LIMIT 1
+            ) AS latest_order_status,
+            (
+              SELECT co.course_name
+              FROM course_orders co
+              WHERE co.line_user_id = line_customers.line_user_id
+              ORDER BY datetime(COALESCE(co.paid_at, co.updated_at, co.created_at)) DESC,
+                       co.reference_id DESC
+              LIMIT 1
+            ) AS latest_order_course_name,
+            (
+              SELECT co.amount_value
+              FROM course_orders co
+              WHERE co.line_user_id = line_customers.line_user_id
+              ORDER BY datetime(COALESCE(co.paid_at, co.updated_at, co.created_at)) DESC,
+                       co.reference_id DESC
+              LIMIT 1
+            ) AS latest_order_amount_value,
+            (
+              SELECT co.paid_at
+              FROM course_orders co
+              WHERE co.line_user_id = line_customers.line_user_id
+              ORDER BY datetime(COALESCE(co.paid_at, co.updated_at, co.created_at)) DESC,
+                       co.reference_id DESC
+              LIMIT 1
+            ) AS latest_order_paid_at,
+            (
+              SELECT co.created_at
+              FROM course_orders co
+              WHERE co.line_user_id = line_customers.line_user_id
+              ORDER BY datetime(COALESCE(co.paid_at, co.updated_at, co.created_at)) DESC,
+                       co.reference_id DESC
+              LIMIT 1
+            ) AS latest_order_created_at,
+            (
+              SELECT co.buyer_name
+              FROM course_orders co
+              WHERE co.line_user_id = line_customers.line_user_id
+              ORDER BY datetime(COALESCE(co.paid_at, co.updated_at, co.created_at)) DESC,
+                       co.reference_id DESC
+              LIMIT 1
+            ) AS buyer_name,
+            (
+              SELECT co.buyer_phone
+              FROM course_orders co
+              WHERE co.line_user_id = line_customers.line_user_id
+              ORDER BY datetime(COALESCE(co.paid_at, co.updated_at, co.created_at)) DESC,
+                       co.reference_id DESC
+              LIMIT 1
+            ) AS buyer_phone,
+            (
+              SELECT co.buyer_email
+              FROM course_orders co
+              WHERE co.line_user_id = line_customers.line_user_id
+              ORDER BY datetime(COALESCE(co.paid_at, co.updated_at, co.created_at)) DESC,
+                       co.reference_id DESC
+              LIMIT 1
+            ) AS buyer_email
      FROM line_customers
      ORDER BY datetime(last_seen_at) DESC
      LIMIT ?`,
@@ -535,6 +673,19 @@ async function listLineCustomers(env, url) {
     accessCount: toNumber(row.access_count),
     firstSeenAt: row.first_seen_at,
     lastSeenAt: row.last_seen_at,
+    totalOrders: toNumber(row.total_orders),
+    paidOrders: toNumber(row.paid_orders),
+    pendingOrders: toNumber(row.pending_orders),
+    paidRevenue: toNumber(row.paid_revenue),
+    latestOrderReferenceId: row.latest_order_reference_id,
+    latestOrderStatus: row.latest_order_status,
+    latestOrderCourseName: row.latest_order_course_name,
+    latestOrderAmountValue: toNumber(row.latest_order_amount_value),
+    latestOrderPaidAt: row.latest_order_paid_at,
+    latestOrderCreatedAt: row.latest_order_created_at,
+    buyerName: row.buyer_name,
+    buyerPhone: row.buyer_phone,
+    buyerEmail: row.buyer_email,
   }))
 }
 
@@ -1007,6 +1158,48 @@ function routeParts(request) {
   }
 }
 
+async function linkOrderLineCustomer(env, referenceId, lineUserId) {
+  const customer = await safeFirst(
+    env,
+    `SELECT line_user_id, display_name, picture_url, is_friend
+     FROM line_customers
+     WHERE line_user_id = ?`,
+    [lineUserId],
+  )
+
+  if (!customer) {
+    return null
+  }
+
+  await env.DB.prepare(
+    `UPDATE course_orders
+     SET line_user_id = ?,
+         line_display_name = ?,
+         line_picture_url = ?,
+         line_is_friend = ?,
+         line_context_json = ?,
+         updated_at = datetime('now')
+     WHERE reference_id = ?`,
+  )
+    .bind(
+      customer.line_user_id,
+      customer.display_name,
+      customer.picture_url || null,
+      customer.is_friend ? 1 : 0,
+      JSON.stringify({
+        lineUserId: customer.line_user_id,
+        displayName: customer.display_name,
+        pictureUrl: customer.picture_url || null,
+        isFriend: Boolean(customer.is_friend),
+        source: 'admin_manual_link',
+      }),
+      referenceId,
+    )
+    .run()
+
+  return getOrder(env, referenceId)
+}
+
 export async function onRequestGet({ request, env }) {
   if (!env.DB) {
     return json({ error: 'Missing D1 binding DB' }, { status: 503 })
@@ -1059,6 +1252,37 @@ export async function onRequestGet({ request, env }) {
 
   if (resource === 'line-customers') {
     return json({ ok: true, customers: await listLineCustomers(env, url) })
+  }
+
+  return json({ error: 'Not found' }, { status: 404 })
+}
+
+export async function onRequestPost({ request, env }) {
+  if (!env.DB) {
+    return json({ error: 'Missing D1 binding DB' }, { status: 503 })
+  }
+
+  const authError = assertAdmin(request, env)
+  if (authError) return authError
+
+  await ensureCustomerTrackingTables(env)
+
+  const { parts } = routeParts(request)
+  const resource = parts[0] || ''
+  const id = parts[1] ? decodeURIComponent(parts[1]) : ''
+  const action = parts[2] || ''
+
+  if (resource === 'orders' && id && action === 'link-line') {
+    const body = await request.json().catch(() => null)
+    const lineUserId = String(body?.lineUserId || '').trim()
+    if (!lineUserId) {
+      return json({ error: 'Missing lineUserId' }, { status: 400 })
+    }
+
+    const order = await linkOrderLineCustomer(env, id, lineUserId)
+    return order
+      ? json({ ok: true, order })
+      : json({ error: 'Order or LINE customer not found' }, { status: 404 })
   }
 
   return json({ error: 'Not found' }, { status: 404 })

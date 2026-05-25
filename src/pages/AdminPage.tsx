@@ -18,6 +18,10 @@ type AdminOrder = {
   buyerName: string
   buyerPhone: string
   buyerEmail?: string | null
+  lineUserId?: string | null
+  lineDisplayName?: string | null
+  linePictureUrl?: string | null
+  lineIsFriend?: boolean | null
   sourcePath?: string | null
   metaPurchaseEventId?: string | null
   metaPurchaseSentAt?: string | null
@@ -93,6 +97,19 @@ type LineCustomer = {
   accessCount: number
   firstSeenAt: string
   lastSeenAt: string
+  totalOrders?: number
+  paidOrders?: number
+  pendingOrders?: number
+  paidRevenue?: number
+  latestOrderReferenceId?: string | null
+  latestOrderStatus?: string | null
+  latestOrderCourseName?: string | null
+  latestOrderAmountValue?: number | null
+  latestOrderPaidAt?: string | null
+  latestOrderCreatedAt?: string | null
+  buyerName?: string | null
+  buyerPhone?: string | null
+  buyerEmail?: string | null
 }
 
 type AdminSummary = {
@@ -117,6 +134,22 @@ type AdminSummary = {
     totalCustomers: number
     friends: number
   }
+}
+
+type ReconcileResponse = {
+  checked: number
+  changed: number
+  results: Array<{
+    referenceId: string
+    previousStatus: string
+    reconciledStatus?: string | null
+    provider?: {
+      diagnosis?: string
+      sessionStatus?: string | null
+      paymentMethod?: string | null
+      tradeOrderId?: string | null
+    } | null
+  }>
 }
 
 type TrafficSource = {
@@ -377,6 +410,18 @@ function statusClass(status: string) {
   return 'border-blaze/35 bg-blaze/10 text-blaze'
 }
 
+function linePaymentLabel(customer: LineCustomer) {
+  if ((customer.paidOrders || 0) > 0) return '已付款'
+  if ((customer.pendingOrders || 0) > 0) return '待付款'
+  return '未購買'
+}
+
+function linePaymentClass(customer: LineCustomer) {
+  if ((customer.paidOrders || 0) > 0) return 'border-neon/25 bg-neon/10 text-neon'
+  if ((customer.pendingOrders || 0) > 0) return 'border-gold/35 bg-gold/10 text-gold'
+  return 'border-pearl/12 bg-pearl/5 text-mist/70'
+}
+
 async function fetchAdmin<T>(path: string, token: string): Promise<T> {
   const response = await fetch(path, {
     headers: {
@@ -388,6 +433,29 @@ async function fetchAdmin<T>(path: string, token: string): Promise<T> {
 
   if (!response.ok) {
     throw new Error(data.error || '後台資料讀取失敗')
+  }
+
+  return data
+}
+
+async function postAdmin<T>(
+  path: string,
+  token: string,
+  body?: Record<string, unknown>,
+): Promise<T> {
+  const response = await fetch(path, {
+    method: 'POST',
+    headers: {
+      'x-admin-token': token,
+      ...(body ? { 'content-type': 'application/json' } : {}),
+    },
+    body: body ? JSON.stringify(body) : undefined,
+    cache: 'no-store',
+  })
+  const data = (await response.json().catch(() => ({}))) as T & ApiError
+
+  if (!response.ok) {
+    throw new Error(data.error || '後台操作失敗')
   }
 
   return data
@@ -423,7 +491,73 @@ function EmptyState({ children }: { children: string }) {
   )
 }
 
-function OrdersTable({ orders }: { orders: AdminOrder[] }) {
+function OrderLineLinkControl({
+  order,
+  customers,
+  onLinkLine,
+}: {
+  order: AdminOrder
+  customers: LineCustomer[]
+  onLinkLine: (referenceId: string, lineUserId: string) => Promise<void>
+}) {
+  const [selectedLineUserId, setSelectedLineUserId] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
+
+  if (customers.length === 0) {
+    return <p className="mt-3 text-xs text-blaze/70">未綁 LINE 用戶</p>
+  }
+
+  const handleLink = async () => {
+    if (!selectedLineUserId) return
+    setIsSaving(true)
+    try {
+      await onLinkLine(order.referenceId, selectedLineUserId)
+      setSelectedLineUserId('')
+    } catch {
+      // Parent surface shows the API error.
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  return (
+    <div className="mt-3 grid gap-2">
+      <p className="text-xs text-blaze/70">未綁 LINE 用戶</p>
+      <div className="flex gap-2">
+        <select
+          value={selectedLineUserId}
+          onChange={(event) => setSelectedLineUserId(event.target.value)}
+          className="min-w-0 flex-1 rounded-lg border border-pearl/10 bg-black/35 px-2 py-1.5 text-xs text-pearl"
+        >
+          <option value="">選擇 LINE 用戶</option>
+          {customers.map((customer) => (
+            <option key={customer.lineUserId} value={customer.lineUserId}>
+              {customer.displayName} {linePaymentLabel(customer)}
+            </option>
+          ))}
+        </select>
+        <button
+          type="button"
+          disabled={!selectedLineUserId || isSaving}
+          onClick={() => void handleLink()}
+          className="shrink-0 rounded-lg border border-neon/25 bg-neon/10 px-3 py-1.5 text-xs font-heading text-neon disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {isSaving ? '綁定中' : '綁定'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function OrdersTable({
+  orders,
+  customers,
+  onLinkLine,
+}: {
+  orders: AdminOrder[]
+  customers: LineCustomer[]
+  onLinkLine: (referenceId: string, lineUserId: string) => Promise<void>
+}) {
   if (orders.length === 0) return <EmptyState>目前還沒有訂單資料。</EmptyState>
 
   return (
@@ -465,6 +599,33 @@ function OrdersTable({ orders }: { orders: AdminOrder[] }) {
                 <p className="mt-1 text-mist/65">{order.buyerPhone}</p>
                 {order.buyerEmail && (
                   <p className="mt-1 text-mist/45">{order.buyerEmail}</p>
+                )}
+                {order.lineUserId ? (
+                  <div className="mt-3 flex items-center gap-2 rounded-lg border border-pearl/10 bg-black/25 p-2">
+                    {order.linePictureUrl ? (
+                      <img
+                        src={order.linePictureUrl}
+                        alt=""
+                        className="h-8 w-8 shrink-0 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="h-8 w-8 shrink-0 rounded-full bg-pearl/8" />
+                    )}
+                    <div className="min-w-0">
+                      <p className="truncate text-xs font-heading text-neon">
+                        LINE {order.lineDisplayName || '已綁定'}
+                      </p>
+                      <p className="mt-0.5 truncate font-mono text-[10px] text-mist/45">
+                        {order.lineUserId}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <OrderLineLinkControl
+                    order={order}
+                    customers={customers}
+                    onLinkLine={onLinkLine}
+                  />
                 )}
               </td>
               <td className="px-4 py-4">
@@ -650,7 +811,7 @@ function EventsTable({ events }: { events: TrackingEventRow[] }) {
   )
 }
 
-function LineCustomersTable({ customers }: { customers: LineCustomer[] }) {
+export function LineCustomersTable({ customers }: { customers: LineCustomer[] }) {
   if (customers.length === 0) return <EmptyState>目前還沒有 LINE 足跡。</EmptyState>
 
   return (
@@ -694,6 +855,110 @@ function LineCustomersTable({ customers }: { customers: LineCustomer[] }) {
           </div>
         </div>
       ))}
+    </div>
+  )
+}
+
+function LineCustomersTableV2({ customers }: { customers: LineCustomer[] }) {
+  if (customers.length === 0) return <EmptyState>尚無 LINE 用戶紀錄</EmptyState>
+
+  return (
+    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+      {customers.map((customer) => {
+        const latestOrderTime =
+          customer.latestOrderPaidAt || customer.latestOrderCreatedAt
+
+        return (
+          <div
+            key={customer.lineUserId}
+            className="rounded-lg border border-pearl/10 bg-black/28 p-4"
+          >
+            <div className="flex gap-3">
+              {customer.pictureUrl ? (
+                <img
+                  src={customer.pictureUrl}
+                  alt=""
+                  className="h-12 w-12 shrink-0 rounded-full object-cover"
+                />
+              ) : (
+                <div className="h-12 w-12 shrink-0 rounded-full bg-pearl/8" />
+              )}
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="truncate font-heading text-pearl">
+                    {customer.displayName}
+                  </p>
+                  <span
+                    className={`rounded-full border px-2 py-0.5 text-[11px] font-heading ${
+                      customer.isFriend
+                        ? 'border-neon/25 bg-neon/10 text-neon'
+                        : 'border-gold/30 bg-gold/10 text-gold'
+                    }`}
+                  >
+                    {customer.isFriend ? '好友' : '未加好友'}
+                  </span>
+                  <span
+                    className={`rounded-full border px-2 py-0.5 text-[11px] font-heading ${linePaymentClass(customer)}`}
+                  >
+                    {linePaymentLabel(customer)}
+                  </span>
+                </div>
+                <p className="mt-1 truncate font-mono text-[11px] text-mist/45">
+                  {customer.lineUserId}
+                </p>
+                <p className="mt-2 text-sm text-mist/65">
+                  進站 {customer.accessCount} 次，最近{' '}
+                  {formatDateTime(customer.lastSeenAt)}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-4 rounded-lg border border-pearl/8 bg-black/20 p-3">
+              {customer.latestOrderReferenceId ? (
+                <>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-pearl">
+                        {customer.latestOrderCourseName || '未命名課程'}
+                      </p>
+                      <p className="mt-1 font-mono text-[11px] text-mist/45">
+                        {customer.latestOrderReferenceId}
+                      </p>
+                    </div>
+                    <span
+                      className={`shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-heading ${statusClass(
+                        customer.latestOrderStatus || '',
+                      )}`}
+                    >
+                      {statusLabel(customer.latestOrderStatus || '')}
+                    </span>
+                  </div>
+                  <div className="mt-3 grid gap-1 text-sm text-mist/65">
+                    <p>
+                      累計已付款 {customer.paidOrders || 0} 筆 /{' '}
+                      {formatMoney(customer.paidRevenue || 0)}
+                    </p>
+                    <p>
+                      最近訂單 {formatMoney(customer.latestOrderAmountValue || 0)}，
+                      {formatDateTime(latestOrderTime)}
+                    </p>
+                    {(customer.buyerName ||
+                      customer.buyerPhone ||
+                      customer.buyerEmail) && (
+                      <p className="break-all text-mist/50">
+                        {customer.buyerName || '-'} / {customer.buyerPhone || '-'}
+                        {customer.buyerEmail ? ` / ${customer.buyerEmail}` : ''}
+                      </p>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <p className="text-sm text-mist/55">尚未建立購課訂單</p>
+              )}
+            </div>
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -1030,6 +1295,8 @@ export function AdminPage() {
   const [data, setData] = useState<AdminData>(initialData)
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [isReconciling, setIsReconciling] = useState(false)
+  const [reconcileResult, setReconcileResult] = useState('')
 
   const summary = data.summary
   const checkoutRate = useMemo(() => {
@@ -1113,6 +1380,55 @@ export function AdminPage() {
     setData(initialData)
   }
 
+  const handleReconcilePending = useCallback(async () => {
+    if (!token) return
+
+    setIsReconciling(true)
+    setError('')
+    setReconcileResult('')
+
+    try {
+      const response = await postAdmin<ReconcileResponse>(
+        '/api/shopline/reconcile-pending',
+        token,
+      )
+      setReconcileResult(
+        `已檢查 ${response.checked} 筆 pending 訂單，更新 ${response.changed} 筆。`,
+      )
+      await loadAdminData()
+    } catch (reconcileError) {
+      setError(
+        reconcileError instanceof Error
+          ? reconcileError.message
+          : '補對帳失敗',
+      )
+    } finally {
+      setIsReconciling(false)
+    }
+  }, [loadAdminData, token])
+
+  const handleLinkOrderLine = useCallback(
+    async (referenceId: string, lineUserId: string) => {
+      if (!token) return
+
+      setError('')
+      try {
+        await postAdmin<{ order: AdminOrder }>(
+          `/api/admin/orders/${encodeURIComponent(referenceId)}/link-line`,
+          token,
+          { lineUserId },
+        )
+        await loadAdminData()
+      } catch (linkError) {
+        setError(
+          linkError instanceof Error ? linkError.message : 'LINE 用戶綁定失敗',
+        )
+        throw linkError
+      }
+    },
+    [loadAdminData, token],
+  )
+
   if (!token) {
     return (
       <div className="min-h-screen bg-abyss px-4 py-10 text-pearl">
@@ -1164,6 +1480,14 @@ export function AdminPage() {
           <div className="flex gap-2">
             <button
               type="button"
+              onClick={() => void handleReconcilePending()}
+              disabled={isReconciling}
+              className="rounded-lg border border-neon/25 bg-neon/10 px-4 py-2 font-heading text-sm text-neon transition-colors hover:border-neon/45 disabled:cursor-not-allowed disabled:opacity-55"
+            >
+              {isReconciling ? '補對帳中...' : '補對帳'}
+            </button>
+            <button
+              type="button"
               onClick={() => void loadAdminData()}
               className="rounded-lg border border-pearl/15 bg-pearl/5 px-4 py-2 font-heading text-sm text-pearl transition-colors hover:border-neon/35"
             >
@@ -1182,6 +1506,12 @@ export function AdminPage() {
         {error && (
           <p className="mt-5 rounded-lg border border-blaze/35 bg-blaze/10 px-4 py-3 text-sm text-blaze">
             {error}
+          </p>
+        )}
+
+        {reconcileResult && (
+          <p className="mt-5 rounded-lg border border-neon/25 bg-neon/10 px-4 py-3 text-sm text-neon">
+            {reconcileResult}
           </p>
         )}
 
@@ -1263,13 +1593,19 @@ export function AdminPage() {
         <section className="mt-5 pb-12">
           {activeTab === 'traffic' && <TrafficDashboard traffic={data.traffic} />}
           {activeTab === 'journeys' && <JourneysPanel journeys={data.journeys} />}
-          {activeTab === 'orders' && <OrdersTable orders={data.orders} />}
+          {activeTab === 'orders' && (
+            <OrdersTable
+              orders={data.orders}
+              customers={data.customers}
+              onLinkLine={handleLinkOrderLine}
+            />
+          )}
           {activeTab === 'inventory' && (
             <InventoryTable inventory={data.inventory} />
           )}
           {activeTab === 'events' && <EventsTable events={data.events} />}
           {activeTab === 'line' && (
-            <LineCustomersTable customers={data.customers} />
+            <LineCustomersTableV2 customers={data.customers} />
           )}
         </section>
       </main>

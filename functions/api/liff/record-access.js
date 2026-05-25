@@ -130,7 +130,13 @@ export async function onRequestPost({ request, env }) {
       )
       .run()
 
-    return json({ ok: true, lineUserId })
+    return json({
+      ok: true,
+      lineUserId,
+      displayName: trimText(profile?.displayName, 200) || 'LINE user',
+      pictureUrl: trimText(profile?.pictureUrl, 1200) || null,
+      isFriend: Boolean(isFriend),
+    })
   } catch (error) {
     return json(
       {

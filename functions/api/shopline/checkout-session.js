@@ -210,6 +210,55 @@ function trimText(value, maxLength) {
   return String(value || '').trim().slice(0, maxLength)
 }
 
+function normalizeLineContext(value) {
+  if (!value || typeof value !== 'object') return null
+
+  const lineUserId = trimText(value.lineUserId || value.userId, 120)
+  if (!lineUserId) return null
+
+  return {
+    lineUserId,
+    displayName: trimText(value.displayName, 200) || null,
+    pictureUrl: trimText(value.pictureUrl, 1200) || null,
+    isFriend: value.isFriend === true || value.friendFlag === true,
+  }
+}
+
+async function fetchLineProfile(accessToken) {
+  const response = await fetch('https://api.line.me/v2/profile', {
+    headers: {
+      authorization: `Bearer ${accessToken}`,
+    },
+  })
+
+  if (!response.ok) {
+    throw new Error('LINE profile verification failed')
+  }
+
+  return response.json()
+}
+
+async function resolveLineContext(value) {
+  const submittedContext = normalizeLineContext(value)
+  const accessToken = trimText(value?.accessToken, 2000)
+  if (!accessToken) return submittedContext
+
+  try {
+    const profile = await fetchLineProfile(accessToken)
+    const lineUserId = trimText(profile?.userId, 120)
+    if (!lineUserId) return submittedContext
+
+    return {
+      lineUserId,
+      displayName: trimText(profile?.displayName, 200) || submittedContext?.displayName || null,
+      pictureUrl: trimText(profile?.pictureUrl, 1200) || submittedContext?.pictureUrl || null,
+      isFriend: submittedContext?.isFriend === true,
+    }
+  } catch {
+    return submittedContext
+  }
+}
+
 function normalizeClientInfo(client, request) {
   const sourceIp =
     request.headers.get('CF-Connecting-IP') ||
@@ -305,6 +354,11 @@ async function ensureTables(env) {
       buyer_name TEXT NOT NULL,
       buyer_phone TEXT NOT NULL,
       buyer_email TEXT,
+      line_user_id TEXT,
+      line_display_name TEXT,
+      line_picture_url TEXT,
+      line_is_friend INTEGER,
+      line_context_json TEXT,
       source_path TEXT,
       return_url TEXT NOT NULL,
       shopline_session_url TEXT,
@@ -326,6 +380,10 @@ async function ensureTables(env) {
      ON course_orders (status, updated_at)`,
   ).run()
   await ensureOrderTrackingColumns(env)
+  await env.DB.prepare(
+    `CREATE INDEX IF NOT EXISTS idx_course_orders_line_user
+     ON course_orders (line_user_id, updated_at)`,
+  ).run()
 }
 
 async function ensureOrderTrackingColumns(env) {
@@ -335,6 +393,11 @@ async function ensureOrderTrackingColumns(env) {
     ['meta_capi_status', 'TEXT'],
     ['meta_capi_response_json', 'TEXT'],
     ['meta_capi_error', 'TEXT'],
+    ['line_user_id', 'TEXT'],
+    ['line_display_name', 'TEXT'],
+    ['line_picture_url', 'TEXT'],
+    ['line_is_friend', 'INTEGER'],
+    ['line_context_json', 'TEXT'],
   ]
 
   for (const [name, type] of columns) {
@@ -348,6 +411,51 @@ async function ensureOrderTrackingColumns(env) {
       }
     }
   }
+}
+
+async function upsertLineCustomerFromCheckout(env, lineContext) {
+  if (!lineContext?.lineUserId) return
+
+  await env.DB.batch([
+    env.DB.prepare(
+      `CREATE TABLE IF NOT EXISTS line_customers (
+        line_user_id TEXT PRIMARY KEY,
+        display_name TEXT NOT NULL,
+        picture_url TEXT,
+        status_message TEXT,
+        is_friend INTEGER NOT NULL DEFAULT 0,
+        access_count INTEGER NOT NULL DEFAULT 1,
+        raw_profile_json TEXT,
+        first_seen_at TEXT NOT NULL DEFAULT (datetime('now')),
+        last_seen_at TEXT NOT NULL DEFAULT (datetime('now'))
+      )`,
+    ),
+    env.DB.prepare(
+      `CREATE INDEX IF NOT EXISTS idx_line_customers_last_seen
+       ON line_customers (last_seen_at)`,
+    ),
+  ])
+
+  await env.DB.prepare(
+    `INSERT INTO line_customers (
+      line_user_id, display_name, picture_url, status_message, is_friend,
+      access_count, raw_profile_json, first_seen_at, last_seen_at
+    ) VALUES (?, ?, ?, NULL, ?, 1, ?, datetime('now'), datetime('now'))
+    ON CONFLICT(line_user_id) DO UPDATE SET
+      display_name = COALESCE(excluded.display_name, line_customers.display_name),
+      picture_url = COALESCE(excluded.picture_url, line_customers.picture_url),
+      is_friend = excluded.is_friend,
+      raw_profile_json = COALESCE(excluded.raw_profile_json, line_customers.raw_profile_json),
+      last_seen_at = datetime('now')`,
+  )
+    .bind(
+      lineContext.lineUserId,
+      lineContext.displayName || 'LINE user',
+      lineContext.pictureUrl,
+      lineContext.isFriend ? 1 : 0,
+      JSON.stringify(lineContext),
+    )
+    .run()
 }
 
 async function ensureInventoryRows(env, sessionIds) {
@@ -564,6 +672,8 @@ export async function onRequestPost({ request, env }) {
     }
 
     await ensureTables(env)
+    const lineContext = await resolveLineContext(body?.lineContext)
+    await upsertLineCustomerFromCheckout(env, lineContext)
 
     const referenceId = createReferenceId()
     const { value: amountValue, pricingTier } = getPriceAmount(course, packageSize)
@@ -599,6 +709,7 @@ export async function onRequestPost({ request, env }) {
     })
     const localOrderRequest = {
       shoplinePayload,
+      lineContext,
       tracking:
         body?.tracking && typeof body.tracking === 'object' ? body.tracking : {},
       client: shoplinePayload.client,
@@ -609,9 +720,10 @@ export async function onRequestPost({ request, env }) {
         reference_id, status, event_id, course_id, course_name, category,
         venue_id, venue_name, coach, coach_pricing_tier, route, package_size,
         quantity, amount_value, currency, session_ids_json, series_dates_json,
-        buyer_name, buyer_phone, buyer_email, source_path, return_url,
-        raw_request_json
-      ) VALUES (?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        buyer_name, buyer_phone, buyer_email, line_user_id, line_display_name,
+        line_picture_url, line_is_friend, line_context_json, source_path,
+        return_url, raw_request_json
+      ) VALUES (?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
       .bind(
         referenceId,
@@ -632,6 +744,11 @@ export async function onRequestPost({ request, env }) {
         buyer.name,
         buyer.phone,
         buyer.email || null,
+        lineContext?.lineUserId || null,
+        lineContext?.displayName || null,
+        lineContext?.pictureUrl || null,
+        lineContext ? (lineContext.isFriend ? 1 : 0) : null,
+        lineContext ? JSON.stringify(lineContext) : null,
         body?.sourcePath || null,
         returnUrl,
         JSON.stringify(localOrderRequest),

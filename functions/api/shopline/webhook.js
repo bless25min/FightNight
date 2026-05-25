@@ -152,6 +152,11 @@ async function ensureTables(env) {
       buyer_name TEXT NOT NULL,
       buyer_phone TEXT NOT NULL,
       buyer_email TEXT,
+      line_user_id TEXT,
+      line_display_name TEXT,
+      line_picture_url TEXT,
+      line_is_friend INTEGER,
+      line_context_json TEXT,
       source_path TEXT,
       return_url TEXT NOT NULL,
       shopline_session_url TEXT,
@@ -169,6 +174,10 @@ async function ensureTables(env) {
     )`,
   ).run()
   await ensureOrderTrackingColumns(env)
+  await env.DB.prepare(
+    `CREATE INDEX IF NOT EXISTS idx_course_orders_line_user
+     ON course_orders (line_user_id, updated_at)`,
+  ).run()
 }
 
 async function ensureOrderTrackingColumns(env) {
@@ -178,6 +187,11 @@ async function ensureOrderTrackingColumns(env) {
     ['meta_capi_status', 'TEXT'],
     ['meta_capi_response_json', 'TEXT'],
     ['meta_capi_error', 'TEXT'],
+    ['line_user_id', 'TEXT'],
+    ['line_display_name', 'TEXT'],
+    ['line_picture_url', 'TEXT'],
+    ['line_is_friend', 'INTEGER'],
+    ['line_context_json', 'TEXT'],
   ]
 
   for (const [name, type] of columns) {
