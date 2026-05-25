@@ -22,6 +22,10 @@ type AdminOrder = {
   lineDisplayName?: string | null
   linePictureUrl?: string | null
   lineIsFriend?: boolean | null
+  linePaymentNotifyStatus?: string | null
+  linePaymentNotifyAttemptedAt?: string | null
+  linePaymentNotifiedAt?: string | null
+  linePaymentNotifyError?: string | null
   sourcePath?: string | null
   metaPurchaseEventId?: string | null
   metaPurchaseSentAt?: string | null
@@ -404,6 +408,16 @@ function metaCapiLabel(status?: string | null) {
   return `CAPI ${status}`
 }
 
+function lineNotifyLabel(status?: string | null) {
+  if (!status) return '確認卡未處理'
+  if (status === 'sent') return '確認卡已送'
+  if (status === 'sending') return '確認卡發送中'
+  if (status === 'failed') return '確認卡失敗'
+  if (status === 'skipped_missing_token') return '確認卡缺少 Token'
+  if (status === 'skipped_no_line_user') return '確認卡未綁 LINE'
+  return `LINE ${status}`
+}
+
 function statusClass(status: string) {
   if (status === 'paid') return 'border-neon/30 bg-neon/10 text-neon'
   if (status === 'pending') return 'border-gold/35 bg-gold/10 text-gold'
@@ -588,6 +602,22 @@ function OrdersTable({
                 <p className="mt-2 text-[11px] text-mist/45">
                   {metaCapiLabel(order.metaCapiStatus)}
                 </p>
+                <p
+                  className={`mt-1 text-[11px] ${
+                    order.linePaymentNotifyStatus === 'sent'
+                      ? 'text-neon/70'
+                      : order.linePaymentNotifyStatus === 'failed'
+                        ? 'text-coral/70'
+                        : 'text-mist/45'
+                  }`}
+                >
+                  {lineNotifyLabel(order.linePaymentNotifyStatus)}
+                </p>
+                {order.linePaymentNotifyError && (
+                  <p className="mt-1 max-w-[180px] truncate text-[11px] text-coral/70">
+                    {order.linePaymentNotifyError}
+                  </p>
+                )}
                 {order.metaCapiError && (
                   <p className="mt-1 max-w-[180px] truncate text-[11px] text-coral/70">
                     {order.metaCapiError}

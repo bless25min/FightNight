@@ -171,6 +171,7 @@ Optional:
 
 ```
 META_CAPI_ACCESS_TOKEN=EA...
+LINE_CHANNEL_ACCESS_TOKEN=your_line_messaging_api_channel_access_token
 META_GRAPH_API_VERSION=v21.0
 META_TEST_EVENT_CODE=optional-meta-test-code
 SHOPLINE_PAYMENT_METHODS=CreditCard,ApplePay,LinePay
@@ -210,6 +211,15 @@ curl -X POST https://<your-domain>/api/shopline/reconcile-pending \
 ```
 
 Run this after changing SHOPLINE webhook event settings, or schedule an external/Worker cron to call it every 3-5 minutes. It is idempotent: already paid/refunded/locked orders are not double-counted, and seat increments are claimed before the order is finalized as paid.
+
+Payment-complete LINE reservation cards:
+
+- When an order becomes `paid`, the server pushes a LINE reservation confirmation card to the linked `line_user_id`.
+- The card button uses a LINE `message` action. When the customer taps it, the Official Account chat receives a visible customer message containing venue, course, date/time, buyer name, buyer phone, and order id.
+- The same notification helper is called from the SHOPLINE webhook, the order-status fallback query, and the manual reconciliation endpoint.
+- `line_payment_notified_at` prevents duplicate card sends for the same order.
+- If `LINE_CHANNEL_ACCESS_TOKEN` is missing, the order records `line_payment_notify_status = skipped_missing_token` and can be retried after the secret is configured.
+- If the order has no linked LINE user, the order records `skipped_no_line_user`; manually linking a paid order in `/admin` will try the card again.
 
 ## Customer Tracking Admin
 

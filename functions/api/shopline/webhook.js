@@ -1,4 +1,8 @@
 import { getShoplineConfigForMerchant, getShoplineConfigs } from './config.js'
+import {
+  ensureLineNotificationColumns,
+  notifyLinePaymentSuccess,
+} from './line-notify.js'
 import { sendMetaPurchaseEvent } from './meta-capi.js'
 
 const DEFAULT_CAPACITY = 6
@@ -157,6 +161,11 @@ async function ensureTables(env) {
       line_picture_url TEXT,
       line_is_friend INTEGER,
       line_context_json TEXT,
+      line_payment_notify_status TEXT,
+      line_payment_notify_attempted_at TEXT,
+      line_payment_notified_at TEXT,
+      line_payment_notify_response_json TEXT,
+      line_payment_notify_error TEXT,
       source_path TEXT,
       return_url TEXT NOT NULL,
       shopline_session_url TEXT,
@@ -178,6 +187,7 @@ async function ensureTables(env) {
     `CREATE INDEX IF NOT EXISTS idx_course_orders_line_user
      ON course_orders (line_user_id, updated_at)`,
   ).run()
+  await ensureLineNotificationColumns(env)
 }
 
 async function ensureOrderTrackingColumns(env) {
@@ -634,6 +644,9 @@ export async function onRequestPost({ request, env }) {
       LOCKED_PAID_STATUSES.includes(order.status) ||
       order.status === 'payment_processing'
     ) {
+      if (order.status === 'paid') {
+        await notifyLinePaymentSuccess(env, referenceId)
+      }
       await finishWebhookAttempt(env, attemptId, {
         verificationStatus: 'verified',
         responseStatus: 200,
@@ -655,6 +668,9 @@ export async function onRequestPost({ request, env }) {
   }
 
   if (LOCKED_PAID_STATUSES.includes(order.status)) {
+    if (order.status === 'paid') {
+      await notifyLinePaymentSuccess(env, referenceId)
+    }
     await finishWebhookAttempt(env, attemptId, {
       verificationStatus: 'verified',
       responseStatus: 200,
@@ -748,6 +764,8 @@ export async function onRequestPost({ request, env }) {
           : 'Meta CAPI purchase send failed',
     })
   }
+
+  await notifyLinePaymentSuccess(env, referenceId)
 
   await finishWebhookAttempt(env, attemptId, {
     verificationStatus: 'verified',

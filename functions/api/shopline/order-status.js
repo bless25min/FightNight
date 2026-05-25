@@ -3,6 +3,7 @@ import {
   queryShoplineSession,
   reconcileProviderOrder,
 } from './reconcile.js'
+import { notifyLinePaymentSuccess } from './line-notify.js'
 
 function json(data, init = {}) {
   return new Response(JSON.stringify(data), {
@@ -51,6 +52,10 @@ export async function onRequestGet({ request, env }) {
       order.status = reconciledStatus
       if (reconciledStatus === 'paid') order.paid_at = new Date().toISOString()
     }
+  }
+
+  if (order.status === 'paid') {
+    await notifyLinePaymentSuccess(env, referenceId)
   }
 
   return json({

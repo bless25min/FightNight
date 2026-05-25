@@ -1,3 +1,5 @@
+import { notifyLinePaymentSuccess } from '../shopline/line-notify.js'
+
 const ATTENTION_STATUSES = [
   'payment_processing',
   'refund_processing',
@@ -283,6 +285,11 @@ async function ensureOrderTrackingColumns(env) {
     ['line_picture_url', 'TEXT'],
     ['line_is_friend', 'INTEGER'],
     ['line_context_json', 'TEXT'],
+    ['line_payment_notify_status', 'TEXT'],
+    ['line_payment_notify_attempted_at', 'TEXT'],
+    ['line_payment_notified_at', 'TEXT'],
+    ['line_payment_notify_response_json', 'TEXT'],
+    ['line_payment_notify_error', 'TEXT'],
   ]
 
   for (const [name, type] of columns) {
@@ -327,6 +334,10 @@ function normalizeOrder(row) {
     lineDisplayName: row.line_display_name,
     linePictureUrl: row.line_picture_url,
     lineIsFriend: row.line_is_friend == null ? null : Boolean(row.line_is_friend),
+    linePaymentNotifyStatus: row.line_payment_notify_status,
+    linePaymentNotifyAttemptedAt: row.line_payment_notify_attempted_at,
+    linePaymentNotifiedAt: row.line_payment_notified_at,
+    linePaymentNotifyError: row.line_payment_notify_error,
     sourcePath: row.source_path,
     metaPurchaseEventId: row.meta_purchase_event_id,
     metaPurchaseSentAt: row.meta_purchase_sent_at,
@@ -379,7 +390,9 @@ async function listOrders(env, url) {
             buyer_phone, buyer_email, line_user_id, line_display_name,
             line_picture_url, line_is_friend, source_path, created_at, updated_at,
             paid_at, meta_purchase_event_id, meta_purchase_sent_at,
-            meta_capi_status, meta_capi_error
+            meta_capi_status, meta_capi_error, line_payment_notify_status,
+            line_payment_notify_attempted_at, line_payment_notified_at,
+            line_payment_notify_error
      FROM course_orders
      ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
      ORDER BY datetime(COALESCE(paid_at, updated_at, created_at)) DESC
@@ -400,7 +413,9 @@ async function getOrder(env, referenceId) {
             buyer_phone, buyer_email, line_user_id, line_display_name,
             line_picture_url, line_is_friend, source_path, created_at, updated_at,
             paid_at, meta_purchase_event_id, meta_purchase_sent_at,
-            meta_capi_status, meta_capi_error
+            meta_capi_status, meta_capi_error, line_payment_notify_status,
+            line_payment_notify_attempted_at, line_payment_notified_at,
+            line_payment_notify_error
      FROM course_orders
      WHERE reference_id = ?`,
     [referenceId],
@@ -1197,7 +1212,12 @@ async function linkOrderLineCustomer(env, referenceId, lineUserId) {
     )
     .run()
 
-  return getOrder(env, referenceId)
+  const order = await getOrder(env, referenceId)
+  if (order?.status === 'paid') {
+    await notifyLinePaymentSuccess(env, referenceId)
+  }
+
+  return order
 }
 
 export async function onRequestGet({ request, env }) {

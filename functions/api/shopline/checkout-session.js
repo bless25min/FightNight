@@ -359,6 +359,11 @@ async function ensureTables(env) {
       line_picture_url TEXT,
       line_is_friend INTEGER,
       line_context_json TEXT,
+      line_payment_notify_status TEXT,
+      line_payment_notify_attempted_at TEXT,
+      line_payment_notified_at TEXT,
+      line_payment_notify_response_json TEXT,
+      line_payment_notify_error TEXT,
       source_path TEXT,
       return_url TEXT NOT NULL,
       shopline_session_url TEXT,
@@ -398,6 +403,11 @@ async function ensureOrderTrackingColumns(env) {
     ['line_picture_url', 'TEXT'],
     ['line_is_friend', 'INTEGER'],
     ['line_context_json', 'TEXT'],
+    ['line_payment_notify_status', 'TEXT'],
+    ['line_payment_notify_attempted_at', 'TEXT'],
+    ['line_payment_notified_at', 'TEXT'],
+    ['line_payment_notify_response_json', 'TEXT'],
+    ['line_payment_notify_error', 'TEXT'],
   ]
 
   for (const [name, type] of columns) {

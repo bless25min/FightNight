@@ -1,4 +1,5 @@
 import { getShoplineConfigForVenue } from './config.js'
+import { notifyLinePaymentSuccess } from './line-notify.js'
 
 const DEFAULT_CAPACITY = 6
 const LOCKED_PAID_STATUSES = [
@@ -256,6 +257,10 @@ export async function reconcileProviderOrder(env, order, provider) {
   )
     .bind(nextStatus, provider.tradeOrderId || null, nextStatus, order.reference_id)
     .run()
+
+  if (nextStatus === 'paid') {
+    await notifyLinePaymentSuccess(env, order.reference_id)
+  }
 
   return nextStatus
 }
