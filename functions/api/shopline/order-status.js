@@ -30,7 +30,8 @@ export async function onRequestGet({ request, env }) {
   const order = await env.DB.prepare(
     `SELECT reference_id, status, course_name, category, venue_name, package_size,
             amount_value, currency, series_dates_json, created_at, paid_at,
-            venue_id, shopline_session_id, session_ids_json, quantity
+            venue_id, shopline_session_id, shopline_trade_order_id,
+            session_ids_json, quantity
      FROM course_orders
      WHERE reference_id = ?`,
   )

@@ -1334,47 +1334,76 @@ export function AdminPage() {
     return `${Math.round((summary.orders.paid / summary.orders.total) * 100)}%`
   }, [summary])
 
-  const loadAdminData = useCallback(async () => {
+  const loadAdminData = useCallback(async (tab: AdminTab) => {
     if (!token) return
 
     setIsLoading(true)
     setError('')
 
     try {
-      const [
-        summaryResponse,
-        trafficResponse,
-        journeysResponse,
-        ordersResponse,
-        inventoryResponse,
-        eventsResponse,
-        lineResponse,
-      ] =
-        await Promise.all([
-          fetchAdmin<{ summary: AdminSummary }>('/api/admin/summary', token),
-          fetchAdmin<{ traffic: TrafficData }>('/api/admin/traffic', token),
-          fetchAdmin<{ journeys: Journey[] }>('/api/admin/journeys?limit=40', token),
-          fetchAdmin<{ orders: AdminOrder[] }>('/api/admin/orders?limit=80', token),
-          fetchAdmin<{ inventory: InventoryRecord[] }>(
+      const summaryPromise = fetchAdmin<{ summary: AdminSummary }>(
+        '/api/admin/summary',
+        token,
+      )
+      const tabPromise = (async (): Promise<Partial<AdminData>> => {
+        if (tab === 'traffic') {
+          const response = await fetchAdmin<{ traffic: TrafficData }>(
+            '/api/admin/traffic',
+            token,
+          )
+          return { traffic: response.traffic }
+        }
+        if (tab === 'journeys') {
+          const response = await fetchAdmin<{ journeys: Journey[] }>(
+            '/api/admin/journeys?limit=40',
+            token,
+          )
+          return { journeys: response.journeys }
+        }
+        if (tab === 'orders') {
+          const [ordersResponse, lineResponse] = await Promise.all([
+            fetchAdmin<{ orders: AdminOrder[] }>('/api/admin/orders?limit=80', token),
+            fetchAdmin<{ customers: LineCustomer[] }>(
+              '/api/admin/line-customers?limit=120&compact=1',
+              token,
+            ),
+          ])
+          return {
+            orders: ordersResponse.orders,
+            customers: lineResponse.customers,
+          }
+        }
+        if (tab === 'inventory') {
+          const response = await fetchAdmin<{ inventory: InventoryRecord[] }>(
             '/api/admin/inventory?limit=120',
             token,
-          ),
-          fetchAdmin<{ events: TrackingEventRow[] }>('/api/admin/events?limit=120', token),
-          fetchAdmin<{ customers: LineCustomer[] }>(
-            '/api/admin/line-customers?limit=120',
+          )
+          return { inventory: response.inventory }
+        }
+        if (tab === 'events') {
+          const response = await fetchAdmin<{ events: TrackingEventRow[] }>(
+            '/api/admin/events?limit=120',
             token,
-          ),
-        ])
+          )
+          return { events: response.events }
+        }
 
-      setData({
+        const response = await fetchAdmin<{ customers: LineCustomer[] }>(
+          '/api/admin/line-customers?limit=120',
+          token,
+        )
+        return { customers: response.customers }
+      })()
+      const [summaryResponse, tabData] = await Promise.all([
+        summaryPromise,
+        tabPromise,
+      ])
+
+      setData((currentData) => ({
+        ...currentData,
+        ...tabData,
         summary: summaryResponse.summary,
-        traffic: trafficResponse.traffic,
-        journeys: journeysResponse.journeys,
-        orders: ordersResponse.orders,
-        inventory: inventoryResponse.inventory,
-        events: eventsResponse.events,
-        customers: lineResponse.customers,
-      })
+      }))
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : '後台資料讀取失敗')
     } finally {
@@ -1383,8 +1412,8 @@ export function AdminPage() {
   }, [token])
 
   useEffect(() => {
-    void loadAdminData()
-  }, [loadAdminData])
+    void loadAdminData(activeTab)
+  }, [activeTab, loadAdminData])
 
   const handleLogin = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -1425,7 +1454,7 @@ export function AdminPage() {
       setReconcileResult(
         `已檢查 ${response.checked} 筆可補對帳訂單，更新 ${response.changed} 筆。`,
       )
-      await loadAdminData()
+      await loadAdminData(activeTab)
     } catch (reconcileError) {
       setError(
         reconcileError instanceof Error
@@ -1435,7 +1464,7 @@ export function AdminPage() {
     } finally {
       setIsReconciling(false)
     }
-  }, [loadAdminData, token])
+  }, [activeTab, loadAdminData, token])
 
   const handleLinkOrderLine = useCallback(
     async (referenceId: string, lineUserId: string) => {
@@ -1448,7 +1477,7 @@ export function AdminPage() {
           token,
           { lineUserId },
         )
-        await loadAdminData()
+        await loadAdminData(activeTab)
       } catch (linkError) {
         setError(
           linkError instanceof Error ? linkError.message : 'LINE 用戶綁定失敗',
@@ -1456,7 +1485,7 @@ export function AdminPage() {
         throw linkError
       }
     },
-    [loadAdminData, token],
+    [activeTab, loadAdminData, token],
   )
 
   if (!token) {
@@ -1518,7 +1547,7 @@ export function AdminPage() {
             </button>
             <button
               type="button"
-              onClick={() => void loadAdminData()}
+              onClick={() => void loadAdminData(activeTab)}
               className="rounded-lg border border-pearl/15 bg-pearl/5 px-4 py-2 font-heading text-sm text-pearl transition-colors hover:border-neon/35"
             >
               重新整理

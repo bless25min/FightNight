@@ -37,33 +37,74 @@ function getPrimaryPaymentDetail(data) {
     : null
 }
 
+function unwrapResponseData(data) {
+  return data?.data && typeof data.data === 'object' ? data.data : data
+}
+
+function getRefundDetails(data) {
+  const body = unwrapResponseData(data)
+  const paymentDetail = getPrimaryPaymentDetail(body)
+  const lists = [
+    body?.refundDetails,
+    body?.refunds,
+    body?.refundResponses,
+    body?.refund_responses,
+    body?.paymentData?.refundResponses,
+    body?.payment_data?.refund_responses,
+    paymentDetail?.refundDetails,
+    paymentDetail?.refunds,
+    paymentDetail?.refundResponses,
+  ]
+
+  return lists.flatMap((list) => (Array.isArray(list) ? list : []))
+}
+
 function getProviderAmountValue(data) {
-  return Number(data?.amount?.value || data?.order?.amount?.value || 0)
+  const body = unwrapResponseData(data)
+  return Number(body?.amount?.value || body?.order?.amount?.value || 0)
 }
 
 function getProviderRefundAmountValue(data) {
-  const paymentDetail = getPrimaryPaymentDetail(data)
-  return Number(
-    data?.refundAmount?.value ||
-      data?.refundedAmount?.value ||
-      data?.totalRefundAmount?.value ||
+  const body = unwrapResponseData(data)
+  const paymentDetail = getPrimaryPaymentDetail(body)
+  const directAmount = Number(
+    body?.refundAmount?.value ||
+      body?.refundedAmount?.value ||
+      body?.totalRefundAmount?.value ||
       paymentDetail?.refundAmount?.value ||
       paymentDetail?.refundedAmount?.value ||
       0,
   )
+  if (directAmount) return directAmount
+
+  return getRefundDetails(body).reduce((total, refund) => {
+    const normalized = normalizeStatus(refund?.status || refund?.refundStatus)
+    const failed = ['FAILED', 'FAILURE', 'REJECTED', 'DECLINED'].some((token) =>
+      normalized.includes(token),
+    )
+    if (failed) return total
+    return total + Number(refund?.amount?.value || refund?.refundAmount?.value || 0)
+  }, 0)
 }
 
 function hasRefundStatus(data) {
-  const paymentDetail = getPrimaryPaymentDetail(data)
+  const body = unwrapResponseData(data)
+  const paymentDetail = getPrimaryPaymentDetail(body)
   const values = [
-    data?.status,
-    data?.refundStatus,
-    data?.tradeStatus,
-    data?.paymentStatus,
+    body?.status,
+    body?.refundStatus,
+    body?.tradeStatus,
+    body?.paymentStatus,
     paymentDetail?.status,
     paymentDetail?.refundStatus,
     paymentDetail?.tradeStatus,
     paymentDetail?.paymentStatus,
+    ...getRefundDetails(body).flatMap((refund) => [
+      refund?.status,
+      refund?.refundStatus,
+      refund?.tradeStatus,
+      refund?.paymentStatus,
+    ]),
   ]
   const refundTokens = ['REFUND', 'REFUNDED', 'REVERSED', 'VOIDED']
   const successTokens = ['SUCCEEDED', 'SUCCESS', 'COMPLETED', 'DONE', 'REFUNDED']
@@ -90,16 +131,23 @@ function hasRefundStatus(data) {
 }
 
 function hasPartialRefundStatus(data) {
-  const paymentDetail = getPrimaryPaymentDetail(data)
+  const body = unwrapResponseData(data)
+  const paymentDetail = getPrimaryPaymentDetail(body)
   const values = [
-    data?.status,
-    data?.refundStatus,
-    data?.tradeStatus,
-    data?.paymentStatus,
+    body?.status,
+    body?.refundStatus,
+    body?.tradeStatus,
+    body?.paymentStatus,
     paymentDetail?.status,
     paymentDetail?.refundStatus,
     paymentDetail?.tradeStatus,
     paymentDetail?.paymentStatus,
+    ...getRefundDetails(body).flatMap((refund) => [
+      refund?.status,
+      refund?.refundStatus,
+      refund?.tradeStatus,
+      refund?.paymentStatus,
+    ]),
   ]
 
   return values.some((value) => {
@@ -109,8 +157,9 @@ function hasPartialRefundStatus(data) {
 }
 
 function classifyProviderStatus(data, localStatus) {
-  const sessionStatus = normalizeStatus(data?.status)
-  const paymentDetail = getPrimaryPaymentDetail(data)
+  const body = unwrapResponseData(data)
+  const sessionStatus = normalizeStatus(body?.status)
+  const paymentDetail = getPrimaryPaymentDetail(body)
   const paymentStatus = normalizeStatus(paymentDetail?.status)
   const hasTradeOrder = Boolean(paymentDetail?.tradeOrderId)
   const hasSuccessTime = Boolean(paymentDetail?.paymentSuccessTime)
@@ -165,6 +214,81 @@ function providerTerminalStatus(provider) {
   return null
 }
 
+async function queryShoplinePayment(env, order, tradeOrderId) {
+  if (!tradeOrderId) return null
+
+  const shoplineConfig = getShoplineConfigForVenue(env, order.venue_id)
+  if (!shoplineConfig.merchantId || !shoplineConfig.apiKey) {
+    return {
+      ok: false,
+      diagnosis: 'provider_config_missing',
+      checkedAt: new Date().toISOString(),
+    }
+  }
+
+  const apiBaseUrl =
+    env.SHOPLINE_API_BASE_URL || 'https://api.shoplinepayments.com'
+  const response = await fetch(`${apiBaseUrl}/api/v1/trade/payment/get`, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      merchantId: shoplineConfig.merchantId,
+      apiKey: shoplineConfig.apiKey,
+      requestId: createRequestId(),
+    },
+    body: JSON.stringify({ tradeOrderId }),
+  })
+
+  const data = await response.json().catch(() => null)
+  if (!response.ok || !data || data.code) {
+    return {
+      ok: false,
+      diagnosis: 'provider_payment_query_failed',
+      httpStatus: response.status,
+      code: data?.code || null,
+      message: data?.msg || data?.message || null,
+      checkedAt: new Date().toISOString(),
+    }
+  }
+
+  const body = unwrapResponseData(data)
+  const paymentDetail = getPrimaryPaymentDetail(body)
+  return {
+    ok: true,
+    diagnosis: classifyProviderStatus(body, order.status),
+    amountValue: getProviderAmountValue(body),
+    refundAmountValue: getProviderRefundAmountValue(body),
+    status: body?.status || null,
+    refundStatus: body?.refundStatus || null,
+    paymentStatus: paymentDetail?.status || body?.paymentStatus || null,
+    tradeOrderId: body?.tradeOrderId || paymentDetail?.tradeOrderId || tradeOrderId,
+    paymentSuccessTime:
+      body?.paymentSuccessTime || paymentDetail?.paymentSuccessTime || null,
+    refundDetailsCount: getRefundDetails(body).length,
+    checkedAt: new Date().toISOString(),
+  }
+}
+
+function mergeSessionAndPaymentProvider(sessionProvider, paymentProvider) {
+  if (!paymentProvider) return sessionProvider
+  if (!sessionProvider?.ok) return { ...paymentProvider, paymentQuery: paymentProvider }
+
+  const paymentDiagnosis = paymentProvider.diagnosis
+  const shouldPreferPayment =
+    paymentDiagnosis === 'provider_refunded' ||
+    paymentDiagnosis === 'provider_partially_refunded' ||
+    paymentDiagnosis === 'provider_paid_cancelled'
+
+  return {
+    ...sessionProvider,
+    diagnosis: shouldPreferPayment ? paymentDiagnosis : sessionProvider.diagnosis,
+    refundAmountValue:
+      paymentProvider.refundAmountValue || sessionProvider.refundAmountValue,
+    tradeOrderId: paymentProvider.tradeOrderId || sessionProvider.tradeOrderId,
+    paymentQuery: paymentProvider,
+  }
+}
+
 export async function queryShoplineSession(env, order) {
   if (!order.shopline_session_id) return null
   if (env.SHOPLINE_STATUS_QUERY_ENABLED === 'false') return null
@@ -204,7 +328,7 @@ export async function queryShoplineSession(env, order) {
   }
 
   const paymentDetail = getPrimaryPaymentDetail(data)
-  return {
+  const sessionProvider = {
     ok: true,
     diagnosis: classifyProviderStatus(data, order.status),
     amountValue: getProviderAmountValue(data),
@@ -216,6 +340,13 @@ export async function queryShoplineSession(env, order) {
     paymentSuccessTime: paymentDetail?.paymentSuccessTime || null,
     checkedAt: new Date().toISOString(),
   }
+  const paymentProvider = await queryShoplinePayment(
+    env,
+    order,
+    sessionProvider.tradeOrderId || order.shopline_trade_order_id,
+  )
+
+  return mergeSessionAndPaymentProvider(sessionProvider, paymentProvider)
 }
 
 async function ensureInventoryRows(env, sessionIds) {

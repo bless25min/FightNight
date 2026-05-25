@@ -307,6 +307,24 @@ async function ensureOrderTrackingColumns(env) {
       throw error
     }
   }
+
+  try {
+    await env.DB.batch([
+      env.DB.prepare(
+        `CREATE INDEX IF NOT EXISTS idx_course_orders_line_user_updated
+         ON course_orders (line_user_id, updated_at)`,
+      ),
+      env.DB.prepare(
+        `CREATE INDEX IF NOT EXISTS idx_course_orders_line_user_paid
+         ON course_orders (line_user_id, paid_at)`,
+      ),
+    ])
+  } catch (error) {
+    if (error instanceof Error && /no such table/i.test(error.message)) {
+      return
+    }
+    throw error
+  }
 }
 
 function normalizeOrder(row) {
@@ -540,146 +558,8 @@ async function listEvents(env, url) {
   }))
 }
 
-async function listLineCustomers(env, url) {
-  const limit = getLimit(url, 80, 200)
-  const hasOrdersTable = Boolean(
-    await safeFirst(
-      env,
-      `SELECT name FROM sqlite_master
-       WHERE type = 'table' AND name = 'course_orders'`,
-    ),
-  )
-
-  if (!hasOrdersTable) {
-    const rows = await safeAll(
-      env,
-      `SELECT line_user_id, display_name, picture_url, status_message,
-              is_friend, access_count, first_seen_at, last_seen_at
-       FROM line_customers
-       ORDER BY datetime(last_seen_at) DESC
-       LIMIT ?`,
-      [limit],
-    )
-
-    return rows.map((row) => ({
-      lineUserId: row.line_user_id,
-      displayName: row.display_name,
-      pictureUrl: row.picture_url,
-      statusMessage: row.status_message,
-      isFriend: Boolean(row.is_friend),
-      accessCount: toNumber(row.access_count),
-      firstSeenAt: row.first_seen_at,
-      lastSeenAt: row.last_seen_at,
-      totalOrders: 0,
-      paidOrders: 0,
-      pendingOrders: 0,
-      paidRevenue: 0,
-    }))
-  }
-
-  const rows = await safeAll(
-    env,
-    `SELECT line_user_id, display_name, picture_url, status_message,
-            is_friend, access_count, first_seen_at, last_seen_at,
-            COALESCE((
-              SELECT COUNT(*)
-              FROM course_orders co
-              WHERE co.line_user_id = line_customers.line_user_id
-            ), 0) AS total_orders,
-            COALESCE((
-              SELECT SUM(CASE WHEN co.status = 'paid' THEN 1 ELSE 0 END)
-              FROM course_orders co
-              WHERE co.line_user_id = line_customers.line_user_id
-            ), 0) AS paid_orders,
-            COALESCE((
-              SELECT SUM(CASE WHEN co.status IN ('pending', 'payment_processing', 'session_failed') THEN 1 ELSE 0 END)
-              FROM course_orders co
-              WHERE co.line_user_id = line_customers.line_user_id
-            ), 0) AS pending_orders,
-            COALESCE((
-              SELECT SUM(CASE WHEN co.status = 'paid' THEN co.amount_value ELSE 0 END)
-              FROM course_orders co
-              WHERE co.line_user_id = line_customers.line_user_id
-            ), 0) AS paid_revenue,
-            (
-              SELECT co.reference_id
-              FROM course_orders co
-              WHERE co.line_user_id = line_customers.line_user_id
-              ORDER BY datetime(COALESCE(co.paid_at, co.updated_at, co.created_at)) DESC,
-                       co.reference_id DESC
-              LIMIT 1
-            ) AS latest_order_reference_id,
-            (
-              SELECT co.status
-              FROM course_orders co
-              WHERE co.line_user_id = line_customers.line_user_id
-              ORDER BY datetime(COALESCE(co.paid_at, co.updated_at, co.created_at)) DESC,
-                       co.reference_id DESC
-              LIMIT 1
-            ) AS latest_order_status,
-            (
-              SELECT co.course_name
-              FROM course_orders co
-              WHERE co.line_user_id = line_customers.line_user_id
-              ORDER BY datetime(COALESCE(co.paid_at, co.updated_at, co.created_at)) DESC,
-                       co.reference_id DESC
-              LIMIT 1
-            ) AS latest_order_course_name,
-            (
-              SELECT co.amount_value
-              FROM course_orders co
-              WHERE co.line_user_id = line_customers.line_user_id
-              ORDER BY datetime(COALESCE(co.paid_at, co.updated_at, co.created_at)) DESC,
-                       co.reference_id DESC
-              LIMIT 1
-            ) AS latest_order_amount_value,
-            (
-              SELECT co.paid_at
-              FROM course_orders co
-              WHERE co.line_user_id = line_customers.line_user_id
-              ORDER BY datetime(COALESCE(co.paid_at, co.updated_at, co.created_at)) DESC,
-                       co.reference_id DESC
-              LIMIT 1
-            ) AS latest_order_paid_at,
-            (
-              SELECT co.created_at
-              FROM course_orders co
-              WHERE co.line_user_id = line_customers.line_user_id
-              ORDER BY datetime(COALESCE(co.paid_at, co.updated_at, co.created_at)) DESC,
-                       co.reference_id DESC
-              LIMIT 1
-            ) AS latest_order_created_at,
-            (
-              SELECT co.buyer_name
-              FROM course_orders co
-              WHERE co.line_user_id = line_customers.line_user_id
-              ORDER BY datetime(COALESCE(co.paid_at, co.updated_at, co.created_at)) DESC,
-                       co.reference_id DESC
-              LIMIT 1
-            ) AS buyer_name,
-            (
-              SELECT co.buyer_phone
-              FROM course_orders co
-              WHERE co.line_user_id = line_customers.line_user_id
-              ORDER BY datetime(COALESCE(co.paid_at, co.updated_at, co.created_at)) DESC,
-                       co.reference_id DESC
-              LIMIT 1
-            ) AS buyer_phone,
-            (
-              SELECT co.buyer_email
-              FROM course_orders co
-              WHERE co.line_user_id = line_customers.line_user_id
-              ORDER BY datetime(COALESCE(co.paid_at, co.updated_at, co.created_at)) DESC,
-                       co.reference_id DESC
-              LIMIT 1
-            ) AS buyer_email
-     FROM line_customers
-     ORDER BY datetime(last_seen_at) DESC
-     LIMIT ?`,
-    [limit],
-  )
-
-  return rows.map((row) => ({
+function normalizeLineCustomer(row) {
+  return {
     lineUserId: row.line_user_id,
     displayName: row.display_name,
     pictureUrl: row.picture_url,
@@ -692,16 +572,125 @@ async function listLineCustomers(env, url) {
     paidOrders: toNumber(row.paid_orders),
     pendingOrders: toNumber(row.pending_orders),
     paidRevenue: toNumber(row.paid_revenue),
-    latestOrderReferenceId: row.latest_order_reference_id,
-    latestOrderStatus: row.latest_order_status,
-    latestOrderCourseName: row.latest_order_course_name,
-    latestOrderAmountValue: toNumber(row.latest_order_amount_value),
-    latestOrderPaidAt: row.latest_order_paid_at,
-    latestOrderCreatedAt: row.latest_order_created_at,
-    buyerName: row.buyer_name,
-    buyerPhone: row.buyer_phone,
-    buyerEmail: row.buyer_email,
-  }))
+    latestOrderReferenceId: row.latest_order_reference_id || null,
+    latestOrderStatus: row.latest_order_status || null,
+    latestOrderCourseName: row.latest_order_course_name || null,
+    latestOrderAmountValue:
+      row.latest_order_amount_value == null
+        ? null
+        : toNumber(row.latest_order_amount_value),
+    latestOrderPaidAt: row.latest_order_paid_at || null,
+    latestOrderCreatedAt: row.latest_order_created_at || null,
+    buyerName: row.buyer_name || null,
+    buyerPhone: row.buyer_phone || null,
+    buyerEmail: row.buyer_email || null,
+  }
+}
+
+async function listLineCustomers(env, url) {
+  const limit = getLimit(url, 80, 200)
+  const compact = url.searchParams.get('compact') === '1'
+  const hasOrdersTable = Boolean(
+    await safeFirst(
+      env,
+      `SELECT name FROM sqlite_master
+       WHERE type = 'table' AND name = 'course_orders'`,
+    ),
+  )
+
+  if (!hasOrdersTable) {
+    const rows = await safeAll(
+      env,
+      `SELECT line_user_id, display_name, picture_url, status_message,
+              is_friend, access_count, first_seen_at, last_seen_at,
+              0 AS total_orders, 0 AS paid_orders, 0 AS pending_orders,
+              0 AS paid_revenue
+       FROM line_customers
+       ORDER BY datetime(last_seen_at) DESC
+       LIMIT ?`,
+      [limit],
+    )
+
+    return rows.map(normalizeLineCustomer)
+  }
+
+  if (compact) {
+    const rows = await safeAll(
+      env,
+      `WITH order_stats AS (
+         SELECT line_user_id,
+                COUNT(*) AS total_orders,
+                COALESCE(SUM(CASE WHEN status = 'paid' THEN 1 ELSE 0 END), 0) AS paid_orders,
+                COALESCE(SUM(CASE WHEN status IN ('pending', 'payment_processing', 'session_failed') THEN 1 ELSE 0 END), 0) AS pending_orders,
+                COALESCE(SUM(CASE WHEN status = 'paid' THEN amount_value ELSE 0 END), 0) AS paid_revenue
+         FROM course_orders
+         WHERE line_user_id IS NOT NULL AND line_user_id != ''
+         GROUP BY line_user_id
+       )
+       SELECT lc.line_user_id, lc.display_name, lc.picture_url, lc.status_message,
+              lc.is_friend, lc.access_count, lc.first_seen_at, lc.last_seen_at,
+              COALESCE(os.total_orders, 0) AS total_orders,
+              COALESCE(os.paid_orders, 0) AS paid_orders,
+              COALESCE(os.pending_orders, 0) AS pending_orders,
+              COALESCE(os.paid_revenue, 0) AS paid_revenue
+       FROM line_customers lc
+       LEFT JOIN order_stats os ON os.line_user_id = lc.line_user_id
+       ORDER BY datetime(lc.last_seen_at) DESC
+       LIMIT ?`,
+      [limit],
+    )
+
+    return rows.map(normalizeLineCustomer)
+  }
+
+  const rows = await safeAll(
+    env,
+    `WITH order_ranked AS (
+       SELECT co.line_user_id, co.reference_id, co.status, co.course_name,
+              co.amount_value, co.paid_at, co.created_at, co.updated_at,
+              co.buyer_name, co.buyer_phone, co.buyer_email,
+              ROW_NUMBER() OVER (
+                PARTITION BY co.line_user_id
+                ORDER BY datetime(COALESCE(co.paid_at, co.updated_at, co.created_at)) DESC,
+                         co.reference_id DESC
+              ) AS rn
+       FROM course_orders co
+       WHERE co.line_user_id IS NOT NULL AND co.line_user_id != ''
+     ),
+     order_stats AS (
+       SELECT line_user_id,
+              COUNT(*) AS total_orders,
+              COALESCE(SUM(CASE WHEN status = 'paid' THEN 1 ELSE 0 END), 0) AS paid_orders,
+              COALESCE(SUM(CASE WHEN status IN ('pending', 'payment_processing', 'session_failed') THEN 1 ELSE 0 END), 0) AS pending_orders,
+              COALESCE(SUM(CASE WHEN status = 'paid' THEN amount_value ELSE 0 END), 0) AS paid_revenue
+       FROM order_ranked
+       GROUP BY line_user_id
+     )
+     SELECT lc.line_user_id, lc.display_name, lc.picture_url, lc.status_message,
+            lc.is_friend, lc.access_count, lc.first_seen_at, lc.last_seen_at,
+            COALESCE(os.total_orders, 0) AS total_orders,
+            COALESCE(os.paid_orders, 0) AS paid_orders,
+            COALESCE(os.pending_orders, 0) AS pending_orders,
+            COALESCE(os.paid_revenue, 0) AS paid_revenue,
+            latest.reference_id AS latest_order_reference_id,
+            latest.status AS latest_order_status,
+            latest.course_name AS latest_order_course_name,
+            latest.amount_value AS latest_order_amount_value,
+            latest.paid_at AS latest_order_paid_at,
+            latest.created_at AS latest_order_created_at,
+            latest.buyer_name AS buyer_name,
+            latest.buyer_phone AS buyer_phone,
+            latest.buyer_email AS buyer_email
+     FROM line_customers lc
+     LEFT JOIN order_stats os ON os.line_user_id = lc.line_user_id
+     LEFT JOIN order_ranked latest
+       ON latest.line_user_id = lc.line_user_id AND latest.rn = 1
+     ORDER BY datetime(lc.last_seen_at) DESC
+     LIMIT ?`,
+    [limit],
+  )
+
+  return rows.map(normalizeLineCustomer)
 }
 
 async function getLineCustomer(env, lineUserId) {
