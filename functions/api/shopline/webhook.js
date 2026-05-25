@@ -52,6 +52,12 @@ async function hmacSha256Hex(payload, secret) {
   return toHex(signature)
 }
 
+async function sha256Hex(payload) {
+  const data = new TextEncoder().encode(String(payload || ''))
+  const digest = await crypto.subtle.digest('SHA-256', data)
+  return toHex(digest)
+}
+
 async function verifyWebhook(request, rawBody, env) {
   const timestamp = request.headers.get('timestamp')
   const sign = request.headers.get('sign')
@@ -74,6 +80,40 @@ async function verifyWebhook(request, rawBody, env) {
   }
 
   return false
+}
+
+async function ensureWebhookAttemptTable(env) {
+  await env.DB.prepare(
+    `CREATE TABLE IF NOT EXISTS shopline_webhook_attempts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      merchant_id TEXT,
+      has_timestamp INTEGER NOT NULL DEFAULT 0,
+      has_sign INTEGER NOT NULL DEFAULT 0,
+      body_size INTEGER NOT NULL DEFAULT 0,
+      body_sha256 TEXT,
+      event_type TEXT,
+      event_status TEXT,
+      reference_id TEXT,
+      session_id TEXT,
+      trade_order_id TEXT,
+      verification_status TEXT NOT NULL DEFAULT 'received',
+      response_status INTEGER,
+      error_code TEXT,
+      processed_status TEXT,
+      cf_ray TEXT,
+      user_agent TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )`,
+  ).run()
+  await env.DB.prepare(
+    `CREATE INDEX IF NOT EXISTS idx_shopline_webhook_attempts_created
+     ON shopline_webhook_attempts (created_at)`,
+  ).run()
+  await env.DB.prepare(
+    `CREATE INDEX IF NOT EXISTS idx_shopline_webhook_attempts_reference
+     ON shopline_webhook_attempts (reference_id, created_at)`,
+  ).run()
 }
 
 async function ensureTables(env) {
@@ -150,6 +190,66 @@ async function ensureOrderTrackingColumns(env) {
         throw error
       }
     }
+  }
+}
+
+async function createWebhookAttempt(env, request, rawBody, event) {
+  try {
+    await ensureWebhookAttemptTable(env)
+    const result = await env.DB.prepare(
+      `INSERT INTO shopline_webhook_attempts (
+        merchant_id, has_timestamp, has_sign, body_size, body_sha256,
+        event_type, event_status, reference_id, session_id, trade_order_id,
+        cf_ray, user_agent
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+      .bind(
+        request.headers.get('merchantId') || null,
+        request.headers.has('timestamp') ? 1 : 0,
+        request.headers.has('sign') ? 1 : 0,
+        new TextEncoder().encode(rawBody).byteLength,
+        await sha256Hex(rawBody),
+        event?.type || null,
+        event?.data?.status || null,
+        event ? getReferenceId(event) : null,
+        event ? getSessionId(event) : null,
+        event ? getTradeOrderId(event) : null,
+        request.headers.get('cf-ray') || null,
+        String(request.headers.get('user-agent') || '').slice(0, 500) || null,
+      )
+      .run()
+    return result.meta?.last_row_id || null
+  } catch {
+    return null
+  }
+}
+
+async function finishWebhookAttempt(
+  env,
+  attemptId,
+  { verificationStatus, responseStatus, errorCode, processedStatus },
+) {
+  if (!attemptId) return
+  try {
+    await env.DB.prepare(
+      `UPDATE shopline_webhook_attempts
+       SET verification_status = COALESCE(?, verification_status),
+           response_status = COALESCE(?, response_status),
+           error_code = COALESCE(?, error_code),
+           processed_status = COALESCE(?, processed_status),
+           updated_at = datetime('now')
+       WHERE id = ?`,
+    )
+      .bind(
+        verificationStatus || null,
+        responseStatus || null,
+        errorCode || null,
+        processedStatus || null,
+        attemptId,
+      )
+      .run()
+  } catch {
+    // Diagnostic writes should never block payment webhook handling.
   }
 }
 
@@ -398,19 +498,39 @@ export async function onRequestPost({ request, env }) {
   }
 
   const rawBody = await request.text()
-  const verified = await verifyWebhook(request, rawBody, env)
-  if (!verified) {
-    return json({ error: 'Invalid webhook signature' }, { status: 401 })
-  }
-
   let event
   try {
     event = JSON.parse(rawBody)
   } catch {
+    event = null
+  }
+  const attemptId = await createWebhookAttempt(env, request, rawBody, event)
+
+  const verified = await verifyWebhook(request, rawBody, env)
+  if (!verified) {
+    await finishWebhookAttempt(env, attemptId, {
+      verificationStatus: 'invalid_signature',
+      responseStatus: 401,
+      errorCode: 'invalid_signature',
+    })
+    return json({ error: 'Invalid webhook signature' }, { status: 401 })
+  }
+
+  if (!event) {
+    await finishWebhookAttempt(env, attemptId, {
+      verificationStatus: 'verified',
+      responseStatus: 400,
+      errorCode: 'invalid_json',
+    })
     return json({ error: 'Invalid JSON body' }, { status: 400 })
   }
   const referenceId = getReferenceId(event)
   if (!referenceId) {
+    await finishWebhookAttempt(env, attemptId, {
+      verificationStatus: 'verified',
+      responseStatus: 400,
+      errorCode: 'missing_reference',
+    })
     return json({ error: 'Missing reference id' }, { status: 400 })
   }
 
@@ -428,11 +548,21 @@ export async function onRequestPost({ request, env }) {
     .first()
 
   if (!order) {
+    await finishWebhookAttempt(env, attemptId, {
+      verificationStatus: 'verified',
+      responseStatus: 404,
+      errorCode: 'order_not_found',
+    })
     return json({ error: 'Order not found' }, { status: 404 })
   }
 
   if (isRefundSucceededEvent(event)) {
     if (order.status === 'refunded') {
+      await finishWebhookAttempt(env, attemptId, {
+        verificationStatus: 'verified',
+        responseStatus: 200,
+        processedStatus: 'refunded',
+      })
       return json({ ok: true, status: 'refunded' })
     }
 
@@ -441,6 +571,12 @@ export async function onRequestPost({ request, env }) {
       !refundAmount || refundAmount >= Number(order.amount_value) * 100
 
     if (!isFullRefund) {
+      await finishWebhookAttempt(env, attemptId, {
+        verificationStatus: 'verified',
+        responseStatus: 200,
+        processedStatus: order.status,
+        errorCode: 'partial_refund_ignored',
+      })
       return json({ ok: true, status: order.status, refund: 'partial' })
     }
 
@@ -458,13 +594,24 @@ export async function onRequestPost({ request, env }) {
           .bind(referenceId)
           .first()
 
-        return json({ ok: true, status: currentOrder?.status || order.status })
+        const status = currentOrder?.status || order.status
+        await finishWebhookAttempt(env, attemptId, {
+          verificationStatus: 'verified',
+          responseStatus: 200,
+          processedStatus: status,
+        })
+        return json({ ok: true, status })
       }
 
       await releasePaidSeats(env, sessionIds, quantity)
     }
 
     await markOrderStatus(env, referenceId, 'refunded', event, rawBody)
+    await finishWebhookAttempt(env, attemptId, {
+      verificationStatus: 'verified',
+      responseStatus: 200,
+      processedStatus: 'refunded',
+    })
     return json({ ok: true, status: 'refunded' })
   }
 
@@ -473,6 +620,11 @@ export async function onRequestPost({ request, env }) {
       LOCKED_PAID_STATUSES.includes(order.status) ||
       order.status === 'payment_processing'
     ) {
+      await finishWebhookAttempt(env, attemptId, {
+        verificationStatus: 'verified',
+        responseStatus: 200,
+        processedStatus: order.status,
+      })
       return json({ ok: true, status: order.status })
     }
 
@@ -480,16 +632,31 @@ export async function onRequestPost({ request, env }) {
     if (nextStatus) {
       await markNonPaidStatus(env, referenceId, nextStatus, event, rawBody)
     }
+    await finishWebhookAttempt(env, attemptId, {
+      verificationStatus: 'verified',
+      responseStatus: 200,
+      processedStatus: nextStatus || order.status,
+    })
     return json({ ok: true, status: nextStatus || order.status })
   }
 
   if (LOCKED_PAID_STATUSES.includes(order.status)) {
+    await finishWebhookAttempt(env, attemptId, {
+      verificationStatus: 'verified',
+      responseStatus: 200,
+      processedStatus: order.status,
+    })
     return json({ ok: true, status: order.status })
   }
 
   const paidAmount = getPaidAmountValue(event)
   if (paidAmount && paidAmount < Number(order.amount_value) * 100) {
     await markOrderStatus(env, referenceId, 'payment_amount_mismatch', event, rawBody)
+    await finishWebhookAttempt(env, attemptId, {
+      verificationStatus: 'verified',
+      responseStatus: 200,
+      processedStatus: 'payment_amount_mismatch',
+    })
     return json({ ok: true, status: 'payment_amount_mismatch' })
   }
 
@@ -503,7 +670,13 @@ export async function onRequestPost({ request, env }) {
       .bind(referenceId)
       .first()
 
-    return json({ ok: true, status: currentOrder?.status || order.status })
+    const status = currentOrder?.status || order.status
+    await finishWebhookAttempt(env, attemptId, {
+      verificationStatus: 'verified',
+      responseStatus: 200,
+      processedStatus: status,
+    })
+    return json({ ok: true, status })
   }
 
   const sessionIds = JSON.parse(order.session_ids_json || '[]')
@@ -513,6 +686,11 @@ export async function onRequestPost({ request, env }) {
   const seatsUpdated = await incrementPaidSeats(env, sessionIds, quantity)
   if (!seatsUpdated) {
     await markOrderStatus(env, referenceId, 'paid_over_capacity', event, rawBody)
+    await finishWebhookAttempt(env, attemptId, {
+      verificationStatus: 'verified',
+      responseStatus: 200,
+      processedStatus: 'paid_over_capacity',
+    })
     return json({ ok: true, status: 'paid_over_capacity' })
   }
 
@@ -557,5 +735,10 @@ export async function onRequestPost({ request, env }) {
     })
   }
 
+  await finishWebhookAttempt(env, attemptId, {
+    verificationStatus: 'verified',
+    responseStatus: 200,
+    processedStatus: 'paid',
+  })
   return json({ ok: true, status: 'paid' })
 }
