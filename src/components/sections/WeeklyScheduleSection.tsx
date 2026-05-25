@@ -560,8 +560,10 @@ type CheckoutLineContext = {
   lineUserId: string
   displayName?: string
   pictureUrl?: string
+  email?: string
   isFriend?: boolean
   accessToken?: string
+  idToken?: string
 }
 
 const lineContextKey = 'fightnight_line_context'
@@ -574,6 +576,13 @@ function getCheckoutLineContext(): CheckoutLineContext | null {
     if (!raw) return null
     const parsed = JSON.parse(raw) as Partial<CheckoutLineContext>
     if (!parsed.lineUserId || typeof parsed.lineUserId !== 'string') return null
+    const decodedEmail = window.liff?.getDecodedIDToken?.()?.email
+    const lineEmail =
+      typeof decodedEmail === 'string' && decodedEmail.trim()
+        ? decodedEmail.trim()
+        : typeof parsed.email === 'string'
+          ? parsed.email
+          : undefined
 
     return {
       lineUserId: parsed.lineUserId,
@@ -581,8 +590,10 @@ function getCheckoutLineContext(): CheckoutLineContext | null {
         typeof parsed.displayName === 'string' ? parsed.displayName : undefined,
       pictureUrl:
         typeof parsed.pictureUrl === 'string' ? parsed.pictureUrl : undefined,
+      email: lineEmail,
       isFriend: parsed.isFriend === true,
       accessToken: window.liff?.getAccessToken?.() || undefined,
+      idToken: window.liff?.getIDToken?.() || undefined,
     }
   } catch {
     return null

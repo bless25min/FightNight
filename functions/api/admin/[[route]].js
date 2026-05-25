@@ -54,6 +54,12 @@ function getLimit(url, fallback = 50, max = 200) {
   return Math.max(1, Math.min(max, Math.floor(limit)))
 }
 
+function getLookbackDays(url, fallback = 7, max = 30) {
+  const days = Number(url.searchParams.get('days') || fallback)
+  if (!Number.isFinite(days)) return fallback
+  return Math.max(1, Math.min(max, Math.floor(days)))
+}
+
 async function safeAll(env, sql, bindings = []) {
   try {
     const statement = env.DB.prepare(sql)
@@ -80,6 +86,58 @@ async function safeFirst(env, sql, bindings = []) {
     }
     throw error
   }
+}
+
+let customerTrackingEnsurePromise = null
+let adminCoreEnsurePromise = null
+
+async function ensureCustomerTrackingTablesOnce(env) {
+  if (!customerTrackingEnsurePromise) {
+    customerTrackingEnsurePromise = ensureCustomerTrackingTables(env).catch((error) => {
+      customerTrackingEnsurePromise = null
+      throw error
+    })
+  }
+
+  return customerTrackingEnsurePromise
+}
+
+async function ensureAdminCoreTablesOnce(env) {
+  if (!adminCoreEnsurePromise) {
+    adminCoreEnsurePromise = ensureAdminCoreTables(env).catch((error) => {
+      adminCoreEnsurePromise = null
+      throw error
+    })
+  }
+
+  return adminCoreEnsurePromise
+}
+
+async function ensureAdminCoreTables(env) {
+  await env.DB.batch([
+    env.DB.prepare(
+      `CREATE TABLE IF NOT EXISTS line_customers (
+        line_user_id TEXT PRIMARY KEY,
+        display_name TEXT NOT NULL,
+        picture_url TEXT,
+        status_message TEXT,
+        email TEXT,
+        email_verified INTEGER NOT NULL DEFAULT 0,
+        email_updated_at TEXT,
+        is_friend INTEGER NOT NULL DEFAULT 0,
+        access_count INTEGER NOT NULL DEFAULT 1,
+        raw_profile_json TEXT,
+        first_seen_at TEXT NOT NULL DEFAULT (datetime('now')),
+        last_seen_at TEXT NOT NULL DEFAULT (datetime('now'))
+      )`,
+    ),
+    env.DB.prepare(
+      `CREATE INDEX IF NOT EXISTS idx_line_customers_last_seen
+       ON line_customers (last_seen_at)`,
+    ),
+  ])
+  await ensureLineCustomerColumns(env)
+  await ensureOrderTrackingColumns(env)
 }
 
 async function ensureCustomerTrackingTables(env) {
@@ -166,6 +224,9 @@ async function ensureCustomerTrackingTables(env) {
         display_name TEXT NOT NULL,
         picture_url TEXT,
         status_message TEXT,
+        email TEXT,
+        email_verified INTEGER NOT NULL DEFAULT 0,
+        email_updated_at TEXT,
         is_friend INTEGER NOT NULL DEFAULT 0,
         access_count INTEGER NOT NULL DEFAULT 1,
         raw_profile_json TEXT,
@@ -200,6 +261,7 @@ async function ensureCustomerTrackingTables(env) {
   ])
 
   await ensureTrackingColumns(env)
+  await ensureLineCustomerColumns(env)
   await env.DB.batch([
     env.DB.prepare(
       `CREATE INDEX IF NOT EXISTS idx_tracking_events_source_created
@@ -208,6 +270,14 @@ async function ensureCustomerTrackingTables(env) {
     env.DB.prepare(
       `CREATE INDEX IF NOT EXISTS idx_tracking_events_route_created
        ON tracking_events (route_path, created_at)`,
+    ),
+    env.DB.prepare(
+      `CREATE INDEX IF NOT EXISTS idx_tracking_events_session_created
+       ON tracking_events (session_id, created_at)`,
+    ),
+    env.DB.prepare(
+      `CREATE INDEX IF NOT EXISTS idx_tracking_events_created_session
+       ON tracking_events (created_at, session_id)`,
     ),
   ])
   await ensureOrderTrackingColumns(env)
@@ -273,6 +343,30 @@ async function ensureTrackingColumns(env) {
   }
 }
 
+async function ensureLineCustomerColumns(env) {
+  const columns = [
+    ['email', 'TEXT'],
+    ['email_verified', 'INTEGER NOT NULL DEFAULT 0'],
+    ['email_updated_at', 'TEXT'],
+  ]
+
+  for (const [name, type] of columns) {
+    try {
+      await env.DB.prepare(
+        `ALTER TABLE line_customers ADD COLUMN ${name} ${type}`,
+      ).run()
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        (/duplicate column/i.test(error.message) || /no such table/i.test(error.message))
+      ) {
+        continue
+      }
+      throw error
+    }
+  }
+}
+
 async function ensureOrderTrackingColumns(env) {
   const columns = [
     ['meta_purchase_event_id', 'TEXT'],
@@ -283,6 +377,8 @@ async function ensureOrderTrackingColumns(env) {
     ['line_user_id', 'TEXT'],
     ['line_display_name', 'TEXT'],
     ['line_picture_url', 'TEXT'],
+    ['line_email', 'TEXT'],
+    ['line_email_verified', 'INTEGER'],
     ['line_is_friend', 'INTEGER'],
     ['line_context_json', 'TEXT'],
     ['line_payment_notify_status', 'TEXT'],
@@ -351,6 +447,9 @@ function normalizeOrder(row) {
     lineUserId: row.line_user_id,
     lineDisplayName: row.line_display_name,
     linePictureUrl: row.line_picture_url,
+    lineEmail: row.line_email || null,
+    lineEmailVerified:
+      row.line_email_verified == null ? null : Boolean(row.line_email_verified),
     lineIsFriend: row.line_is_friend == null ? null : Boolean(row.line_is_friend),
     linePaymentNotifyStatus: row.line_payment_notify_status,
     linePaymentNotifyAttemptedAt: row.line_payment_notify_attempted_at,
@@ -391,10 +490,10 @@ async function listOrders(env, url) {
 
   if (query) {
     where.push(
-      `(reference_id LIKE ? OR buyer_name LIKE ? OR buyer_phone LIKE ? OR buyer_email LIKE ? OR course_name LIKE ? OR line_user_id LIKE ? OR line_display_name LIKE ?)`,
+      `(reference_id LIKE ? OR buyer_name LIKE ? OR buyer_phone LIKE ? OR buyer_email LIKE ? OR course_name LIKE ? OR line_user_id LIKE ? OR line_display_name LIKE ? OR line_email LIKE ?)`,
     )
     const like = `%${query}%`
-    bindings.push(like, like, like, like, like, like, like)
+    bindings.push(like, like, like, like, like, like, like, like)
   }
 
   bindings.push(limit)
@@ -406,7 +505,8 @@ async function listOrders(env, url) {
             coach_pricing_tier, route, package_size, quantity, amount_value,
             currency, session_ids_json, series_dates_json, buyer_name,
             buyer_phone, buyer_email, line_user_id, line_display_name,
-            line_picture_url, line_is_friend, source_path, created_at, updated_at,
+            line_picture_url, line_email, line_email_verified,
+            line_is_friend, source_path, created_at, updated_at,
             paid_at, meta_purchase_event_id, meta_purchase_sent_at,
             meta_capi_status, meta_capi_error, line_payment_notify_status,
             line_payment_notify_attempted_at, line_payment_notified_at,
@@ -429,7 +529,8 @@ async function getOrder(env, referenceId) {
             coach_pricing_tier, route, package_size, quantity, amount_value,
             currency, session_ids_json, series_dates_json, buyer_name,
             buyer_phone, buyer_email, line_user_id, line_display_name,
-            line_picture_url, line_is_friend, source_path, created_at, updated_at,
+            line_picture_url, line_email, line_email_verified,
+            line_is_friend, source_path, created_at, updated_at,
             paid_at, meta_purchase_event_id, meta_purchase_sent_at,
             meta_capi_status, meta_capi_error, line_payment_notify_status,
             line_payment_notify_attempted_at, line_payment_notified_at,
@@ -564,6 +665,8 @@ function normalizeLineCustomer(row) {
     displayName: row.display_name,
     pictureUrl: row.picture_url,
     statusMessage: row.status_message,
+    email: row.email || null,
+    emailVerified: row.email_verified == null ? null : Boolean(row.email_verified),
     isFriend: Boolean(row.is_friend),
     accessCount: toNumber(row.access_count),
     firstSeenAt: row.first_seen_at,
@@ -584,6 +687,11 @@ function normalizeLineCustomer(row) {
     buyerName: row.buyer_name || null,
     buyerPhone: row.buyer_phone || null,
     buyerEmail: row.buyer_email || null,
+    latestOrderLineEmail: row.latest_order_line_email || null,
+    latestOrderLineEmailVerified:
+      row.latest_order_line_email_verified == null
+        ? null
+        : Boolean(row.latest_order_line_email_verified),
   }
 }
 
@@ -602,7 +710,7 @@ async function listLineCustomers(env, url) {
     const rows = await safeAll(
       env,
       `SELECT line_user_id, display_name, picture_url, status_message,
-              is_friend, access_count, first_seen_at, last_seen_at,
+              email, email_verified, is_friend, access_count, first_seen_at, last_seen_at,
               0 AS total_orders, 0 AS paid_orders, 0 AS pending_orders,
               0 AS paid_revenue
        FROM line_customers
@@ -615,6 +723,22 @@ async function listLineCustomers(env, url) {
   }
 
   if (compact) {
+    if (url.searchParams.get('minimal') === '1') {
+      const rows = await safeAll(
+        env,
+        `SELECT line_user_id, display_name, picture_url, status_message,
+                email, email_verified, is_friend, access_count, first_seen_at, last_seen_at,
+                0 AS total_orders, 0 AS paid_orders, 0 AS pending_orders,
+                0 AS paid_revenue
+         FROM line_customers
+         ORDER BY datetime(last_seen_at) DESC
+         LIMIT ?`,
+        [limit],
+      )
+
+      return rows.map(normalizeLineCustomer)
+    }
+
     const rows = await safeAll(
       env,
       `WITH order_stats AS (
@@ -628,7 +752,8 @@ async function listLineCustomers(env, url) {
          GROUP BY line_user_id
        )
        SELECT lc.line_user_id, lc.display_name, lc.picture_url, lc.status_message,
-              lc.is_friend, lc.access_count, lc.first_seen_at, lc.last_seen_at,
+              lc.email, lc.email_verified, lc.is_friend, lc.access_count,
+              lc.first_seen_at, lc.last_seen_at,
               COALESCE(os.total_orders, 0) AS total_orders,
               COALESCE(os.paid_orders, 0) AS paid_orders,
               COALESCE(os.pending_orders, 0) AS pending_orders,
@@ -646,9 +771,10 @@ async function listLineCustomers(env, url) {
   const rows = await safeAll(
     env,
     `WITH order_ranked AS (
-       SELECT co.line_user_id, co.reference_id, co.status, co.course_name,
-              co.amount_value, co.paid_at, co.created_at, co.updated_at,
+     SELECT co.line_user_id, co.reference_id, co.status, co.course_name,
+            co.amount_value, co.paid_at, co.created_at, co.updated_at,
               co.buyer_name, co.buyer_phone, co.buyer_email,
+              co.line_email, co.line_email_verified,
               ROW_NUMBER() OVER (
                 PARTITION BY co.line_user_id
                 ORDER BY datetime(COALESCE(co.paid_at, co.updated_at, co.created_at)) DESC,
@@ -667,7 +793,8 @@ async function listLineCustomers(env, url) {
        GROUP BY line_user_id
      )
      SELECT lc.line_user_id, lc.display_name, lc.picture_url, lc.status_message,
-            lc.is_friend, lc.access_count, lc.first_seen_at, lc.last_seen_at,
+            lc.email, lc.email_verified, lc.is_friend, lc.access_count,
+            lc.first_seen_at, lc.last_seen_at,
             COALESCE(os.total_orders, 0) AS total_orders,
             COALESCE(os.paid_orders, 0) AS paid_orders,
             COALESCE(os.pending_orders, 0) AS pending_orders,
@@ -680,7 +807,9 @@ async function listLineCustomers(env, url) {
             latest.created_at AS latest_order_created_at,
             latest.buyer_name AS buyer_name,
             latest.buyer_phone AS buyer_phone,
-            latest.buyer_email AS buyer_email
+            latest.buyer_email AS buyer_email,
+            latest.line_email AS latest_order_line_email,
+            latest.line_email_verified AS latest_order_line_email_verified
      FROM line_customers lc
      LEFT JOIN order_stats os ON os.line_user_id = lc.line_user_id
      LEFT JOIN order_ranked latest
@@ -697,7 +826,7 @@ async function getLineCustomer(env, lineUserId) {
   const customer = await safeFirst(
     env,
     `SELECT line_user_id, display_name, picture_url, status_message,
-            is_friend, access_count, first_seen_at, last_seen_at
+            email, email_verified, is_friend, access_count, first_seen_at, last_seen_at
      FROM line_customers
      WHERE line_user_id = ?`,
     [lineUserId],
@@ -720,6 +849,9 @@ async function getLineCustomer(env, lineUserId) {
     displayName: customer.display_name,
     pictureUrl: customer.picture_url,
     statusMessage: customer.status_message,
+    email: customer.email || null,
+    emailVerified:
+      customer.email_verified == null ? null : Boolean(customer.email_verified),
     isFriend: Boolean(customer.is_friend),
     accessCount: toNumber(customer.access_count),
     firstSeenAt: customer.first_seen_at,
@@ -734,7 +866,10 @@ async function getLineCustomer(env, lineUserId) {
   }
 }
 
-async function getTraffic(env) {
+async function getTraffic(env, url) {
+  const lookbackDays = getLookbackDays(url, 7, 30)
+  const lookbackSql = `-${lookbackDays} days`
+
   const sourceRows = await safeAll(
     env,
     `SELECT COALESCE(source_channel, 'direct') AS source_channel,
@@ -750,7 +885,7 @@ async function getTraffic(env) {
             ROUND(AVG(CASE WHEN event_name = 'page_exit' THEN duration_ms END)) AS avg_duration_ms,
             ROUND(AVG(CASE WHEN event_name = 'page_exit' THEN max_scroll_depth END)) AS avg_scroll_depth
      FROM tracking_events
-     WHERE created_at >= datetime('now', '-14 days')
+     WHERE created_at >= datetime('now', '${lookbackSql}')
      GROUP BY COALESCE(source_channel, 'direct')
      ORDER BY sessions DESC
      LIMIT 12`,
@@ -766,7 +901,7 @@ async function getTraffic(env) {
             COALESCE(SUM(CASE WHEN event_name IN ('course_purchase_click', 'shopline_checkout_submit') THEN 1 ELSE 0 END), 0) AS checkout_intents,
             COALESCE(SUM(CASE WHEN event_name IN ('ui_click', 'hero_cta_click', 'ticket_cta_click', 'plan_cta_click', 'line_cta_click') THEN 1 ELSE 0 END), 0) AS actions
      FROM tracking_events
-     WHERE created_at >= datetime('now', '-14 days')
+     WHERE created_at >= datetime('now', '${lookbackSql}')
        AND (
          utm_source IS NOT NULL OR utm_medium IS NOT NULL OR utm_campaign IS NOT NULL
          OR click_id_type IS NOT NULL
@@ -789,7 +924,7 @@ async function getTraffic(env) {
             ROUND(AVG(CASE WHEN event_name = 'page_exit' THEN duration_ms END)) AS avg_duration_ms,
             ROUND(AVG(CASE WHEN event_name = 'page_exit' THEN max_scroll_depth END)) AS avg_scroll_depth
      FROM tracking_events
-     WHERE created_at >= datetime('now', '-14 days')
+     WHERE created_at >= datetime('now', '${lookbackSql}')
      GROUP BY COALESCE(route_path, '(unknown)')
      ORDER BY sessions DESC
      LIMIT 30`,
@@ -803,7 +938,7 @@ async function getTraffic(env) {
             COALESCE(SUM(CASE WHEN event_name = 'ui_click' THEN 1 ELSE 0 END), 0) AS clicks,
             MAX(created_at) AS last_at
      FROM tracking_events
-     WHERE created_at >= datetime('now', '-14 days')
+     WHERE created_at >= datetime('now', '${lookbackSql}')
        AND section_id IS NOT NULL
      GROUP BY section_id
      ORDER BY views DESC, clicks DESC
@@ -820,7 +955,7 @@ async function getTraffic(env) {
             MAX(created_at) AS last_at
      FROM tracking_events
      WHERE event_name = 'page_exit'
-       AND created_at >= datetime('now', '-14 days')
+       AND created_at >= datetime('now', '${lookbackSql}')
      GROUP BY COALESCE(route_path, '(unknown)')
      ORDER BY exits DESC
      LIMIT 20`,
@@ -833,7 +968,7 @@ async function getTraffic(env) {
             COALESCE(SUM(CASE WHEN event_name IN ('course_purchase_click', 'shopline_checkout_submit') THEN 1 ELSE 0 END), 0) AS checkout_intents,
             ROUND(AVG(CASE WHEN event_name = 'page_exit' THEN max_scroll_depth END)) AS avg_scroll_depth
      FROM tracking_events
-     WHERE created_at >= datetime('now', '-14 days')
+     WHERE created_at >= datetime('now', '${lookbackSql}')
      GROUP BY COALESCE(device_type, 'unknown')
      ORDER BY sessions DESC`,
   )
@@ -847,7 +982,7 @@ async function getTraffic(env) {
             COALESCE(SUM(CASE WHEN event_name IN ('course_purchase_click', 'shopline_checkout_submit') THEN 1 ELSE 0 END), 0) AS checkout_intents,
             ROUND(AVG(CASE WHEN event_name = 'page_exit' THEN max_scroll_depth END)) AS avg_scroll_depth
      FROM tracking_events
-     WHERE created_at >= datetime('now', '-14 days')
+     WHERE created_at >= datetime('now', '${lookbackSql}')
      GROUP BY COALESCE(browser_name, 'unknown'), COALESCE(os_name, 'unknown'), COALESCE(in_app_browser, '')
      ORDER BY sessions DESC
      LIMIT 20`,
@@ -861,7 +996,7 @@ async function getTraffic(env) {
             COUNT(DISTINCT session_id) AS sessions,
             COALESCE(SUM(CASE WHEN event_name IN ('course_purchase_click', 'shopline_checkout_submit') THEN 1 ELSE 0 END), 0) AS checkout_intents
      FROM tracking_events
-     WHERE created_at >= datetime('now', '-14 days')
+     WHERE created_at >= datetime('now', '${lookbackSql}')
      GROUP BY COALESCE(cf_as_organization, 'unknown'), COALESCE(cf_asn, 0), COALESCE(cf_colo, '')
      ORDER BY sessions DESC
      LIMIT 20`,
@@ -875,7 +1010,7 @@ async function getTraffic(env) {
             COUNT(DISTINCT session_id) AS sessions,
             COALESCE(SUM(CASE WHEN event_name IN ('course_purchase_click', 'shopline_checkout_submit') THEN 1 ELSE 0 END), 0) AS checkout_intents
      FROM tracking_events
-     WHERE created_at >= datetime('now', '-14 days')
+     WHERE created_at >= datetime('now', '${lookbackSql}')
      GROUP BY COALESCE(cf_country, 'unknown'), COALESCE(cf_region, ''), COALESCE(cf_city, '')
      ORDER BY sessions DESC
      LIMIT 30`,
@@ -964,6 +1099,8 @@ async function getTraffic(env) {
 
 async function listJourneys(env, url) {
   const limit = getLimit(url, 30, 80)
+  const lookbackDays = getLookbackDays(url, 7, 30)
+  const lookbackSql = `-${lookbackDays} days`
   const sessions = await safeAll(
     env,
     `SELECT session_id,
@@ -989,7 +1126,7 @@ async function listJourneys(env, url) {
             MAX(duration_ms) AS duration_ms,
             COUNT(*) AS event_count
      FROM tracking_events
-     WHERE created_at >= datetime('now', '-14 days')
+     WHERE created_at >= datetime('now', '${lookbackSql}')
      GROUP BY session_id
      ORDER BY datetime(MAX(created_at)) DESC
      LIMIT ?`,
@@ -1062,7 +1199,8 @@ async function listJourneys(env, url) {
   }))
 }
 
-async function getSummary(env) {
+async function getSummary(env, url) {
+  const light = url.searchParams.get('light') === '1'
   const orderSummary =
     (await safeFirst(
       env,
@@ -1084,25 +1222,28 @@ async function getSummary(env) {
      ORDER BY count DESC`,
   )
 
-  const eventBreakdown = await safeAll(
-    env,
-    `SELECT event_name, COUNT(*) AS count, MAX(created_at) AS last_at
-     FROM tracking_events
-     WHERE created_at >= datetime('now', '-7 days')
-     GROUP BY event_name
-     ORDER BY count DESC
-     LIMIT 20`,
-  )
+  const eventBreakdown = light
+    ? []
+    : await safeAll(
+        env,
+        `SELECT event_name, COUNT(*) AS count, MAX(created_at) AS last_at
+         FROM tracking_events
+         WHERE created_at >= datetime('now', '-7 days')
+         GROUP BY event_name
+         ORDER BY count DESC
+         LIMIT 20`,
+      )
 
-  const eventSummary =
-    (await safeFirst(
-      env,
-      `SELECT COUNT(*) AS total_events,
-              COUNT(DISTINCT anonymous_id) AS anonymous_visitors,
-              COUNT(DISTINCT session_id) AS sessions
-       FROM tracking_events
-       WHERE created_at >= datetime('now', '-7 days')`,
-    )) || {}
+  const eventSummary = light
+    ? {}
+    : (await safeFirst(
+        env,
+        `SELECT COUNT(*) AS total_events,
+                COUNT(DISTINCT anonymous_id) AS anonymous_visitors,
+                COUNT(DISTINCT session_id) AS sessions
+         FROM tracking_events
+         WHERE created_at >= datetime('now', '-7 days')`,
+      )) || {}
 
   const lineSummary =
     (await safeFirst(
@@ -1111,15 +1252,6 @@ async function getSummary(env) {
               COALESCE(SUM(CASE WHEN is_friend = 1 THEN 1 ELSE 0 END), 0) AS friends
        FROM line_customers`,
     )) || {}
-
-  const recentOrders = await listOrders(
-    env,
-    new URL('https://admin.local/?limit=10'),
-  )
-  const inventory = await listInventory(
-    env,
-    new URL('https://admin.local/?limit=12'),
-  )
 
   return {
     orders: {
@@ -1148,8 +1280,6 @@ async function getSummary(env) {
       totalCustomers: toNumber(lineSummary.total_line_customers),
       friends: toNumber(lineSummary.friends),
     },
-    recentOrders,
-    inventory,
   }
 }
 
@@ -1165,7 +1295,7 @@ function routeParts(request) {
 async function linkOrderLineCustomer(env, referenceId, lineUserId) {
   const customer = await safeFirst(
     env,
-    `SELECT line_user_id, display_name, picture_url, is_friend
+    `SELECT line_user_id, display_name, picture_url, email, email_verified, is_friend
      FROM line_customers
      WHERE line_user_id = ?`,
     [lineUserId],
@@ -1180,6 +1310,8 @@ async function linkOrderLineCustomer(env, referenceId, lineUserId) {
      SET line_user_id = ?,
          line_display_name = ?,
          line_picture_url = ?,
+         line_email = ?,
+         line_email_verified = ?,
          line_is_friend = ?,
          line_context_json = ?,
          updated_at = datetime('now')
@@ -1189,11 +1321,15 @@ async function linkOrderLineCustomer(env, referenceId, lineUserId) {
       customer.line_user_id,
       customer.display_name,
       customer.picture_url || null,
+      customer.email || null,
+      customer.email_verified ? 1 : 0,
       customer.is_friend ? 1 : 0,
       JSON.stringify({
         lineUserId: customer.line_user_id,
         displayName: customer.display_name,
         pictureUrl: customer.picture_url || null,
+        email: customer.email || null,
+        emailVerified: Boolean(customer.email_verified),
         isFriend: Boolean(customer.is_friend),
         source: 'admin_manual_link',
       }),
@@ -1217,14 +1353,23 @@ export async function onRequestGet({ request, env }) {
   const authError = assertAdmin(request, env)
   if (authError) return authError
 
-  await ensureCustomerTrackingTables(env)
-
   const { url, parts } = routeParts(request)
   const resource = parts[0] || 'summary'
   const id = parts[1] ? decodeURIComponent(parts[1]) : ''
+  const needsFullTrackingEnsure =
+    resource === 'traffic' ||
+    resource === 'journeys' ||
+    resource === 'events' ||
+    (resource === 'summary' && url.searchParams.get('light') !== '1')
+
+  if (needsFullTrackingEnsure) {
+    await ensureCustomerTrackingTablesOnce(env)
+  } else {
+    await ensureAdminCoreTablesOnce(env)
+  }
 
   if (resource === 'summary') {
-    return json({ ok: true, summary: await getSummary(env) })
+    return json({ ok: true, summary: await getSummary(env, url) })
   }
 
   if (resource === 'orders' && id) {
@@ -1245,7 +1390,7 @@ export async function onRequestGet({ request, env }) {
   }
 
   if (resource === 'traffic') {
-    return json({ ok: true, traffic: await getTraffic(env) })
+    return json({ ok: true, traffic: await getTraffic(env, url) })
   }
 
   if (resource === 'journeys') {
@@ -1274,12 +1419,12 @@ export async function onRequestPost({ request, env }) {
   const authError = assertAdmin(request, env)
   if (authError) return authError
 
-  await ensureCustomerTrackingTables(env)
-
   const { parts } = routeParts(request)
   const resource = parts[0] || ''
   const id = parts[1] ? decodeURIComponent(parts[1]) : ''
   const action = parts[2] || ''
+
+  await ensureAdminCoreTablesOnce(env)
 
   if (resource === 'orders' && id && action === 'link-line') {
     const body = await request.json().catch(() => null)

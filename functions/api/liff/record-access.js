@@ -13,6 +13,42 @@ function trimText(value, maxLength) {
   return String(value || '').trim().slice(0, maxLength)
 }
 
+function normalizeEmail(value) {
+  const email = trimText(value, 320).toLowerCase()
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return null
+  return email
+}
+
+function getLineChannelId(env) {
+  return trimText(
+    env.LINE_LOGIN_CHANNEL_ID ||
+      env.VITE_LINE_LOGIN_CHANNEL_ID ||
+      env.LINE_CHANNEL_ID ||
+      env.LINE_LIFF_CHANNEL_ID,
+    80,
+  )
+}
+
+async function verifyLineIdToken(idToken, env) {
+  const channelId = getLineChannelId(env)
+  if (!idToken || !channelId) return null
+
+  const body = new URLSearchParams()
+  body.set('id_token', idToken)
+  body.set('client_id', channelId)
+
+  const response = await fetch('https://api.line.me/oauth2/v2.1/verify', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/x-www-form-urlencoded',
+    },
+    body,
+  })
+
+  if (!response.ok) return null
+  return response.json().catch(() => null)
+}
+
 async function ensureTables(env) {
   await env.DB.batch([
     env.DB.prepare(
@@ -21,6 +57,9 @@ async function ensureTables(env) {
         display_name TEXT NOT NULL,
         picture_url TEXT,
         status_message TEXT,
+        email TEXT,
+        email_verified INTEGER NOT NULL DEFAULT 0,
+        email_updated_at TEXT,
         is_friend INTEGER NOT NULL DEFAULT 0,
         access_count INTEGER NOT NULL DEFAULT 1,
         raw_profile_json TEXT,
@@ -53,6 +92,28 @@ async function ensureTables(env) {
        ON liff_access_events (created_at)`,
     ),
   ])
+
+  await ensureLineCustomerColumns(env)
+}
+
+async function ensureLineCustomerColumns(env) {
+  const columns = [
+    ['email', 'TEXT'],
+    ['email_verified', 'INTEGER NOT NULL DEFAULT 0'],
+    ['email_updated_at', 'TEXT'],
+  ]
+
+  for (const [name, type] of columns) {
+    try {
+      await env.DB.prepare(
+        `ALTER TABLE line_customers ADD COLUMN ${name} ${type}`,
+      ).run()
+    } catch (error) {
+      if (!(error instanceof Error) || !/duplicate column/i.test(error.message)) {
+        throw error
+      }
+    }
+  }
 }
 
 async function fetchLineProfile(accessToken) {
@@ -88,19 +149,43 @@ export async function onRequestPost({ request, env }) {
     }
 
     const isFriend = body?.friendFlag === true || body?.isFriend === true ? 1 : 0
+    const verifiedToken = await verifyLineIdToken(trimText(body?.idToken, 4000), env)
+    const tokenMatchesProfile = verifiedToken?.sub && verifiedToken.sub === lineUserId
+    const verifiedEmail = tokenMatchesProfile ? normalizeEmail(verifiedToken?.email) : null
+    const submittedEmail = normalizeEmail(body?.email || body?.lineEmail)
+    const lineEmail = verifiedEmail || submittedEmail
+    const lineEmailVerified = verifiedEmail ? 1 : 0
     const rawProfileJson = JSON.stringify(profile)
 
     await ensureTables(env)
 
     await env.DB.prepare(
       `INSERT INTO line_customers (
-        line_user_id, display_name, picture_url, status_message, is_friend,
-        access_count, raw_profile_json, first_seen_at, last_seen_at
-      ) VALUES (?, ?, ?, ?, ?, 1, ?, datetime('now'), datetime('now'))
+        line_user_id, display_name, picture_url, status_message, email,
+        email_verified, email_updated_at, is_friend, access_count,
+        raw_profile_json, first_seen_at, last_seen_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, datetime('now'), datetime('now'))
       ON CONFLICT(line_user_id) DO UPDATE SET
         display_name = excluded.display_name,
         picture_url = excluded.picture_url,
         status_message = excluded.status_message,
+        email = CASE
+          WHEN excluded.email IS NULL THEN line_customers.email
+          WHEN line_customers.email IS NULL THEN excluded.email
+          WHEN excluded.email_verified = 1 THEN excluded.email
+          WHEN COALESCE(line_customers.email_verified, 0) = 0 THEN excluded.email
+          ELSE line_customers.email
+        END,
+        email_verified = CASE
+          WHEN excluded.email IS NULL THEN COALESCE(line_customers.email_verified, 0)
+          WHEN excluded.email_verified = 1 THEN 1
+          ELSE COALESCE(line_customers.email_verified, 0)
+        END,
+        email_updated_at = CASE
+          WHEN excluded.email IS NULL THEN line_customers.email_updated_at
+          WHEN line_customers.email IS NULL OR excluded.email_verified = 1 OR COALESCE(line_customers.email_verified, 0) = 0 THEN datetime('now')
+          ELSE line_customers.email_updated_at
+        END,
         is_friend = excluded.is_friend,
         access_count = line_customers.access_count + 1,
         raw_profile_json = excluded.raw_profile_json,
@@ -111,6 +196,9 @@ export async function onRequestPost({ request, env }) {
         trimText(profile?.displayName, 200) || 'LINE user',
         trimText(profile?.pictureUrl, 1200) || null,
         trimText(profile?.statusMessage, 400) || null,
+        lineEmail,
+        lineEmailVerified,
+        lineEmail ? new Date().toISOString() : null,
         isFriend,
         rawProfileJson,
       )
@@ -135,6 +223,8 @@ export async function onRequestPost({ request, env }) {
       lineUserId,
       displayName: trimText(profile?.displayName, 200) || 'LINE user',
       pictureUrl: trimText(profile?.pictureUrl, 1200) || null,
+      email: lineEmail,
+      emailVerified: Boolean(lineEmailVerified),
       isFriend: Boolean(isFriend),
     })
   } catch (error) {

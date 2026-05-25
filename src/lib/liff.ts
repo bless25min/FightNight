@@ -9,6 +9,13 @@ type LiffFriendship = {
   friendFlag: boolean
 }
 
+type LiffDecodedIdToken = {
+  sub?: string
+  name?: string
+  picture?: string
+  email?: string
+}
+
 export type LiffInstance = {
   init: (config: {
     liffId: string
@@ -17,6 +24,8 @@ export type LiffInstance = {
   isLoggedIn: () => boolean
   login: (config?: { redirectUri?: string }) => void
   getAccessToken?: () => string | null
+  getIDToken?: () => string | null
+  getDecodedIDToken?: () => LiffDecodedIdToken | null
   getProfile: () => Promise<LiffProfile>
   getFriendship: () => Promise<LiffFriendship>
   requestFriendship: () => Promise<void>

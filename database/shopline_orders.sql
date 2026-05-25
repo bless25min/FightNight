@@ -24,6 +24,8 @@ CREATE TABLE IF NOT EXISTS course_orders (
   line_user_id TEXT,
   line_display_name TEXT,
   line_picture_url TEXT,
+  line_email TEXT,
+  line_email_verified INTEGER,
   line_is_friend INTEGER,
   line_context_json TEXT,
   line_payment_notify_status TEXT,

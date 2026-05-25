@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 const adminTokenKey = 'fightnight_admin_token'
 
@@ -21,6 +21,8 @@ type AdminOrder = {
   lineUserId?: string | null
   lineDisplayName?: string | null
   linePictureUrl?: string | null
+  lineEmail?: string | null
+  lineEmailVerified?: boolean | null
   lineIsFriend?: boolean | null
   linePaymentNotifyStatus?: string | null
   linePaymentNotifyAttemptedAt?: string | null
@@ -97,6 +99,8 @@ type LineCustomer = {
   lineUserId: string
   displayName: string
   pictureUrl?: string | null
+  email?: string | null
+  emailVerified?: boolean | null
   isFriend: boolean
   accessCount: number
   firstSeenAt: string
@@ -114,6 +118,8 @@ type LineCustomer = {
   buyerName?: string | null
   buyerPhone?: string | null
   buyerEmail?: string | null
+  latestOrderLineEmail?: string | null
+  latestOrderLineEmailVerified?: boolean | null
 }
 
 type AdminSummary = {
@@ -436,6 +442,12 @@ function linePaymentClass(customer: LineCustomer) {
   return 'border-pearl/12 bg-pearl/5 text-mist/70'
 }
 
+function sameEmail(left?: string | null, right?: string | null) {
+  const normalizedLeft = String(left || '').trim().toLowerCase()
+  const normalizedRight = String(right || '').trim().toLowerCase()
+  return normalizedLeft !== '' && normalizedLeft === normalizedRight
+}
+
 async function fetchAdmin<T>(path: string, token: string): Promise<T> {
   const response = await fetch(path, {
     headers: {
@@ -629,6 +641,12 @@ function OrdersTable({
                 <p className="mt-1 text-mist/65">{order.buyerPhone}</p>
                 {order.buyerEmail && (
                   <p className="mt-1 text-mist/45">{order.buyerEmail}</p>
+                )}
+                {order.lineEmail && !sameEmail(order.lineEmail, order.buyerEmail) && (
+                  <p className="mt-1 break-all text-[11px] text-gold/75">
+                    LINE email: {order.lineEmail}
+                    {order.lineEmailVerified ? ' verified' : ' unverified'}
+                  </p>
                 )}
                 {order.lineUserId ? (
                   <div className="mt-3 flex items-center gap-2 rounded-lg border border-pearl/10 bg-black/25 p-2">
@@ -936,6 +954,12 @@ function LineCustomersTableV2({ customers }: { customers: LineCustomer[] }) {
                 <p className="mt-1 truncate font-mono text-[11px] text-mist/45">
                   {customer.lineUserId}
                 </p>
+                {customer.email && (
+                  <p className="mt-1 break-all text-[11px] text-gold/75">
+                    {customer.email}
+                    {customer.emailVerified ? ' verified' : ' unverified'}
+                  </p>
+                )}
                 <p className="mt-2 text-sm text-mist/65">
                   進站 {customer.accessCount} 次，最近{' '}
                   {formatDateTime(customer.lastSeenAt)}
@@ -980,6 +1004,15 @@ function LineCustomersTableV2({ customers }: { customers: LineCustomer[] }) {
                         {customer.buyerEmail ? ` / ${customer.buyerEmail}` : ''}
                       </p>
                     )}
+                    {customer.latestOrderLineEmail &&
+                      !sameEmail(customer.latestOrderLineEmail, customer.buyerEmail) && (
+                        <p className="break-all text-[11px] text-gold/70">
+                          LINE email: {customer.latestOrderLineEmail}
+                          {customer.latestOrderLineEmailVerified
+                            ? ' verified'
+                            : ' unverified'}
+                        </p>
+                      )}
                   </div>
                 </>
               ) : (
@@ -1321,12 +1354,13 @@ function JourneysPanel({ journeys }: { journeys: Journey[] }) {
 export function AdminPage() {
   const [token, setToken] = useState(getStoredToken)
   const [tokenInput, setTokenInput] = useState(getStoredToken)
-  const [activeTab, setActiveTab] = useState<AdminTab>('traffic')
+  const [activeTab, setActiveTab] = useState<AdminTab>('orders')
   const [data, setData] = useState<AdminData>(initialData)
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [isReconciling, setIsReconciling] = useState(false)
   const [reconcileResult, setReconcileResult] = useState('')
+  const hasLoadedSummaryRef = useRef(false)
 
   const summary = data.summary
   const checkoutRate = useMemo(() => {
@@ -1334,28 +1368,32 @@ export function AdminPage() {
     return `${Math.round((summary.orders.paid / summary.orders.total) * 100)}%`
   }, [summary])
 
-  const loadAdminData = useCallback(async (tab: AdminTab) => {
+  const loadAdminData = useCallback(async (
+    tab: AdminTab,
+    options: { refreshSummary?: boolean } = {},
+  ) => {
     if (!token) return
 
     setIsLoading(true)
     setError('')
 
     try {
-      const summaryPromise = fetchAdmin<{ summary: AdminSummary }>(
-        '/api/admin/summary',
-        token,
-      )
+      const shouldLoadSummary =
+        options.refreshSummary === true || !hasLoadedSummaryRef.current
+      const summaryPromise = shouldLoadSummary
+        ? fetchAdmin<{ summary: AdminSummary }>('/api/admin/summary?light=1', token)
+        : Promise.resolve(null)
       const tabPromise = (async (): Promise<Partial<AdminData>> => {
         if (tab === 'traffic') {
           const response = await fetchAdmin<{ traffic: TrafficData }>(
-            '/api/admin/traffic',
+            '/api/admin/traffic?days=7',
             token,
           )
           return { traffic: response.traffic }
         }
         if (tab === 'journeys') {
           const response = await fetchAdmin<{ journeys: Journey[] }>(
-            '/api/admin/journeys?limit=40',
+            '/api/admin/journeys?limit=30&days=7',
             token,
           )
           return { journeys: response.journeys }
@@ -1364,7 +1402,7 @@ export function AdminPage() {
           const [ordersResponse, lineResponse] = await Promise.all([
             fetchAdmin<{ orders: AdminOrder[] }>('/api/admin/orders?limit=80', token),
             fetchAdmin<{ customers: LineCustomer[] }>(
-              '/api/admin/line-customers?limit=120&compact=1',
+              '/api/admin/line-customers?limit=80&compact=1&minimal=1',
               token,
             ),
           ])
@@ -1402,8 +1440,9 @@ export function AdminPage() {
       setData((currentData) => ({
         ...currentData,
         ...tabData,
-        summary: summaryResponse.summary,
+        ...(summaryResponse ? { summary: summaryResponse.summary } : {}),
       }))
+      if (summaryResponse) hasLoadedSummaryRef.current = true
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : '後台資料讀取失敗')
     } finally {
@@ -1437,6 +1476,7 @@ export function AdminPage() {
     setToken('')
     setTokenInput('')
     setData(initialData)
+    hasLoadedSummaryRef.current = false
   }
 
   const handleReconcilePending = useCallback(async () => {
@@ -1454,7 +1494,7 @@ export function AdminPage() {
       setReconcileResult(
         `已檢查 ${response.checked} 筆可補對帳訂單，更新 ${response.changed} 筆。`,
       )
-      await loadAdminData(activeTab)
+      await loadAdminData(activeTab, { refreshSummary: true })
     } catch (reconcileError) {
       setError(
         reconcileError instanceof Error
@@ -1477,7 +1517,7 @@ export function AdminPage() {
           token,
           { lineUserId },
         )
-        await loadAdminData(activeTab)
+        await loadAdminData(activeTab, { refreshSummary: true })
       } catch (linkError) {
         setError(
           linkError instanceof Error ? linkError.message : 'LINE 用戶綁定失敗',
@@ -1547,7 +1587,7 @@ export function AdminPage() {
             </button>
             <button
               type="button"
-              onClick={() => void loadAdminData(activeTab)}
+              onClick={() => void loadAdminData(activeTab, { refreshSummary: true })}
               className="rounded-lg border border-pearl/15 bg-pearl/5 px-4 py-2 font-heading text-sm text-pearl transition-colors hover:border-neon/35"
             >
               重新整理

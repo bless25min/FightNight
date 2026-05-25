@@ -55,6 +55,7 @@ function saveLineContext(context: {
   lineUserId: string
   displayName?: string
   pictureUrl?: string
+  email?: string
   isFriend: boolean
 }) {
   if (typeof window === 'undefined') return
@@ -67,6 +68,11 @@ function saveLineContext(context: {
   }
 }
 
+function getLiffEmail() {
+  const email = window.liff?.getDecodedIDToken?.()?.email
+  return typeof email === 'string' && email.trim() ? email.trim() : undefined
+}
+
 function recordLiffAccess(accessToken: string | null | undefined, friendFlag: boolean) {
   if (!accessToken) return
 
@@ -77,6 +83,8 @@ function recordLiffAccess(accessToken: string | null | undefined, friendFlag: bo
     },
     body: JSON.stringify({
       accessToken,
+      idToken: window.liff?.getIDToken?.() || undefined,
+      email: getLiffEmail(),
       friendFlag,
       placement: getLiffPlacement(),
       sourcePath: getSourcePath(),
@@ -157,6 +165,7 @@ export function useLiffGate() {
         lineUserId: profile.userId,
         displayName: profile.displayName,
         pictureUrl: profile.pictureUrl,
+        email: getLiffEmail(),
         isFriend: friendship.friendFlag,
       })
       recordLiffAccess(liff.getAccessToken?.(), friendship.friendFlag)

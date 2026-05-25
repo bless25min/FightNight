@@ -256,8 +256,9 @@ The offer cards use LIFF login to unlock member-only content. The frontend first
 
 ```
 LINE_LIFF_ID=your_liff_id
+LINE_LOGIN_CHANNEL_ID=your_line_login_channel_id
 ```
 
 This fallback prevents a local `wrangler pages deploy dist` from accidentally shipping a bundle with no LIFF ID.
 
-When a logged-in LIFF user starts checkout, the browser sends the LINE user context with the SHOPLINE session request. New `course_orders` rows store `line_user_id`, LINE display name, picture URL, friend flag, and raw line context so the admin dashboard can connect the paid order back to the LINE user. Orders created before this field existed may remain unlinked unless they are manually associated later.
+When a logged-in LIFF user starts checkout, the browser sends the LINE user context with the SHOPLINE session request. New `course_orders` rows store `line_user_id`, LINE display name, picture URL, LINE email when LIFF provides it, friend flag, and raw line context so the admin dashboard can connect the paid order back to the LINE user. LINE email is stored separately from the SHOPLINE checkout buyer email because the two addresses can be different. If `LINE_LOGIN_CHANNEL_ID` is configured, the server verifies the LIFF ID token before marking the LINE email as verified. Orders created before this field existed may remain unlinked unless they are manually associated later.

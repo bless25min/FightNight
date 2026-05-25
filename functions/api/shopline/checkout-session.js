@@ -210,6 +210,22 @@ function trimText(value, maxLength) {
   return String(value || '').trim().slice(0, maxLength)
 }
 
+function normalizeEmail(value) {
+  const email = trimText(value, 320).toLowerCase()
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return null
+  return email
+}
+
+function getLineChannelId(env) {
+  return trimText(
+    env.LINE_LOGIN_CHANNEL_ID ||
+      env.VITE_LINE_LOGIN_CHANNEL_ID ||
+      env.LINE_CHANNEL_ID ||
+      env.LINE_LIFF_CHANNEL_ID,
+    80,
+  )
+}
+
 function normalizeLineContext(value) {
   if (!value || typeof value !== 'object') return null
 
@@ -220,6 +236,8 @@ function normalizeLineContext(value) {
     lineUserId,
     displayName: trimText(value.displayName, 200) || null,
     pictureUrl: trimText(value.pictureUrl, 1200) || null,
+    email: normalizeEmail(value.email || value.lineEmail),
+    emailVerified: value.emailVerified === true,
     isFriend: value.isFriend === true || value.friendFlag === true,
   }
 }
@@ -238,24 +256,52 @@ async function fetchLineProfile(accessToken) {
   return response.json()
 }
 
-async function resolveLineContext(value) {
+async function verifyLineIdToken(idToken, env) {
+  const channelId = getLineChannelId(env)
+  if (!idToken || !channelId) return null
+
+  const body = new URLSearchParams()
+  body.set('id_token', idToken)
+  body.set('client_id', channelId)
+
+  const response = await fetch('https://api.line.me/oauth2/v2.1/verify', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/x-www-form-urlencoded',
+    },
+    body,
+  })
+
+  if (!response.ok) return null
+  return response.json().catch(() => null)
+}
+
+async function resolveLineContext(value, env) {
   const submittedContext = normalizeLineContext(value)
   const accessToken = trimText(value?.accessToken, 2000)
-  if (!accessToken) return submittedContext
+  if (!accessToken) return null
 
   try {
     const profile = await fetchLineProfile(accessToken)
     const lineUserId = trimText(profile?.userId, 120)
-    if (!lineUserId) return submittedContext
+    if (!lineUserId) return null
+
+    const verifiedToken = await verifyLineIdToken(trimText(value?.idToken, 4000), env)
+    const tokenMatchesProfile = verifiedToken?.sub && verifiedToken.sub === lineUserId
+    const verifiedEmail = tokenMatchesProfile ? normalizeEmail(verifiedToken?.email) : null
+    const submittedEmail = submittedContext?.email || normalizeEmail(value?.email || value?.lineEmail)
+    const lineEmail = verifiedEmail || submittedEmail
 
     return {
       lineUserId,
       displayName: trimText(profile?.displayName, 200) || submittedContext?.displayName || null,
       pictureUrl: trimText(profile?.pictureUrl, 1200) || submittedContext?.pictureUrl || null,
+      email: lineEmail,
+      emailVerified: Boolean(verifiedEmail),
       isFriend: submittedContext?.isFriend === true,
     }
   } catch {
-    return submittedContext
+    return null
   }
 }
 
@@ -357,6 +403,8 @@ async function ensureTables(env) {
       line_user_id TEXT,
       line_display_name TEXT,
       line_picture_url TEXT,
+      line_email TEXT,
+      line_email_verified INTEGER,
       line_is_friend INTEGER,
       line_context_json TEXT,
       line_payment_notify_status TEXT,
@@ -401,6 +449,8 @@ async function ensureOrderTrackingColumns(env) {
     ['line_user_id', 'TEXT'],
     ['line_display_name', 'TEXT'],
     ['line_picture_url', 'TEXT'],
+    ['line_email', 'TEXT'],
+    ['line_email_verified', 'INTEGER'],
     ['line_is_friend', 'INTEGER'],
     ['line_context_json', 'TEXT'],
     ['line_payment_notify_status', 'TEXT'],
@@ -433,6 +483,9 @@ async function upsertLineCustomerFromCheckout(env, lineContext) {
         display_name TEXT NOT NULL,
         picture_url TEXT,
         status_message TEXT,
+        email TEXT,
+        email_verified INTEGER NOT NULL DEFAULT 0,
+        email_updated_at TEXT,
         is_friend INTEGER NOT NULL DEFAULT 0,
         access_count INTEGER NOT NULL DEFAULT 1,
         raw_profile_json TEXT,
@@ -446,14 +499,34 @@ async function upsertLineCustomerFromCheckout(env, lineContext) {
     ),
   ])
 
+  await ensureLineCustomerColumns(env)
+
   await env.DB.prepare(
     `INSERT INTO line_customers (
-      line_user_id, display_name, picture_url, status_message, is_friend,
-      access_count, raw_profile_json, first_seen_at, last_seen_at
-    ) VALUES (?, ?, ?, NULL, ?, 1, ?, datetime('now'), datetime('now'))
+      line_user_id, display_name, picture_url, status_message, email,
+      email_verified, email_updated_at, is_friend, access_count,
+      raw_profile_json, first_seen_at, last_seen_at
+    ) VALUES (?, ?, ?, NULL, ?, ?, ?, ?, 1, ?, datetime('now'), datetime('now'))
     ON CONFLICT(line_user_id) DO UPDATE SET
       display_name = COALESCE(excluded.display_name, line_customers.display_name),
       picture_url = COALESCE(excluded.picture_url, line_customers.picture_url),
+      email = CASE
+        WHEN excluded.email IS NULL THEN line_customers.email
+        WHEN line_customers.email IS NULL THEN excluded.email
+        WHEN excluded.email_verified = 1 THEN excluded.email
+        WHEN COALESCE(line_customers.email_verified, 0) = 0 THEN excluded.email
+        ELSE line_customers.email
+      END,
+      email_verified = CASE
+        WHEN excluded.email IS NULL THEN COALESCE(line_customers.email_verified, 0)
+        WHEN excluded.email_verified = 1 THEN 1
+        ELSE COALESCE(line_customers.email_verified, 0)
+      END,
+      email_updated_at = CASE
+        WHEN excluded.email IS NULL THEN line_customers.email_updated_at
+        WHEN line_customers.email IS NULL OR excluded.email_verified = 1 OR COALESCE(line_customers.email_verified, 0) = 0 THEN datetime('now')
+        ELSE line_customers.email_updated_at
+      END,
       is_friend = excluded.is_friend,
       raw_profile_json = COALESCE(excluded.raw_profile_json, line_customers.raw_profile_json),
       last_seen_at = datetime('now')`,
@@ -462,10 +535,33 @@ async function upsertLineCustomerFromCheckout(env, lineContext) {
       lineContext.lineUserId,
       lineContext.displayName || 'LINE user',
       lineContext.pictureUrl,
+      lineContext.email || null,
+      lineContext.emailVerified ? 1 : 0,
+      lineContext.email ? new Date().toISOString() : null,
       lineContext.isFriend ? 1 : 0,
       JSON.stringify(lineContext),
     )
     .run()
+}
+
+async function ensureLineCustomerColumns(env) {
+  const columns = [
+    ['email', 'TEXT'],
+    ['email_verified', 'INTEGER NOT NULL DEFAULT 0'],
+    ['email_updated_at', 'TEXT'],
+  ]
+
+  for (const [name, type] of columns) {
+    try {
+      await env.DB.prepare(
+        `ALTER TABLE line_customers ADD COLUMN ${name} ${type}`,
+      ).run()
+    } catch (error) {
+      if (!(error instanceof Error) || !/duplicate column/i.test(error.message)) {
+        throw error
+      }
+    }
+  }
 }
 
 async function ensureInventoryRows(env, sessionIds) {
@@ -682,7 +778,7 @@ export async function onRequestPost({ request, env }) {
     }
 
     await ensureTables(env)
-    const lineContext = await resolveLineContext(body?.lineContext)
+    const lineContext = await resolveLineContext(body?.lineContext, env)
     await upsertLineCustomerFromCheckout(env, lineContext)
 
     const referenceId = createReferenceId()
@@ -731,9 +827,9 @@ export async function onRequestPost({ request, env }) {
         venue_id, venue_name, coach, coach_pricing_tier, route, package_size,
         quantity, amount_value, currency, session_ids_json, series_dates_json,
         buyer_name, buyer_phone, buyer_email, line_user_id, line_display_name,
-        line_picture_url, line_is_friend, line_context_json, source_path,
+        line_picture_url, line_email, line_email_verified, line_is_friend, line_context_json, source_path,
         return_url, raw_request_json
-      ) VALUES (?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
       .bind(
         referenceId,
@@ -757,6 +853,8 @@ export async function onRequestPost({ request, env }) {
         lineContext?.lineUserId || null,
         lineContext?.displayName || null,
         lineContext?.pictureUrl || null,
+        lineContext?.email || null,
+        lineContext ? (lineContext.emailVerified ? 1 : 0) : null,
         lineContext ? (lineContext.isFriend ? 1 : 0) : null,
         lineContext ? JSON.stringify(lineContext) : null,
         body?.sourcePath || null,
