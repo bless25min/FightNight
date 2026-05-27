@@ -18,6 +18,8 @@ import {
   ONLINE_BOOKING_START_OFFSET_DAYS,
   ONLINE_SALES_SEAT_LIMIT,
   SCHEDULE_DISPLAY_LIMIT,
+  getWeeklyCoursePricingOverride,
+  isPublicWeeklyCourse,
   weeklyCourses,
   weeklyScheduleSectionContent,
 } from '../../data/weeklySchedule'
@@ -169,11 +171,6 @@ function getBootCampRoute(course: WeeklyCourse): BootCampRoute | null {
   return null
 }
 
-function isBootCampEntryCourse(course: WeeklyCourse) {
-  if (course.category !== 'BOOT_CAMP') return true
-  return getBootCampRoute(course) !== null
-}
-
 function getBootCampRouteLabel(course: WeeklyCourse) {
   const route = getBootCampRoute(course)
   if (route) return bootCampRouteContent[route].label
@@ -241,26 +238,42 @@ function formatPrice(amount: number) {
   return `NT$${amount.toLocaleString('en-US')}`
 }
 
-function getFightNightPriceLabel(pricingTier: CoachPricingTier) {
-  return formatPrice(coachPricingByTier[pricingTier].fightNight)
+function getFightNightPriceLabel(
+  course: WeeklyCourse,
+  pricingTier: CoachPricingTier,
+) {
+  return formatPrice(getFightNightPriceAmount(course, pricingTier))
 }
 
-function getFightNightPriceAmount(pricingTier: CoachPricingTier) {
-  return coachPricingByTier[pricingTier].fightNight
+function getFightNightPriceAmount(
+  course: WeeklyCourse,
+  pricingTier: CoachPricingTier,
+) {
+  return (
+    getWeeklyCoursePricingOverride(course)?.fightNight ??
+    coachPricingByTier[pricingTier].fightNight
+  )
 }
 
 function getBootCampPackagePriceLabel(
+  course: WeeklyCourse,
   pricingTier: CoachPricingTier,
   packageSize: 2 | 4,
 ) {
-  return formatPrice(coachPricingByTier[pricingTier].bootCamp[packageSize])
+  return formatPrice(
+    getBootCampPackagePriceAmount(course, pricingTier, packageSize),
+  )
 }
 
 function getBootCampPackagePriceAmount(
+  course: WeeklyCourse,
   pricingTier: CoachPricingTier,
   packageSize: 2 | 4,
 ) {
-  return coachPricingByTier[pricingTier].bootCamp[packageSize]
+  return (
+    getWeeklyCoursePricingOverride(course)?.bootCamp[packageSize] ??
+    coachPricingByTier[pricingTier].bootCamp[packageSize]
+  )
 }
 
 function CoachCard({
@@ -556,6 +569,29 @@ type CheckoutBuyer = {
   email: string
 }
 
+function normalizeTaiwanMobilePhone(value: string) {
+  const raw = value.trim()
+  if (!raw || !/^[\d+\s().-]+$/.test(raw)) return null
+
+  const plusMatches = raw.match(/\+/g)
+  if ((plusMatches?.length ?? 0) > 1 || (raw.includes('+') && !raw.startsWith('+'))) {
+    return null
+  }
+
+  const digits = raw.replace(/\D/g, '')
+  let nationalNumber = ''
+  if (digits.startsWith('886')) {
+    nationalNumber = digits.slice(3)
+  } else if (digits.startsWith('0')) {
+    nationalNumber = digits.slice(1)
+  } else {
+    return null
+  }
+
+  if (!/^9\d{8}$/.test(nationalNumber)) return null
+  return `+886${nationalNumber}`
+}
+
 type CheckoutLineContext = {
   lineUserId: string
   displayName?: string
@@ -744,6 +780,7 @@ function CheckoutContactModal({
               required
               inputMode="tel"
               autoComplete="tel"
+              maxLength={24}
               className="rounded-xl border border-pearl/12 bg-black/35 px-4 py-3 text-base text-pearl outline-none transition-colors placeholder:text-mist/35 focus:border-neon/45"
               placeholder="0912345678"
             />
@@ -877,7 +914,7 @@ export function WeeklyScheduleSection({
     const courseBySlot = new Map<string, WeeklyCourse>()
 
     for (const course of weeklyCourses) {
-      if (course.category !== activeCategory || !isBootCampEntryCourse(course)) {
+      if (course.category !== activeCategory || !isPublicWeeklyCourse(course)) {
         continue
       }
 
@@ -901,7 +938,7 @@ export function WeeklyScheduleSection({
         (c) =>
           c.category === activeCategory &&
           c.date >= bookableFromIso &&
-          isBootCampEntryCourse(c),
+          isPublicWeeklyCourse(c),
       )
       .sort((a, b) => {
         if (a.date !== b.date) return a.date < b.date ? -1 : 1
@@ -1101,9 +1138,9 @@ export function WeeklyScheduleSection({
     async (buyer: CheckoutBuyer) => {
       if (!pendingCheckout) return
 
-      const phoneDigits = buyer.phone.replace(/[^\d+]/g, '')
-      if (phoneDigits.length < 8) {
-        setCheckoutError('請留下可聯絡的手機號碼。')
+      const normalizedPhone = normalizeTaiwanMobilePhone(buyer.phone)
+      if (!normalizedPhone) {
+        setCheckoutError('請輸入有效的台灣手機號碼。')
         return
       }
 
@@ -1117,7 +1154,10 @@ export function WeeklyScheduleSection({
             'content-type': 'application/json',
           },
           body: JSON.stringify({
-            buyer,
+            buyer: {
+              ...buyer,
+              phone: normalizedPhone,
+            },
             lineContext: getCheckoutLineContext(),
             course: pendingCheckout.course,
             packageSize: pendingCheckout.packageSize,
@@ -1596,8 +1636,9 @@ export function WeeklyScheduleSection({
                 const coachProfile = findCoachProfile(c.coach)
                 const coachPricingTier = getCoachPricingTier(c.coach, coachProfile)
                 const fightNightPriceLabel =
-                  getFightNightPriceLabel(coachPricingTier)
+                  getFightNightPriceLabel(c, coachPricingTier)
                 const bootCampBasePriceLabel = getBootCampPackagePriceLabel(
+                  c,
                   coachPricingTier,
                   2,
                 )
@@ -1694,11 +1735,13 @@ export function WeeklyScheduleSection({
                             const packageMeta = bootCampPackageMeta[packageSize]
                             const packagePriceLabel =
                               getBootCampPackagePriceLabel(
+                                c,
                                 coachPricingTier,
                                 packageSize,
                               )
                             const packagePriceAmount =
                               getBootCampPackagePriceAmount(
+                                c,
                                 coachPricingTier,
                                 packageSize,
                               )
@@ -1771,6 +1814,7 @@ export function WeeklyScheduleSection({
                             </div>
                             <p className="font-heading text-base font-black text-neon">
                               {getBootCampPackagePriceLabel(
+                                c,
                                 coachPricingTier,
                                 selectedPackageSize,
                               )}
@@ -1803,6 +1847,7 @@ export function WeeklyScheduleSection({
                                   selectedPackageSize,
                                   selectedPackageAvailability.remaining,
                                   getBootCampPackagePriceAmount(
+                                    c,
                                     coachPricingTier,
                                     selectedPackageSize,
                                   ),
@@ -1995,6 +2040,7 @@ export function WeeklyScheduleSection({
                                   2,
                                   bootCamp2Availability.remaining,
                                   getBootCampPackagePriceAmount(
+                                    c,
                                     coachPricingTier,
                                     2,
                                   ),
@@ -2004,6 +2050,7 @@ export function WeeklyScheduleSection({
                               data-cta={`schedule-${c.id}-bootcamp-2`}
                             >
                               兩堂 · {getBootCampPackagePriceLabel(
+                                c,
                                 coachPricingTier,
                                 2,
                               )}
@@ -2022,6 +2069,7 @@ export function WeeklyScheduleSection({
                                   4,
                                   bootCamp4Availability.remaining,
                                   getBootCampPackagePriceAmount(
+                                    c,
                                     coachPricingTier,
                                     4,
                                   ),
@@ -2031,6 +2079,7 @@ export function WeeklyScheduleSection({
                               data-cta={`schedule-${c.id}-bootcamp-4`}
                             >
                               四堂 · {getBootCampPackagePriceLabel(
+                                c,
                                 coachPricingTier,
                                 4,
                               )}
@@ -2049,7 +2098,7 @@ export function WeeklyScheduleSection({
                                 c,
                                 1,
                                 sessionAvailability.remaining,
-                                getFightNightPriceAmount(coachPricingTier),
+                                getFightNightPriceAmount(c, coachPricingTier),
                                 coachPricingTier,
                               )
                             }

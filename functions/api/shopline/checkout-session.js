@@ -1,6 +1,8 @@
 import { getShoplineConfigForVenue } from './config.js'
 import {
   ONLINE_BOOKING_START_OFFSET_DAYS,
+  getWeeklyCoursePricingOverride,
+  isPublicWeeklyCourse,
   weeklyCourses,
 } from '../../../src/data/weeklySchedule.ts'
 
@@ -66,17 +68,18 @@ function getCoachPricingTier(coachName) {
 function getPriceAmount(course, packageSize) {
   const tier = getCoachPricingTier(course.coach)
   const prices = coachPricingByTier[tier]
+  const override = getWeeklyCoursePricingOverride(course)
 
   if (course.category === 'FIGHT_NIGHT') {
     return {
-      value: prices.fightNight,
+      value: override?.fightNight ?? prices.fightNight,
       pricingTier: tier,
     }
   }
 
   if (course.category === 'BOOT_CAMP' && (packageSize === 2 || packageSize === 4)) {
     return {
-      value: prices.bootCamp[packageSize],
+      value: override?.bootCamp[packageSize] ?? prices.bootCamp[packageSize],
       pricingTier: tier,
     }
   }
@@ -127,6 +130,9 @@ function resolveCourseFromCatalog(submittedCourse) {
   const { baseId, date } = getCourseIdParts(submittedCourse?.id)
   const baseCourse = weeklyCourses.find((course) => course.id === baseId)
   if (!baseCourse) {
+    throw new Error('Course is not available for online checkout')
+  }
+  if (!isPublicWeeklyCourse(baseCourse)) {
     throw new Error('Course is not available for online checkout')
   }
 
@@ -183,10 +189,26 @@ function getBootCampRoute(course, submittedRoute) {
 }
 
 function normalizePhone(phone) {
-  const cleaned = String(phone || '').replace(/[^\d+]/g, '')
-  if (cleaned.startsWith('+')) return cleaned
-  if (cleaned.startsWith('0')) return `+886${cleaned.slice(1)}`
-  return cleaned
+  const raw = String(phone || '').trim()
+  if (!raw || !/^[\d+\s().-]+$/.test(raw)) return ''
+
+  const plusMatches = raw.match(/\+/g)
+  if ((plusMatches?.length || 0) > 1 || (raw.includes('+') && !raw.startsWith('+'))) {
+    return ''
+  }
+
+  const digits = raw.replace(/\D/g, '')
+  let nationalNumber = ''
+  if (digits.startsWith('886')) {
+    nationalNumber = digits.slice(3)
+  } else if (digits.startsWith('0')) {
+    nationalNumber = digits.slice(1)
+  } else {
+    return ''
+  }
+
+  if (!/^9\d{8}$/.test(nationalNumber)) return ''
+  return `+886${nationalNumber}`
 }
 
 function splitName(name) {
@@ -773,8 +795,11 @@ export async function onRequestPost({ request, env }) {
       phone: normalizePhone(body?.buyer?.phone),
       email: String(body?.buyer?.email || '').trim(),
     }
-    if (!buyer.name || buyer.phone.length < 8) {
-      throw new Error('Missing buyer contact')
+    if (!buyer.name) {
+      throw new Error('請留下姓名。')
+    }
+    if (!buyer.phone) {
+      throw new Error('請輸入有效的台灣手機號碼。')
     }
 
     await ensureTables(env)

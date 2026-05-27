@@ -4,6 +4,54 @@ export const SCHEDULE_DISPLAY_LIMIT = 12
 export const ONLINE_SALES_SEAT_LIMIT = 6
 export const ONLINE_BOOKING_START_OFFSET_DAYS = 8
 
+export const POPULAR_COURSE_PRICING = {
+  fightNight: 680,
+  bootCamp: {
+    2: 1280,
+    4: 2680,
+  },
+} as const
+
+const POPULAR_WEEKLY_COURSE_IDS = [
+  'wc-dn-0518-1810-kickbox-cond',
+  'wc-dn-0519-1810-basic-kickbox',
+  'wc-dn-0513-2010-boxing-cond',
+  'wc-dn-0514-2010-fight-fit',
+  'wc-nh-0518-1910-basic-boxing',
+  'wc-nh-0513-2010-boxing-cond',
+  'wc-nh-0515-1810-basic-boxing',
+  'wc-nh-0515-2010-boxing-cond',
+  'wc-tc-0518-1910-basic-boxing',
+  'wc-tc-0525-1910-basic-boxing',
+  'wc-tc-0515-2010-basic-muaythai',
+] as const
+
+const popularWeeklyCourseIdSet = new Set<string>(POPULAR_WEEKLY_COURSE_IDS)
+
+function getBaseWeeklyCourseId(courseId: string) {
+  return courseId.replace(/-\d{4}-\d{2}-\d{2}$/, '')
+}
+
+export function isPopularWeeklyCourse(course: WeeklyCourse) {
+  return popularWeeklyCourseIdSet.has(getBaseWeeklyCourseId(course.id))
+}
+
+export function getWeeklyCoursePricingOverride(course: WeeklyCourse) {
+  return isPopularWeeklyCourse(course) ? POPULAR_COURSE_PRICING : null
+}
+
+export function isPublicWeeklyCourse(course: WeeklyCourse) {
+  if (course.category !== 'BOOT_CAMP') return true
+  const name = course.name
+  if (name.includes('技巧')) return false
+  return (
+    name.includes('拳擊') ||
+    name.includes('泰拳') ||
+    name.includes('踢拳') ||
+    name.includes('體適能')
+  )
+}
+
 export const weeklyScheduleSectionContent = {
   title: '目前可購買的課程名額',
   subtitle: '先選一個你真的會出現的日期、場館與時段，再把那一場的位置保留下來。',
