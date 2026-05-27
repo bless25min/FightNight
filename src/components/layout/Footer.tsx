@@ -108,6 +108,12 @@ export function Footer({ onVenueAction }: FooterProps = {}) {
               隱私政策
             </a>
             <a
+              href="/refund-policy"
+              className="transition-colors hover:text-neon"
+            >
+              退款與取消政策
+            </a>
+            <a
               href="https://blessliao.25min.co/"
               target="_blank"
               rel="noopener noreferrer"

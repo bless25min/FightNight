@@ -48,6 +48,15 @@ if (Test-Path -LiteralPath $IndexHtml) {
   $PrivacyContent = $PrivacyContent -replace '\./assets/', '../assets/'
   Set-Content -LiteralPath $PrivacyHtml -Value $PrivacyContent -Encoding utf8
 
+  $RefundDir = Join-Path $PreviewDir 'refund-policy'
+  $RefundHtml = Join-Path $RefundDir 'index.html'
+  New-Item -ItemType Directory -Force -Path $RefundDir | Out-Null
+  Copy-Item -LiteralPath $IndexHtml -Destination $RefundHtml -Force
+
+  $RefundContent = Get-Content -LiteralPath $RefundHtml -Raw
+  $RefundContent = $RefundContent -replace '\./assets/', '../assets/'
+  Set-Content -LiteralPath $RefundHtml -Value $RefundContent -Encoding utf8
+
   $GuideSlugs = @(
     'taipei-boxing-muay-thai-classes',
     'taichung-boxing-muay-thai-classes',

@@ -4,11 +4,21 @@ type Props = {
   id: string
   question: string
   answer: string
+  linkHref?: string
+  linkLabel?: string
   isOpen: boolean
   onToggle: () => void
 }
 
-export function Accordion({ id, question, answer, isOpen, onToggle }: Props) {
+export function Accordion({
+  id,
+  question,
+  answer,
+  linkHref,
+  linkLabel,
+  isOpen,
+  onToggle,
+}: Props) {
   return (
     <div data-faq={id} className="border-b border-pearl/10 last:border-b-0">
       <button
@@ -39,6 +49,17 @@ export function Accordion({ id, question, answer, isOpen, onToggle }: Props) {
           >
             <p className="pb-5 md:pb-6 text-mist leading-relaxed pr-8">
               {answer}
+              {linkHref && linkLabel && (
+                <>
+                  {' '}
+                  <a
+                    href={linkHref}
+                    className="font-medium text-neon underline-offset-4 transition-colors hover:text-pearl hover:underline"
+                  >
+                    {linkLabel}
+                  </a>
+                </>
+              )}
             </p>
           </motion.div>
         )}

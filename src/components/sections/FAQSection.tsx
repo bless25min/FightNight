@@ -41,6 +41,8 @@ export function FAQSection({
             id={item.id}
             question={item.question}
             answer={item.answer}
+            linkHref={item.linkHref}
+            linkLabel={item.linkLabel}
             isOpen={expandedFaq === item.id}
             onToggle={() => handleToggle(item.id)}
           />

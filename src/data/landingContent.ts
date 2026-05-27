@@ -347,6 +347,14 @@ export const bootCampFaqItems: FAQItem[] = [
     answer:
       '是的，你選擇的課程教練，就如同課程卡片中所描述，詳細資訊可見教練介紹。',
   },
+  {
+    id: 'bootcamp-faq-refund',
+    question: 'Boot Camp 可以取消、改期或退款嗎？',
+    answer:
+      '若付款後尚未使用課程，可於付款日起七日內依退款與取消政策提出申請；若已開始上課、已報到或未滿 24 小時取消，會依實際使用與名額安排狀況處理。',
+    linkHref: '/refund-policy',
+    linkLabel: '查看退款與取消政策',
+  },
 ]
 
 export const offersPlanSectionContent = {
@@ -619,7 +627,9 @@ export const faqItems: FAQItem[] = [
     id: 'faq-8',
     question: '可以退款、轉讓或改期嗎？',
     answer:
-      '報名前會先確認當月規則。若臨時無法參加，請盡早聯繫官方協助確認是否能改期、轉讓或依當月規則處理；越接近活動日，能調整的空間通常越少。',
+      '若付款後尚未使用課程，可於付款日起七日內依退款與取消政策提出申請；若已開始上課、已報到或未滿 24 小時取消，會依實際使用與名額安排狀況處理。',
+    linkHref: '/refund-policy',
+    linkLabel: '查看退款與取消政策',
   },
 ]
 

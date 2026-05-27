@@ -17,6 +17,7 @@ import { PaymentResultPage } from './pages/PaymentResultPage'
 import { AdminPage } from './pages/AdminPage'
 import { SeoGuidePage } from './pages/SeoGuidePage'
 import { PrivacyPolicyPage } from './pages/PrivacyPolicyPage'
+import { RefundPolicyPage } from './pages/RefundPolicyPage'
 import { trackPageView } from './lib/analytics'
 
 const CLIENT_BUILD_MARK = 'inventory-guard-20260522a'
@@ -31,6 +32,7 @@ function getCurrentRoutePath() {
     hashPath.startsWith('/payment/success') ||
     hashPath.startsWith('/admin') ||
     hashPath.startsWith('/privacy-policy') ||
+    hashPath.startsWith('/refund-policy') ||
     hashPath.startsWith('/guides/')
   ) {
     return hashPath
@@ -41,6 +43,7 @@ function getCurrentRoutePath() {
   if (pathname.endsWith('/boot-camp.html')) return '/boot-camp'
   if (pathname.endsWith('/admin.html')) return '/admin'
   if (pathname.endsWith('/privacy-policy.html')) return '/privacy-policy'
+  if (pathname.endsWith('/refund-policy.html')) return '/refund-policy'
 
   return pathname
 }
@@ -165,6 +168,10 @@ function App() {
 
   if (pathname.startsWith('/privacy-policy')) {
     return <PrivacyPolicyPage />
+  }
+
+  if (pathname.startsWith('/refund-policy')) {
+    return <RefundPolicyPage />
   }
 
   return <HomePage />

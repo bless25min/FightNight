@@ -17,7 +17,9 @@ export function Header() {
   const isGuidePage =
     pathname.startsWith('/guides/')
   const isUtilityPage =
-    isGuidePage || pathname.startsWith('/privacy-policy')
+    isGuidePage ||
+    pathname.startsWith('/privacy-policy') ||
+    pathname.startsWith('/refund-policy')
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 50)

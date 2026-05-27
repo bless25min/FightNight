@@ -87,6 +87,8 @@ export type FAQItem = {
   id: string
   question: string
   answer: string
+  linkHref?: string
+  linkLabel?: string
 }
 
 export type PainPoint = {
