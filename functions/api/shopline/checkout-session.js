@@ -2,6 +2,7 @@ import { getShoplineConfigForVenue } from './config.js'
 import {
   ONLINE_BOOKING_START_OFFSET_DAYS,
   getWeeklyCoursePricingOverride,
+  getWeeklyCourseForCategory,
   isPublicWeeklyCourse,
   weeklyCourses,
 } from '../../../src/data/weeklySchedule.ts'
@@ -135,18 +136,21 @@ function resolveCourseFromCatalog(submittedCourse) {
   if (!isPublicWeeklyCourse(baseCourse)) {
     throw new Error('Course is not available for online checkout')
   }
+  const courseCategory =
+    submittedCourse?.category === 'FIGHT_NIGHT' ? 'FIGHT_NIGHT' : baseCourse.category
+  const catalogCourse = getWeeklyCourseForCategory(baseCourse, courseCategory)
 
-  const courseDate = date || baseCourse.date
+  const courseDate = date || catalogCourse.date
   const bookableFromIso = addDays(getTodayLocal(), ONLINE_BOOKING_START_OFFSET_DAYS)
-  if (!isValidWeeklyOccurrence(baseCourse.date, courseDate) || courseDate < bookableFromIso) {
+  if (!isValidWeeklyOccurrence(catalogCourse.date, courseDate) || courseDate < bookableFromIso) {
     throw new Error('Course date is not available for online checkout')
   }
 
-  if (date === baseCourse.date || !date) return baseCourse
+  if (date === catalogCourse.date || !date) return catalogCourse
 
   return {
-    ...baseCourse,
-    id: `${baseCourse.id}-${date}`,
+    ...catalogCourse,
+    id: `${catalogCourse.id}-${date}`,
     date,
     weekday: getWeekdayLabel(date),
   }

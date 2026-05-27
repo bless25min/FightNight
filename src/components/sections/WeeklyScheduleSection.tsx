@@ -19,7 +19,8 @@ import {
   ONLINE_SALES_SEAT_LIMIT,
   SCHEDULE_DISPLAY_LIMIT,
   getWeeklyCoursePricingOverride,
-  isPublicWeeklyCourse,
+  getWeeklyCourseForCategory,
+  isWeeklyCourseAvailableForCategory,
   weeklyCourses,
   weeklyScheduleSectionContent,
 } from '../../data/weeklySchedule'
@@ -914,11 +915,12 @@ export function WeeklyScheduleSection({
     const courseBySlot = new Map<string, WeeklyCourse>()
 
     for (const course of weeklyCourses) {
-      if (course.category !== activeCategory || !isPublicWeeklyCourse(course)) {
+      if (!isWeeklyCourseAvailableForCategory(course, activeCategory)) {
         continue
       }
 
-      const nextCourse = getNextWeeklyOccurrence(course, bookableFromIso)
+      const categorizedCourse = getWeeklyCourseForCategory(course, activeCategory)
+      const nextCourse = getNextWeeklyOccurrence(categorizedCourse, bookableFromIso)
       const slotKey = [
         nextCourse.category,
         nextCourse.venueId,
@@ -938,7 +940,7 @@ export function WeeklyScheduleSection({
         (c) =>
           c.category === activeCategory &&
           c.date >= bookableFromIso &&
-          isPublicWeeklyCourse(c),
+          isWeeklyCourseAvailableForCategory(c, activeCategory),
       )
       .sort((a, b) => {
         if (a.date !== b.date) return a.date < b.date ? -1 : 1

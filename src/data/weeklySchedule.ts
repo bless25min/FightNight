@@ -1,4 +1,4 @@
-import type { WeeklyCourse } from '../types'
+import type { CourseCategory, WeeklyCourse } from '../types'
 
 export const SCHEDULE_DISPLAY_LIMIT = 12
 export const ONLINE_SALES_SEAT_LIMIT = 6
@@ -50,6 +50,35 @@ export function isPublicWeeklyCourse(course: WeeklyCourse) {
     name.includes('踢拳') ||
     name.includes('體適能')
   )
+}
+
+export function isWeeklyCourseAvailableForCategory(
+  course: WeeklyCourse,
+  category: CourseCategory,
+) {
+  if (category === 'FIGHT_NIGHT') {
+    return course.category === 'FIGHT_NIGHT' || isPublicWeeklyCourse(course)
+  }
+
+  return course.category === 'BOOT_CAMP' && isPublicWeeklyCourse(course)
+}
+
+export function getWeeklyCourseForCategory(
+  course: WeeklyCourse,
+  category: CourseCategory,
+) {
+  if (
+    category === 'FIGHT_NIGHT' &&
+    course.category === 'BOOT_CAMP' &&
+    isPublicWeeklyCourse(course)
+  ) {
+    return {
+      ...course,
+      category,
+    }
+  }
+
+  return course
 }
 
 export const weeklyScheduleSectionContent = {
