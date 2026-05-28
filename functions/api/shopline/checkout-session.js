@@ -1,32 +1,18 @@
 import { getShoplineConfigForVenue } from './config.js'
 import {
   ONLINE_BOOKING_START_OFFSET_DAYS,
-  getWeeklyCoursePricingOverride,
   getWeeklyCourseForCategory,
-  isPublicWeeklyCourse,
+  isWeeklyCourseAvailableForCategory,
   weeklyCourses,
 } from '../../../src/data/weeklySchedule.ts'
+import {
+  getCoursePriceModel,
+  getTaipeiTodayIso,
+} from '../../../src/lib/coursePricing.ts'
 
 const DEFAULT_CAPACITY = 6
 const CURRENCY = 'TWD'
 const WEEKDAY_LABELS = ['日', '一', '二', '三', '四', '五', '六']
-
-const coachPricingByTier = {
-  'foreign-fighter': {
-    fightNight: 1280,
-    bootCamp: {
-      2: 2200,
-      4: 3800,
-    },
-  },
-  'domestic-teacher': {
-    fightNight: 980,
-    bootCamp: {
-      2: 1800,
-      4: 2800,
-    },
-  },
-}
 
 const foreignFighterNameKeywords = [
   'Andre',
@@ -66,26 +52,40 @@ function getCoachPricingTier(coachName) {
   return isForeignFighter ? 'foreign-fighter' : 'domestic-teacher'
 }
 
-function getPriceAmount(course, packageSize) {
-  const tier = getCoachPricingTier(course.coach)
-  const prices = coachPricingByTier[tier]
-  const override = getWeeklyCoursePricingOverride(course)
+function getCoachIdFromName(coachName) {
+  const normalized = normalizeCoachName(coachName).toLowerCase()
+  if (normalized.includes('got')) return 'got'
+  if (normalized.includes('楊孟諺') || normalized.includes('孟諺')) return 'mengyan'
+  return ''
+}
 
-  if (course.category === 'FIGHT_NIGHT') {
-    return {
-      value: override?.fightNight ?? prices.fightNight,
-      pricingTier: tier,
-    }
+function getPriceAmount(course, packageSize, remaining) {
+  if (course.category === 'FIGHT_NIGHT' && packageSize !== 1) {
+    throw new Error('Invalid course package')
+  }
+  if (course.category === 'BOOT_CAMP' && ![2, 4].includes(packageSize)) {
+    throw new Error('Invalid course package')
   }
 
-  if (course.category === 'BOOT_CAMP' && (packageSize === 2 || packageSize === 4)) {
-    return {
-      value: override?.bootCamp[packageSize] ?? prices.bootCamp[packageSize],
-      pricingTier: tier,
-    }
-  }
+  const pricingTier = getCoachPricingTier(course.coach)
+  const price = getCoursePriceModel({
+    course,
+    pricingTier,
+    packageSize,
+    remaining,
+    coachId: getCoachIdFromName(course.coach),
+  })
 
-  throw new Error('Invalid course package')
+  return {
+    value: price.amount,
+    pricingTier,
+  }
+}
+
+function getQuotedAmountValue(body) {
+  const quoted = Number(body?.quotedAmountValue)
+  if (!Number.isFinite(quoted)) return null
+  return Math.round(quoted)
 }
 
 function addDays(iso, days) {
@@ -98,11 +98,7 @@ function addDays(iso, days) {
 }
 
 function getTodayLocal() {
-  const d = new Date()
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
+  return getTaipeiTodayIso()
 }
 
 function getWeekdayLabel(iso) {
@@ -133,11 +129,15 @@ function resolveCourseFromCatalog(submittedCourse) {
   if (!baseCourse) {
     throw new Error('Course is not available for online checkout')
   }
-  if (!isPublicWeeklyCourse(baseCourse)) {
+  const courseCategory =
+    submittedCourse?.category === 'FIGHT_NIGHT'
+      ? 'FIGHT_NIGHT'
+      : submittedCourse?.category === 'BOOT_CAMP'
+        ? 'BOOT_CAMP'
+        : baseCourse.category
+  if (!isWeeklyCourseAvailableForCategory(baseCourse, courseCategory)) {
     throw new Error('Course is not available for online checkout')
   }
-  const courseCategory =
-    submittedCourse?.category === 'FIGHT_NIGHT' ? 'FIGHT_NIGHT' : baseCourse.category
   const catalogCourse = getWeeklyCourseForCategory(baseCourse, courseCategory)
 
   const courseDate = date || catalogCourse.date
@@ -810,8 +810,6 @@ export async function onRequestPost({ request, env }) {
     const lineContext = await resolveLineContext(body?.lineContext, env)
     await upsertLineCustomerFromCheckout(env, lineContext)
 
-    const referenceId = createReferenceId()
-    const { value: amountValue, pricingTier } = getPriceAmount(course, packageSize)
     const { sessionIds, seriesDates } = buildSessionIds(course, packageSize)
     const availability = await getAvailability(env, sessionIds)
     if (availability.some((record) => record.remaining <= 0)) {
@@ -819,6 +817,23 @@ export async function onRequestPost({ request, env }) {
         {
           error: 'Selected session is sold out',
           availability,
+        },
+        { status: 409 },
+      )
+    }
+    const remaining = Math.min(...availability.map((record) => record.remaining))
+    const referenceId = createReferenceId()
+    const { value: amountValue, pricingTier } = getPriceAmount(
+      course,
+      packageSize,
+      remaining,
+    )
+    const quotedAmountValue = getQuotedAmountValue(body)
+    if (quotedAmountValue !== amountValue) {
+      return json(
+        {
+          error: '價格或名額剛剛更新，請重新整理課表後再建立付款。',
+          amountValue,
         },
         { status: 409 },
       )

@@ -41,6 +41,8 @@ export type WeeklyCourse = {
   category: CourseCategory
   venueId: string
   venueName: string
+  productTitle?: string
+  bundleItems?: string[]
   name: string
   nameEn: string
   coach: string

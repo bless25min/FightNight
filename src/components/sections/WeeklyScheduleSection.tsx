@@ -4,7 +4,6 @@ import type { FormEvent } from 'react'
 import { createPortal } from 'react-dom'
 import {
   bootCampRouteContent,
-  planSummaryByCategory,
   venues,
 } from '../../data/landingContent'
 import {
@@ -18,7 +17,6 @@ import {
   ONLINE_BOOKING_START_OFFSET_DAYS,
   ONLINE_SALES_SEAT_LIMIT,
   SCHEDULE_DISPLAY_LIMIT,
-  getWeeklyCoursePricingOverride,
   getWeeklyCourseForCategory,
   isWeeklyCourseAvailableForCategory,
   weeklyCourses,
@@ -26,6 +24,7 @@ import {
 } from '../../data/weeklySchedule'
 import { useSessionAvailability } from '../../hooks/useSessionAvailability'
 import { useTracking } from '../../hooks/useTracking'
+import { getCoursePriceModel, getTaipeiTodayIso } from '../../lib/coursePricing'
 import type { BootCampRoute, CourseCategory, WeeklyCourse } from '../../types'
 import { Button } from '../ui/Button'
 import { SectionHeading } from '../ui/SectionHeading'
@@ -33,11 +32,56 @@ import { SectionWrapper } from '../ui/SectionWrapper'
 
 const CATEGORY_ORDER: CourseCategory[] = ['FIGHT_NIGHT', 'BOOT_CAMP']
 const WEEKDAY_LABELS = ['日', '一', '二', '三', '四', '五', '六']
+const BOOT_CAMP_START_DATE_WEEKS = 6
 const BOOT_CAMP_ROUTE_ORDER: Array<BootCampRoute | null> = [
   null,
   'BOXING',
   'MUAY_THAI',
 ]
+const INTERACTION_HINT_SEEN_STORAGE_KEY =
+  'fightnight_seen_interaction_hints_v1'
+
+type InteractionHintSeenState = {
+  coaches: string[]
+  courses: string[]
+}
+
+function getInitialInteractionHintSeen(): InteractionHintSeenState {
+  if (typeof window === 'undefined') return { coaches: [], courses: [] }
+
+  try {
+    const raw = window.localStorage.getItem(INTERACTION_HINT_SEEN_STORAGE_KEY)
+    if (!raw) return { coaches: [], courses: [] }
+    const parsed = JSON.parse(raw) as Partial<InteractionHintSeenState>
+    return {
+      coaches: Array.isArray(parsed.coaches) ? parsed.coaches : [],
+      courses: Array.isArray(parsed.courses) ? parsed.courses : [],
+    }
+  } catch {
+    return { coaches: [], courses: [] }
+  }
+}
+
+function writeInteractionHintSeen(next: InteractionHintSeenState) {
+  if (typeof window === 'undefined') return
+
+  try {
+    window.localStorage.setItem(
+      INTERACTION_HINT_SEEN_STORAGE_KEY,
+      JSON.stringify(next),
+    )
+  } catch {
+    // Hint memory is non-critical; if storage is blocked, the page still works.
+  }
+}
+
+function getCoachHintKey(coachName: string, profile: CoachProfile | null) {
+  return profile?.id ?? getCoachDisplayName(coachName)
+}
+
+function getCourseHintKey(course: WeeklyCourse) {
+  return course.name
+}
 
 const bootCampPackageMeta: Record<
   2 | 4,
@@ -45,34 +89,11 @@ const bootCampPackageMeta: Record<
 > = {
   2: {
     label: '兩堂',
-    description: '先確認這條路徑是不是你的出口',
+    description: '連續兩週保留同一時段，先確認自己能不能固定出現',
   },
   4: {
     label: '四堂',
-    description: '保留四週，讓節奏開始留下',
-  },
-}
-
-const coachPricingByTier: Record<
-  CoachPricingTier,
-  {
-    fightNight: number
-    bootCamp: Record<2 | 4, number>
-  }
-> = {
-  'foreign-fighter': {
-    fightNight: 1280,
-    bootCamp: {
-      2: 2200,
-      4: 3800,
-    },
-  },
-  'domestic-teacher': {
-    fightNight: 980,
-    bootCamp: {
-      2: 1800,
-      4: 2800,
-    },
+    description: '連續四週保留同一時段，適合把運動排進生活',
   },
 }
 
@@ -100,11 +121,7 @@ const categoryMeta: Record<
 }
 
 function getTodayLocal(): string {
-  const d = new Date()
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
+  return getTaipeiTodayIso()
 }
 
 function addDays(iso: string, days: number): string {
@@ -154,6 +171,25 @@ function getSessionInventoryId(course: WeeklyCourse, date = course.date) {
   const dynamicDateSuffix = /-\d{4}-\d{2}-\d{2}$/
   const baseId = course.id.replace(dynamicDateSuffix, '')
   return `${baseId}-${date}`
+}
+
+function getUpcomingWeeklyOccurrences(
+  course: WeeklyCourse,
+  fromIso: string,
+  weeks: number,
+) {
+  const first = getNextWeeklyOccurrence(course, fromIso)
+
+  return Array.from({ length: weeks }, (_, index) => {
+    const date = index === 0 ? first.date : addDays(first.date, index * 7)
+
+    return {
+      ...course,
+      id: getSessionInventoryId(course, date),
+      date,
+      weekday: getWeekdayLabel(date),
+    }
+  })
 }
 
 function venueShortName(fullName: string) {
@@ -224,9 +260,9 @@ function DisabledCta({
   )
 }
 
-function getRemainingLabel(remaining: number, hasLiveData = false) {
+function getRemainingLabel(remaining: number) {
   if (remaining <= 0) return '已售完'
-  return `${hasLiveData ? '即時' : ''}剩餘 ${remaining} 席`
+  return `剩餘 ${remaining} 席`
 }
 
 function getRemainingBadgeClass(remaining: number, defaultClass: string) {
@@ -235,119 +271,604 @@ function getRemainingBadgeClass(remaining: number, defaultClass: string) {
   return defaultClass
 }
 
-function formatPrice(amount: number) {
-  return `NT$${amount.toLocaleString('en-US')}`
+function shouldShowRemainingBadge(remaining: number) {
+  return remaining <= 2
 }
 
-function getFightNightPriceLabel(
-  course: WeeklyCourse,
-  pricingTier: CoachPricingTier,
-) {
-  return formatPrice(getFightNightPriceAmount(course, pricingTier))
+type CourseMerchandisingCopy = {
+  title: string
+  pitch: string
+  desire: string
+  coachHook: string
 }
 
-function getFightNightPriceAmount(
-  course: WeeklyCourse,
-  pricingTier: CoachPricingTier,
+function getCoachHook(
+  coachName: string,
+  coachProfile: CoachProfile | null,
 ) {
-  return (
-    getWeeklyCoursePricingOverride(course)?.fightNight ??
-    coachPricingByTier[pricingTier].fightNight
+  const displayName = coachProfile?.shortName ?? getCoachDisplayName(coachName)
+
+  if (coachProfile?.id === 'andre') {
+    return 'Andre 的世界冠軍與泰拳實戰背景，會把踢拳回合帶得更有壓迫感。'
+  }
+  if (coachProfile?.id === 'bruno') {
+    return 'Bruno 有職業泰拳與 MMA 賽事經驗，適合想感受實戰節奏的人。'
+  }
+  if (coachProfile?.id === 'got') {
+    return 'Got 具泰拳教師資格與職業選手靶師背景，會把踢拳節奏帶得很直接。'
+  }
+  if (coachProfile?.id === 'mario') {
+    return 'Mario 的職業 MMA 28 勝背景，會把訓練帶成一場完整的身體挑戰。'
+  }
+  if (coachProfile?.id === 'rafael') {
+    return 'Rafael 具柔術黑帶與 MMA、拳擊背景，會把動作控制與壓力節奏帶進課裡。'
+  }
+  if (coachProfile?.id === 'sim') {
+    return 'Sim 的技擊與柔道背景，會把重心、穩定和動作控制帶得更扎實。'
+  }
+  if (coachProfile?.id === 'mengyan') {
+    return '孟諺有拳擊四連霸與教練背景，適合把出拳、節奏和沙包回合練得更清楚。'
+  }
+
+  return `${displayName} 會用口令和回合帶你進入狀態，不需要自己硬撐。`
+}
+
+function getCourseMerchandisingCopy(
+  course: WeeklyCourse,
+  activeCategory: CourseCategory,
+  coachProfile: CoachProfile | null,
+): CourseMerchandisingCopy {
+  const isBootCamp = activeCategory === 'BOOT_CAMP'
+  const coachHook = getCoachHook(course.coach, coachProfile)
+
+  if (isBootCamp) {
+    if (course.name.includes('拳擊技巧')) {
+      return {
+        title: '把拳套聲，磨成更清楚的拳路',
+        pitch:
+          '你已熟悉基本出拳，這堂會把技術攻防組合與校準，打得更有意義。',
+        desire:
+          '把原本會用力的身體，磨成更能控制節奏、方向和壓力的身體。',
+        coachHook,
+      }
+    }
+    if (course.name.includes('泰拳技巧') || course.name.includes('踢拳技巧')) {
+      return {
+        title: '把踢擊、膝頂，磨成更清楚的節奏',
+        pitch:
+          '你已熟悉泰拳或踢拳，把技術攻防組合與校準，讓身體形成記憶。',
+        desire:
+          '把原本只會燃燒的身體，推進到能控制力道、距離和節奏的狀態。',
+        coachHook,
+      }
+    }
+    if (course.name.includes('基礎拳擊')) {
+      return {
+        title: '把第一拳，變成每週回來的儀式',
+        pitch:
+          '從站姿、出拳到沙包悶響，每週把身體帶回那個被點燃的地方。',
+        desire: '讓第一次被點燃的感覺，不只停在一個晚上，而是變成每週會出現的自己。',
+        coachHook,
+      }
+    }
+    if (course.name.includes('拳擊體適能')) {
+      return {
+        title: '每週一次，把壓力砸進黑色沙包',
+        pitch:
+          '拳套握緊、口令落下、沙包回聲響起，讓下班後的悶每週都有一個真正能倒出去的地方。',
+        desire: '你保留的是一個固定出口，讓壓力每週都能被身體完整處理掉一次。',
+        coachHook,
+      }
+    }
+    if (course.name.includes('基礎泰拳') || course.name.includes('基礎踢拳')) {
+      return {
+        title: '踢拳點燃的瞬間，形成身體記憶',
+        pitch:
+          '從第一組踢拳開始，讓重心、吐氣和全身發熱慢慢成為熟悉節奏。',
+        desire: '把踢拳帶起來的身體記憶，變成生活裡固定會被喚醒的暗號。',
+        coachHook,
+      }
+    }
+    if (course.name.includes('泰拳體適能') || course.name.includes('踢拳體適能')) {
+      return {
+        title: '每週回到那個踢拳沸騰的小圈子',
+        pitch:
+          '拳、踢、沙包、倒數一起堆上去，把日常的雜訊關掉，重新進入那個有人一起流汗的場。',
+        desire: '你買的是每週回到同一個小圈子的門票，讓身體重新記得熱起來的感覺。',
+        coachHook,
+      }
+    }
+    if (course.name.includes('戰鬥體適能')) {
+      return {
+        title: '固定把自己交給全場，換一身完成感',
+        pitch:
+          '教練口令、體能回合和最後倒數會把你推過去；你不是自己硬撐，是被一整個場帶著完成。',
+        desire: '把 Fight Night 的集體推力留下來，變成每週固定能回到身上的完成感。',
+        coachHook,
+      }
+    }
+  }
+
+  if (course.name.includes('基礎拳擊')) {
+    return {
+      title: '第一次出拳，是身體蛻變的開始',
+      pitch:
+        '從第一次出拳開始，把緊張交給教練，把力量交給沙包，找回屬於你的專注。',
+      desire: '你會記得的不是動作做得多標準，而是第一次真的跟全場一起走到最後。',
+      coachHook,
+    }
+  }
+
+  if (course.name.includes('拳擊體適能')) {
+    return {
+      title: '奮力出拳與沙包的完美編排',
+      pitch:
+        '把精神與壓力握進拳套，釋放到深不見底、帶著鮮豔標誌的黑色沙包裡。',
+      desire: '你會記得拳套撞上沙包那一下，像把整天的精神和壓力一次交出去。',
+      coachHook,
+    }
+  }
+
+  if (course.name.includes('基礎泰拳')) {
+    return {
+      title: '第一組踢拳，喚醒身體裡的力量',
+      pitch:
+        '拳、踢、膝，把身體一段段逐步喚醒；在教練口令裡，你會慢慢被帶到那個比想像更高的地方。',
+      desire: '你會發現自己不是來學幾個動作，而是被踢拳帶進一個更炙熱的身體狀態。',
+      coachHook,
+    }
+  }
+
+  if (course.name.includes('基礎踢拳')) {
+    return {
+      title: '第一組踢拳，進入全場沸騰節奏',
+      pitch:
+        '先讓你跟上，再讓你被帶走；踢拳聲、吐氣聲、倒數聲疊在一起，普通的一天會開始變形。',
+      desire: '你會在踢拳和倒數之間，感覺自己從旁觀者變成那個場的一部分。',
+      coachHook,
+    }
+  }
+
+  if (course.name.includes('泰拳體適能')) {
+    return {
+      title: '拳、踢、膝組合，不斷堆疊的風暴',
+      pitch:
+        '拳套、踢擊、膝頂一路堆疊，教練的吶喊和旁邊的人把你推進高點，直到最後一分鐘全場一起釋放。',
+      desire: '你買的是那種全身被推到高點，最後和一群人一起爆開的情緒體驗。',
+      coachHook,
+    }
+  }
+
+  if (course.name.includes('踢拳體適能')) {
+    return {
+      title: '踢拳聲與倒數聲，把夜晚推到發亮',
+      pitch:
+        '從能跟上的踢拳開始，一路被節奏加速；你會感覺日常慢慢退後，只剩眼前的沙包、口令和呼吸。',
+      desire: '你會被踢拳聲、倒數聲和全場的呼吸拉進去，像短暫進入另一個城市角落。',
+      coachHook,
+    }
+  }
+
+  if (course.name.includes('戰鬥體適能')) {
+    return {
+      title: '燃燒吧，與身旁的人共同撐過挑戰',
+      pitch:
+        '格鬥、沙包與倒數被編成一段城市裡的吶喊；最累的時候，旁邊的人和教練會把你一起推過去。',
+      desire: '你會在快要放棄的地方，被全場一起推過去，留下疲憊之後的狂喜和安靜。',
+      coachHook,
+    }
+  }
+
+  return {
+    title: course.name,
+    pitch: '跟著教練口令進入回合，把注意力、呼吸和力氣一起交給現場。',
+    desire: '你買的是一段會把日常暫時關掉的身體經驗。',
+    coachHook,
+  }
+}
+
+function getCourseProductTitle(
+  course: WeeklyCourse,
+  activeCategory: CourseCategory,
+  coachProfile: CoachProfile | null,
+) {
+  if (course.productTitle) return course.productTitle
+  return getCourseMerchandisingCopy(course, activeCategory, coachProfile).title
+}
+
+function getCourseCardPitch(
+  course: WeeklyCourse,
+  activeCategory: CourseCategory,
+  coachProfile: CoachProfile | null,
+) {
+  return getCourseMerchandisingCopy(course, activeCategory, coachProfile).pitch
+}
+
+type CourseDecisionSignal = {
+  label: string
+  value: string
+}
+
+function getCourseBundleItems(
+  course: WeeklyCourse,
+) {
+  return (course.bundleItems ?? []).slice(0, 3)
+}
+
+function getCourseStimulusLabel(course: WeeklyCourse) {
+  if (course.name.includes('拳擊體適能')) return '肩背、核心、心肺'
+  if (course.name.includes('基礎拳擊')) return '肩背、核心、手臂'
+  if (course.name.includes('戰鬥體適能')) return '全身、核心、心肺'
+  if (course.name.includes('泰拳體適能') || course.name.includes('踢拳體適能')) {
+    return '核心、臀腿、心肺'
+  }
+  if (course.name.includes('泰拳') || course.name.includes('踢拳')) {
+    return '核心、髖、腿'
+  }
+  return '全身、核心、心肺'
+}
+
+function getCourseFeelingLabel(course: WeeklyCourse) {
+  if (course.name.includes('拳擊體適能')) return '暢快打擊、排解壓力'
+  if (course.name.includes('基礎拳擊')) return '把拳送進沙包'
+  if (course.name.includes('戰鬥體適能')) return '倒數衝刺、全身燃燒'
+  if (course.name.includes('泰拳體適能')) return '拳、踢、膝堆疊爆汗'
+  if (course.name.includes('踢拳體適能')) return '踢拳連發、心率拉高'
+  if (course.name.includes('基礎泰拳')) return '拳膝連動、全身醒來'
+  if (course.name.includes('基礎踢拳')) return '踢拳連動、節奏加速'
+  return '高心率、全身釋放'
+}
+
+function getCourseTechniqueLabel(course: WeeklyCourse) {
+  if (course.name.includes('技巧')) return '中階'
+  if (course.name.includes('基礎')) return '簡單'
+  if (course.name.includes('體適能') || course.name.includes('戰鬥')) {
+    return '入門'
+  }
+  return '入門'
+}
+
+function getCourseStyleLabel(
+  course: WeeklyCourse,
+  coachName: string,
+  coachProfile: CoachProfile | null,
+) {
+  const isMuayOrKick =
+    course.name.includes('泰拳') || course.name.includes('踢拳')
+  const isBoxing = course.name.includes('拳擊')
+  const isBjj = course.name.includes('巴西柔術')
+  const isMma = course.name.includes('綜合格鬥')
+  const isFightFit = course.name.includes('戰鬥體適能')
+
+  if (isMuayOrKick) {
+    if (coachProfile?.id === 'andre') return '巴西泰拳冠軍訓練'
+    if (coachProfile?.id === 'bruno') return '巴西職業泰拳選手'
+    if (coachProfile?.id === 'got') return '泰國職業選手靶師'
+    if (coachProfile?.id === 'mario' || coachProfile?.id === 'rafael') {
+      return '巴西 MMA 踢拳訓練'
+    }
+    if (coachProfile?.id === 'sim') return '柔道技擊重心訓練'
+    if (coachProfile?.id === 'mengyan') return '拳擊隊打擊節奏'
+
+    return getCoachPricingTier(coachName, coachProfile) === 'foreign-fighter'
+      ? '國際踢拳打擊訓練'
+      : '踢拳體適能訓練'
+  }
+
+  if (isBoxing) {
+    if (coachProfile?.id === 'mengyan') return '拳擊隊 / 全運會選手'
+    if (coachProfile?.id === 'got') return '泰國靶師打擊訓練'
+    if (coachProfile?.id === 'sim') return '技擊重心拳擊訓練'
+    if (
+      coachProfile?.id === 'andre' ||
+      coachProfile?.id === 'bruno' ||
+      coachProfile?.id === 'mario' ||
+      coachProfile?.id === 'rafael'
+    ) {
+      return '巴西 MMA 拳擊訓練'
+    }
+
+    return '拳擊打擊訓練'
+  }
+
+  if (isBjj) {
+    if (coachProfile?.id === 'rafael') return '巴柔黑帶4段系統'
+    if (coachProfile?.id === 'mario' || coachProfile?.id === 'bruno') {
+      return '巴西柔術黑帶系統'
+    }
+    if (coachProfile?.id === 'sim') return '柔道 / 巴柔技擊訓練'
+
+    return '巴西柔術入門系統'
+  }
+
+  if (isMma) {
+    if (coachProfile?.id === 'mario' || coachProfile?.id === 'bruno') {
+      return '職業MMA選手訓練'
+    }
+    if (coachProfile?.id === 'andre' || coachProfile?.id === 'rafael') {
+      return '巴西 MMA 實戰訓練'
+    }
+    if (coachProfile?.id === 'sim') return '柔道 / MMA 技擊訓練'
+
+    return 'MMA 入門訓練'
+  }
+
+  if (isFightFit) {
+    if (coachProfile?.id === 'mengyan') return '拳擊隊戰鬥體適能'
+    if (coachProfile?.id === 'got') return '泰拳靶師體能訓練'
+    if (coachProfile?.id === 'sim') return '柔道技擊體能訓練'
+    if (getCoachPricingTier(coachName, coachProfile) === 'foreign-fighter') {
+      return 'MMA 體能打擊訓練'
+    }
+
+    return '戰鬥體適能訓練'
+  }
+
+  if (coachProfile?.id === 'andre') {
+    return '巴西 MMA 打擊訓練'
+  }
+  if (coachProfile?.id === 'bruno') {
+    return '巴西職業 MMA 選手'
+  }
+  if (coachProfile?.id === 'got') return '泰國職業選手靶師'
+  if (coachProfile?.id === 'mario') return '巴西職業 MMA 選手'
+  if (coachProfile?.id === 'rafael') return '巴西 MMA 訓練背景'
+  if (coachProfile?.id === 'sim') return '柔道隊技擊訓練'
+  if (coachProfile?.id === 'mengyan') return '拳擊隊 / 全運會選手'
+
+  return getCoachPricingTier(coachName, coachProfile) === 'foreign-fighter'
+    ? '國際格鬥訓練'
+    : '團課技擊訓練'
+}
+
+function getCourseDecisionSignals(
+  course: WeeklyCourse,
+  coachProfile: CoachProfile | null,
+): CourseDecisionSignal[] {
+  return [
+    { label: '刺激', value: getCourseStimulusLabel(course) },
+    { label: '感受', value: getCourseFeelingLabel(course) },
+    { label: '技術', value: getCourseTechniqueLabel(course) },
+    {
+      label: '風格',
+      value: getCourseStyleLabel(course, course.coach, coachProfile),
+    },
+  ]
+}
+
+function getCoachProofTag(
+  coachName: string,
+  coachProfile: CoachProfile | null,
+) {
+  if (coachProfile?.id === 'andre') return '世界冠軍教練'
+  if (coachProfile?.id === 'bruno') return '職業泰拳 14 勝'
+  if (coachProfile?.id === 'got') return '泰拳教師'
+  if (coachProfile?.id === 'mario') return '職業 MMA 28 勝'
+  if (coachProfile?.id === 'rafael') return '柔術黑帶 4 段'
+  if (coachProfile?.id === 'sim') return '技擊教練資格'
+  if (coachProfile?.id === 'mengyan') return '拳擊四連霸'
+
+  return getCoachPricingTier(coachName, coachProfile) === 'foreign-fighter'
+    ? '國際實戰背景'
+    : null
+}
+
+function getCoachPreviewTags(
+  coachName: string,
+  coachProfile: CoachProfile | null,
+) {
+  if (!coachProfile) return []
+
+  const tagsByCoach: Record<string, string[]> = {
+    andre: ['泰拳 / MMA', '泰拳世界冠軍'],
+    bruno: ['泰拳 / MMA', '職業泰拳選手'],
+    got: ['泰拳 / 踢拳', '職業選手靶師'],
+    mario: ['巴西柔術 / MMA', '職業MMA選手'],
+    rafael: ['巴柔黑帶4段', '職業MMA選手'],
+    sim: ['柔道 / 綜合格鬥', '柔道代表隊教練'],
+    mengyan: ['拳擊 / 戰鬥體適能', '大專盃拳擊四連霸'],
+  }
+
+  const fallbackTags = [
+    coachProfile.specialties[0] ?? coachProfile.role,
+    getCoachProofTag(coachName, coachProfile),
+  ]
+
+  return Array.from(
+    new Set(tagsByCoach[coachProfile.id] ?? fallbackTags),
   )
+    .filter((tag): tag is string => Boolean(tag))
+    .slice(0, 2)
 }
 
-function getBootCampPackagePriceLabel(
-  course: WeeklyCourse,
-  pricingTier: CoachPricingTier,
-  packageSize: 2 | 4,
-) {
-  return formatPrice(
-    getBootCampPackagePriceAmount(course, pricingTier, packageSize),
-  )
+function getCourseLevelTag(course: WeeklyCourse) {
+  if (course.name.includes('技巧')) return '需經驗'
+  if (course.name.includes('基礎')) return '新手入門'
+  if (course.name.includes('體適能') || course.name.includes('戰鬥')) {
+    return '高消耗'
+  }
+  return '新手可上'
 }
 
-function getBootCampPackagePriceAmount(
+function getCourseFormatTag(course: WeeklyCourse) {
+  if (course.name.includes('拳擊')) return '沙包訓練'
+  if (course.name.includes('泰拳') || course.name.includes('踢拳')) {
+    return '踢拳訓練'
+  }
+  return '全身訓練'
+}
+
+function getCourseFeatureTags(
   course: WeeklyCourse,
+  remaining: number,
   pricingTier: CoachPricingTier,
-  packageSize: 2 | 4,
+  coachProfile: CoachProfile | null,
 ) {
-  return (
-    getWeeklyCoursePricingOverride(course)?.bootCamp[packageSize] ??
-    coachPricingByTier[pricingTier].bootCamp[packageSize]
-  )
+  const tags: string[] = []
+  const priceModel = getCoursePriceModel({
+    course,
+    pricingTier,
+    remaining,
+    packageSize: 1,
+    coachId: coachProfile?.id,
+  })
+
+  tags.push(...priceModel.tags, getCourseLevelTag(course), '不對打')
+  if (tags.length < 4) tags.push(getCourseFormatTag(course))
+
+  return Array.from(new Set(tags)).slice(0, 4)
+}
+
+function getCourseFeatureTagClass(tag: string) {
+  if (
+    tag === '開放席' ||
+    tag === '最後席' ||
+    tag === '精選場' ||
+    tag === '國際場' ||
+    tag === '泰國靶師' ||
+    tag === '拳擊冠軍'
+  ) {
+    return 'border-blaze/45 bg-blaze/15 text-blaze'
+  }
+  if (
+    tag === '新手入門' ||
+    tag === '新手可上' ||
+    tag === '不對打' ||
+    tag === '日間席'
+  ) {
+    return 'border-neon/45 bg-neon/12 text-neon'
+  }
+  if (
+    tag === '高消耗' ||
+    tag === '高流汗' ||
+    tag === '下班場' ||
+    tag === '週五場' ||
+    tag === '週末場' ||
+    tag === '需經驗' ||
+    tag === '沙包訓練' ||
+    tag === '踢拳訓練' ||
+    tag === '全身訓練'
+  ) {
+    return 'border-blaze/35 bg-blaze/12 text-blaze'
+  }
+  if (
+    tag.includes('拳') ||
+    tag.includes('沙包') ||
+    tag.includes('倒數') ||
+    tag.includes('儀式') ||
+    tag.includes('狂喜') ||
+    tag.includes('沸騰') ||
+    tag.includes('風暴') ||
+    tag.includes('夜晚') ||
+    tag.includes('入口') ||
+    tag.includes('爆汗') ||
+    tag.includes('釋放') ||
+    tag.includes('放電') ||
+    tag.includes('完成') ||
+    tag.includes('續航') ||
+    tag.includes('養成')
+  ) {
+    return 'border-blaze/35 bg-blaze/12 text-blaze'
+  }
+  if (tag === '已售完') {
+    return 'border-pearl/15 bg-pearl/5 text-mist/45'
+  }
+  if (
+    tag.includes('冠軍') ||
+    tag.includes('勝') ||
+    tag.includes('資格') ||
+    tag.includes('教師') ||
+    tag.includes('黑帶') ||
+    tag.includes('四連霸') ||
+    tag.includes('實戰')
+  ) {
+    return 'border-pearl/22 bg-pearl/10 text-pearl/86'
+  }
+  return 'border-pearl/18 bg-pearl/8 text-pearl/82'
 }
 
 function CoachCard({
   coachName,
   profile,
+  courseName,
+  hintSeen = false,
   onOpen,
 }: {
   coachName: string
   profile: CoachProfile | null
+  courseName: string
+  hintSeen?: boolean
   onOpen: () => void
 }) {
   const displayName = profile?.shortName ?? getCoachDisplayName(coachName)
   const initials = displayName.slice(0, 1).toUpperCase()
-  const previewTags = profile
-    ? [profile.role, ...profile.specialties.slice(0, 2)]
-    : ['教練介紹待補']
+  const previewTags = getCoachPreviewTags(coachName, profile)
 
   return (
-    <div className="mt-4 rounded-xl border border-pearl/10 bg-black/25 p-3">
+    <div className="mt-4 border-t border-pearl/10 pt-3">
       <div className="flex items-center gap-3">
         {profile ? (
-          <img
-            src={profile.photo}
-            alt={profile.displayName}
-            className="h-14 w-14 shrink-0 rounded-full border border-pearl/15 object-cover"
-            loading="lazy"
-          />
+          <button
+            type="button"
+            onClick={onOpen}
+            data-interaction-hint
+            data-interacted={hintSeen ? 'true' : undefined}
+            className="coach-avatar-trigger shrink-0 rounded-full transition-transform hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-neon/70"
+            aria-label={`查看 ${displayName} 教練介紹`}
+          >
+            <img
+              src={profile.photo}
+              alt={profile.displayName}
+              className="h-11 w-11 rounded-full border border-neon/30 object-cover"
+              loading="lazy"
+            />
+          </button>
         ) : (
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-pearl/10 bg-pearl/8 font-heading text-lg font-black text-mist">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-pearl/10 bg-pearl/8 font-heading text-base font-black text-mist">
             {initials}
           </div>
         )}
 
         <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-heading uppercase tracking-[0.22em] text-mist/55">
-            當堂教練
+          <p className="text-sm font-heading font-semibold leading-snug text-pearl">
+            {courseName}
           </p>
-          <p className="mt-1 truncate font-heading text-lg font-black text-pearl">
-            {displayName}
-          </p>
-          <div className="mt-1 flex gap-1.5 overflow-x-auto pb-0.5">
+          <div className="mt-1 flex flex-wrap items-center gap-1.5">
+            <span className="font-heading text-xs font-semibold text-neon/85">
+              {displayName} 教練
+            </span>
             {previewTags.map((tag) => (
               <span
                 key={tag}
-                className="shrink-0 rounded-full border border-pearl/10 bg-pearl/5 px-2 py-0.5 text-[10px] text-mist/70"
+                className="rounded-full border border-pearl/10 bg-pearl/5 px-2 py-0.5 text-[10px] leading-snug text-mist/72"
               >
                 {tag}
               </span>
             ))}
           </div>
         </div>
-
-        {profile ? (
-          <button
-            type="button"
-            onClick={onOpen}
-            data-interaction-hint
-            className="interaction-hint shrink-0 rounded-full border border-neon/25 bg-neon/10 px-3 py-1.5 text-xs font-heading font-bold text-neon transition-colors hover:border-neon/45 hover:bg-neon/15"
-          >
-            看介紹
-          </button>
-        ) : (
-          <span className="shrink-0 rounded-full border border-pearl/10 bg-pearl/5 px-3 py-1.5 text-xs text-mist/45">
-            待補
-          </span>
-        )}
       </div>
+    </div>
+  )
+}
 
-      {!profile && (
-        <p className="mt-2 text-xs leading-relaxed text-mist/50">
-          這位教練的照片與完整介紹之後補上；目前先以課表排定名稱為準。
-        </p>
-      )}
+function CourseSpecStrip({
+  signals,
+}: {
+  signals: CourseDecisionSignal[]
+}) {
+  return (
+    <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 border-t border-pearl/10 pt-3">
+      {signals.map((signal) => (
+        <div key={`${signal.label}-${signal.value}`} className="min-w-0">
+          <p className="text-[10px] font-heading tracking-[0.16em] text-mist/42">
+            {signal.label}
+          </p>
+          <p className="mt-0.5 text-[11px] font-heading font-semibold leading-snug text-pearl/88">
+            {signal.value}
+          </p>
+        </div>
+      ))}
     </div>
   )
 }
@@ -411,13 +932,54 @@ function CoachProfileDetailList({
   )
 }
 
+function isTechniqueTrainingCourse(course?: WeeklyCourse | null) {
+  return Boolean(course?.name.includes('技巧'))
+}
+
+function getTechniqueTrainingNotice(course: WeeklyCourse) {
+  const discipline = course.name.includes('拳擊')
+    ? '拳擊'
+    : '拳擊、泰拳或踢拳'
+
+  return `這堂是技巧訓練，不是第一次體驗課。請確認你具備 6 個月以上的${discipline}訓練經驗，能跟上基本站姿、防護、出拳／踢擊與教練口令；如果是第一次接觸，建議先從基礎或體適能課開始。`
+}
+
+function TechniqueCourseNotice({
+  course,
+  compact = false,
+  className = '',
+}: {
+  course?: WeeklyCourse | null
+  compact?: boolean
+  className?: string
+}) {
+  if (!course || !isTechniqueTrainingCourse(course)) return null
+
+  return (
+    <div
+      className={`rounded-2xl border border-blaze/35 bg-blaze/10 ${
+        compact ? 'p-3' : 'p-4'
+      } ${className}`}
+    >
+      <p className="font-heading text-xs uppercase tracking-[0.2em] text-blaze">
+        技巧課參加提醒
+      </p>
+      <p className="mt-2 text-sm leading-relaxed text-mist/84">
+        {getTechniqueTrainingNotice(course)}
+      </p>
+    </div>
+  )
+}
+
 function CoachProfileModal({
   coachName,
   profile,
+  course,
   onClose,
 }: {
   coachName: string
   profile: CoachProfile
+  course?: WeeklyCourse | null
   onClose: () => void
 }) {
   const displayName = profile.shortName ?? getCoachDisplayName(coachName)
@@ -457,10 +1019,7 @@ function CoachProfileModal({
             ×
           </button>
           <div className="absolute bottom-4 left-4 right-4">
-            <p className="text-[10px] font-heading uppercase tracking-[0.24em] text-neon/85">
-              當堂教練
-            </p>
-            <h3 className="mt-1 font-heading text-3xl font-black leading-none text-pearl">
+            <h3 className="font-heading text-3xl font-black leading-none text-pearl">
               {displayName}
             </h3>
             <p className="mt-2 text-sm font-heading text-mist/78">
@@ -480,6 +1039,8 @@ function CoachProfileModal({
               </span>
             ))}
           </div>
+
+          <TechniqueCourseNotice course={course} />
 
           <div className="grid gap-3">
             {(profile.bio?.length ? profile.bio : [profile.intro]).map(
@@ -557,6 +1118,609 @@ function CoachProfileModal({
               </p>
             )}
           </div>
+        </div>
+      </motion.div>
+    </motion.div>,
+    document.body,
+  )
+}
+
+type CourseDetailSession = {
+  id: string
+  date: string
+  weekday: string
+  startTime: string
+}
+
+type CourseDetailPackageOption = {
+  packageSize: 1 | 2 | 4
+  label: string
+  description: string
+  priceLabel: string
+  compareAtLabel?: string
+  value: number
+  remaining: number
+  series: CourseDetailSession[]
+  primary: boolean
+}
+
+type SelectedCourseDetail = {
+  course: WeeklyCourse
+  activeCategory: CourseCategory
+  productTitle: string
+  featureTags: string[]
+  routeLabel: string | null
+  routeBadge: string | null
+  routeSkills: string[]
+  routeLesson: string | null
+  coachProfile: CoachProfile | null
+  coachProofTag: string | null
+  coachDisplayName: string
+  pricingTier: CoachPricingTier
+  dateLabel: string
+  timeLabel: string
+  venueLabel: string
+  sessionTitle: string
+  remaining: number
+  decisionSignals: CourseDecisionSignal[]
+  packageOptions: CourseDetailPackageOption[]
+}
+
+function getCourseDisciplineLabel(course: WeeklyCourse) {
+  if (course.name.includes('泰拳')) return '泰拳'
+  if (course.name.includes('踢拳')) return '踢拳'
+  if (course.name.includes('拳擊')) return '拳擊'
+  if (course.name.includes('綜合格鬥')) return '綜合格鬥'
+  return '格鬥體能'
+}
+
+function getCourseDetailExperienceLead(
+  course: WeeklyCourse,
+  activeCategory: CourseCategory,
+) {
+  const isBootCamp = activeCategory === 'BOOT_CAMP'
+
+  if (isBootCamp) {
+    if (course.name.includes('拳擊')) {
+      return '把拳套落在沙包上的觸感留下來，你會在同一個時段回來，讓站姿、出拳、呼吸和沙包悶響慢慢變熟，像在城市裡替自己保留一個固定的出口。'
+    }
+    if (course.name.includes('泰拳') || course.name.includes('踢拳')) {
+      return '建立習慣，每週回到同一個節奏裡。拳、踢、重心、吐氣會一點一點變成身體的暗號，讓你重新進入那個有人一起流汗、一起被推上去的小圈子。'
+    }
+    return '替自己保留一段會固定發生的身體記憶。你只要出現，教練口令、回合和旁邊的人會把你帶回那個被推動、被點燃、最後真的完成的狀態。'
+  }
+
+  if (course.name.includes('基礎拳擊')) {
+    return '你先被帶進一個安全又有張力的環境，教練會讓你把站姿、手套、呼吸和第一下出拳接起來；沙包的悶響很快會把腦中的雜訊蓋掉，最後只剩全場一起倒數的那 60 秒。'
+  }
+
+  if (course.name.includes('拳擊體適能')) {
+    return '這堂把出拳、沙包和體能回合編成一段壓力釋放儀式。你不用先想自己能不能撐完，只要把拳套戴好，跟著口令，把白天留在身上的悶，一下下交給黑色沙包。'
+  }
+
+  if (course.name.includes('基礎泰拳')) {
+    return '拳、踢、膝會先被拆得能跟上，但它真正迷人的地方不是技術，而是你會感覺身體開始醒來。重心轉過去、膝蓋抬起來、吐氣跟上，現場會把你一層層推到更高的位置。'
+  }
+
+  if (course.name.includes('基礎踢拳')) {
+    return '一開始你可能只是想試試看，但踢拳聲、教練口令和全場呼吸會慢慢把你吸進去。你會從跟動作，變成跟節奏，最後變成真的在那個夜晚裡。'
+  }
+
+  if (course.name.includes('泰拳體適能')) {
+    return '拳、踢、膝、沙包和倒數會一段段堆成風暴；你會聽到教練的吶喊、旁邊的人喘息，直到最後一起把忍耐放掉。'
+  }
+
+  if (course.name.includes('踢拳體適能')) {
+    return '這堂會先讓你跟上，然後慢慢把你帶走。踢拳落下、腳步移動、口令加速，日常感會被一層一層剝掉，只剩眼前的沙包、呼吸和越來越近的倒數。'
+  }
+
+  if (course.name.includes('戰鬥體適能')) {
+    return '這堂最迷人的地方，是你不用獨自靠意志力撐完。體能、拳擊、倒數和全場氣氛會被編成一段城市裡的狂喜，最想停下來的那一刻，旁邊的人會把你一起推過去。'
+  }
+
+  return '這堂不是只把動作做完，而是把注意力、呼吸和力氣交給現場，讓身體暫時離開普通的一天。'
+}
+
+function getCourseExperienceMoments(
+  course: WeeklyCourse,
+  activeCategory: CourseCategory,
+) {
+  if (activeCategory === 'BOOT_CAMP') {
+    return [
+      {
+        title: '先把出現變簡單',
+        body: '你先選好同一個館、同一個時段，到了那天不需要再和自己討價還價，只要走進場裡。',
+      },
+      {
+        title: '拳套聲開始變熟',
+        body: '第一堂還在找節奏，第二堂開始記得怎麼呼吸、怎麼出拳、怎麼把力量送進沙包。',
+      },
+      {
+        title: '固定節奏把你推上去',
+        body: '教練口令、回合和旁邊的人會一次次把你帶回同一個狀態，讓熱血慢慢變成習慣。',
+      },
+      {
+        title: '下課後留下入口',
+        body: '留下來的不只是幾堂課，而是下次可以再次回到身體裡的清楚入口。',
+      },
+    ]
+  }
+
+  if (course.name.includes('泰拳') || course.name.includes('踢拳')) {
+    return [
+      {
+        title: '先跟上第一組節奏',
+        body: '教練會把拳、踢、膝拆到能跟上，讓緊張先被節奏接住。',
+      },
+      {
+        title: '踢擊把身體點亮',
+        body: '重心轉過去、吐氣跟上、沙包聲落下，身體會從試探變成投入。',
+      },
+      {
+        title: '倒數把全場推高',
+        body: '口令、倒數和旁邊的人會把你推進更高的位置，在最想停下來時再多做一下。',
+      },
+      {
+        title: '完成後還在發熱',
+        body: '最後一分鐘結束後，剛剛累積的悶、熱和專注會慢慢沉下來，變成身體記得住的東西。',
+      },
+    ]
+  }
+
+  return [
+    {
+      title: '先把緊張交給教練',
+      body: '進場後不用急著證明自己，教練會用口令和動作把你帶進安全又有張力的節奏。',
+    },
+    {
+      title: '第一下打進沙包',
+      body: '拳套扎實撞上黑色沙包時，聲音會比想像更沉；你會開始明白，這不是把動作做完，而是真的把力氣送出去。',
+    },
+    {
+      title: '全場倒數把你推上去',
+      body: '你不需要自己想還能不能撐，教練和旁邊的人會把你推到下一下、下一回合、下一次吐氣。',
+    },
+    {
+      title: '最後 60 秒留在身上',
+      body: '完成後會有幾秒安靜，身體還在發熱，剛剛堆到最高的喘息和吶喊慢慢沉下來，壓力也被留在場裡。',
+    },
+  ]
+}
+
+function getCourseDetailCopy(
+  course: WeeklyCourse,
+  activeCategory: CourseCategory,
+  coachProfile: CoachProfile | null,
+) {
+  const isBootCamp = activeCategory === 'BOOT_CAMP'
+  const isBasic = course.name.includes('基礎')
+  const isTechnique = course.name.includes('技巧')
+  const isConditioning =
+    course.name.includes('體適能') || course.name.includes('戰鬥')
+  const discipline = getCourseDisciplineLabel(course)
+  const merchandising = getCourseMerchandisingCopy(
+    course,
+    activeCategory,
+    coachProfile,
+  )
+  const benefit = merchandising.desire
+  const safetyLine =
+    '不對打、不被打，教練會用口令、沙包和動作回合帶著你做。'
+
+  const intro = getCourseDetailExperienceLead(course, activeCategory)
+  const experienceMoments = getCourseExperienceMoments(course, activeCategory)
+
+  const bestFor = isTechnique
+    ? [
+        `已經上過 ${discipline}，想把動作做得更清楚`,
+        '想把出力變成更穩的站姿、回防、距離和節奏',
+        '想固定幾週，把原本會做的動作磨成更可靠的身體反應',
+      ]
+    : [
+        `第一次想試 ${discipline}，希望教練一步一步帶`,
+        isBasic
+          ? '怕一開始跟不上，想先從基本動作開始'
+          : '平常運動不夠過癮，想要更有節奏、更會流汗',
+        isBootCamp
+          ? '想先把接下來幾週的運動時間排好'
+          : '想先買一堂，讓今晚或這週真的有一個出口',
+      ]
+
+  const prep = [
+    '穿著方便流汗的衣服與運動鞋',
+    '建議提前 10 分鐘到場',
+    '報到時告知姓名與課程時間',
+  ]
+
+  const venueServices = [
+    {
+      title: '智能置物櫃',
+      body: '感應式手環開關，免自備鎖頭。',
+    },
+    {
+      title: 'UFC GYM 大毛巾',
+      body: '現場提供專屬運動毛巾，流汗後可以直接使用。',
+    },
+    {
+      title: 'SPA 沐浴備品',
+      body: '淋浴間備有星級酒店御用 SPA 沐浴用品，課後可以整理好再離開。',
+    },
+  ]
+
+  const reassurance = isTechnique
+    ? [
+        `這堂適合已有 6 個月以上 ${discipline} 經驗的人`,
+        safetyLine,
+        '教練會修細節，但不會從零開始教基本動作',
+      ]
+    : [
+        '不需要先有拳擊或泰拳基礎',
+        safetyLine,
+        isConditioning ? '強度會累，但不是技術考試' : '從能跟上的動作開始',
+      ]
+
+  const buyingQuestions = [
+    {
+      question: '我沒有經驗可以嗎？',
+      answer: isTechnique
+        ? '不建議。技巧課需要至少 6 個月以上拳擊或泰拳經驗；如果是第一次接觸，建議先從基礎或體適能課開始。'
+        : isBasic
+          ? '可以。這堂會從基本動作開始，教練會拆小步驟帶。'
+          : '可以。跟著口令與回合做，現場會依程度調整強度。',
+    },
+    {
+      question: '會不會對打？',
+      answer: '不對打、不被打，主要是沙包、動作和體能回合。',
+    },
+    {
+      question: '需要先買裝備嗎？',
+      answer:
+        '不用先買拳套。穿適合流汗的運動服與運動鞋，帶水與替換衣物；拳套可依現場方案租用或自備。',
+    },
+  ]
+
+  return {
+    intro,
+    benefit,
+    safetyLine,
+    coachHook: merchandising.coachHook,
+    experienceMoments,
+    bestFor,
+    prep,
+    venueServices,
+    reassurance,
+    buyingQuestions,
+  }
+}
+
+function CourseDetailModal({
+  detail,
+  onClose,
+  onPurchase,
+  onOpenCoach,
+}: {
+  detail: SelectedCourseDetail
+  onClose: () => void
+  onPurchase: (option: CourseDetailPackageOption) => void
+  onOpenCoach: () => void
+}) {
+  const copy = getCourseDetailCopy(
+    detail.course,
+    detail.activeCategory,
+    detail.coachProfile,
+  )
+  const hasCoachProfile = Boolean(detail.coachProfile)
+  const availableOptions = detail.packageOptions.filter(
+    (option) => option.remaining > 0,
+  )
+  const primaryOption =
+    availableOptions.find((option) => option.primary) ??
+    availableOptions[0] ??
+    detail.packageOptions[0] ??
+    null
+  const isBootCampDetail = detail.activeCategory === 'BOOT_CAMP'
+  const reserveLabel =
+    isBootCampDetail ? '保留這組日期' : '保留這堂'
+  const reservationLine = shouldShowRemainingBadge(detail.remaining)
+    ? `${getRemainingLabel(detail.remaining)} · ${detail.dateLabel} ${detail.timeLabel}`
+    : `${detail.dateLabel} ${detail.timeLabel}`
+  const showPackageOptions =
+    detail.activeCategory === 'BOOT_CAMP' || detail.packageOptions.length > 1
+
+  return createPortal(
+    <motion.div
+      className="fixed inset-0 z-[120] flex items-end justify-center bg-black/78 p-0 backdrop-blur-sm md:items-center md:p-6"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${detail.productTitle} 下單前確認`}
+      onClick={onClose}
+    >
+      <motion.div
+        className="max-h-[100dvh] w-full max-w-5xl overflow-y-auto rounded-none border-y border-pearl/15 bg-abyss shadow-2xl shadow-black/50 md:max-h-[92vh] md:rounded-3xl md:border"
+        initial={{ opacity: 0, y: 28, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.22 }}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-pearl/10 bg-abyss/95 px-4 py-3 backdrop-blur md:px-6">
+          <div>
+            <p className="text-[10px] font-heading uppercase tracking-[0.24em] text-neon/80">
+              下單前確認
+            </p>
+            <p className="mt-0.5 text-xs text-mist/55">
+              {detail.dateLabel} · {detail.timeLabel}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            data-interaction-hint
+            className="interaction-hint flex h-10 w-10 items-center justify-center rounded-full border border-pearl/15 bg-black/35 font-heading text-lg font-black text-pearl transition-colors hover:bg-black/55"
+            aria-label="關閉課程介紹"
+          >
+            ×
+          </button>
+        </div>
+
+        <div className="grid gap-5 p-5 md:p-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+          <div className="space-y-5">
+            <TechniqueCourseNotice course={detail.course} />
+
+            <div className="rounded-2xl border border-blaze/24 bg-blaze/10 p-5 md:p-6">
+              <p className="text-xs font-heading uppercase tracking-[0.2em] text-neon">
+                課程介紹
+              </p>
+              <p className="mt-3 text-base leading-relaxed text-mist/86 md:text-lg">
+                {copy.intro}
+              </p>
+              <div className="mt-5 grid gap-3 md:grid-cols-2">
+                {copy.experienceMoments.map((moment) => (
+                  <div
+                    key={moment.title}
+                    className="rounded-xl border border-pearl/10 bg-black/24 p-3"
+                  >
+                    <p className="font-heading text-sm font-black text-pearl">
+                      {moment.title}
+                    </p>
+                    <p className="mt-2 text-sm leading-relaxed text-mist/78">
+                      {moment.body}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-neon/18 bg-neon/8 p-4 md:p-5">
+              <p className="text-xs font-heading uppercase tracking-[0.2em] text-neon">
+                購買前先確認
+              </p>
+              <div className="mt-3 grid gap-3 md:grid-cols-3">
+                {copy.buyingQuestions.map((item) => (
+                  <div
+                    key={item.question}
+                    className="rounded-xl border border-pearl/10 bg-black/22 p-3"
+                  >
+                    <p className="font-heading text-sm font-black text-pearl">
+                      {item.question}
+                    </p>
+                    <p className="mt-2 text-sm leading-relaxed text-mist/78">
+                      {item.answer}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-pearl/10 bg-black/25 p-4 md:p-5">
+              <p className="text-xs font-heading uppercase tracking-[0.2em] text-mist/55">
+                場館服務與備品
+              </p>
+              <div className="mt-3 grid gap-3 md:grid-cols-3">
+                {copy.venueServices.map((item) => (
+                  <div
+                    key={item.title}
+                    className="rounded-xl border border-pearl/10 bg-pearl/[0.035] p-3"
+                  >
+                    <p className="font-heading text-sm font-black text-pearl">
+                      {item.title}
+                    </p>
+                    <p className="mt-2 text-sm leading-relaxed text-mist/74">
+                      {item.body}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-pearl/10 bg-black/25 p-4">
+              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <p className="font-heading text-xl font-black text-pearl">
+                    {detail.coachDisplayName}
+                  </p>
+                  <p className="mt-1 text-sm leading-relaxed text-mist/68">
+                    {copy.coachHook}
+                  </p>
+                </div>
+                {hasCoachProfile && (
+                  <button
+                    type="button"
+                    onClick={onOpenCoach}
+                    data-interaction-hint
+                    className="interaction-hint rounded-full border border-neon/30 bg-neon/10 px-4 py-2 text-sm font-heading font-bold text-neon transition-colors hover:border-neon/50 hover:bg-neon/15"
+                  >
+                    看教練介紹
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {(detail.routeLesson || detail.routeSkills.length > 0) && (
+              <div className="rounded-2xl border border-neon/16 bg-neon/6 p-4">
+                <p className="text-xs font-heading uppercase tracking-[0.2em] text-neon">
+                  {detail.routeLabel ?? '課程重點'}
+                </p>
+                {detail.routeLesson && (
+                  <p className="mt-2 font-heading text-lg font-black leading-snug text-pearl">
+                    {detail.routeLesson}
+                  </p>
+                )}
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {detail.routeSkills.map((skill) => (
+                    <span
+                      key={skill}
+                      className="rounded-full border border-pearl/10 bg-pearl/5 px-2.5 py-1 text-xs text-mist/76"
+                    >
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="rounded-2xl border border-pearl/10 bg-black/25 p-4">
+              <p className="text-xs font-heading uppercase tracking-[0.2em] text-mist/55">
+                第一次來，先知道這些
+              </p>
+              <div className="mt-3 grid gap-2 md:grid-cols-3">
+                {copy.prep.map((item) => (
+                  <p key={item} className="text-sm leading-relaxed text-mist/78">
+                    {item}
+                  </p>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <aside className="h-fit rounded-2xl border border-blaze/30 bg-blaze/10 p-4 md:p-5 lg:sticky lg:top-20">
+            {!isBootCampDetail && (
+              <>
+                <p className="text-xs font-heading uppercase tracking-[0.2em] text-blaze">
+                  {reserveLabel}
+                </p>
+                <p className="mt-2 font-heading text-2xl font-black text-pearl">
+                  {primaryOption?.priceLabel ?? '已售完'}
+                </p>
+                {primaryOption?.compareAtLabel && (
+                  <p className="mt-0.5 text-xs text-mist/55">
+                    一般{' '}
+                    <span className="line-through">
+                      {primaryOption.compareAtLabel}
+                    </span>
+                  </p>
+                )}
+                <p className="mt-1 text-sm text-mist/68">{reservationLine}</p>
+
+                {primaryOption && primaryOption.remaining > 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => onPurchase(primaryOption)}
+                    data-interaction-hint
+                    className="interaction-hint mt-4 w-full rounded-xl bg-blaze px-4 py-3 text-sm font-heading font-black text-abyss transition-colors hover:bg-pearl"
+                  >
+                    {reserveLabel} · {primaryOption.priceLabel}
+                  </button>
+                ) : (
+                  <DisabledCta className="mt-4">這堂已售完</DisabledCta>
+                )}
+              </>
+            )}
+
+            {showPackageOptions && (
+              <div
+                className={
+                  isBootCampDetail ? '' : 'mt-5 border-t border-pearl/10 pt-4'
+                }
+              >
+                <p className="text-xs font-heading uppercase tracking-[0.18em] text-mist/55">
+                  選擇堂數
+                </p>
+                <div className="mt-3 grid gap-2">
+                  {detail.packageOptions.map((option) => {
+                    const soldOut = option.remaining <= 0
+                    return (
+                      <button
+                        key={option.packageSize}
+                        type="button"
+                        disabled={soldOut}
+                        onClick={() => onPurchase(option)}
+                        data-interaction-hint={soldOut ? undefined : true}
+                        className={`rounded-xl border p-3 text-left transition-colors ${
+                          soldOut ? '' : 'interaction-hint'
+                        } ${
+                          option.primary
+                            ? 'border-blaze/45 bg-blaze/15'
+                            : 'border-neon/25 bg-neon/10'
+                        } ${
+                          soldOut
+                            ? 'cursor-not-allowed opacity-45'
+                            : 'hover:border-pearl/35'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="font-heading text-base font-black text-pearl">
+                              {option.label}
+                            </p>
+                            <p className="mt-1 text-xs leading-relaxed text-mist/62">
+                              {option.description}
+                            </p>
+                          </div>
+                          <div className="shrink-0 text-right">
+                            <p className="font-heading text-sm font-black text-neon">
+                              {option.priceLabel}
+                            </p>
+                            {option.compareAtLabel && (
+                              <p className="mt-0.5 text-[11px] text-mist/45">
+                                一般{' '}
+                                <span className="line-through">
+                                  {option.compareAtLabel}
+                                </span>
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        {(soldOut || shouldShowRemainingBadge(option.remaining)) && (
+                          <p className="mt-2 text-xs text-mist/58">
+                            {soldOut
+                              ? '已售完'
+                              : getRemainingLabel(option.remaining)}
+                          </p>
+                        )}
+                        {option.series.length > 1 && (
+                          <div className="mt-3 grid gap-1.5">
+                            {option.series.map((session, index) => (
+                              <div
+                                key={session.id}
+                                className="flex items-center justify-between rounded-lg bg-black/22 px-2.5 py-1.5 text-xs"
+                              >
+                                <span className="font-heading text-mist/52">
+                                  第 {index + 1} 堂
+                                </span>
+                                <span className="font-heading text-pearl/82 tabular-nums">
+                                  {formatShortDate(session.date)} 週
+                                  {session.weekday} {session.startTime}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {availableOptions.length === 0 && (
+              <p className="mt-4 rounded-xl border border-pearl/10 bg-black/25 px-4 py-3 text-sm text-mist/58">
+                這堂目前已售完，可以回到課表選其他日期或場館。
+              </p>
+            )}
+          </aside>
         </div>
       </motion.div>
     </motion.div>,
@@ -761,6 +1925,8 @@ function CheckoutContactModal({
           </p>
         </div>
 
+        <TechniqueCourseNotice course={pending.course} compact className="mt-3" />
+
         <div className="mt-5 grid gap-3">
           <label className="grid gap-1.5 text-sm font-heading text-mist/72">
             姓名
@@ -879,20 +2045,44 @@ export function WeeklyScheduleSection({
   const [activeVenueId, setActiveVenueId] = useState<string | null>(null)
   const [hasTouchedVenueFilter, setHasTouchedVenueFilter] = useState(false)
   const [activeDateIso, setActiveDateIso] = useState<string | null>(null)
-  const [selectedBooking, setSelectedBooking] = useState<{
-    courseId: string
-    packageSize: 2 | 4
-  } | null>(null)
   const [selectedCoach, setSelectedCoach] = useState<{
     coachName: string
     profile: CoachProfile
+    course?: WeeklyCourse
   } | null>(null)
+  const [selectedCourseDetail, setSelectedCourseDetail] =
+    useState<SelectedCourseDetail | null>(null)
   const [pendingCheckout, setPendingCheckout] =
     useState<PendingCheckout | null>(null)
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
   const [isCheckoutSubmitting, setIsCheckoutSubmitting] = useState(false)
+  const [interactionHintSeen, setInteractionHintSeen] =
+    useState<InteractionHintSeenState>(getInitialInteractionHintSeen)
   const isBootCampBookingMode =
     bookingMode === 'bootcamp' && activeCategory === 'BOOT_CAMP'
+
+  const interactionHintSeenSets = useMemo(
+    () => ({
+      coaches: new Set(interactionHintSeen.coaches),
+      courses: new Set(interactionHintSeen.courses),
+    }),
+    [interactionHintSeen],
+  )
+
+  const markInteractionHintSeen = useCallback(
+    (type: keyof InteractionHintSeenState, key: string) => {
+      setInteractionHintSeen((current) => {
+        if (current[type].includes(key)) return current
+        const next = {
+          ...current,
+          [type]: [...current[type], key],
+        }
+        writeInteractionHintSeen(next)
+        return next
+      })
+    },
+    [],
+  )
 
   const scrollSchedule = (direction: -1 | 1) => {
     const el = scrollerRef.current
@@ -920,18 +2110,27 @@ export function WeeklyScheduleSection({
       }
 
       const categorizedCourse = getWeeklyCourseForCategory(course, activeCategory)
-      const nextCourse = getNextWeeklyOccurrence(categorizedCourse, bookableFromIso)
-      const slotKey = [
-        nextCourse.category,
-        nextCourse.venueId,
-        nextCourse.date,
-        nextCourse.startTime,
-        nextCourse.endTime,
-        nextCourse.name,
-      ].join('|')
+      const upcomingOccurrences = isBootCampBookingMode
+        ? getUpcomingWeeklyOccurrences(
+            categorizedCourse,
+            bookableFromIso,
+            BOOT_CAMP_START_DATE_WEEKS,
+          )
+        : [getNextWeeklyOccurrence(categorizedCourse, bookableFromIso)]
 
-      if (!courseBySlot.has(slotKey)) {
-        courseBySlot.set(slotKey, nextCourse)
+      for (const nextCourse of upcomingOccurrences) {
+        const slotKey = [
+          nextCourse.category,
+          nextCourse.venueId,
+          nextCourse.date,
+          nextCourse.startTime,
+          nextCourse.endTime,
+          nextCourse.name,
+        ].join('|')
+
+        if (!courseBySlot.has(slotKey)) {
+          courseBySlot.set(slotKey, nextCourse)
+        }
       }
     }
 
@@ -948,7 +2147,7 @@ export function WeeklyScheduleSection({
           return a.startTime < b.startTime ? -1 : 1
         return sortByVenueThenName(a, b)
       })
-  }, [activeCategory, bookableFromIso])
+  }, [activeCategory, bookableFromIso, isBootCampBookingMode])
 
   const upcomingCourses = useMemo(() => {
     if (activeCategory !== 'BOOT_CAMP' || !activeBootCampRoute) {
@@ -1057,30 +2256,6 @@ export function WeeklyScheduleSection({
     [bookingMode, hasLiveData],
   )
 
-  const trackBootCampPackageSelect = useCallback(
-    (
-      course: WeeklyCourse,
-      packageSize: 2 | 4,
-      remaining: number,
-      value: number,
-      pricingTier: CoachPricingTier,
-    ) => {
-      track({
-        event: 'bootcamp_package_select',
-        params: buildCourseTrackingParams(
-          course,
-          packageSize,
-          remaining,
-          value,
-          pricingTier,
-        ),
-        metaStandardEvent: 'ViewContent',
-        lineEventName: 'PackageSelect',
-      })
-    },
-    [buildCourseTrackingParams, track],
-  )
-
   const trackCoursePurchase = useCallback(
     (
       course: WeeklyCourse,
@@ -1163,6 +2338,7 @@ export function WeeklyScheduleSection({
             lineContext: getCheckoutLineContext(),
             course: pendingCheckout.course,
             packageSize: pendingCheckout.packageSize,
+            quotedAmountValue: pendingCheckout.value,
             route: pendingCheckout.route,
             sessionIds: pendingCheckout.sessionIds,
             seriesDates: pendingCheckout.seriesDates,
@@ -1276,18 +2452,20 @@ export function WeeklyScheduleSection({
   }, [activeDateIso, dateOptions, isBootCampBookingMode])
 
   useEffect(() => {
-    setSelectedBooking(null)
     setSelectedCoach(null)
+    setSelectedCourseDetail(null)
   }, [activeCategory, activeBootCampRoute, activeVenueId, activeDateIso])
 
   useEffect(() => {
-    if (!selectedCoach) return undefined
+    if (!selectedCoach && !selectedCourseDetail) return undefined
 
     const originalOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setSelectedCoach(null)
+      if (event.key !== 'Escape') return
+      if (selectedCourseDetail) setSelectedCourseDetail(null)
+      else setSelectedCoach(null)
     }
 
     window.addEventListener('keydown', handleKeyDown)
@@ -1296,7 +2474,7 @@ export function WeeklyScheduleSection({
       document.body.style.overflow = originalOverflow
       window.removeEventListener('keydown', handleKeyDown)
     }
-  }, [selectedCoach])
+  }, [selectedCoach, selectedCourseDetail])
 
   useEffect(() => {
     if (!activeBootCampRoute) return
@@ -1307,7 +2485,6 @@ export function WeeklyScheduleSection({
   }, [activeBootCampRoute, routeOptions, setActiveBootCampRoute])
 
   const meta = categoryMeta[activeCategory]
-  const planSummary = planSummaryByCategory[activeCategory]
   const venueSelectionPending =
     showVenueFilter && upcomingCourses.length > 0 && !hasTouchedVenueFilter
   const purchaseSteps =
@@ -1483,7 +2660,7 @@ export function WeeklyScheduleSection({
                 2 選第一堂日期
               </p>
               <p className="text-xs text-mist/55">
-                會自動帶入後續週次
+                未來 6 週可選
               </p>
             </div>
 
@@ -1608,7 +2785,6 @@ export function WeeklyScheduleSection({
               className={`${hasTouchedVenueFilter ? 'swipe-hint' : ''} -mx-3 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-3 pb-4 sm:mx-0 sm:px-0 md:gap-5`}
             >
               {displayCourses.map((c, i) => {
-                const dayLabel = getRelativeDayLabel(c.date, todayIso)
                 const bootCampRouteLabel =
                   activeCategory === 'BOOT_CAMP'
                     ? getBootCampRouteLabel(c)
@@ -1635,488 +2811,526 @@ export function WeeklyScheduleSection({
                   displayAvailability.remaining,
                   meta.badgeClass,
                 )
+                const merchandisingRemaining =
+                  activeCategory === 'BOOT_CAMP'
+                    ? Math.max(
+                        bootCamp2Availability.remaining,
+                        bootCamp4Availability.remaining,
+                      )
+                    : displayAvailability.remaining
                 const coachProfile = findCoachProfile(c.coach)
-                const coachPricingTier = getCoachPricingTier(c.coach, coachProfile)
-                const fightNightPriceLabel =
-                  getFightNightPriceLabel(c, coachPricingTier)
-                const bootCampBasePriceLabel = getBootCampPackagePriceLabel(
+                const coachHintKey = getCoachHintKey(c.coach, coachProfile)
+                const courseHintKey = getCourseHintKey(c)
+                const hasSeenCoachHint =
+                  interactionHintSeenSets.coaches.has(coachHintKey)
+                const hasSeenCourseHint =
+                  interactionHintSeenSets.courses.has(courseHintKey)
+                const courseProductTitle = getCourseProductTitle(
                   c,
-                  coachPricingTier,
-                  2,
+                  activeCategory,
+                  coachProfile,
                 )
-
+                const courseCardPitch = getCourseCardPitch(
+                  c,
+                  activeCategory,
+                  coachProfile,
+                )
+                const coachPricingTier = getCoachPricingTier(c.coach, coachProfile)
+                const courseFeatureTags = getCourseFeatureTags(
+                  c,
+                  merchandisingRemaining,
+                  coachPricingTier,
+                  coachProfile,
+                )
+                const courseBundleItems = getCourseBundleItems(c)
+                const courseDecisionSignals = getCourseDecisionSignals(
+                  c,
+                  coachProfile,
+                )
+                const fightNightPrice = getCoursePriceModel({
+                  course: c,
+                  pricingTier: coachPricingTier,
+                  packageSize: 1,
+                  remaining: sessionAvailability.remaining,
+                  coachId: coachProfile?.id,
+                })
+                const bootCamp2Price = getCoursePriceModel({
+                  course: c,
+                  pricingTier: coachPricingTier,
+                  packageSize: 2,
+                  remaining: bootCamp2Availability.remaining,
+                  coachId: coachProfile?.id,
+                })
+                const bootCamp4Price = getCoursePriceModel({
+                  course: c,
+                  pricingTier: coachPricingTier,
+                  packageSize: 4,
+                  remaining: bootCamp4Availability.remaining,
+                  coachId: coachProfile?.id,
+                })
+                const primaryCardPriceLabel =
+                  activeCategory === 'FIGHT_NIGHT'
+                    ? fightNightPrice.label
+                    : `${bootCamp2Price.label} 起`
+                const primaryCardCompareAtLabel =
+                  activeCategory === 'FIGHT_NIGHT'
+                    ? fightNightPrice.compareAtLabel
+                    : bootCamp2Price.compareAtLabel
+                const fightNightSession = [
+                  {
+                    id: getSessionInventoryId(c),
+                    date: c.date,
+                    weekday: c.weekday,
+                    startTime: c.startTime,
+                  },
+                ]
+                const courseDetailPackageOptions: CourseDetailPackageOption[] =
+                  activeCategory === 'BOOT_CAMP'
+                    ? ([2, 4] as const).map((packageSize) => {
+                        const availability =
+                          packageSize === 2
+                            ? bootCamp2Availability
+                            : bootCamp4Availability
+                        const price =
+                          packageSize === 2 ? bootCamp2Price : bootCamp4Price
+                        return {
+                          packageSize,
+                          label: `${bootCampPackageMeta[packageSize].label} Boot Camp`,
+                          description: bootCampPackageMeta[packageSize].description,
+                          priceLabel: price.label,
+                          compareAtLabel: price.compareAtLabel,
+                          value: price.amount,
+                          remaining: availability.remaining,
+                          series:
+                            packageSize === 2 ? bootCampSeries2 : bootCampSeries4,
+                          primary: packageSize === 4,
+                        }
+                      })
+                    : [
+                        {
+                          packageSize: 1,
+                          label: 'Fight Night Pass',
+                          description: '單堂體驗，先把這個晚上留給自己',
+                          priceLabel: fightNightPrice.label,
+                          compareAtLabel: fightNightPrice.compareAtLabel,
+                          value: fightNightPrice.amount,
+                          remaining: sessionAvailability.remaining,
+                          series: fightNightSession,
+                          primary: true,
+                        },
+                      ]
+                const coachProofTag = getCoachProofTag(c.coach, coachProfile)
+                const courseDetail: SelectedCourseDetail = {
+                  course: c,
+                  activeCategory,
+                  productTitle: courseProductTitle,
+                  featureTags: courseFeatureTags,
+                  routeLabel: routeContent?.label ?? bootCampRouteLabel,
+                  routeBadge: routeContent?.shortLabel ?? bootCampRouteLabel,
+                  routeSkills: routeContent?.skills.slice(0, 4) ?? [],
+                  routeLesson: routeContent?.fighterLesson ?? null,
+                  coachProfile,
+                  coachProofTag,
+                  coachDisplayName:
+                    coachProfile?.shortName ?? getCoachDisplayName(c.coach),
+                  pricingTier: coachPricingTier,
+                  dateLabel: `${formatShortDate(c.date)} 週${c.weekday}`,
+                  timeLabel: `${c.startTime}–${c.endTime}`,
+                  venueLabel: venueLandmarks[c.venueId] ?? c.venueName,
+                  sessionTitle,
+                  remaining: merchandisingRemaining,
+                  decisionSignals: courseDecisionSignals,
+                  packageOptions: courseDetailPackageOptions,
+                }
+                const openCourseDetail = () => {
+                  const primaryOption =
+                    courseDetailPackageOptions.find((option) => option.primary) ??
+                    courseDetailPackageOptions[0]!
+                  markInteractionHintSeen('courses', courseHintKey)
+                  setSelectedCourseDetail(courseDetail)
+                  track({
+                    event: 'course_detail_open',
+                    params: buildCourseTrackingParams(
+                      c,
+                      primaryOption.packageSize,
+                      courseDetail.remaining,
+                      primaryOption.value,
+                      coachPricingTier,
+                    ),
+                    metaStandardEvent: 'ViewContent',
+                    lineEventName: 'CourseDetailOpen',
+                  })
+                }
                 if (isBootCampBookingMode) {
-                  const selectedPackageSize =
-                    selectedBooking?.courseId === c.id
-                      ? selectedBooking.packageSize
-                      : null
-                  const selectedSeries =
-                    selectedPackageSize === 2 ? bootCampSeries2 : bootCampSeries4
-                  const selectedPackageAvailability =
-                    selectedPackageSize === 2
-                      ? bootCamp2Availability
-                      : bootCamp4Availability
-
                   return (
-                    <motion.article
+                    <motion.div
                       key={`${hasTouchedVenueFilter ? activeVenueId ?? 'all' : 'venue'}-${c.id}`}
-                      aria-label={`${sessionTitle}，${formatShortDate(c.date)} 週${c.weekday} ${c.startTime}–${c.endTime}，${c.venueName}`}
                       data-schedule-card
                       initial={{ opacity: 0, y: 16 }}
                       whileInView={{ opacity: 1, y: 0 }}
                       viewport={{ once: true }}
                       transition={{ duration: 0.4, delay: i * 0.04 }}
-                      className="group flex shrink-0 basis-[88vw] snap-start flex-col gap-4 rounded-2xl border border-pearl/15 bg-black/40 p-5 transition-colors hover:border-pearl/30 hover:bg-black/45 sm:basis-[24rem] md:basis-[25rem] md:p-6"
+                      className="flex shrink-0 basis-[82vw] snap-start flex-col gap-2 sm:basis-[21.5rem] md:basis-[22rem]"
                     >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="font-heading text-xs uppercase tracking-[0.22em] text-neon/75">
-                            第一堂
-                          </p>
-                          <p className="mt-1 font-heading text-3xl font-black text-pearl tabular-nums">
-                            {c.startTime}
-                          </p>
-                          <p className="text-sm text-mist/72 tabular-nums">
-                            {formatShortDate(c.date)} 週{c.weekday} · {c.startTime}–{c.endTime}
-                          </p>
+                      <article
+                        aria-label={`${sessionTitle}，${formatShortDate(c.date)} 週${c.weekday} ${c.startTime}–${c.endTime}，${c.venueName}`}
+                        className="group relative flex flex-1 flex-col overflow-hidden rounded-2xl border border-pearl/12 bg-[linear-gradient(180deg,rgba(255,255,255,0.065),rgba(0,0,0,0.34))] p-0 shadow-[0_18px_52px_rgba(0,0,0,0.24)] transition-colors hover:border-neon/35"
+                      >
+                      <div className="px-4 pb-3 pt-4 md:px-5">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="min-w-0">
+                            <span className={`venue-location-chip inline-flex rounded-md border px-2 py-1 text-xs font-heading tracking-wide ${meta.badgeClass}`}>
+                              {venueShortLookup[c.venueId] ?? c.venueName}
+                            </span>
+                            <p className="venue-location-chip mt-2 text-xs leading-snug text-mist/62">
+                              {venueLandmarks[c.venueId] ?? c.venueName}
+                            </p>
+                          </div>
+                          <div className="shrink-0 text-right">
+                            <p className="font-heading text-xs tracking-[0.14em] text-neon/75">
+                              第一堂 · {formatShortDate(c.date)} 週{c.weekday}
+                            </p>
+                            <p className="mt-1 font-heading text-2xl font-black leading-none text-pearl tabular-nums md:text-3xl">
+                              {c.startTime}–{c.endTime}
+                            </p>
+                          </div>
                         </div>
-                        <span className={`venue-location-chip shrink-0 rounded-md border px-2 py-1 text-xs font-heading tracking-wide ${meta.badgeClass}`}>
-                          {venueShortLookup[c.venueId] ?? c.venueName}
-                        </span>
+
+                        <CoachCard
+                          coachName={c.coach}
+                          profile={coachProfile}
+                          courseName={c.name}
+                          hintSeen={hasSeenCoachHint}
+                          onOpen={() => {
+                            if (!coachProfile) return
+                            markInteractionHintSeen('coaches', coachHintKey)
+                            setSelectedCoach({
+                              coachName: c.coach,
+                              profile: coachProfile,
+                              course: c,
+                            })
+                          }}
+                        />
                       </div>
 
-                      <div className="rounded-xl border border-pearl/10 bg-black/25 p-4">
-                        <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={openCourseDetail}
+                        data-interaction-hint
+                        data-interacted={hasSeenCourseHint ? 'true' : undefined}
+                        className="interaction-hint course-detail-trigger block w-full px-4 pr-12 pt-3 text-left md:px-5 md:pr-14"
+                        aria-label={`查看 ${courseProductTitle} 課程介紹`}
+                      >
+                        <h3 className="font-heading text-xl font-black leading-tight text-pearl">
+                          {courseProductTitle}
+                        </h3>
+                        <p className="mt-2 text-sm leading-relaxed text-mist/74">
+                          {courseCardPitch}
+                        </p>
+                        <div className="mt-3 flex flex-wrap items-center gap-2">
+                          {courseFeatureTags.slice(0, 3).map((tag) => (
+                            <span
+                              key={tag}
+                              className={`rounded-full border px-2.5 py-1 text-[11px] font-heading tracking-wide ${getCourseFeatureTagClass(tag)}`}
+                            >
+                              {tag}
+                            </span>
+                          ))}
                           {routeContent && (
                             <span className="rounded-full border border-neon/20 bg-neon/10 px-2.5 py-1 text-[11px] font-heading tracking-wide text-neon/90">
                               {routeContent.shortLabel}
                             </span>
                           )}
-                          <span
-                            className={`rounded-full border px-2.5 py-1 text-[11px] font-heading tracking-wide ${remainingBadgeClass}`}
-                          >
-                            {getRemainingLabel(
-                              displayAvailability.remaining,
-                              hasLiveData,
-                            )}
-                          </span>
+                          {shouldShowRemainingBadge(
+                            displayAvailability.remaining,
+                          ) && (
+                            <span
+                              className={`rounded-full border px-2.5 py-1 text-[11px] font-heading tracking-wide ${remainingBadgeClass}`}
+                            >
+                              {getRemainingLabel(displayAvailability.remaining)}
+                            </span>
+                          )}
                         </div>
+                        <CourseSpecStrip signals={courseDecisionSignals} />
+                        {courseBundleItems.length > 0 && (
+                          <div className="mt-3 flex min-w-0 items-center gap-2 rounded-xl border border-pearl/10 bg-pearl/[0.04] px-3 py-2">
+                            <span className="shrink-0 text-[10px] font-heading tracking-[0.16em] text-mist/45">
+                              方案包含
+                            </span>
+                            <div className="flex min-w-0 flex-wrap gap-1.5">
+                              {courseBundleItems.map((item) => (
+                                <span
+                                  key={item}
+                                  className="rounded-full bg-black/30 px-2 py-0.5 text-[11px] leading-snug text-pearl/84"
+                                >
+                                  {item}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </button>
 
-                        <h3 className="mt-3 font-heading text-xl font-black leading-tight text-pearl">
-                          {c.name}
-                        </h3>
-                        <p className="venue-location-chip mt-2 inline-flex w-fit items-center rounded-full border border-pearl/10 bg-pearl/[0.04] px-2.5 py-1 text-xs text-mist/70">
-                          {venueLandmarks[c.venueId] ?? c.venueName}
-                        </p>
-
-                        <CoachCard
-                          coachName={c.coach}
-                          profile={coachProfile}
-                          onOpen={() =>
-                            coachProfile &&
-                            setSelectedCoach({
-                              coachName: c.coach,
-                              profile: coachProfile,
-                            })
-                          }
-                        />
-                      </div>
-
-                      <div>
-                        <div className="mb-2 flex items-center justify-between gap-2">
-                          <p className="text-xs font-heading uppercase tracking-[0.22em] text-neon/75">
-                            選擇保留堂數
+                      <div className="mt-auto px-4 pb-4 pt-3 md:px-5">
+                        <div className="mb-2 flex items-center justify-between gap-2 border-t border-pearl/10 pt-3">
+                          <p className="text-[10px] font-heading tracking-[0.18em] text-neon/75">
+                            固定時段方案
                           </p>
-                          <p className="text-xs text-mist/55">
-                            先選堂數再確認日期
-                          </p>
+                          <div className="text-right">
+                            <p className="font-heading text-sm font-black text-pearl">
+                              {primaryCardPriceLabel}
+                            </p>
+                            {primaryCardCompareAtLabel && (
+                              <p className="mt-0.5 text-[11px] text-mist/45">
+                                一般{' '}
+                                <span className="line-through">
+                                  {primaryCardCompareAtLabel}
+                                </span>
+                              </p>
+                            )}
+                          </div>
                         </div>
 
                         <div className="grid grid-cols-2 gap-2">
                           {([2, 4] as const).map((packageSize) => {
-                            const packageMeta = bootCampPackageMeta[packageSize]
-                            const packagePriceLabel =
-                              getBootCampPackagePriceLabel(
-                                c,
-                                coachPricingTier,
-                                packageSize,
-                              )
-                            const packagePriceAmount =
-                              getBootCampPackagePriceAmount(
-                                c,
-                                coachPricingTier,
-                                packageSize,
-                              )
                             const availability =
                               packageSize === 2
                                 ? bootCamp2Availability
                                 : bootCamp4Availability
-                            const active = selectedPackageSize === packageSize
+                            const packagePrice =
+                              packageSize === 2 ? bootCamp2Price : bootCamp4Price
                             const soldOut = availability.remaining <= 0
 
-                            return (
-                              <button
+                            return soldOut ? (
+                              <DisabledCta key={packageSize}>
+                                {`${bootCampPackageMeta[packageSize].label}已售完`}
+                              </DisabledCta>
+                            ) : (
+                              <Button
                                 key={packageSize}
-                                type="button"
-                                disabled={soldOut}
-                                onClick={() => {
-                                  setSelectedBooking({
-                                    courseId: c.id,
-                                    packageSize,
-                                  })
-                                  trackBootCampPackageSelect(
+                                variant={packageSize === 4 ? 'primary' : 'secondary'}
+                                size="sm"
+                                className={
+                                  packageSize === 4
+                                    ? 'w-full'
+                                    : 'w-full border-neon/25 bg-neon/10 text-pearl'
+                                }
+                                onClick={() =>
+                                  openShoplineCheckout(
                                     c,
                                     packageSize,
                                     availability.remaining,
-                                    packagePriceAmount,
+                                    packagePrice.amount,
                                     coachPricingTier,
                                   )
-                                }}
-                                data-interaction-hint={soldOut ? undefined : true}
-                                className={`rounded-xl border p-3 text-left transition-colors ${
-                                  soldOut ? '' : 'interaction-hint'
-                                } ${
-                                  active
-                                    ? 'border-neon/55 bg-neon/15'
-                                    : 'border-pearl/10 bg-black/25 hover:border-pearl/25'
-                                } ${
-                                  soldOut ? 'cursor-not-allowed opacity-45' : ''
-                                }`}
+                                }
+                                data-cta={`schedule-${c.id}-bootcamp-${packageSize}`}
                               >
-                                <p className="font-heading text-lg font-black text-pearl">
-                                  {packageMeta.label}
-                                </p>
-                                <p className="mt-1 font-heading text-sm font-bold text-neon">
-                                  {packagePriceLabel}
-                                </p>
-                                <p className="mt-1 text-xs leading-snug text-mist/62">
-                                  {soldOut
-                                    ? '已售完'
-                                    : getRemainingLabel(
-                                        availability.remaining,
-                                        hasLiveData,
-                                      )}
-                                </p>
-                              </button>
+                                {bootCampPackageMeta[packageSize].label} ·{' '}
+                                {packagePrice.label}
+                              </Button>
                             )
                           })}
                         </div>
                       </div>
-
-                      {selectedPackageSize ? (
-                        <div className="rounded-2xl border border-neon/20 bg-neon/10 p-4">
-                          <div className="flex items-start justify-between gap-3">
-                            <div>
-                              <p className="text-xs font-heading uppercase tracking-[0.22em] text-neon/75">
-                                確認保留日期
-                              </p>
-                              <p className="mt-1 font-heading text-lg font-black text-pearl">
-                                {bootCampPackageMeta[selectedPackageSize].label} · 同館同時段
-                              </p>
-                            </div>
-                            <p className="font-heading text-base font-black text-neon">
-                              {getBootCampPackagePriceLabel(
-                                c,
-                                coachPricingTier,
-                                selectedPackageSize,
-                              )}
-                            </p>
-                          </div>
-
-                          <div className="mt-3 space-y-1.5">
-                            {selectedSeries.map((session, index) => (
-                              <div
-                                key={session.id}
-                                className="flex items-center justify-between gap-3 rounded-lg bg-black/25 px-3 py-2 text-sm"
-                              >
-                                <span className="font-heading text-mist/55">
-                                  第 {index + 1} 堂
-                                </span>
-                                <span className="font-heading text-pearl tabular-nums">
-                                  {formatShortDate(session.date)} 週{session.weekday} {session.startTime}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-
-                          {selectedPackageAvailability.remaining > 0 ? (
-                            <Button
-                              variant="primary"
-                              className="mt-4 w-full"
-                              onClick={() =>
-                                openShoplineCheckout(
-                                  c,
-                                  selectedPackageSize,
-                                  selectedPackageAvailability.remaining,
-                                  getBootCampPackagePriceAmount(
-                                    c,
-                                    coachPricingTier,
-                                    selectedPackageSize,
-                                  ),
-                                  coachPricingTier,
-                                )
-                              }
-                              data-cta={`schedule-${c.id}-bootcamp-${selectedPackageSize}`}
-                            >
-                              購買這個位置 · {getRemainingLabel(
-                                selectedPackageAvailability.remaining,
-                                hasLiveData,
-                              )}
-                            </Button>
-                          ) : (
-                            <DisabledCta className="mt-4">
-                              這組日期已售完
-                            </DisabledCta>
-                          )}
-                        </div>
-                      ) : (
-                        <p className="rounded-xl border border-pearl/10 bg-black/20 px-4 py-3 text-sm leading-relaxed text-mist/60">
-                          選兩堂或四堂後，系統會直接列出你要保留的每一堂日期。
-                        </p>
-                      )}
-                    </motion.article>
+                      </article>
+                    </motion.div>
                   )
                 }
 
                 return (
-                  <motion.article
+                  <motion.div
                     key={`${hasTouchedVenueFilter ? activeVenueId ?? 'all' : 'venue'}-${c.id}`}
-                    aria-label={`${sessionTitle}，${formatShortDate(c.date)} 週${c.weekday} ${c.startTime}–${c.endTime}，${c.venueName}`}
                     data-schedule-card
                     initial={{ opacity: 0, y: 16 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ duration: 0.4, delay: i * 0.04 }}
-                    className="group flex min-h-[30rem] shrink-0 basis-[84vw] snap-start flex-col gap-3 rounded-2xl border border-pearl/15 bg-black/35 p-5 transition-colors hover:border-pearl/30 hover:bg-black/45 sm:basis-[22rem] md:basis-[21rem] md:p-6 lg:basis-[22rem] xl:basis-[23rem]"
+                    className="flex shrink-0 basis-[82vw] snap-start flex-col gap-2 sm:basis-[21.5rem] md:basis-[22rem]"
                   >
-                    <div className="flex items-baseline justify-between gap-3">
-                      <span className="text-xl md:text-2xl font-heading font-bold text-pearl tracking-wide">
-                        {dayLabel ?? `週${c.weekday}`}
-                      </span>
-                      <span
-                        className={`venue-location-chip shrink-0 inline-flex items-center px-2 py-0.5 rounded-md text-[10px] md:text-xs font-heading font-medium tracking-wide border ${meta.badgeClass}`}
-                      >
-                        {venueShortLookup[c.venueId] ?? c.venueName}
-                      </span>
-                    </div>
-
-                    <div>
-                      <p className="text-2xl md:text-3xl font-heading font-black text-pearl tabular-nums">
-                        {c.startTime}
-                      </p>
-                      <p className="text-sm md:text-base text-mist/70 font-heading tabular-nums">
-                        {formatShortDate(c.date)} 週{c.weekday} · {c.startTime}–{c.endTime}
-                      </p>
-                      <p className="venue-location-chip mt-2 inline-flex w-fit items-center rounded-full border border-pearl/10 bg-pearl/[0.04] px-2.5 py-1 text-xs text-mist/70 md:text-sm">
-                        {venueLandmarks[c.venueId] ?? c.venueName}
-                      </p>
-                    </div>
-
-                    <div className="flex flex-wrap gap-2">
-                      <p
-                        className={`inline-flex w-fit rounded-full px-2.5 py-1 text-[11px] font-heading tracking-wide border ${remainingBadgeClass}`}
-                      >
-                        {getRemainingLabel(
-                          displayAvailability.remaining,
-                          hasLiveData,
-                        )}
-                      </p>
-                      <p className="inline-flex w-fit rounded-full border border-pearl/10 bg-black/25 px-2.5 py-1 text-[11px] font-heading tracking-wide text-mist/55">
-                        {hasLiveData ? '即時更新' : '名額同步中'}
-                      </p>
-                      {bootCampRouteLabel && (
-                        <p className="inline-flex w-fit rounded-full border border-neon/20 bg-neon/10 px-2.5 py-1 text-[11px] font-heading tracking-wide text-neon/90">
-                          {routeContent?.badge ?? bootCampRouteLabel}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="border-t border-pearl/10 pt-3">
-                      <p className="text-base md:text-lg text-pearl font-semibold leading-snug">
-                        {c.name}
-                      </p>
-                      <p className="text-xs md:text-sm text-mist/55 font-heading tracking-wide">
-                        {c.nameEn}
-                      </p>
+                    <article
+                      aria-label={`${sessionTitle}，${formatShortDate(c.date)} 週${c.weekday} ${c.startTime}–${c.endTime}，${c.venueName}`}
+                      className="group relative flex flex-1 flex-col overflow-hidden rounded-2xl border border-pearl/12 bg-[linear-gradient(180deg,rgba(255,255,255,0.065),rgba(0,0,0,0.34))] p-0 shadow-[0_18px_52px_rgba(0,0,0,0.24)] transition-colors hover:border-blaze/35"
+                    >
+                    <div className="px-4 pb-3 pt-4 md:px-5">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="min-w-0">
+                          <span
+                            className={`venue-location-chip inline-flex items-center rounded-md border px-2 py-1 text-[10px] font-heading font-medium tracking-wide md:text-xs ${meta.badgeClass}`}
+                          >
+                            {venueShortLookup[c.venueId] ?? c.venueName}
+                          </span>
+                          <p className="venue-location-chip mt-2 text-xs leading-snug text-mist/62 md:text-sm">
+                            {venueLandmarks[c.venueId] ?? c.venueName}
+                          </p>
+                        </div>
+                        <div className="shrink-0 text-right">
+                          <p className="font-heading text-xs tracking-[0.14em] text-blaze/75">
+                            {formatShortDate(c.date)} 週{c.weekday}
+                          </p>
+                          <p className="mt-1 font-heading text-2xl font-black leading-none text-pearl tabular-nums md:text-3xl">
+                            {c.startTime}–{c.endTime}
+                          </p>
+                        </div>
+                      </div>
                       <CoachCard
                         coachName={c.coach}
                         profile={coachProfile}
-                        onOpen={() =>
-                          coachProfile &&
+                        courseName={c.name}
+                        hintSeen={hasSeenCoachHint}
+                        onOpen={() => {
+                          if (!coachProfile) return
+                          markInteractionHintSeen('coaches', coachHintKey)
                           setSelectedCoach({
                             coachName: c.coach,
                             profile: coachProfile,
+                            course: c,
                           })
-                        }
+                        }}
                       />
                     </div>
 
-                    <div className="border-t border-pearl/10 pt-3">
-                      <p className="text-[10px] md:text-xs font-heading tracking-[0.2em] text-mist/55 mb-1">
-                        你正在保留
+                    <button
+                      type="button"
+                      onClick={openCourseDetail}
+                      data-interaction-hint
+                      data-interacted={hasSeenCourseHint ? 'true' : undefined}
+                      className="interaction-hint course-detail-trigger block w-full px-4 pr-12 pt-3 text-left md:px-5 md:pr-14"
+                      aria-label={`查看 ${courseProductTitle} 課程介紹`}
+                    >
+                      <p className="font-heading text-xl font-black leading-tight text-pearl">
+                        {courseProductTitle}
                       </p>
-                      <p className="text-sm md:text-base text-pearl font-heading font-semibold">
-                        {sessionTitle}
+                      <p className="mt-2 text-sm leading-relaxed text-mist/74">
+                        {courseCardPitch}
                       </p>
-                      <p className="text-sm md:text-base text-pearl/85 tabular-nums">
-                        {activeCategory === 'FIGHT_NIGHT'
-                          ? fightNightPriceLabel
-                          : `${bootCampBasePriceLabel} 起`}
-                        {planSummary.hint && (
-                          <span className="text-mist/55 text-xs ml-2">
-                            {planSummary.hint}
-                          </span>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {shouldShowRemainingBadge(
+                          displayAvailability.remaining,
+                        ) && (
+                          <p
+                            className={`inline-flex w-fit rounded-full px-2.5 py-1 text-[11px] font-heading tracking-wide border ${remainingBadgeClass}`}
+                          >
+                            {getRemainingLabel(displayAvailability.remaining)}
+                          </p>
                         )}
-                      </p>
-                    </div>
-
-                    {routeContent && (
-                      <div className="rounded-xl border border-pearl/10 bg-black/25 p-3">
-                        <p className="text-[10px] md:text-xs font-heading tracking-[0.18em] text-mist/55 mb-1.5">
-                          FIGHTER 壓力應對
-                        </p>
-                        <p className="text-sm font-heading font-semibold text-pearl leading-snug">
-                          {routeContent.fighterLesson}
-                        </p>
-                        <div className="mt-2 flex flex-wrap gap-1.5">
-                          {routeContent.skills.slice(0, 3).map((skill) => (
-                            <span
-                              key={skill}
-                              className="rounded-full border border-pearl/10 bg-pearl/5 px-2 py-0.5 text-[11px] text-mist/75"
-                            >
-                              {skill}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {activeCategory === 'BOOT_CAMP' && (
-                      <div className="rounded-xl border border-neon/15 bg-neon/5 p-3">
-                        <div className="mb-2 flex items-center justify-between gap-2">
-                          <p className="text-[10px] md:text-xs font-heading tracking-[0.18em] text-neon/80">
-                            自動帶入四週
+                        {courseFeatureTags.slice(0, 3).map((tag) => (
+                          <p
+                            key={tag}
+                            className={`inline-flex w-fit rounded-full border px-2.5 py-1 text-[11px] font-heading tracking-wide ${getCourseFeatureTagClass(tag)}`}
+                          >
+                            {tag}
                           </p>
-                          <p className="text-[11px] text-mist/55">
-                            同館同時段
+                        ))}
+                        {bootCampRouteLabel && (
+                          <p className="inline-flex w-fit rounded-full border border-neon/20 bg-neon/10 px-2.5 py-1 text-[11px] font-heading tracking-wide text-neon/90">
+                            {routeContent?.badge ?? bootCampRouteLabel}
                           </p>
-                        </div>
-
-                        <div className="space-y-1.5">
-                          {bootCampSeries4.map((session, index) => (
-                            <div
-                              key={session.id}
-                              className="rounded-lg bg-black/20 px-2.5 py-2 text-xs md:text-sm"
-                            >
-                              <div className="flex items-center justify-between gap-3">
-                                <span className="font-heading text-mist/55">
-                                  第 {index + 1} 堂
-                                </span>
-                                <span className="font-heading text-pearl tabular-nums">
-                                  {formatShortDate(session.date)} 週{session.weekday}{' '}
-                                  {session.startTime}
-                                </span>
-                              </div>
-                              {routeContent?.weekPlan[index] && (
-                                <p className="mt-1 text-[11px] leading-snug text-mist/65">
-                                  {routeContent.weekPlan[index]}
-                                </p>
-                              )}
-                            </div>
-                          ))}
-                        </div>
+                        )}
                       </div>
-                    )}
+                      <CourseSpecStrip signals={courseDecisionSignals} />
+                      {courseBundleItems.length > 0 && (
+                        <div className="mt-3 flex min-w-0 items-center gap-2 rounded-xl border border-pearl/10 bg-pearl/[0.04] px-3 py-2">
+                          <span className="shrink-0 text-[10px] font-heading tracking-[0.16em] text-mist/45">
+                            方案包含
+                          </span>
+                          <div className="flex min-w-0 flex-wrap gap-1.5">
+                            {courseBundleItems.map((item) => (
+                              <span
+                                key={item}
+                                className="rounded-full bg-black/30 px-2 py-0.5 text-[11px] leading-snug text-pearl/84"
+                              >
+                                {item}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </button>
 
-                    <div className="mt-auto">
+                    <div className="mt-auto space-y-2 px-4 pb-4 pt-3 md:px-5">
                       {activeCategory === 'BOOT_CAMP' ? (
-                        <div className="grid grid-cols-2 gap-2">
-                          {bootCamp2Availability.remaining > 0 ? (
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              className="w-full border-neon/25 bg-neon/10 text-pearl"
-                              onClick={() =>
-                                openShoplineCheckout(
-                                  c,
-                                  2,
-                                  bootCamp2Availability.remaining,
-                                  getBootCampPackagePriceAmount(
+                        <div className="space-y-2">
+                          <div className="grid grid-cols-2 gap-2">
+                            {bootCamp2Availability.remaining > 0 ? (
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                className="w-full border-neon/25 bg-neon/10 text-pearl"
+                                onClick={() =>
+                                  openShoplineCheckout(
                                     c,
-                                    coachPricingTier,
                                     2,
-                                  ),
-                                  coachPricingTier,
-                                )
-                              }
-                              data-cta={`schedule-${c.id}-bootcamp-2`}
-                            >
-                              兩堂 · {getBootCampPackagePriceLabel(
-                                c,
-                                coachPricingTier,
-                                2,
-                              )}
-                            </Button>
-                          ) : (
-                            <DisabledCta>兩堂已售完</DisabledCta>
-                          )}
-                          {bootCamp4Availability.remaining > 0 ? (
+                                    bootCamp2Availability.remaining,
+                                    bootCamp2Price.amount,
+                                    coachPricingTier,
+                                  )
+                                }
+                                data-cta={`schedule-${c.id}-bootcamp-2`}
+                              >
+                                保留兩堂 · {bootCamp2Price.label}
+                              </Button>
+                            ) : (
+                              <DisabledCta>兩堂已售完</DisabledCta>
+                            )}
+                            {bootCamp4Availability.remaining > 0 ? (
+                              <Button
+                                variant="primary"
+                                size="sm"
+                                className="w-full"
+                                onClick={() =>
+                                  openShoplineCheckout(
+                                    c,
+                                    4,
+                                    bootCamp4Availability.remaining,
+                                    bootCamp4Price.amount,
+                                    coachPricingTier,
+                                  )
+                                }
+                                data-cta={`schedule-${c.id}-bootcamp-4`}
+                              >
+                                保留四堂 · {bootCamp4Price.label}
+                              </Button>
+                            ) : (
+                              <DisabledCta>四堂已售完</DisabledCta>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        sessionAvailability.remaining > 0 ? (
+                          <>
+                            {primaryCardCompareAtLabel && (
+                              <p className="text-right text-[11px] text-mist/45">
+                                一般{' '}
+                                <span className="line-through">
+                                  {primaryCardCompareAtLabel}
+                                </span>
+                              </p>
+                            )}
                             <Button
                               variant="primary"
-                              size="sm"
                               className="w-full"
                               onClick={() =>
                                 openShoplineCheckout(
                                   c,
-                                  4,
-                                  bootCamp4Availability.remaining,
-                                  getBootCampPackagePriceAmount(
-                                    c,
-                                    coachPricingTier,
-                                    4,
-                                  ),
+                                  1,
+                                  sessionAvailability.remaining,
+                                  fightNightPrice.amount,
                                   coachPricingTier,
                                 )
                               }
-                              data-cta={`schedule-${c.id}-bootcamp-4`}
+                              data-cta={`schedule-${c.id}-fight-night`}
                             >
-                              四堂 · {getBootCampPackagePriceLabel(
-                                c,
-                                coachPricingTier,
-                                4,
-                              )}
+                              保留這一場 · {fightNightPrice.label}
                             </Button>
-                          ) : (
-                            <DisabledCta>四堂已售完</DisabledCta>
-                          )}
-                        </div>
-                      ) : (
-                        sessionAvailability.remaining > 0 ? (
-                          <Button
-                            variant="primary"
-                            className="w-full"
-                            onClick={() =>
-                              openShoplineCheckout(
-                                c,
-                                1,
-                                sessionAvailability.remaining,
-                                getFightNightPriceAmount(c, coachPricingTier),
-                                coachPricingTier,
-                              )
-                            }
-                            data-cta={`schedule-${c.id}-fight-night`}
-                          >
-                            購買這一場 · {fightNightPriceLabel} · {getRemainingLabel(
-                              sessionAvailability.remaining,
-                              hasLiveData,
-                            )}
-                          </Button>
+                          </>
                         ) : (
                           <DisabledCta>本場已售完</DisabledCta>
                         )
                       )}
                     </div>
-                  </motion.article>
+                    </article>
+                  </motion.div>
                 )
               })}
             </div>
@@ -2124,14 +3338,78 @@ export function WeeklyScheduleSection({
         )}
       </div>
 
+      {activeCategory === 'BOOT_CAMP' && displayCourses.length > 0 && (
+        <div className="mx-auto mt-8 max-w-5xl border-y border-neon/20 bg-neon/8 px-4 py-5 md:mt-10 md:flex md:items-center md:justify-between md:gap-6 md:px-6 md:py-6">
+          <div className="max-w-xl">
+            <p className="font-heading text-xs uppercase tracking-[0.26em] text-neon/80">
+              只想先體驗一次？
+            </p>
+            <p className="mt-2 font-heading text-2xl font-black leading-tight text-pearl md:text-3xl">
+              先選一堂 Fight Night 感受現場
+            </p>
+          </div>
+          <div className="mt-5 md:mt-0 md:w-64">
+            <Button
+              variant="secondary"
+              size="lg"
+              href="/#ticket"
+              className="w-full border-neon/35 bg-neon/8 text-neon hover:border-neon/55 hover:bg-neon/14 hover:text-pearl"
+              onClick={() =>
+                track({
+                  event: 'bootcamp_single_class_redirect_click',
+                  params: {
+                    surface: 'bootcamp_schedule_block',
+                    active_route: activeBootCampRoute ?? 'all',
+                    active_venue_id: activeVenueId ?? 'all',
+                    active_date: activeDateIso ?? 'all',
+                  },
+                  metaStandardEvent: 'ViewContent',
+                  lineEventName: 'SingleClassRedirect',
+                })
+              }
+              data-cta="bootcamp-single-class-redirect"
+            >
+              回到 Fight Night 選課
+            </Button>
+          </div>
+        </div>
+      )}
+
       <p className="text-center text-xs md:text-sm text-mist/50 max-w-2xl mx-auto mt-8 md:mt-12">
         {weeklyScheduleSectionContent.footnote}
       </p>
+
+      {selectedCourseDetail && (
+        <CourseDetailModal
+          detail={selectedCourseDetail}
+          onClose={() => setSelectedCourseDetail(null)}
+          onPurchase={(option) => {
+            setSelectedCourseDetail(null)
+            openShoplineCheckout(
+              selectedCourseDetail.course,
+              option.packageSize,
+              option.remaining,
+              option.value,
+              selectedCourseDetail.pricingTier,
+            )
+          }}
+          onOpenCoach={() => {
+            if (!selectedCourseDetail.coachProfile) return
+            setSelectedCourseDetail(null)
+            setSelectedCoach({
+              coachName: selectedCourseDetail.course.coach,
+              profile: selectedCourseDetail.coachProfile,
+              course: selectedCourseDetail.course,
+            })
+          }}
+        />
+      )}
 
       {selectedCoach && (
         <CoachProfileModal
           coachName={selectedCoach.coachName}
           profile={selectedCoach.profile}
+          course={selectedCoach.course}
           onClose={() => setSelectedCoach(null)}
         />
       )}

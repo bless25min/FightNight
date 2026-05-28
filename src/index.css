@@ -171,6 +171,151 @@
     z-index: 2;
   }
 
+  .course-detail-trigger {
+    border-radius: 1rem;
+    transform-origin: center;
+    overflow: visible;
+    transition:
+      background-color 180ms ease,
+      box-shadow 180ms ease,
+      transform 180ms ease;
+    will-change: transform, box-shadow;
+  }
+
+  .course-detail-trigger:not([data-interacted='true']) {
+    background:
+      linear-gradient(135deg, rgba(255, 59, 92, 0.085), transparent 42%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent);
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.1),
+      0 0 26px rgba(255, 59, 92, 0.13);
+    animation: none;
+  }
+
+  .course-detail-trigger:not([data-interacted='true'])::after {
+    content: '';
+    position: absolute;
+    inset: -0.22rem;
+    z-index: 1;
+    pointer-events: none;
+    border-radius: 1.18rem;
+    border: 1px solid rgba(255, 59, 92, 0.52);
+    background: transparent;
+    opacity: 0.62;
+    transform: scale(0.985);
+    box-shadow:
+      0 0 22px rgba(255, 59, 92, 0.18),
+      0 0 34px rgba(191, 90, 242, 0.1);
+    animation: course-card-ring-breathe 2.35s ease-in-out infinite;
+  }
+
+  .course-detail-trigger:not([data-interacted='true']):hover {
+    background:
+      linear-gradient(135deg, rgba(255, 59, 92, 0.14), transparent 46%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent);
+    box-shadow:
+      0 0 0 1px rgba(255, 59, 92, 0.46),
+      0 0 0 6px rgba(255, 59, 92, 0.08),
+      0 0 30px rgba(255, 59, 92, 0.22),
+      inset 0 0 0 1px rgba(255, 59, 92, 0.28);
+  }
+
+  .course-detail-trigger:not([data-interacted='true']):hover::after {
+    border-color: rgba(255, 59, 92, 0.68);
+    animation-duration: 1.55s;
+  }
+
+  .course-detail-trigger[data-interacted='true']:hover {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.075);
+  }
+
+  .course-detail-trigger::before {
+    content: 'i';
+    position: absolute;
+    right: 1rem;
+    top: 0.95rem;
+    z-index: 3;
+    display: flex;
+    width: 1.05rem;
+    height: 1.05rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(0, 0, 0, 0.72);
+    color: rgba(255, 59, 92, 0.96);
+    font-family: Rajdhani, sans-serif;
+    font-size: 0.7rem;
+    font-weight: 800;
+    line-height: 1;
+    pointer-events: none;
+    box-shadow:
+      0 0 14px rgba(255, 59, 92, 0.2),
+      0 0 24px rgba(191, 90, 242, 0.1);
+  }
+
+  .course-detail-trigger:not([data-interacted='true'])::before {
+    animation: coach-avatar-pulse 2.4s ease-in-out infinite;
+  }
+
+  .course-detail-trigger:hover::before {
+    border-color: rgba(255, 255, 255, 0.32);
+    color: rgba(255, 255, 255, 0.96);
+    box-shadow:
+      0 0 16px rgba(255, 59, 92, 0.28),
+      0 0 30px rgba(191, 90, 242, 0.14);
+  }
+
+  .coach-avatar-trigger {
+    position: relative;
+    isolation: isolate;
+  }
+
+  .coach-avatar-trigger > img {
+    position: relative;
+    z-index: 1;
+    box-shadow:
+      0 0 0 1px rgba(40, 236, 210, 0.18),
+      0 0 20px rgba(40, 236, 210, 0.12);
+  }
+
+  .coach-avatar-trigger:not([data-interacted='true'])::before {
+    content: '';
+    position: absolute;
+    inset: -0.32rem;
+    z-index: 0;
+    pointer-events: none;
+    border-radius: 999px;
+    border: 1px solid rgba(40, 236, 210, 0.52);
+    box-shadow:
+      0 0 20px rgba(40, 236, 210, 0.22),
+      0 0 36px rgba(191, 90, 242, 0.12);
+    animation: coach-avatar-pulse 2.4s ease-in-out infinite;
+  }
+
+  .coach-avatar-trigger::after {
+    content: 'i';
+    position: absolute;
+    right: -0.12rem;
+    bottom: -0.08rem;
+    z-index: 2;
+    display: flex;
+    width: 1rem;
+    height: 1rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    background: rgba(0, 0, 0, 0.78);
+    color: rgba(40, 236, 210, 0.95);
+    font-family: Rajdhani, sans-serif;
+    font-size: 0.68rem;
+    font-weight: 800;
+    line-height: 1;
+    box-shadow: 0 0 14px rgba(40, 236, 210, 0.22);
+  }
+
   .image-interaction-hint > * {
     position: static;
     z-index: auto;
@@ -244,6 +389,38 @@
     }
   }
 
+  @keyframes coach-avatar-pulse {
+    0%,
+    100% {
+      opacity: 0.58;
+      transform: scale(0.96);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.08);
+    }
+  }
+
+  @keyframes course-card-ring-breathe {
+    0%,
+    100% {
+      opacity: 0.62;
+      transform: scale(0.985);
+      box-shadow:
+        0 0 0 0 rgba(255, 59, 92, 0.12),
+        0 0 20px rgba(255, 59, 92, 0.18),
+        0 0 30px rgba(191, 90, 242, 0.1);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.018);
+      box-shadow:
+        0 0 0 0.5rem rgba(255, 59, 92, 0.1),
+        0 0 28px rgba(255, 59, 92, 0.27),
+        0 0 42px rgba(191, 90, 242, 0.16);
+    }
+  }
+
   @keyframes swipe-cue {
     0%,
     100% {
@@ -271,6 +448,8 @@
   @media (prefers-reduced-motion: reduce) {
     .interaction-hint,
     .interaction-hint::after,
+    .course-detail-trigger::before,
+    .coach-avatar-trigger::before,
     .swipe-hint::before,
     .swipe-hint::after {
       animation: none !important;
