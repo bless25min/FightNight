@@ -1182,40 +1182,40 @@ function getCourseDetailExperienceLead(
 
   if (isBootCamp) {
     if (course.name.includes('拳擊')) {
-      return '把拳套落在沙包上的觸感留下來，你會在同一個時段回來，讓站姿、出拳、呼吸和沙包悶響慢慢變熟，像在城市裡替自己保留一個固定的出口。'
+      return '固定回到同一個時段，把拳套落在沙包上的觸感留下來，讓站姿、出拳、呼吸和沙包悶響慢慢變成熟悉的身體記憶。'
     }
     if (course.name.includes('泰拳') || course.name.includes('踢拳')) {
-      return '建立習慣，每週回到同一個節奏裡。拳、踢、重心、吐氣會一點一點變成身體的暗號，讓你重新進入那個有人一起流汗、一起被推上去的小圈子。'
+      return '建立習慣，每週回到同一個節奏裡。拳、踢、重心和吐氣會一點一點變熟，讓身體記得那個被點燃的狀態。'
     }
-    return '替自己保留一段會固定發生的身體記憶。你只要出現，教練口令、回合和旁邊的人會把你帶回那個被推動、被點燃、最後真的完成的狀態。'
+    return '替自己保留一段會固定發生的身體記憶。你只要出現，教練口令、回合和旁邊的人會把你帶回場裡。'
   }
 
   if (course.name.includes('基礎拳擊')) {
-    return '你先被帶進一個安全又有張力的環境，教練會讓你把站姿、手套、呼吸和第一下出拳接起來；沙包的悶響很快會把腦中的雜訊蓋掉，最後只剩全場一起倒數的那 60 秒。'
+    return '你不用一進場就證明自己。先把緊張交給教練，把注意力放回呼吸、拳套和眼前的黑色沙包。'
   }
 
   if (course.name.includes('拳擊體適能')) {
-    return '這堂把出拳、沙包和體能回合編成一段壓力釋放儀式。你不用先想自己能不能撐完，只要把拳套戴好，跟著口令，把白天留在身上的悶，一下下交給黑色沙包。'
+    return '把拳套戴好，先不用想自己能不能撐完。教練會把出拳、沙包和體能回合編成一段可以跟上的壓力釋放。'
   }
 
   if (course.name.includes('基礎泰拳')) {
-    return '拳、踢、膝會先被拆得能跟上，但它真正迷人的地方不是技術，而是你會感覺身體開始醒來。重心轉過去、膝蓋抬起來、吐氣跟上，現場會把你一層層推到更高的位置。'
+    return '不用先把拳、踢、膝學會才敢進來。你會先跟上節奏，再讓重心、吐氣和沙包聲把身體一段段喚醒。'
   }
 
   if (course.name.includes('基礎踢拳')) {
-    return '一開始你可能只是想試試看，但踢拳聲、教練口令和全場呼吸會慢慢把你吸進去。你會從跟動作，變成跟節奏，最後變成真的在那個夜晚裡。'
+    return '第一組踢拳先讓身體進入節奏。你會從跟動作，慢慢變成跟呼吸、跟口令、跟全場一起往前。'
   }
 
   if (course.name.includes('泰拳體適能')) {
-    return '拳、踢、膝、沙包和倒數會一段段堆成風暴；你會聽到教練的吶喊、旁邊的人喘息，直到最後一起把忍耐放掉。'
+    return '拳、踢、膝、沙包和倒數會一段段堆起來。你只要跟著現場往前，讓身體把壓力一層層放掉。'
   }
 
   if (course.name.includes('踢拳體適能')) {
-    return '這堂會先讓你跟上，然後慢慢把你帶走。踢拳落下、腳步移動、口令加速，日常感會被一層一層剝掉，只剩眼前的沙包、呼吸和越來越近的倒數。'
+    return '這堂會先讓你跟上，然後慢慢把你帶走。踢拳落下、腳步移動、口令加速，日常感會被一層一層剝掉。'
   }
 
   if (course.name.includes('戰鬥體適能')) {
-    return '這堂最迷人的地方，是你不用獨自靠意志力撐完。體能、拳擊、倒數和全場氣氛會被編成一段城市裡的狂喜，最想停下來的那一刻，旁邊的人會把你一起推過去。'
+    return '你不用獨自靠意志力撐完。體能、拳擊、倒數和全場氣氛會把你一起推進那段最累、也最清醒的高點。'
   }
 
   return '這堂不是只把動作做完，而是把注意力、呼吸和力氣交給現場，讓身體暫時離開普通的一天。'
@@ -1228,20 +1228,20 @@ function getCourseExperienceMoments(
   if (activeCategory === 'BOOT_CAMP') {
     return [
       {
-        title: '先把出現變簡單',
-        body: '你先選好同一個館、同一個時段，到了那天不需要再和自己討價還價，只要走進場裡。',
+        title: '先把時間留住',
+        body: '把接下來的課先排好，到了那天不需要再和自己討價還價，只要走進場裡。',
       },
       {
-        title: '拳套聲開始變熟',
-        body: '第一堂還在找節奏，第二堂開始記得怎麼呼吸、怎麼出拳、怎麼把力量送進沙包。',
+        title: '讓身體認得節奏',
+        body: '第一堂還在找呼吸，下一堂開始記得站姿、出拳和沙包聲。',
       },
       {
-        title: '固定節奏把你推上去',
-        body: '教練口令、回合和旁邊的人會一次次把你帶回同一個狀態，讓熱血慢慢變成習慣。',
+        title: '每週回到同一個場',
+        body: '教練口令、回合和旁邊的人會把你帶回那個狀態，讓熱血慢慢變成習慣。',
       },
       {
-        title: '下課後留下入口',
-        body: '留下來的不只是幾堂課，而是下次可以再次回到身體裡的清楚入口。',
+        title: '完成感留下來',
+        body: '留下來的不只是課程次數，而是一段固定會發生的身體記憶。',
       },
     ]
   }
@@ -1249,40 +1249,40 @@ function getCourseExperienceMoments(
   if (course.name.includes('泰拳') || course.name.includes('踢拳')) {
     return [
       {
-        title: '先跟上第一組節奏',
-        body: '教練會把拳、踢、膝拆到能跟上，讓緊張先被節奏接住。',
+        title: '先進入節奏',
+        body: '教練會把第一組動作拆到能跟上，讓緊張先有地方放。',
       },
       {
-        title: '踢擊把身體點亮',
-        body: '重心轉過去、吐氣跟上、沙包聲落下，身體會從試探變成投入。',
+        title: '重心開始醒來',
+        body: '轉髖、吐氣、踢擊落下，身體會從試探變成投入。',
       },
       {
-        title: '倒數把全場推高',
-        body: '口令、倒數和旁邊的人會把你推進更高的位置，在最想停下來時再多做一下。',
+        title: '全場把你推高',
+        body: '口令加速、倒數靠近，旁邊的人會把你帶過最想停下來的那一下。',
       },
       {
-        title: '完成後還在發熱',
-        body: '最後一分鐘結束後，剛剛累積的悶、熱和專注會慢慢沉下來，變成身體記得住的東西。',
+        title: '熱留在身上',
+        body: '最後一輪結束後，喘息慢慢沉下來，你會知道自己真的完成了一段。',
       },
     ]
   }
 
   return [
     {
-      title: '先把緊張交給教練',
-      body: '進場後不用急著證明自己，教練會用口令和動作把你帶進安全又有張力的節奏。',
+      title: '口令先接住你',
+      body: '站姿、手位和第一下出拳會被拆成能跟上的節奏，身體先進入狀態。',
     },
     {
-      title: '第一下打進沙包',
-      body: '拳套扎實撞上黑色沙包時，聲音會比想像更沉；你會開始明白，這不是把動作做完，而是真的把力氣送出去。',
+      title: '沙包聲把雜訊蓋掉',
+      body: '拳套落下的悶響會把注意力從腦袋拉回身體，力氣開始有地方釋放。',
     },
     {
-      title: '全場倒數把你推上去',
-      body: '你不需要自己想還能不能撐，教練和旁邊的人會把你推到下一下、下一回合、下一次吐氣。',
+      title: '回合把全場拉在一起',
+      body: '越累的時候，教練的倒數和身旁的人會讓你少想一點，再多做一下。',
     },
     {
-      title: '最後 60 秒留在身上',
-      body: '完成後會有幾秒安靜，身體還在發熱，剛剛堆到最高的喘息和吶喊慢慢沉下來，壓力也被留在場裡。',
+      title: '最後 60 秒留下來',
+      body: '結束後有幾秒安靜，身體還在發熱，壓力像被留在場裡。',
     },
   ]
 }
@@ -1476,21 +1476,26 @@ function CourseDetailModal({
               <p className="mt-3 text-base leading-relaxed text-mist/86 md:text-lg">
                 {copy.intro}
               </p>
-              <div className="mt-5 grid gap-3 md:grid-cols-2">
-                {copy.experienceMoments.map((moment) => (
-                  <div
+              <ol className="mt-5 space-y-3">
+                {copy.experienceMoments.map((moment, index) => (
+                  <li
                     key={moment.title}
-                    className="rounded-xl border border-pearl/10 bg-black/24 p-3"
+                    className="grid grid-cols-[2.25rem_minmax(0,1fr)] gap-3 rounded-xl border border-pearl/10 bg-black/24 p-3"
                   >
-                    <p className="font-heading text-sm font-black text-pearl">
-                      {moment.title}
-                    </p>
-                    <p className="mt-2 text-sm leading-relaxed text-mist/78">
-                      {moment.body}
-                    </p>
-                  </div>
+                    <span className="flex h-9 w-9 items-center justify-center rounded-full border border-neon/25 bg-neon/10 font-heading text-xs font-black text-neon">
+                      {String(index + 1).padStart(2, '0')}
+                    </span>
+                    <span>
+                      <span className="block font-heading text-sm font-black text-pearl">
+                        {moment.title}
+                      </span>
+                      <span className="mt-1.5 block text-sm leading-relaxed text-mist/78">
+                        {moment.body}
+                      </span>
+                    </span>
+                  </li>
                 ))}
-              </div>
+              </ol>
             </div>
 
             <div className="rounded-2xl border border-neon/18 bg-neon/8 p-4 md:p-5">
