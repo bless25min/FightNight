@@ -1,5 +1,8 @@
 import { notifyLinePaymentSuccess } from '../shopline/line-notify.js'
 
+const LINE_PUSH_ENDPOINT = 'https://api.line.me/v2/bot/message/push'
+const DEFAULT_PUBLIC_ORIGIN = 'https://fightnight.25min.co'
+
 const ATTENTION_STATUSES = [
   'payment_processing',
   'refund_processing',
@@ -46,6 +49,10 @@ function assertAdmin(request, env) {
 function toNumber(value) {
   const number = Number(value)
   return Number.isFinite(number) ? number : 0
+}
+
+function trimText(value, maxLength) {
+  return String(value || '').trim().slice(0, maxLength)
 }
 
 function getLimit(url, fallback = 50, max = 200) {
@@ -138,6 +145,7 @@ async function ensureAdminCoreTables(env) {
   ])
   await ensureLineCustomerColumns(env)
   await ensureOrderTrackingColumns(env)
+  await ensureLineRecoveryTables(env)
 }
 
 async function ensureCustomerTrackingTables(env) {
@@ -423,6 +431,36 @@ async function ensureOrderTrackingColumns(env) {
   }
 }
 
+async function ensureLineRecoveryTables(env) {
+  await env.DB.batch([
+    env.DB.prepare(
+      `CREATE TABLE IF NOT EXISTS line_recovery_messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        recovery_id TEXT NOT NULL UNIQUE,
+        line_user_id TEXT NOT NULL,
+        template_id TEXT NOT NULL,
+        target_url TEXT,
+        status TEXT NOT NULL DEFAULT 'sending',
+        message_json TEXT,
+        response_json TEXT,
+        error TEXT,
+        attempted_at TEXT NOT NULL DEFAULT (datetime('now')),
+        sent_at TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        FOREIGN KEY (line_user_id) REFERENCES line_customers(line_user_id)
+      )`,
+    ),
+    env.DB.prepare(
+      `CREATE INDEX IF NOT EXISTS idx_line_recovery_messages_user
+       ON line_recovery_messages (line_user_id, created_at)`,
+    ),
+    env.DB.prepare(
+      `CREATE INDEX IF NOT EXISTS idx_line_recovery_messages_status
+       ON line_recovery_messages (status, created_at)`,
+    ),
+  ])
+}
+
 function normalizeOrder(row) {
   return {
     referenceId: row.reference_id,
@@ -692,6 +730,11 @@ function normalizeLineCustomer(row) {
       row.latest_order_line_email_verified == null
         ? null
         : Boolean(row.latest_order_line_email_verified),
+    latestRecoveryTemplateId: row.latest_recovery_template_id || null,
+    latestRecoveryStatus: row.latest_recovery_status || null,
+    latestRecoverySentAt: row.latest_recovery_sent_at || null,
+    latestRecoveryAttemptedAt: row.latest_recovery_attempted_at || null,
+    latestRecoveryError: row.latest_recovery_error || null,
   }
 }
 
@@ -709,12 +752,26 @@ async function listLineCustomers(env, url) {
   if (!hasOrdersTable) {
     const rows = await safeAll(
       env,
-      `SELECT line_user_id, display_name, picture_url, status_message,
-              email, email_verified, is_friend, access_count, first_seen_at, last_seen_at,
+      `WITH latest_recovery AS (
+         SELECT line_user_id, template_id, status, sent_at, attempted_at, error,
+                ROW_NUMBER() OVER (
+                  PARTITION BY line_user_id
+                  ORDER BY datetime(COALESCE(sent_at, attempted_at, created_at)) DESC, id DESC
+                ) AS rn
+         FROM line_recovery_messages
+       )
+       SELECT lc.line_user_id, lc.display_name, lc.picture_url, lc.status_message,
+              lc.email, lc.email_verified, lc.is_friend, lc.access_count, lc.first_seen_at, lc.last_seen_at,
               0 AS total_orders, 0 AS paid_orders, 0 AS pending_orders,
-              0 AS paid_revenue
-       FROM line_customers
-       ORDER BY datetime(last_seen_at) DESC
+              0 AS paid_revenue,
+              lr.template_id AS latest_recovery_template_id,
+              lr.status AS latest_recovery_status,
+              lr.sent_at AS latest_recovery_sent_at,
+              lr.attempted_at AS latest_recovery_attempted_at,
+              lr.error AS latest_recovery_error
+       FROM line_customers lc
+       LEFT JOIN latest_recovery lr ON lr.line_user_id = lc.line_user_id AND lr.rn = 1
+       ORDER BY datetime(lc.last_seen_at) DESC
        LIMIT ?`,
       [limit],
     )
@@ -726,12 +783,26 @@ async function listLineCustomers(env, url) {
     if (url.searchParams.get('minimal') === '1') {
       const rows = await safeAll(
         env,
-        `SELECT line_user_id, display_name, picture_url, status_message,
-                email, email_verified, is_friend, access_count, first_seen_at, last_seen_at,
+        `WITH latest_recovery AS (
+           SELECT line_user_id, template_id, status, sent_at, attempted_at, error,
+                  ROW_NUMBER() OVER (
+                    PARTITION BY line_user_id
+                    ORDER BY datetime(COALESCE(sent_at, attempted_at, created_at)) DESC, id DESC
+                  ) AS rn
+           FROM line_recovery_messages
+         )
+         SELECT lc.line_user_id, lc.display_name, lc.picture_url, lc.status_message,
+                lc.email, lc.email_verified, lc.is_friend, lc.access_count, lc.first_seen_at, lc.last_seen_at,
                 0 AS total_orders, 0 AS paid_orders, 0 AS pending_orders,
-                0 AS paid_revenue
-         FROM line_customers
-         ORDER BY datetime(last_seen_at) DESC
+                0 AS paid_revenue,
+                lr.template_id AS latest_recovery_template_id,
+                lr.status AS latest_recovery_status,
+                lr.sent_at AS latest_recovery_sent_at,
+                lr.attempted_at AS latest_recovery_attempted_at,
+                lr.error AS latest_recovery_error
+         FROM line_customers lc
+         LEFT JOIN latest_recovery lr ON lr.line_user_id = lc.line_user_id AND lr.rn = 1
+         ORDER BY datetime(lc.last_seen_at) DESC
          LIMIT ?`,
         [limit],
       )
@@ -750,6 +821,14 @@ async function listLineCustomers(env, url) {
          FROM course_orders
          WHERE line_user_id IS NOT NULL AND line_user_id != ''
          GROUP BY line_user_id
+       ),
+       latest_recovery AS (
+         SELECT line_user_id, template_id, status, sent_at, attempted_at, error,
+                ROW_NUMBER() OVER (
+                  PARTITION BY line_user_id
+                  ORDER BY datetime(COALESCE(sent_at, attempted_at, created_at)) DESC, id DESC
+                ) AS rn
+         FROM line_recovery_messages
        )
        SELECT lc.line_user_id, lc.display_name, lc.picture_url, lc.status_message,
               lc.email, lc.email_verified, lc.is_friend, lc.access_count,
@@ -757,9 +836,15 @@ async function listLineCustomers(env, url) {
               COALESCE(os.total_orders, 0) AS total_orders,
               COALESCE(os.paid_orders, 0) AS paid_orders,
               COALESCE(os.pending_orders, 0) AS pending_orders,
-              COALESCE(os.paid_revenue, 0) AS paid_revenue
+              COALESCE(os.paid_revenue, 0) AS paid_revenue,
+              lr.template_id AS latest_recovery_template_id,
+              lr.status AS latest_recovery_status,
+              lr.sent_at AS latest_recovery_sent_at,
+              lr.attempted_at AS latest_recovery_attempted_at,
+              lr.error AS latest_recovery_error
        FROM line_customers lc
        LEFT JOIN order_stats os ON os.line_user_id = lc.line_user_id
+       LEFT JOIN latest_recovery lr ON lr.line_user_id = lc.line_user_id AND lr.rn = 1
        ORDER BY datetime(lc.last_seen_at) DESC
        LIMIT ?`,
       [limit],
@@ -772,7 +857,8 @@ async function listLineCustomers(env, url) {
     env,
     `WITH order_ranked AS (
      SELECT co.line_user_id, co.reference_id, co.status, co.course_name,
-            co.amount_value, co.paid_at, co.created_at, co.updated_at,
+            co.amount_value, co.shopline_session_url, co.source_path,
+              co.paid_at, co.created_at, co.updated_at,
               co.buyer_name, co.buyer_phone, co.buyer_email,
               co.line_email, co.line_email_verified,
               ROW_NUMBER() OVER (
@@ -791,6 +877,14 @@ async function listLineCustomers(env, url) {
               COALESCE(SUM(CASE WHEN status = 'paid' THEN amount_value ELSE 0 END), 0) AS paid_revenue
        FROM order_ranked
        GROUP BY line_user_id
+     ),
+     latest_recovery AS (
+       SELECT line_user_id, template_id, status, sent_at, attempted_at, error,
+              ROW_NUMBER() OVER (
+                PARTITION BY line_user_id
+                ORDER BY datetime(COALESCE(sent_at, attempted_at, created_at)) DESC, id DESC
+              ) AS rn
+       FROM line_recovery_messages
      )
      SELECT lc.line_user_id, lc.display_name, lc.picture_url, lc.status_message,
             lc.email, lc.email_verified, lc.is_friend, lc.access_count,
@@ -809,11 +903,17 @@ async function listLineCustomers(env, url) {
             latest.buyer_phone AS buyer_phone,
             latest.buyer_email AS buyer_email,
             latest.line_email AS latest_order_line_email,
-            latest.line_email_verified AS latest_order_line_email_verified
+            latest.line_email_verified AS latest_order_line_email_verified,
+            lr.template_id AS latest_recovery_template_id,
+            lr.status AS latest_recovery_status,
+            lr.sent_at AS latest_recovery_sent_at,
+            lr.attempted_at AS latest_recovery_attempted_at,
+            lr.error AS latest_recovery_error
      FROM line_customers lc
      LEFT JOIN order_stats os ON os.line_user_id = lc.line_user_id
      LEFT JOIN order_ranked latest
        ON latest.line_user_id = lc.line_user_id AND latest.rn = 1
+     LEFT JOIN latest_recovery lr ON lr.line_user_id = lc.line_user_id AND lr.rn = 1
      ORDER BY datetime(lc.last_seen_at) DESC
      LIMIT ?`,
     [limit],
@@ -1345,6 +1445,355 @@ async function linkOrderLineCustomer(env, referenceId, lineUserId) {
   return order
 }
 
+function createRecoveryId() {
+  if (globalThis.crypto?.randomUUID) {
+    return `lr_${globalThis.crypto.randomUUID()}`
+  }
+  return `lr_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`
+}
+
+function formatLineMoney(value, currency = 'TWD') {
+  const amount = Number(value || 0)
+  if (currency !== 'TWD') return `${currency} ${amount.toLocaleString('en-US')}`
+  return `NT$${amount.toLocaleString('zh-TW')}`
+}
+
+function getPublicOrigin(env, request) {
+  const configured =
+    env.PUBLIC_SITE_URL ||
+    env.SITE_ORIGIN ||
+    env.PUBLIC_ORIGIN ||
+    env.VITE_PUBLIC_SITE_URL
+
+  if (configured) {
+    try {
+      return new URL(configured).origin
+    } catch {
+      // Fall back to the request origin below.
+    }
+  }
+
+  try {
+    return new URL(request.url).origin
+  } catch {
+    return DEFAULT_PUBLIC_ORIGIN
+  }
+}
+
+function buildRecoveryTicketUrl(env, request, recoveryId, templateId) {
+  const url = new URL('/', getPublicOrigin(env, request))
+  url.searchParams.set('utm_source', 'line')
+  url.searchParams.set('utm_medium', 'recovery')
+  url.searchParams.set('utm_campaign', templateId)
+  url.searchParams.set('recovery_id', recoveryId)
+  url.hash = 'ticket'
+  return url.toString()
+}
+
+function isPendingOrderStatus(status) {
+  return ['pending', 'payment_processing', 'session_failed'].includes(
+    String(status || ''),
+  )
+}
+
+function chooseRecoveryTemplate(customer, requestedTemplateId) {
+  const allowed = new Set([
+    'pending_checkout',
+    'course_reminder',
+    'newcomer_entry',
+  ])
+  if (allowed.has(requestedTemplateId)) return requestedTemplateId
+  if (customer.latest_order_reference_id && isPendingOrderStatus(customer.latest_order_status)) {
+    return 'pending_checkout'
+  }
+  if (toNumber(customer.access_count) > 1) return 'course_reminder'
+  return 'newcomer_entry'
+}
+
+function buildRecoveryMessage({ customer, templateId, targetUrl }) {
+  const latestCourseName = trimText(customer.latest_order_course_name, 80)
+  const latestAmount =
+    customer.latest_order_amount_value == null
+      ? ''
+      : formatLineMoney(customer.latest_order_amount_value)
+
+  const copyByTemplate = {
+    pending_checkout: {
+      eyebrow: '你剛剛看的課',
+      title: '這堂還可以預訂',
+      body: latestCourseName
+        ? `你剛剛建立的 ${latestCourseName} 還沒完成付款。如果還想保留這堂，可以從這裡回去完成。`
+        : '你剛剛建立的課程還沒完成付款。如果還想保留這堂，可以從這裡回去完成。',
+      meta: latestAmount ? `目前價格 ${latestAmount}` : '付款完成後才會保留名額',
+      button: '回去完成付款',
+    },
+    course_reminder: {
+      eyebrow: 'Fight Night',
+      title: '先從一堂能跟上的課開始',
+      body:
+        '如果剛剛有心動但還沒下單，建議先選新手入門或體適能場。教練會用口令、沙包和回合把你帶進節奏。',
+      meta: '不對打、不被打，先體驗一次',
+      button: '看本週可預訂課程',
+    },
+    newcomer_entry: {
+      eyebrow: '第一次進場',
+      title: '這週可以先體驗一次',
+      body:
+        '不用先有拳擊或泰拳基礎。選一堂 Fight Night，新手也能跟著教練把第一下出拳送進沙包。',
+      meta: '適合第一次嘗試的新手入口',
+      button: '看 Fight Night 課程',
+    },
+  }
+  const copy = copyByTemplate[templateId] || copyByTemplate.newcomer_entry
+
+  return {
+    type: 'flex',
+    altText: `${copy.title}｜${copy.button}`,
+    contents: {
+      type: 'bubble',
+      size: 'mega',
+      body: {
+        type: 'box',
+        layout: 'vertical',
+        spacing: 'md',
+        contents: [
+          {
+            type: 'text',
+            text: copy.eyebrow,
+            size: 'xs',
+            weight: 'bold',
+            color: '#E3242B',
+          },
+          {
+            type: 'text',
+            text: copy.title,
+            weight: 'bold',
+            size: 'xl',
+            color: '#111111',
+            wrap: true,
+          },
+          {
+            type: 'text',
+            text: copy.body,
+            size: 'sm',
+            color: '#555555',
+            wrap: true,
+          },
+          {
+            type: 'separator',
+            margin: 'md',
+          },
+          {
+            type: 'text',
+            text: copy.meta,
+            size: 'sm',
+            color: '#777777',
+            wrap: true,
+          },
+        ],
+      },
+      footer: {
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          {
+            type: 'button',
+            style: 'primary',
+            color: '#E3242B',
+            action: {
+              type: 'uri',
+              label: copy.button,
+              uri: targetUrl,
+            },
+          },
+        ],
+      },
+    },
+  }
+}
+
+async function getRecoveryCustomer(env, lineUserId) {
+  const hasOrdersTable = Boolean(
+    await safeFirst(
+      env,
+      `SELECT name FROM sqlite_master
+       WHERE type = 'table' AND name = 'course_orders'`,
+    ),
+  )
+
+  if (!hasOrdersTable) {
+    return safeFirst(
+      env,
+      `SELECT lc.line_user_id, lc.display_name, lc.picture_url, lc.email,
+              lc.email_verified, lc.is_friend, lc.access_count, lc.last_seen_at,
+              0 AS total_orders, 0 AS paid_orders, 0 AS pending_orders,
+              0 AS paid_revenue
+       FROM line_customers lc
+       WHERE lc.line_user_id = ?`,
+      [lineUserId],
+    )
+  }
+
+  return safeFirst(
+    env,
+    `WITH order_ranked AS (
+       SELECT co.line_user_id, co.reference_id, co.status, co.course_name,
+              co.amount_value, co.currency, co.shopline_session_url,
+              co.source_path, co.created_at, co.updated_at, co.paid_at,
+              ROW_NUMBER() OVER (
+                PARTITION BY co.line_user_id
+                ORDER BY
+                  CASE WHEN co.status IN ('pending', 'payment_processing', 'session_failed') THEN 0 ELSE 1 END,
+                  datetime(COALESCE(co.paid_at, co.updated_at, co.created_at)) DESC,
+                  co.reference_id DESC
+              ) AS rn
+       FROM course_orders co
+       WHERE co.line_user_id = ?
+     ),
+     order_stats AS (
+       SELECT line_user_id,
+              COUNT(*) AS total_orders,
+              COALESCE(SUM(CASE WHEN status = 'paid' THEN 1 ELSE 0 END), 0) AS paid_orders,
+              COALESCE(SUM(CASE WHEN status IN ('pending', 'payment_processing', 'session_failed') THEN 1 ELSE 0 END), 0) AS pending_orders,
+              COALESCE(SUM(CASE WHEN status = 'paid' THEN amount_value ELSE 0 END), 0) AS paid_revenue
+       FROM order_ranked
+       GROUP BY line_user_id
+     )
+     SELECT lc.line_user_id, lc.display_name, lc.picture_url, lc.email,
+            lc.email_verified, lc.is_friend, lc.access_count, lc.last_seen_at,
+            COALESCE(os.total_orders, 0) AS total_orders,
+            COALESCE(os.paid_orders, 0) AS paid_orders,
+            COALESCE(os.pending_orders, 0) AS pending_orders,
+            COALESCE(os.paid_revenue, 0) AS paid_revenue,
+            latest.reference_id AS latest_order_reference_id,
+            latest.status AS latest_order_status,
+            latest.course_name AS latest_order_course_name,
+            latest.amount_value AS latest_order_amount_value,
+            latest.currency AS latest_order_currency,
+            latest.shopline_session_url AS latest_order_shopline_session_url,
+            latest.source_path AS latest_order_source_path
+     FROM line_customers lc
+     LEFT JOIN order_stats os ON os.line_user_id = lc.line_user_id
+     LEFT JOIN order_ranked latest
+       ON latest.line_user_id = lc.line_user_id AND latest.rn = 1
+     WHERE lc.line_user_id = ?`,
+    [lineUserId, lineUserId],
+  )
+}
+
+async function sendLineRecoveryMessage(env, request, lineUserId, body = {}) {
+  const customer = await getRecoveryCustomer(env, lineUserId)
+  if (!customer) return { error: 'LINE customer not found', status: 404 }
+  if (!customer.is_friend) {
+    return { error: '這位用戶不是 LINE 好友，無法主動推播。', status: 409 }
+  }
+  if (toNumber(customer.paid_orders) > 0 && !body?.force) {
+    return { error: '這位用戶已有付款紀錄，已略過喚回訊息。', status: 409 }
+  }
+  if (!env.LINE_CHANNEL_ACCESS_TOKEN) {
+    return { error: 'Missing LINE_CHANNEL_ACCESS_TOKEN', status: 503 }
+  }
+
+  const recoveryId = createRecoveryId()
+  const templateId = chooseRecoveryTemplate(
+    customer,
+    trimText(body?.templateId, 80),
+  )
+  const targetUrl =
+    templateId === 'pending_checkout' &&
+    customer.latest_order_shopline_session_url &&
+    String(customer.latest_order_status || '') === 'pending'
+      ? customer.latest_order_shopline_session_url
+      : buildRecoveryTicketUrl(env, request, recoveryId, templateId)
+  const message = buildRecoveryMessage({ customer, templateId, targetUrl })
+
+  await env.DB.prepare(
+    `INSERT INTO line_recovery_messages (
+       recovery_id, line_user_id, template_id, target_url, status,
+       message_json, attempted_at
+     ) VALUES (?, ?, ?, ?, 'sending', ?, datetime('now'))`,
+  )
+    .bind(
+      recoveryId,
+      customer.line_user_id,
+      templateId,
+      targetUrl,
+      JSON.stringify(message),
+    )
+    .run()
+
+  try {
+    const response = await fetch(LINE_PUSH_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${env.LINE_CHANNEL_ACCESS_TOKEN}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        to: customer.line_user_id,
+        messages: [message],
+      }),
+    })
+    const responseBody = await response.json().catch(() => null)
+
+    if (!response.ok) {
+      const error = `LINE push failed with HTTP ${response.status}`
+      await env.DB.prepare(
+        `UPDATE line_recovery_messages
+         SET status = 'failed',
+             response_json = ?,
+             error = ?,
+             attempted_at = datetime('now')
+         WHERE recovery_id = ?`,
+      )
+        .bind(
+          responseBody ? JSON.stringify(responseBody).slice(0, 8000) : null,
+          error,
+          recoveryId,
+        )
+        .run()
+
+      return { error, status: 502, recoveryId, templateId, response: responseBody }
+    }
+
+    await env.DB.prepare(
+      `UPDATE line_recovery_messages
+       SET status = 'sent',
+           response_json = ?,
+           sent_at = datetime('now'),
+           attempted_at = datetime('now')
+       WHERE recovery_id = ?`,
+    )
+      .bind(
+        responseBody ? JSON.stringify(responseBody).slice(0, 8000) : JSON.stringify({ ok: true }),
+        recoveryId,
+      )
+      .run()
+
+    return {
+      ok: true,
+      status: 'sent',
+      recoveryId,
+      templateId,
+      targetUrl,
+    }
+  } catch (error) {
+    const messageText =
+      error instanceof Error ? error.message : 'LINE push request failed'
+    await env.DB.prepare(
+      `UPDATE line_recovery_messages
+       SET status = 'failed',
+           error = ?,
+           attempted_at = datetime('now')
+       WHERE recovery_id = ?`,
+    )
+      .bind(messageText, recoveryId)
+      .run()
+
+    return { error: messageText, status: 502, recoveryId, templateId }
+  }
+}
+
 export async function onRequestGet({ request, env }) {
   if (!env.DB) {
     return json({ error: 'Missing D1 binding DB' }, { status: 503 })
@@ -1437,6 +1886,13 @@ export async function onRequestPost({ request, env }) {
     return order
       ? json({ ok: true, order })
       : json({ error: 'Order or LINE customer not found' }, { status: 404 })
+  }
+
+  if (resource === 'line-customers' && id && action === 'send-recovery') {
+    const body = await request.json().catch(() => ({}))
+    const result = await sendLineRecoveryMessage(env, request, id, body)
+    if (result.ok) return json(result)
+    return json({ error: result.error, ...result }, { status: result.status || 500 })
   }
 
   return json({ error: 'Not found' }, { status: 404 })

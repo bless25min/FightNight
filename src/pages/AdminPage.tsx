@@ -120,6 +120,11 @@ type LineCustomer = {
   buyerEmail?: string | null
   latestOrderLineEmail?: string | null
   latestOrderLineEmailVerified?: boolean | null
+  latestRecoveryTemplateId?: string | null
+  latestRecoveryStatus?: string | null
+  latestRecoverySentAt?: string | null
+  latestRecoveryAttemptedAt?: string | null
+  latestRecoveryError?: string | null
 }
 
 type AdminSummary = {
@@ -160,6 +165,14 @@ type ReconcileResponse = {
       tradeOrderId?: string | null
     } | null
   }>
+}
+
+type LineRecoveryResponse = {
+  ok: boolean
+  status: string
+  recoveryId: string
+  templateId: string
+  targetUrl?: string
 }
 
 type TrafficSource = {
@@ -422,6 +435,27 @@ function lineNotifyLabel(status?: string | null) {
   if (status === 'skipped_missing_token') return '確認卡缺少 Token'
   if (status === 'skipped_no_line_user') return '確認卡未綁 LINE'
   return `LINE ${status}`
+}
+
+function lineRecoveryLabel(status?: string | null) {
+  if (!status) return '尚未喚回'
+  if (status === 'sent') return '喚回已送'
+  if (status === 'sending') return '喚回發送中'
+  if (status === 'failed') return '喚回失敗'
+  return `喚回 ${status}`
+}
+
+function lineRecoveryClass(status?: string | null) {
+  if (status === 'sent') return 'border-neon/25 bg-neon/10 text-neon'
+  if (status === 'failed') return 'border-blaze/35 bg-blaze/10 text-blaze'
+  if (status === 'sending') return 'border-gold/35 bg-gold/10 text-gold'
+  return 'border-pearl/12 bg-pearl/5 text-mist/65'
+}
+
+function recoveryButtonLabel(customer: LineCustomer) {
+  if ((customer.pendingOrders || 0) > 0) return '發送待付款提醒'
+  if (customer.latestOrderReferenceId) return '發送課程提醒'
+  return '發送新手課提醒'
 }
 
 function statusClass(status: string) {
@@ -907,7 +941,15 @@ export function LineCustomersTable({ customers }: { customers: LineCustomer[] })
   )
 }
 
-function LineCustomersTableV2({ customers }: { customers: LineCustomer[] }) {
+function LineCustomersTableV2({
+  customers,
+  onSendRecovery,
+}: {
+  customers: LineCustomer[]
+  onSendRecovery: (lineUserId: string) => Promise<void>
+}) {
+  const [sendingLineUserId, setSendingLineUserId] = useState<string | null>(null)
+
   if (customers.length === 0) return <EmptyState>尚無 LINE 用戶紀錄</EmptyState>
 
   return (
@@ -915,6 +957,21 @@ function LineCustomersTableV2({ customers }: { customers: LineCustomer[] }) {
       {customers.map((customer) => {
         const latestOrderTime =
           customer.latestOrderPaidAt || customer.latestOrderCreatedAt
+        const latestRecoveryTime =
+          customer.latestRecoverySentAt || customer.latestRecoveryAttemptedAt
+        const canSendRecovery =
+          customer.isFriend && (customer.paidOrders || 0) === 0
+        const isSending = sendingLineUserId === customer.lineUserId
+
+        const handleSendRecovery = async () => {
+          if (!canSendRecovery || isSending) return
+          setSendingLineUserId(customer.lineUserId)
+          try {
+            await onSendRecovery(customer.lineUserId)
+          } finally {
+            setSendingLineUserId(null)
+          }
+        }
 
         return (
           <div
@@ -1018,6 +1075,47 @@ function LineCustomersTableV2({ customers }: { customers: LineCustomer[] }) {
               ) : (
                 <p className="text-sm text-mist/55">尚未建立購課訂單</p>
               )}
+            </div>
+
+            <div className="mt-3 rounded-lg border border-pearl/8 bg-black/18 p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span
+                  className={`rounded-full border px-2 py-0.5 text-[11px] font-heading ${lineRecoveryClass(
+                    customer.latestRecoveryStatus,
+                  )}`}
+                >
+                  {lineRecoveryLabel(customer.latestRecoveryStatus)}
+                </span>
+                {latestRecoveryTime && (
+                  <span className="text-[11px] text-mist/45">
+                    {formatDateTime(latestRecoveryTime)}
+                  </span>
+                )}
+              </div>
+              {customer.latestRecoveryTemplateId && (
+                <p className="mt-2 text-[11px] text-mist/45">
+                  模板 {customer.latestRecoveryTemplateId}
+                </p>
+              )}
+              {customer.latestRecoveryError && (
+                <p className="mt-2 line-clamp-2 text-xs text-blaze/75">
+                  {customer.latestRecoveryError}
+                </p>
+              )}
+              <button
+                type="button"
+                onClick={() => void handleSendRecovery()}
+                disabled={!canSendRecovery || isSending}
+                className="mt-3 w-full rounded-lg border border-neon/25 bg-neon/10 px-3 py-2 font-heading text-sm text-neon transition-colors hover:border-neon/45 hover:bg-neon/15 disabled:cursor-not-allowed disabled:border-pearl/10 disabled:bg-pearl/5 disabled:text-mist/45"
+              >
+                {isSending
+                  ? '發送中...'
+                  : canSendRecovery
+                    ? recoveryButtonLabel(customer)
+                    : customer.isFriend
+                      ? '已付款不喚回'
+                      : '非好友無法推播'}
+              </button>
             </div>
           </div>
         )
@@ -1360,6 +1458,7 @@ export function AdminPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [isReconciling, setIsReconciling] = useState(false)
   const [reconcileResult, setReconcileResult] = useState('')
+  const [lineRecoveryResult, setLineRecoveryResult] = useState('')
   const hasLoadedSummaryRef = useRef(false)
 
   const summary = data.summary
@@ -1476,6 +1575,8 @@ export function AdminPage() {
     setToken('')
     setTokenInput('')
     setData(initialData)
+    setReconcileResult('')
+    setLineRecoveryResult('')
     hasLoadedSummaryRef.current = false
   }
 
@@ -1485,6 +1586,7 @@ export function AdminPage() {
     setIsReconciling(true)
     setError('')
     setReconcileResult('')
+    setLineRecoveryResult('')
 
     try {
       const response = await postAdmin<ReconcileResponse>(
@@ -1523,6 +1625,33 @@ export function AdminPage() {
           linkError instanceof Error ? linkError.message : 'LINE 用戶綁定失敗',
         )
         throw linkError
+      }
+    },
+    [activeTab, loadAdminData, token],
+  )
+
+  const handleSendLineRecovery = useCallback(
+    async (lineUserId: string) => {
+      if (!token) return
+
+      setError('')
+      setLineRecoveryResult('')
+      try {
+        const response = await postAdmin<LineRecoveryResponse>(
+          `/api/admin/line-customers/${encodeURIComponent(
+            lineUserId,
+          )}/send-recovery`,
+          token,
+        )
+        setLineRecoveryResult(
+          `已發送 LINE 喚回訊息：${response.templateId} / ${response.recoveryId}`,
+        )
+        await loadAdminData(activeTab, { refreshSummary: true })
+      } catch (sendError) {
+        setError(
+          sendError instanceof Error ? sendError.message : 'LINE 喚回發送失敗',
+        )
+        throw sendError
       }
     },
     [activeTab, loadAdminData, token],
@@ -1611,6 +1740,12 @@ export function AdminPage() {
         {reconcileResult && (
           <p className="mt-5 rounded-lg border border-neon/25 bg-neon/10 px-4 py-3 text-sm text-neon">
             {reconcileResult}
+          </p>
+        )}
+
+        {lineRecoveryResult && (
+          <p className="mt-5 rounded-lg border border-neon/25 bg-neon/10 px-4 py-3 text-sm text-neon">
+            {lineRecoveryResult}
           </p>
         )}
 
@@ -1704,7 +1839,10 @@ export function AdminPage() {
           )}
           {activeTab === 'events' && <EventsTable events={data.events} />}
           {activeTab === 'line' && (
-            <LineCustomersTableV2 customers={data.customers} />
+            <LineCustomersTableV2
+              customers={data.customers}
+              onSendRecovery={handleSendLineRecovery}
+            />
           )}
         </section>
       </main>
