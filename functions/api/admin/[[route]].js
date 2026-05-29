@@ -1313,6 +1313,7 @@ async function getSummary(env, url) {
       `SELECT COUNT(*) AS total_orders,
               COALESCE(SUM(CASE WHEN status = 'paid' THEN 1 ELSE 0 END), 0) AS paid_orders,
               COALESCE(SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END), 0) AS pending_orders,
+              COALESCE(SUM(CASE WHEN status = 'free_reserved' THEN 1 ELSE 0 END), 0) AS free_reserved_orders,
               COALESCE(SUM(CASE WHEN status IN (${ATTENTION_STATUSES.map(() => '?').join(',')}) THEN 1 ELSE 0 END), 0) AS attention_orders,
               COALESCE(SUM(CASE WHEN status = 'paid' THEN amount_value ELSE 0 END), 0) AS paid_revenue
        FROM course_orders`,
@@ -1364,6 +1365,7 @@ async function getSummary(env, url) {
       total: toNumber(orderSummary.total_orders),
       paid: toNumber(orderSummary.paid_orders),
       pending: toNumber(orderSummary.pending_orders),
+      freeReserved: toNumber(orderSummary.free_reserved_orders),
       attention: toNumber(orderSummary.attention_orders),
       paidRevenue: toNumber(orderSummary.paid_revenue),
     },

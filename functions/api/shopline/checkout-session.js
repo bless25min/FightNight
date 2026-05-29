@@ -65,7 +65,7 @@ function getCoachIdFromName(coachName) {
   return ''
 }
 
-function getBasePriceAmount(course, packageSize, remaining) {
+export function getBasePriceAmount(course, packageSize, remaining) {
   if (course.category === 'FIGHT_NIGHT' && packageSize !== 1) {
     throw new Error('Invalid course package')
   }
@@ -203,7 +203,7 @@ function isValidWeeklyOccurrence(baseDate, occurrenceDate) {
   return diffDays % 7 === 0
 }
 
-function resolveCourseFromCatalog(submittedCourse) {
+export function resolveCourseFromCatalog(submittedCourse) {
   const { baseId, date } = getCourseIdParts(submittedCourse?.id)
   const baseCourse = weeklyCourses.find((course) => course.id === baseId)
   if (!baseCourse) {
@@ -243,7 +243,7 @@ function getSessionInventoryId(course, date = course.date) {
   return `${baseId}-${date}`
 }
 
-function buildSessionIds(course, packageSize) {
+export function buildSessionIds(course, packageSize) {
   if (packageSize === 1) {
     return {
       sessionIds: [getSessionInventoryId(course)],
@@ -272,7 +272,7 @@ function getBootCampRoute(course, submittedRoute) {
   return null
 }
 
-function normalizePhone(phone) {
+export function normalizePhone(phone) {
   const raw = String(phone || '').trim()
   if (!raw || !/^[\d+\s().-]+$/.test(raw)) return ''
 
@@ -678,7 +678,7 @@ async function ensureLineCustomerColumns(env) {
   }
 }
 
-async function ensureInventoryRows(env, sessionIds) {
+export async function ensureInventoryRows(env, sessionIds) {
   for (const sessionId of sessionIds) {
     await env.DB.prepare(
       `INSERT OR IGNORE INTO session_inventory
@@ -690,7 +690,7 @@ async function ensureInventoryRows(env, sessionIds) {
   }
 }
 
-async function getAvailability(env, sessionIds) {
+export async function getAvailability(env, sessionIds) {
   const placeholders = sessionIds.map(() => '?').join(',')
   const { results } = await env.DB.prepare(
     `SELECT session_id, capacity, sold
@@ -714,7 +714,7 @@ async function getAvailability(env, sessionIds) {
   })
 }
 
-function assertCourse(course) {
+export function assertCourse(course) {
   if (!course || typeof course !== 'object') {
     throw new Error('Missing course')
   }

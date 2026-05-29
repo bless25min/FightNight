@@ -15,11 +15,17 @@ import { StickyActionBar } from '../ui/StickyActionBar'
 import { WeeklyScheduleSection } from './WeeklyScheduleSection'
 
 const featuredPreviewCourseNames = ['拳擊體適能', '泰拳體適能', '戰鬥體適能']
-const lockedCourseCtaLabel = '登入看此課首購價'
-const lockedOfferBadgeLabel = '618 首購限定'
-const previewSecondaryCtaLabel = '登入看首購限定與更多場次'
+const lockedCourseCtaLabel = '登入免費預約這堂'
+const lockedOfferBadgeLabel = '首堂免費體驗'
+const previewSecondaryCtaLabel = '登入免費預約一堂'
 
 type FirstPurchaseOfferState = 'idle' | 'checking' | 'eligible' | 'ineligible' | 'error'
+
+type FreeTrialReservationState = {
+  referenceId: string
+  courseId: string
+  courseName: string
+} | null
 
 export function TicketSection() {
   const {
@@ -38,6 +44,9 @@ export function TicketSection() {
   const offerPreviewTracked = useRef(false)
   const [firstPurchaseOfferState, setFirstPurchaseOfferState] =
     useState<FirstPurchaseOfferState>('idle')
+  const [freeTrialReservation, setFreeTrialReservation] =
+    useState<FreeTrialReservationState>(null)
+  const [showAddOnCourses, setShowAddOnCourses] = useState(false)
 
   useEffect(() => {
     if (isInView && !tracked.current) {
@@ -190,10 +199,11 @@ export function TicketSection() {
                   showCategoryTabs={false}
                   showVenueFilter={false}
                   title="先選一個你想進場的晚上"
-                  subtitle="拳擊體適能、泰拳體適能、戰鬥體適能，先選一個你有感覺的一晚。"
+                  subtitle="第一次先不用決定全部課表，選一堂你想真的到場的體驗。"
                   embedded
                   displayLimit={3}
                   featuredCourseNames={featuredPreviewCourseNames}
+                  bookingIntent="free_trial"
                   isPurchaseLocked
                   lockedPurchaseCtaLabel={lockedCourseCtaLabel}
                   lockedOfferBadgeLabel={lockedOfferBadgeLabel}
@@ -215,10 +225,11 @@ export function TicketSection() {
 
             {gateState.status === 'unlocked' && (
               <div className="mt-8">
-                {firstPurchaseOfferState === 'checking' ||
-                firstPurchaseOfferState === 'idle' ? (
+                {freeTrialReservation && showAddOnCourses ? (
+                  firstPurchaseOfferState === 'checking' ||
+                  firstPurchaseOfferState === 'idle' ? (
                   <p className="rounded-2xl border border-neon/18 bg-neon/8 px-4 py-5 text-center text-sm leading-relaxed text-mist/72">
-                    正在整理本週可入場名額...
+                    正在整理首購限定可加購課程...
                   </p>
                 ) : (
                   <WeeklyScheduleSection
@@ -227,14 +238,58 @@ export function TicketSection() {
                     categories={['FIGHT_NIGHT']}
                     showCategoryTabs={false}
                     showVenueFilter
-                    title="本週可入場名額"
+                    title="618 首購限定加購"
                     subtitle={
                       firstPurchaseOfferState === 'eligible'
-                        ? '網站首購價已套用，選一個你能到場的晚上。'
-                        : '選一個你能到場的晚上。'
+                        ? '免費體驗已保留，現在可用首購限定優惠加購其他課程。'
+                        : '免費體驗已保留，你也可以選擇其他可線上預訂課程。'
                     }
                     embedded
+                    excludedCourseIds={[freeTrialReservation.courseId]}
                     firstPurchaseOfferEligible={firstPurchaseOfferState === 'eligible'}
+                  />
+                  )
+                ) : freeTrialReservation ? (
+                  <div className="rounded-2xl border border-neon/18 bg-neon/8 px-4 py-5 text-center md:px-6">
+                    <p className="font-heading text-xl font-black text-pearl">
+                      免費體驗已保留
+                    </p>
+                    <p className="mx-auto mt-2 max-w-xl text-sm leading-relaxed text-mist/70">
+                      {freeTrialReservation.courseName} 預約已成立，LINE 確認卡會同步送出。你可以先保留體驗，也可以現在查看 618 首購限定加購。
+                    </p>
+                    <div className="mt-5 flex justify-center">
+                      <Button
+                        variant="secondary"
+                        size="lg"
+                        onClick={() => setShowAddOnCourses(true)}
+                        data-cta="free-trial-confirmed-view-add-ons"
+                        className="border-neon/30 bg-neon/8 text-neon hover:border-neon/55 hover:bg-neon/14 hover:text-pearl"
+                      >
+                        查看其他課程與價格
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <WeeklyScheduleSection
+                    id="fight-night-free-trial-schedule"
+                    activeCategory="FIGHT_NIGHT"
+                    categories={['FIGHT_NIGHT']}
+                    showCategoryTabs={false}
+                    showVenueFilter
+                    title="選一堂免費體驗"
+                    subtitle="留下預約資訊後只會保留體驗名額，不會進入付款頁。"
+                    embedded
+                    bookingIntent="free_trial"
+                    freeTrialCtaLabel="免費預約這堂"
+                    freeTrialBadgeLabel={lockedOfferBadgeLabel}
+                    onFreeTrialReserved={(reservation) => {
+                      setFreeTrialReservation({
+                        referenceId: reservation.referenceId,
+                        courseId: reservation.courseId,
+                        courseName: reservation.courseName,
+                      })
+                    }}
+                    onFreeTrialAddOnClick={() => setShowAddOnCourses(true)}
                   />
                 )}
               </div>
@@ -270,9 +325,9 @@ export function TicketSection() {
         {gateState.status === 'unlocked' && (
           <StickyActionBar
             eyebrow="已解鎖"
-            title="選一堂 Fight Night"
-            detail="購買指定日期名額"
-            actionLabel="選日期"
+            title="選一堂免費體驗"
+            detail="保留指定日期名額"
+            actionLabel="免費預約"
             onAction={() => {
               trackTicketCta(fightNightPassPlan.id)
               scrollToSchedule()

@@ -132,6 +132,7 @@ type AdminSummary = {
     total: number
     paid: number
     pending: number
+    freeReserved: number
     attention: number
     paidRevenue: number
   }
@@ -341,6 +342,7 @@ const initialData: AdminData = {
 }
 
 const statusLabels: Record<string, string> = {
+  free_reserved: '免費體驗已預約',
   pending: '待付款',
   payment_processing: '付款處理中',
   refund_processing: '退款處理中',
@@ -435,6 +437,7 @@ function lineNotifyLabel(status?: string | null) {
   if (status === 'failed') return '確認卡失敗'
   if (status === 'skipped_missing_token') return '確認卡缺少 Token'
   if (status === 'skipped_no_line_user') return '確認卡未綁 LINE'
+  if (status === 'skipped_not_free_reserved') return '非免費預約'
   return `LINE ${status}`
 }
 
@@ -460,6 +463,7 @@ function recoveryButtonLabel(customer: LineCustomer) {
 }
 
 function statusClass(status: string) {
+  if (status === 'free_reserved') return 'border-neon/30 bg-neon/10 text-neon'
   if (status === 'paid') return 'border-neon/30 bg-neon/10 text-neon'
   if (status === 'pending') return 'border-gold/35 bg-gold/10 text-gold'
   return 'border-blaze/35 bg-blaze/10 text-blaze'
@@ -738,7 +742,12 @@ function OrdersTable({
               </td>
               <td className="px-4 py-4 text-mist/65">
                 <p>建立 {formatDateTime(order.createdAt)}</p>
-                <p className="mt-1">付款 {formatDateTime(order.paidAt)}</p>
+                <p className="mt-1">
+                  {order.status === 'free_reserved' ? '預約' : '付款'}{' '}
+                  {formatDateTime(
+                    order.status === 'free_reserved' ? order.updatedAt : order.paidAt,
+                  )}
+                </p>
               </td>
             </tr>
           ))}
@@ -1464,8 +1473,10 @@ export function AdminPage() {
 
   const summary = data.summary
   const checkoutRate = useMemo(() => {
-    if (!summary || summary.orders.total === 0) return '0%'
-    return `${Math.round((summary.orders.paid / summary.orders.total) * 100)}%`
+    const paidFlowTotal =
+      (summary?.orders.total ?? 0) - (summary?.orders.freeReserved ?? 0)
+    if (!summary || paidFlowTotal <= 0) return '0%'
+    return `${Math.round((summary.orders.paid / paidFlowTotal) * 100)}%`
   }, [summary])
 
   const loadAdminData = useCallback(async (
@@ -1750,11 +1761,16 @@ export function AdminPage() {
           </p>
         )}
 
-        <section className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <section className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
           <MetricCard
             label="已付款營收"
             value={formatMoney(summary?.orders.paidRevenue ?? 0)}
             detail={`${summary?.orders.paid ?? 0} 筆付款成功`}
+          />
+          <MetricCard
+            label="免費預約"
+            value={`${summary?.orders.freeReserved ?? 0}`}
+            detail="已保留體驗名額"
           />
           <MetricCard
             label="待付款"
@@ -1769,7 +1785,7 @@ export function AdminPage() {
           <MetricCard
             label="付款率"
             value={checkoutRate}
-            detail={`${summary?.orders.total ?? 0} 筆總 checkout`}
+            detail="不含免費預約"
           />
         </section>
 

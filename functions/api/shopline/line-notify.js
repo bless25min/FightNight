@@ -206,6 +206,133 @@ function buildReservationConfirmationCard(order) {
   }
 }
 
+function buildFreeTrialConfirmationText(order) {
+  const venue = getVenueShortName(order.venue_name)
+  const dateTime = getDateTimeLabel(order)
+  const lines = [
+    `免費體驗預約｜${venue}｜${dateTime}`,
+    `課程：${order.course_name}`,
+    `聯絡人：${order.buyer_name || '-'}`,
+    `電話：${order.buyer_phone || '-'}`,
+    `預約編號：${order.reference_id}`,
+  ]
+
+  if (order.buyer_email) {
+    lines.splice(4, 0, `Email：${order.buyer_email}`)
+  }
+
+  return lines.join('\n').slice(0, 300)
+}
+
+function buildFreeTrialConfirmationCard(order) {
+  const venue = getVenueShortName(order.venue_name)
+  const dateTime = getDateTimeLabel(order)
+  const confirmationText = buildFreeTrialConfirmationText(order)
+
+  return {
+    type: 'flex',
+    altText: `免費體驗已預約，請確認 ${venue} ${dateTime} ${order.course_name}`,
+    contents: {
+      type: 'bubble',
+      size: 'mega',
+      body: {
+        type: 'box',
+        layout: 'vertical',
+        spacing: 'md',
+        contents: [
+          {
+            type: 'text',
+            text: '免費體驗已預約',
+            weight: 'bold',
+            size: 'xl',
+            color: '#111111',
+          },
+          {
+            type: 'text',
+            text: '這堂已為你保留。請點擊下方按鈕確認預約，場館方會在聊天室接手安排。',
+            size: 'sm',
+            color: '#666666',
+            wrap: true,
+          },
+          {
+            type: 'separator',
+            margin: 'md',
+          },
+          {
+            type: 'box',
+            layout: 'vertical',
+            spacing: 'sm',
+            margin: 'md',
+            contents: [
+              {
+                type: 'box',
+                layout: 'baseline',
+                spacing: 'sm',
+                contents: [
+                  { type: 'text', text: '場館', color: '#999999', size: 'sm', flex: 2 },
+                  { type: 'text', text: venue, color: '#111111', size: 'sm', flex: 5, wrap: true },
+                ],
+              },
+              {
+                type: 'box',
+                layout: 'baseline',
+                spacing: 'sm',
+                contents: [
+                  { type: 'text', text: '課程', color: '#999999', size: 'sm', flex: 2 },
+                  { type: 'text', text: order.course_name, color: '#111111', size: 'sm', flex: 5, wrap: true },
+                ],
+              },
+              {
+                type: 'box',
+                layout: 'baseline',
+                spacing: 'sm',
+                contents: [
+                  { type: 'text', text: '時間', color: '#999999', size: 'sm', flex: 2 },
+                  { type: 'text', text: dateTime || '-', color: '#111111', size: 'sm', flex: 5, wrap: true },
+                ],
+              },
+              {
+                type: 'box',
+                layout: 'baseline',
+                spacing: 'sm',
+                contents: [
+                  { type: 'text', text: '方案', color: '#999999', size: 'sm', flex: 2 },
+                  { type: 'text', text: '首堂免費體驗', color: '#111111', size: 'sm', flex: 5, wrap: true },
+                ],
+              },
+              {
+                type: 'box',
+                layout: 'baseline',
+                spacing: 'sm',
+                contents: [
+                  { type: 'text', text: '金額', color: '#999999', size: 'sm', flex: 2 },
+                  { type: 'text', text: '免費', color: '#111111', size: 'sm', flex: 5, wrap: true },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      footer: {
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          {
+            type: 'button',
+            style: 'primary',
+            color: '#E3242B',
+            action: {
+              type: 'message',
+              label: '確認預約',
+              text: confirmationText,
+            },
+          },
+        ],
+      },
+    },
+  }
+}
+
 export async function ensureLineNotificationColumns(env) {
   const columns = [
     ['line_payment_notify_status', 'TEXT'],
@@ -325,6 +452,120 @@ export async function notifyLinePaymentSuccess(env, referenceId) {
   const payload = {
     to: order.line_user_id,
     messages: [buildReservationConfirmationCard(order)],
+  }
+
+  try {
+    const response = await fetch(LINE_PUSH_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${env.LINE_CHANNEL_ACCESS_TOKEN}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    })
+    const responseBody = await response.json().catch(() => null)
+
+    if (!response.ok) {
+      const result = {
+        status: 'failed',
+        response: responseBody,
+        error: `LINE push failed with HTTP ${response.status}`,
+      }
+      await recordLineNotifyStatus(env, referenceId, result)
+      return result
+    }
+
+    const result = {
+      status: 'sent',
+      response: responseBody || { ok: true },
+    }
+    await recordLineNotifyStatus(env, referenceId, result)
+    return result
+  } catch (error) {
+    const result = {
+      status: 'failed',
+      error:
+        error instanceof Error
+          ? error.message
+          : 'LINE push request failed',
+    }
+    await recordLineNotifyStatus(env, referenceId, result)
+    return result
+  }
+}
+
+export async function notifyLineFreeTrialReservation(env, referenceId) {
+  if (!env.DB || !referenceId) {
+    return { status: 'skipped_invalid_request' }
+  }
+
+  await ensureLineNotificationColumns(env)
+
+  const order = await env.DB.prepare(
+    `SELECT reference_id, status, course_id, course_name, venue_name,
+            package_size, amount_value, currency, series_dates_json,
+            buyer_name, buyer_phone, buyer_email, line_user_id,
+            line_display_name, line_payment_notify_status,
+            line_payment_notify_attempted_at, line_payment_notified_at
+     FROM course_orders
+     WHERE reference_id = ?`,
+  )
+    .bind(referenceId)
+    .first()
+
+  if (!order || order.status !== 'free_reserved') {
+    return { status: 'skipped_not_free_reserved' }
+  }
+  if (order.line_payment_notified_at) {
+    return { status: 'skipped_already_sent' }
+  }
+  if (!order.line_user_id) {
+    const result = {
+      status: 'skipped_no_line_user',
+      error: 'Reservation has no linked LINE user',
+    }
+    await recordLineNotifyStatus(env, referenceId, result)
+    return result
+  }
+  if (!env.LINE_CHANNEL_ACCESS_TOKEN) {
+    const result = {
+      status: 'skipped_missing_token',
+      error: 'Missing LINE_CHANNEL_ACCESS_TOKEN',
+    }
+    await recordLineNotifyStatus(env, referenceId, result)
+    return result
+  }
+
+  const claim = await env.DB.prepare(
+    `UPDATE course_orders
+     SET line_payment_notify_status = 'sending',
+         line_payment_notify_attempted_at = datetime('now'),
+         line_payment_notify_error = NULL,
+         updated_at = datetime('now')
+     WHERE reference_id = ?
+       AND status = 'free_reserved'
+       AND line_user_id IS NOT NULL
+       AND line_user_id != ''
+       AND line_payment_notified_at IS NULL
+       AND (
+         line_payment_notify_status IS NULL
+         OR line_payment_notify_status IN ('failed', 'skipped_missing_token', 'skipped_no_line_user')
+         OR (
+           line_payment_notify_status = 'sending'
+           AND datetime(line_payment_notify_attempted_at) <= datetime('now', '-5 minutes')
+         )
+       )`,
+  )
+    .bind(referenceId)
+    .run()
+
+  if (!claim.meta?.changes) {
+    return { status: 'skipped_in_progress_or_sent' }
+  }
+
+  const payload = {
+    to: order.line_user_id,
+    messages: [buildFreeTrialConfirmationCard(order)],
   }
 
   try {
