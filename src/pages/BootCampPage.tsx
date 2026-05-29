@@ -1,5 +1,5 @@
 ﻿import { motion } from 'framer-motion'
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Header } from '../components/layout/Header'
 import { Footer } from '../components/layout/Footer'
@@ -19,12 +19,18 @@ import {
   venues,
 } from '../data/landingContent'
 import { useTracking } from '../hooks/useTracking'
+import { getCheckoutTrackingContext } from '../lib/checkoutTracking'
+import {
+  readFreeTrialBridgeState,
+  writeFreeTrialBridgeState,
+  type FreeTrialBridgeState,
+} from '../lib/freeTrialBridge'
+import { getLineRequestContext } from '../lib/lineContext'
 import { toAbsoluteUrl } from '../lib/url'
-import type { BootCampRoute } from '../types'
+import type { BootCampRoute, CourseCategory } from '../types'
 import boxingRouteImage from '../assets/generated/bootcamp-route-boxing-poster.jpg'
 import bootCampCorePressureMemoryImage from '../assets/generated/bootcamp-core-pressure-memory.jpg'
 import muayThaiRouteImage from '../assets/generated/bootcamp-route-muaythai-poster.jpg'
-import painPoster from '../assets/landing/pain-poster.jpg'
 import bootcampModule2Poster from '../assets/offers/bootcamp-module-2-poster.jpg'
 import bootcampModule5Poster from '../assets/offers/bootcamp-module-5-poster.jpg'
 import offersHeroPoster from '../assets/offers/offers-hero-octagon-poster.jpg'
@@ -35,6 +41,8 @@ const routeImages: Record<BootCampRoute, string> = {
   BOXING: boxingRouteImage,
   MUAY_THAI: muayThaiRouteImage,
 }
+
+type FirstPurchaseOfferState = 'idle' | 'checking' | 'eligible' | 'ineligible' | 'error'
 
 const bootCampSeoKeywords = [
   'Boot Camp 拳擊課程',
@@ -106,17 +114,19 @@ function buildBootCampStructuredData() {
   ]
 }
 
+function getFreeTrialBridgeEntry() {
+  if (typeof window === 'undefined') return null
+
+  const params = new URLSearchParams(window.location.search)
+  if (params.get('from') !== 'free-trial') return null
+
+  return readFreeTrialBridgeState()
+}
+
 const mobileFullBleedImageFrame =
   '-mx-3 rounded-none border-x-0 sm:mx-0 sm:rounded-2xl sm:border-x md:rounded-[2rem]'
 
 const expectationScenes = [
-  {
-    src: painPoster,
-    label: '下班後',
-    title: '告別枯燥乏味的生活',
-    description:
-      '把每週的某個晚上留下來，讓身體的習慣改變你的內在狀態。',
-  },
   {
     src: bootcampModule2Poster,
     label: '訓練中',
@@ -257,7 +267,7 @@ function ExpectationSection({
         subtitle="期待不僅被看見，也要被安排進行事曆"
       />
 
-      <div className="grid gap-4 md:grid-cols-3 md:gap-5">
+      <div className="grid gap-4 md:grid-cols-2 md:gap-5">
         {expectationScenes.map((scene, index) => (
           <VisualPanel
             key={scene.title}
@@ -416,30 +426,88 @@ function RouteSection({
 function BookingSection({
   selectedRoute,
   onRouteChange,
+  addOnCategory,
+  onAddOnCategoryChange,
+  firstPurchaseOfferEligible,
+  firstPurchaseOfferState,
+  checkoutBuyer,
+  excludedCourseIds,
+  beforeCheckoutSubmit,
+  isFreeTrialBridge,
 }: {
   selectedRoute: BootCampRoute | null
   onRouteChange: (route: BootCampRoute | null) => void
+  addOnCategory: CourseCategory
+  onAddOnCategoryChange: (category: CourseCategory) => void
+  firstPurchaseOfferEligible?: boolean
+  firstPurchaseOfferState?: FirstPurchaseOfferState
+  checkoutBuyer?: FreeTrialBridgeState['buyer'] | null
+  excludedCourseIds?: string[]
+  beforeCheckoutSubmit?: () => Promise<void> | void
+  isFreeTrialBridge?: boolean
 }) {
+  const isOfferResolving =
+    isFreeTrialBridge &&
+    (firstPurchaseOfferState === 'idle' ||
+      firstPurchaseOfferState === 'checking')
+  const scheduleTitle = isFreeTrialBridge
+    ? '618 首購限定優惠加購'
+    : '選擇你的起點'
+  const scheduleSubtitle = isFreeTrialBridge
+    ? undefined
+    : '選場館、開始日期、每週習慣的起點'
+
   return (
     <SectionWrapper id="boot-camp-booking" padding="py-10 md:py-24">
       <div className="relative mx-auto max-w-6xl overflow-hidden rounded-3xl border border-pearl/10 bg-black/30 p-4 md:p-8">
         <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_top_left,rgba(255,59,92,0.12),transparent_42%),radial-gradient(circle_at_bottom_right,rgba(40,236,210,0.1),transparent_44%)]" />
 
         <div className="relative">
-          <WeeklyScheduleSection
-            id="boot-camp-schedule"
-            activeCategory="BOOT_CAMP"
-            activeBootCampRoute={selectedRoute}
-            onBootCampRouteChange={onRouteChange}
-            categories={['BOOT_CAMP']}
-            showCategoryTabs={false}
-            showVenueFilter
-            showBootCampRouteFilter={false}
-            bookingMode="bootcamp"
-            title="選擇你的起點"
-            subtitle="選場館、開始日期、每周習慣的起點"
-            embedded
-          />
+          {isOfferResolving ? (
+            <div className="rounded-2xl border border-neon/18 bg-neon/8 px-4 py-5 text-center">
+              <p className="font-heading text-xl font-black text-pearl">
+                正在確認 618 首購資格
+              </p>
+              <p className="mx-auto mt-2 max-w-xl text-sm leading-relaxed text-mist/70">
+                確認後會顯示可購買課程與價格。
+              </p>
+            </div>
+          ) : (
+            <WeeklyScheduleSection
+              id="boot-camp-schedule"
+              activeCategory={addOnCategory}
+              onCategoryChange={onAddOnCategoryChange}
+              activeBootCampRoute={selectedRoute}
+              onBootCampRouteChange={onRouteChange}
+              categories={isFreeTrialBridge ? ['BOOT_CAMP', 'FIGHT_NIGHT'] : ['BOOT_CAMP']}
+              showCategoryTabs={isFreeTrialBridge}
+              showVenueFilter
+              showBootCampRouteFilter={false}
+              showCategoryLead={!isFreeTrialBridge}
+              categoryTabsPlacement={isFreeTrialBridge ? 'bottom' : 'top'}
+              footnoteText={
+                isFreeTrialBridge
+                  ? '覺得 BOOT CAMP 太多？可以先加購一堂 FIGHT NIGHT'
+                  : undefined
+              }
+              categorySwitchHeading={
+                isFreeTrialBridge
+                  ? {
+                      BOOT_CAMP: '覺得 BOOT CAMP 太多？可以先加購一堂 FIGHT NIGHT',
+                      FIGHT_NIGHT: '想透過技術學習蛻變成長？切回 BOOT CAMP 基礎／技巧課程',
+                    }
+                  : undefined
+              }
+              bookingMode={addOnCategory === 'BOOT_CAMP' ? 'bootcamp' : 'standard'}
+              title={scheduleTitle}
+              subtitle={scheduleSubtitle}
+              embedded
+              excludedCourseIds={excludedCourseIds}
+              firstPurchaseOfferEligible={firstPurchaseOfferEligible}
+              checkoutBuyer={checkoutBuyer}
+              beforeCheckoutSubmit={beforeCheckoutSubmit}
+            />
+          )}
         </div>
       </div>
     </SectionWrapper>
@@ -500,7 +568,17 @@ function BootCampCoreSection() {
 
 export function BootCampPage() {
   const [selectedRoute, setSelectedRoute] = useState<BootCampRoute | null>(null)
+  const [freeTrialBridge] = useState<FreeTrialBridgeState | null>(
+    getFreeTrialBridgeEntry,
+  )
+  const [addOnCategory, setAddOnCategory] =
+    useState<CourseCategory>('BOOT_CAMP')
+  const [firstPurchaseOfferState, setFirstPurchaseOfferState] =
+    useState<FirstPurchaseOfferState>('idle')
+  const [freeTrialReservationReferenceId, setFreeTrialReservationReferenceId] =
+    useState<string | null>(freeTrialBridge?.referenceId ?? null)
   const { track } = useTracking()
+  const firstPurchaseOfferEligible = firstPurchaseOfferState === 'eligible'
 
   const scrollTo = useCallback((id: string) => {
     document.getElementById(id)?.scrollIntoView({
@@ -508,6 +586,144 @@ export function BootCampPage() {
       block: 'start',
     })
   }, [])
+
+  useEffect(() => {
+    if (!freeTrialBridge) {
+      return
+    }
+
+    let active = true
+
+    fetch('/api/shopline/first-purchase-offer', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        accept: 'application/json',
+      },
+      body: JSON.stringify({
+        lineContext: getLineRequestContext(),
+      }),
+    })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => {
+        if (!active) return
+        const eligible = data?.eligible === true
+        setFirstPurchaseOfferState(eligible ? 'eligible' : 'ineligible')
+        track({
+          event: 'bootcamp_bridge_first_purchase_offer_check',
+          params: {
+            offer_code: '618_MIDYEAR_FIRST_PURCHASE_HALF',
+            eligible,
+            reason: typeof data?.reason === 'string' ? data.reason : '',
+            reference_id: freeTrialBridge.referenceId,
+            draft_id: freeTrialBridge.draftId,
+            course_id: freeTrialBridge.courseId,
+          },
+        })
+      })
+      .catch(() => {
+        if (!active) return
+        setFirstPurchaseOfferState('error')
+      })
+
+    return () => {
+      active = false
+    }
+  }, [freeTrialBridge, track])
+
+  const finalizeBridgeFreeTrial = useCallback(async () => {
+    if (!freeTrialBridge || freeTrialReservationReferenceId) return
+
+    const response = await fetch('/api/free-trial-reservation', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        buyer: freeTrialBridge.buyer,
+        lineContext: getLineRequestContext(),
+        course: {
+          id: freeTrialBridge.courseId,
+          name: freeTrialBridge.courseName,
+          category: 'FIGHT_NIGHT',
+        },
+        sessionIds: freeTrialBridge.sessionIds,
+        seriesDates: freeTrialBridge.seriesDates,
+        client: {
+          screenWidth: String(window.screen.width),
+          screenHeight: String(window.screen.height),
+          timeZoneOffset: String(new Date().getTimezoneOffset()),
+          transactionWebSite: window.location.origin,
+          userAgent: window.navigator.userAgent,
+          language: window.navigator.language,
+          colorDepth: String(window.screen.colorDepth),
+        },
+        tracking: getCheckoutTrackingContext(),
+        sourcePath: `${window.location.pathname}${window.location.search}${window.location.hash}`,
+      }),
+    })
+
+    const data = (await response.json().catch(() => null)) as
+      | {
+          referenceId?: string
+          reservation?: { courseId?: string; courseName?: string }
+          lineNotify?: { status?: string }
+          reason?: string
+          error?: string
+        }
+      | null
+
+    if (!response.ok || !data?.referenceId) {
+      const reason =
+        typeof data?.reason === 'string'
+          ? data.reason
+          : `http_${response.status}`
+      if (response.status === 409 && data?.reason === 'free_trial_already_reserved') {
+        track({
+          event: 'free_trial_reservation_already_exists',
+          params: {
+            draft_id: freeTrialBridge.draftId,
+            course_id: freeTrialBridge.courseId,
+            course_name: freeTrialBridge.courseName,
+            error_reason: reason,
+          },
+        })
+        setFreeTrialReservationReferenceId('already-reserved')
+        return
+      }
+      const message = data?.error || '免費體驗保留失敗，請先回到 LINE 確認或稍後再試。'
+      track({
+        event: 'free_trial_reservation_error',
+        params: {
+          draft_id: freeTrialBridge.draftId,
+          course_id: freeTrialBridge.courseId,
+          course_name: freeTrialBridge.courseName,
+          error_reason: reason,
+          error_message: message,
+          stage: 'before_checkout',
+        },
+      })
+      throw Object.assign(new Error(message), { reason, tracked: true })
+    }
+
+    setFreeTrialReservationReferenceId(data.referenceId)
+    writeFreeTrialBridgeState({
+      ...freeTrialBridge,
+      referenceId: data.referenceId,
+    })
+    track({
+      event: 'free_trial_reservation_submit_before_checkout',
+      params: {
+        reference_id: data.referenceId,
+        draft_id: freeTrialBridge.draftId,
+        course_id: data.reservation?.courseId ?? freeTrialBridge.courseId,
+        course_name: data.reservation?.courseName ?? freeTrialBridge.courseName,
+        line_notify_status: data.lineNotify?.status ?? '',
+      },
+      metaStandardEvent: 'CompleteRegistration',
+      lineEventName: 'FreeTrialReserved',
+    })
+  }, [freeTrialBridge, freeTrialReservationReferenceId, track])
 
   const selectRouteAndScroll = useCallback(
     (route: BootCampRoute) => {
@@ -577,6 +793,28 @@ export function BootCampPage() {
         <BookingSection
           selectedRoute={selectedRoute}
           onRouteChange={setSelectedRoute}
+          addOnCategory={addOnCategory}
+          onAddOnCategoryChange={(category) => {
+            setAddOnCategory(category)
+            track({
+              event: 'free_trial_add_on_category_select',
+              params: {
+                category,
+                draft_id: freeTrialBridge?.draftId ?? '',
+              },
+              metaStandardEvent: 'ViewContent',
+              lineEventName:
+                category === 'BOOT_CAMP'
+                  ? 'BootCampAddOnSelect'
+                  : 'FightNightAddOnSelect',
+            })
+          }}
+          firstPurchaseOfferEligible={firstPurchaseOfferEligible}
+          firstPurchaseOfferState={firstPurchaseOfferState}
+          checkoutBuyer={freeTrialBridge?.buyer ?? null}
+          excludedCourseIds={freeTrialBridge ? [freeTrialBridge.courseId] : undefined}
+          beforeCheckoutSubmit={freeTrialBridge ? finalizeBridgeFreeTrial : undefined}
+          isFreeTrialBridge={Boolean(freeTrialBridge)}
         />
         <FAQSection
           id="boot-camp-faq"
@@ -592,6 +830,7 @@ export function BootCampPage() {
         detail={selectedRoute ? bootCampRouteContent[selectedRoute].shortLabel : '先選路徑與第一堂'}
         actionLabel={selectedRoute ? '看梯次' : '選路徑'}
         onAction={() => {
+          setAddOnCategory('BOOT_CAMP')
           track({
             event: 'bootcamp_sticky_action_click',
             params: {
@@ -603,13 +842,17 @@ export function BootCampPage() {
           })
           scrollTo(selectedRoute ? 'boot-camp-booking' : 'boot-camp-routes')
         }}
-        secondaryActionLabel="路徑"
+        secondaryActionLabel={freeTrialBridge ? 'Fight Night' : '路徑'}
         onSecondaryAction={() => {
           track({
             event: 'bootcamp_sticky_secondary_click',
-            params: { target: 'routes' },
+            params: {
+              target: freeTrialBridge ? 'fight_night_add_on' : 'routes',
+              draft_id: freeTrialBridge?.draftId ?? '',
+            },
           })
-          scrollTo('boot-camp-routes')
+          if (freeTrialBridge) setAddOnCategory('FIGHT_NIGHT')
+          scrollTo(freeTrialBridge ? 'boot-camp-booking' : 'boot-camp-routes')
         }}
       />
     </div>

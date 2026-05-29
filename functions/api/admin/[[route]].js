@@ -14,6 +14,52 @@ const ATTENTION_STATUSES = [
   'expired',
 ]
 
+const TRAFFIC_ACTION_EVENTS = [
+  'ui_click',
+  'hero_cta_click',
+  'ticket_cta_click',
+  'plan_cta_click',
+  'line_cta_click',
+  'gate_access_click',
+  'ticket_schedule_gate_click',
+  'ticket_schedule_preview_view',
+  'offer_schedule_nav_click',
+  'course_detail_open',
+  'course_purchase_click',
+  'shopline_checkout_submit',
+  'shopline_checkout_error',
+  'free_trial_reservation_click',
+  'free_trial_contact_submit',
+  'free_trial_extension_offer_view',
+  'free_trial_bootcamp_bridge_click',
+  'free_trial_add_on_category_select',
+  'free_trial_add_on_view_click',
+  'free_trial_keep_only_click',
+  'free_trial_keep_only_confirm_click',
+  'free_trial_reservation_submit',
+  'free_trial_reservation_submit_before_checkout',
+  'free_trial_reservation_error',
+  'free_trial_reservation_already_exists',
+  'bootcamp_hero_cta_click',
+  'bootcamp_expectation_click',
+  'bootcamp_expectation_booking_click',
+  'bootcamp_route_select',
+  'bootcamp_sticky_action_click',
+  'bootcamp_sticky_secondary_click',
+]
+
+const CHECKOUT_INTENT_EVENTS = [
+  'course_purchase_click',
+  'shopline_checkout_submit',
+]
+
+const TRAFFIC_ACTION_EVENT_SQL = TRAFFIC_ACTION_EVENTS.map(sqlString).join(', ')
+const CHECKOUT_INTENT_EVENT_SQL = CHECKOUT_INTENT_EVENTS.map(sqlString).join(', ')
+
+function sqlString(value) {
+  return `'${String(value).replace(/'/g, "''")}'`
+}
+
 function json(data, init = {}) {
   return new Response(JSON.stringify(data), {
     ...init,
@@ -982,8 +1028,8 @@ async function getTraffic(env, url) {
             COUNT(DISTINCT CASE WHEN visitor_type = 'new' THEN session_id ELSE NULL END) AS new_sessions,
             COUNT(DISTINCT CASE WHEN visitor_type = 'returning' THEN session_id ELSE NULL END) AS returning_sessions,
             COALESCE(SUM(CASE WHEN event_name = 'page_view' THEN 1 ELSE 0 END), 0) AS page_views,
-            COALESCE(SUM(CASE WHEN event_name IN ('ui_click', 'hero_cta_click', 'ticket_cta_click', 'plan_cta_click', 'course_purchase_click', 'shopline_checkout_submit', 'line_cta_click', 'gate_access_click') THEN 1 ELSE 0 END), 0) AS actions,
-            COALESCE(SUM(CASE WHEN event_name IN ('course_purchase_click', 'shopline_checkout_submit') THEN 1 ELSE 0 END), 0) AS checkout_intents,
+            COALESCE(SUM(CASE WHEN event_name IN (${TRAFFIC_ACTION_EVENT_SQL}) THEN 1 ELSE 0 END), 0) AS actions,
+            COALESCE(SUM(CASE WHEN event_name IN (${CHECKOUT_INTENT_EVENT_SQL}) THEN 1 ELSE 0 END), 0) AS checkout_intents,
             COALESCE(SUM(CASE WHEN event_name = 'page_exit' AND is_bounce = 1 THEN 1 ELSE 0 END), 0) AS bounces,
             COALESCE(SUM(CASE WHEN event_name = 'page_exit' THEN 1 ELSE 0 END), 0) AS exits,
             ROUND(AVG(CASE WHEN event_name = 'page_exit' THEN duration_ms END)) AS avg_duration_ms,
@@ -1002,8 +1048,8 @@ async function getTraffic(env, url) {
             COALESCE(utm_campaign, '(none)') AS utm_campaign,
             COALESCE(click_id_type, '') AS click_id_type,
             COUNT(DISTINCT session_id) AS sessions,
-            COALESCE(SUM(CASE WHEN event_name IN ('course_purchase_click', 'shopline_checkout_submit') THEN 1 ELSE 0 END), 0) AS checkout_intents,
-            COALESCE(SUM(CASE WHEN event_name IN ('ui_click', 'hero_cta_click', 'ticket_cta_click', 'plan_cta_click', 'line_cta_click') THEN 1 ELSE 0 END), 0) AS actions
+            COALESCE(SUM(CASE WHEN event_name IN (${CHECKOUT_INTENT_EVENT_SQL}) THEN 1 ELSE 0 END), 0) AS checkout_intents,
+            COALESCE(SUM(CASE WHEN event_name IN (${TRAFFIC_ACTION_EVENT_SQL}) THEN 1 ELSE 0 END), 0) AS actions
      FROM tracking_events
      WHERE created_at >= datetime('now', '${lookbackSql}')
        AND (
@@ -1021,8 +1067,8 @@ async function getTraffic(env, url) {
     `SELECT COALESCE(route_path, '(unknown)') AS route_path,
             COUNT(DISTINCT session_id) AS sessions,
             COALESCE(SUM(CASE WHEN event_name = 'page_view' THEN 1 ELSE 0 END), 0) AS page_views,
-            COALESCE(SUM(CASE WHEN event_name IN ('course_purchase_click', 'shopline_checkout_submit') THEN 1 ELSE 0 END), 0) AS checkout_intents,
-            COALESCE(SUM(CASE WHEN event_name IN ('ui_click', 'hero_cta_click', 'ticket_cta_click', 'plan_cta_click', 'line_cta_click') THEN 1 ELSE 0 END), 0) AS actions,
+            COALESCE(SUM(CASE WHEN event_name IN (${CHECKOUT_INTENT_EVENT_SQL}) THEN 1 ELSE 0 END), 0) AS checkout_intents,
+            COALESCE(SUM(CASE WHEN event_name IN (${TRAFFIC_ACTION_EVENT_SQL}) THEN 1 ELSE 0 END), 0) AS actions,
             COALESCE(SUM(CASE WHEN event_name = 'page_exit' THEN 1 ELSE 0 END), 0) AS exits,
             COALESCE(SUM(CASE WHEN event_name = 'page_exit' AND is_bounce = 1 THEN 1 ELSE 0 END), 0) AS bounces,
             ROUND(AVG(CASE WHEN event_name = 'page_exit' THEN duration_ms END)) AS avg_duration_ms,
@@ -1070,7 +1116,7 @@ async function getTraffic(env, url) {
     env,
     `SELECT COALESCE(device_type, 'unknown') AS device_type,
             COUNT(DISTINCT session_id) AS sessions,
-            COALESCE(SUM(CASE WHEN event_name IN ('course_purchase_click', 'shopline_checkout_submit') THEN 1 ELSE 0 END), 0) AS checkout_intents,
+            COALESCE(SUM(CASE WHEN event_name IN (${CHECKOUT_INTENT_EVENT_SQL}) THEN 1 ELSE 0 END), 0) AS checkout_intents,
             ROUND(AVG(CASE WHEN event_name = 'page_exit' THEN max_scroll_depth END)) AS avg_scroll_depth
      FROM tracking_events
      WHERE created_at >= datetime('now', '${lookbackSql}')
@@ -1084,7 +1130,7 @@ async function getTraffic(env, url) {
             COALESCE(os_name, 'unknown') AS os_name,
             COALESCE(in_app_browser, '') AS in_app_browser,
             COUNT(DISTINCT session_id) AS sessions,
-            COALESCE(SUM(CASE WHEN event_name IN ('course_purchase_click', 'shopline_checkout_submit') THEN 1 ELSE 0 END), 0) AS checkout_intents,
+            COALESCE(SUM(CASE WHEN event_name IN (${CHECKOUT_INTENT_EVENT_SQL}) THEN 1 ELSE 0 END), 0) AS checkout_intents,
             ROUND(AVG(CASE WHEN event_name = 'page_exit' THEN max_scroll_depth END)) AS avg_scroll_depth
      FROM tracking_events
      WHERE created_at >= datetime('now', '${lookbackSql}')
@@ -1099,7 +1145,7 @@ async function getTraffic(env, url) {
             COALESCE(cf_asn, 0) AS asn,
             COALESCE(cf_colo, '') AS colo,
             COUNT(DISTINCT session_id) AS sessions,
-            COALESCE(SUM(CASE WHEN event_name IN ('course_purchase_click', 'shopline_checkout_submit') THEN 1 ELSE 0 END), 0) AS checkout_intents
+            COALESCE(SUM(CASE WHEN event_name IN (${CHECKOUT_INTENT_EVENT_SQL}) THEN 1 ELSE 0 END), 0) AS checkout_intents
      FROM tracking_events
      WHERE created_at >= datetime('now', '${lookbackSql}')
      GROUP BY COALESCE(cf_as_organization, 'unknown'), COALESCE(cf_asn, 0), COALESCE(cf_colo, '')
@@ -1113,7 +1159,7 @@ async function getTraffic(env, url) {
             COALESCE(cf_region, '') AS region,
             COALESCE(cf_city, '') AS city,
             COUNT(DISTINCT session_id) AS sessions,
-            COALESCE(SUM(CASE WHEN event_name IN ('course_purchase_click', 'shopline_checkout_submit') THEN 1 ELSE 0 END), 0) AS checkout_intents
+            COALESCE(SUM(CASE WHEN event_name IN (${CHECKOUT_INTENT_EVENT_SQL}) THEN 1 ELSE 0 END), 0) AS checkout_intents
      FROM tracking_events
      WHERE created_at >= datetime('now', '${lookbackSql}')
      GROUP BY COALESCE(cf_country, 'unknown'), COALESCE(cf_region, ''), COALESCE(cf_city, '')
@@ -1494,7 +1540,7 @@ function buildRecoveryTicketUrl(env, request, recoveryId, templateId) {
   url.searchParams.set('utm_medium', 'recovery')
   url.searchParams.set('utm_campaign', templateId)
   url.searchParams.set('recovery_id', recoveryId)
-  url.hash = 'ticket'
+  url.hash = 'fight-night-pass'
   return url.toString()
 }
 

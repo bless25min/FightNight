@@ -16,6 +16,8 @@ import { notifyLineFreeTrialReservation } from './shopline/line-notify.js'
 const CURRENCY = 'TWD'
 const FREE_TRIAL_STATUS = 'free_reserved'
 const EXISTING_FREE_TRIAL_STATUSES = ['free_reserved', 'free_attended']
+const FREE_TRIAL_SESSION_LIMIT = 2
+const PAID_SEAT_BUFFER = 2
 
 function json(data, init = {}) {
   return new Response(JSON.stringify(data), {
@@ -64,6 +66,29 @@ async function hasExistingFreeTrial(env, lineUserId) {
     .first()
 
   return Boolean(row?.reference_id)
+}
+
+async function getFreeTrialReservationCounts(env, sessionIds) {
+  const placeholders = EXISTING_FREE_TRIAL_STATUSES.map(() => '?').join(',')
+  const counts = []
+
+  for (const sessionId of sessionIds) {
+    const row = await env.DB.prepare(
+      `SELECT COUNT(*) AS count
+       FROM course_orders
+       WHERE status IN (${placeholders})
+         AND session_ids_json LIKE ?`,
+    )
+      .bind(...EXISTING_FREE_TRIAL_STATUSES, `%${sessionId}%`)
+      .first()
+
+    counts.push({
+      sessionId,
+      count: Number(row?.count || 0),
+    })
+  }
+
+  return counts
 }
 
 async function incrementReservedSeats(env, sessionIds, quantity) {
@@ -172,6 +197,31 @@ export async function onRequestPost({ request, env }) {
         {
           error: '這堂剛剛額滿了，請改選其他場次。',
           reason: 'sold_out',
+          availability,
+        },
+        { status: 409 },
+      )
+    }
+
+    const freeTrialCounts = await getFreeTrialReservationCounts(env, sessionIds)
+    if (freeTrialCounts.some((record) => record.count >= FREE_TRIAL_SESSION_LIMIT)) {
+      return json(
+        {
+          error: '這堂免費體驗名額已滿，仍可用首購限定價付款保留。',
+          reason: 'free_trial_full',
+          freeTrialLimit: FREE_TRIAL_SESSION_LIMIT,
+          freeTrialCounts,
+        },
+        { status: 409 },
+      )
+    }
+
+    if (availability.some((record) => record.remaining <= PAID_SEAT_BUFFER)) {
+      return json(
+        {
+          error: '這堂剩餘名額已優先保留給線上付款，可以改選其他免費體驗場次。',
+          reason: 'paid_seat_buffer_reserved',
+          paidSeatBuffer: PAID_SEAT_BUFFER,
           availability,
         },
         { status: 409 },

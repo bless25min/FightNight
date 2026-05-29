@@ -67,8 +67,7 @@ function isFightNightCourse(course: WeeklyCourse) {
   return (
     isWeekdayCourse(course) &&
     isEveningCourse(course) &&
-    !isTechniqueCourse(course) &&
-    (isBasicCourse(course) || isConditioningCourse(course))
+    isConditioningCourse(course)
   )
 }
 

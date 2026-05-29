@@ -106,11 +106,11 @@ function getTimeFactor(course: WeeklyCourse): CourseValueFactor {
     return { multiplier: 1.15, tag: '週五場' }
   }
   if (startHour >= 18 && startHour <= 20) {
-    return { multiplier: 1.1, tag: '下班場' }
+    return { multiplier: 1.1, tag: '熱門課程' }
   }
   if (startHour >= 21) return { multiplier: 0.95 }
   if (isWeekend) return { multiplier: 1.05, tag: '週末場' }
-  return { multiplier: 0.9, tag: '日間席' }
+  return { multiplier: 0.9, tag: '離峰優惠' }
 }
 
 function getCoachFactor(
@@ -181,7 +181,13 @@ export function isFirstPurchaseOfferCourseEligible(
   course: WeeklyCourse,
   packageSize: 1 | 2 | 4,
 ) {
-  return course.category === 'FIGHT_NIGHT' && packageSize === 1
+  if (course.category === 'FIGHT_NIGHT') return packageSize === 1
+  if (course.category === 'BOOT_CAMP') return packageSize === 2 || packageSize === 4
+  return false
+}
+
+export function getBasePackageAmount(packageSize: 1 | 2 | 4) {
+  return basePackagePrice[packageSize]
 }
 
 export function getFirstPurchaseOfferAmount(amount: number) {

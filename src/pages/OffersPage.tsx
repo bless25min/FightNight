@@ -571,8 +571,6 @@ export function OffersPage() {
           category,
           route: route ?? 'none',
         },
-        metaStandardEvent: 'Lead',
-        lineEventName: 'LeadClick',
       })
       setScheduleCategory(category)
       setScheduleRoute(category === 'BOOT_CAMP' ? route ?? null : null)

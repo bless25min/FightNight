@@ -1,3 +1,5 @@
+import { sendMetaLeadEvent } from '../shopline/meta-capi.js'
+
 function json(data, init = {}) {
   return new Response(JSON.stringify(data), {
     ...init,
@@ -156,8 +158,17 @@ export async function onRequestPost({ request, env }) {
     const lineEmail = verifiedEmail || submittedEmail
     const lineEmailVerified = verifiedEmail ? 1 : 0
     const rawProfileJson = JSON.stringify(profile)
+    const placement = trimText(body?.placement, 120) || null
+    const sourcePath = trimText(body?.sourcePath, 800) || null
 
     await ensureTables(env)
+
+    const existingCustomer = await env.DB.prepare(
+      `SELECT line_user_id FROM line_customers WHERE line_user_id = ?`,
+    )
+      .bind(lineUserId)
+      .first()
+    const isNewCustomer = !existingCustomer
 
     await env.DB.prepare(
       `INSERT INTO line_customers (
@@ -211,12 +222,47 @@ export async function onRequestPost({ request, env }) {
     )
       .bind(
         lineUserId,
-        trimText(body?.placement, 120) || null,
-        trimText(body?.sourcePath, 800) || null,
+        placement,
+        sourcePath,
         isFriend,
         rawProfileJson,
       )
       .run()
+
+    let metaLead = null
+    if (isNewCustomer) {
+      try {
+        metaLead = await sendMetaLeadEvent({
+          env,
+          request,
+          lead: {
+            lineUserId,
+            eventId: trimText(body?.leadEventId, 160) || undefined,
+            email: lineEmail,
+            isFriend: Boolean(isFriend),
+            placement,
+            sourcePath,
+            tracking:
+              body?.tracking && typeof body.tracking === 'object'
+                ? body.tracking
+                : {},
+            client:
+              body?.client && typeof body.client === 'object'
+                ? body.client
+                : {},
+          },
+        })
+      } catch (error) {
+        metaLead = {
+          ok: false,
+          status: 'failed',
+          error:
+            error instanceof Error
+              ? error.message
+              : 'Failed to send Meta Lead event',
+        }
+      }
+    }
 
     return json({
       ok: true,
@@ -226,6 +272,14 @@ export async function onRequestPost({ request, env }) {
       email: lineEmail,
       emailVerified: Boolean(lineEmailVerified),
       isFriend: Boolean(isFriend),
+      metaLead: metaLead
+        ? {
+            ok: metaLead.ok === true,
+            skipped: metaLead.skipped === true,
+            status: metaLead.status || 'unknown',
+            eventId: metaLead.eventId || null,
+          }
+        : null,
     })
   } catch (error) {
     return json(

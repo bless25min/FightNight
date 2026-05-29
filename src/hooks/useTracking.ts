@@ -4,6 +4,7 @@ import {
   type MetaStandardEvent,
   type TrackingParams,
 } from '../lib/analytics'
+import { claimLeadEvent } from '../lib/leadEvent'
 
 type TrackingEvent = {
   event: string
@@ -39,8 +40,25 @@ export function useTracking() {
         console.log('[Track]', event, params)
       }
 
-      trackAnalyticsEvent(event, params, {
-        metaStandardEvent,
+      const leadClaim =
+        metaStandardEvent === 'Lead' ? claimLeadEvent(event) : null
+      const nextParams = leadClaim
+        ? {
+            ...(params ?? {}),
+            lead_event_id: leadClaim.eventId,
+            lead_meta_sent: leadClaim.shouldSendMetaLead,
+          }
+        : params
+
+      trackAnalyticsEvent(event, nextParams, {
+        metaStandardEvent: leadClaim?.shouldSendMetaLead
+          ? 'Lead'
+          : metaStandardEvent === 'Lead'
+            ? undefined
+            : metaStandardEvent,
+        metaEventId: leadClaim?.shouldSendMetaLead
+          ? leadClaim.eventId
+          : undefined,
         lineEventName,
       })
     },
@@ -105,7 +123,7 @@ export function useTracking() {
         event: 'gate_access_click',
         params: { surface, status },
         metaStandardEvent: 'Lead',
-        lineEventName: 'LeadClick',
+        lineEventName: 'LineLoginClick',
       }),
     [track],
   )

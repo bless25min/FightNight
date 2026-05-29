@@ -17,7 +17,7 @@ export const siteConfig = {
   eventName: 'Fight Night',
   lineUrl: 'https://page.line.me/488ujlbg',
   // 方案卡負責帶到可購買場次；指定場次付款由 SHOPLINE checkout session 建立。
-  ticketUrl: '#ticket',
+  ticketUrl: '#fight-night-pass',
   offersUrl: '/offers',
   bootCampUrl: '/boot-camp',
 }

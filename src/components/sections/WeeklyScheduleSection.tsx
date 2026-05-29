@@ -31,6 +31,7 @@ import {
   getTaipeiTodayIso,
   isFirstPurchaseOfferCourseEligible,
 } from '../../lib/coursePricing'
+import { getCheckoutTrackingContext } from '../../lib/checkoutTracking'
 import { getLineRequestContext } from '../../lib/lineContext'
 import type { BootCampRoute, CourseCategory, WeeklyCourse } from '../../types'
 import { Button } from '../ui/Button'
@@ -115,16 +116,16 @@ const categoryMeta: Record<
   }
 > = {
   FIGHT_NIGHT: {
-    label: 'FIGHT NIGHT',
+    label: 'FIGHT NIGHT 體適能課程',
     tabActiveClass: 'bg-blaze text-abyss border-blaze',
     badgeClass: 'border-blaze/40 bg-blaze/15 text-blaze',
-    lead: '選定日期與場館，保留今晚進入狀態的位置。',
+    lead: '體適能課程。',
   },
   BOOT_CAMP: {
-    label: 'BOOT CAMP',
+    label: 'BOOT CAMP 基礎／技巧課程',
     tabActiveClass: 'bg-neon text-abyss border-neon',
     badgeClass: 'border-neon/40 bg-neon/15 text-neon',
-    lead: '選場館、開始日期、每周習慣的起點。',
+    lead: '基礎／技巧課程。',
   },
 }
 
@@ -742,10 +743,11 @@ function getCourseFeatureTags(
     coachId: coachProfile?.id,
   })
 
-  tags.push(...priceModel.tags, getCourseLevelTag(course), '不對打')
-  if (tags.length < 4) tags.push(getCourseFormatTag(course))
+  tags.push(...priceModel.tags)
+  if (pricingTier === 'foreign-fighter') tags.push('國際場')
+  tags.push(getCourseLevelTag(course), '不對打', getCourseFormatTag(course))
 
-  return Array.from(new Set(tags)).slice(0, 4)
+  return Array.from(new Set(tags))
 }
 
 function getCourseFeatureTagClass(tag: string) {
@@ -768,14 +770,14 @@ function getCourseFeatureTagClass(tag: string) {
     tag === '新手入門' ||
     tag === '新手可上' ||
     tag === '不對打' ||
-    tag === '日間席'
+    tag === '離峰優惠'
   ) {
     return 'border-neon/45 bg-neon/12 text-neon'
   }
   if (
     tag === '高消耗' ||
     tag === '高流汗' ||
-    tag === '下班場' ||
+    tag === '熱門課程' ||
     tag === '週五場' ||
     tag === '週末場' ||
     tag === '需經驗' ||
@@ -1167,6 +1169,7 @@ type CourseDetailSession = {
 }
 
 type CourseDetailPackageOption = {
+  intent?: 'checkout' | 'free_trial'
   packageSize: 1 | 2 | 4
   label: string
   description: string
@@ -1459,19 +1462,28 @@ function CourseDetailModal({
     detail.packageOptions[0] ??
     null
   const isBootCampDetail = detail.activeCategory === 'BOOT_CAMP'
+  const isChoiceDetail =
+    detail.bookingIntent === 'choice' && detail.activeCategory === 'FIGHT_NIGHT'
+  const freeTrialOption =
+    availableOptions.find((option) => option.intent === 'free_trial') ??
+    detail.packageOptions.find((option) => option.intent === 'free_trial') ??
+    null
+  const showChoicePanel = isChoiceDetail && Boolean(freeTrialOption)
   const reserveLabel =
-    isBootCampDetail ? '保留這組日期' : '保留這堂'
+    isBootCampDetail ? '保留這組日期' : isChoiceDetail ? '確認這堂體驗' : '保留這堂'
   const getPurchaseButtonLabel = (option: CourseDetailPackageOption) => {
     if (detail.isPurchaseLocked) return detail.lockedPurchaseCtaLabel ?? '登入看此課首購價'
-    if (detail.bookingIntent === 'free_trial') return '免費預約這堂'
-    if (option.offerApplied) return `以首購價保留這堂 · ${option.priceLabel}`
+    if (option.intent === 'free_trial') return '免費保留體驗名額'
+    if (option.offerApplied) return `用首購限定價保留這堂 · ${option.priceLabel}`
+    if (isChoiceDetail) return `用首購價加購一堂 · ${option.priceLabel}`
     return `${reserveLabel} · ${option.priceLabel}`
   }
   const reservationLine = shouldShowRemainingBadge(detail.remaining)
     ? `${getRemainingLabel(detail.remaining)} · ${detail.dateLabel} ${detail.timeLabel}`
     : `${detail.dateLabel} ${detail.timeLabel}`
   const showPackageOptions =
-    detail.activeCategory === 'BOOT_CAMP' || detail.packageOptions.length > 1
+    !showChoicePanel &&
+    (detail.activeCategory === 'BOOT_CAMP' || detail.packageOptions.length > 1)
 
   return createPortal(
     <motion.div
@@ -1494,7 +1506,7 @@ function CourseDetailModal({
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-pearl/10 bg-abyss/95 px-4 py-3 backdrop-blur md:px-6">
           <div>
             <p className="text-[10px] font-heading uppercase tracking-[0.24em] text-neon/80">
-              下單前確認
+              {isChoiceDetail ? '確認這堂體驗' : '下單前確認'}
             </p>
             <p className="mt-0.5 text-xs text-mist/55">
               {detail.dateLabel} · {detail.timeLabel}
@@ -1647,7 +1659,55 @@ function CourseDetailModal({
           </div>
 
           <aside className="h-fit rounded-2xl border border-blaze/30 bg-blaze/10 p-4 md:p-5 lg:sticky lg:top-20">
-            {!isBootCampDetail && (
+            {showChoicePanel ? (
+              <>
+                <p className="text-xs font-heading uppercase tracking-[0.2em] text-blaze">
+                  確認這堂體驗
+                </p>
+                <p className="mt-2 font-heading text-xl font-black text-pearl">
+                  {detail.productTitle}
+                </p>
+                <p className="mt-1 text-sm text-mist/68">{reservationLine}</p>
+
+                {freeTrialOption && (
+                  <div className="mt-4 rounded-2xl border border-neon/28 bg-neon/12 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-heading text-base font-black text-pearl">
+                          首堂免費體驗
+                        </p>
+                        <p className="mt-1 text-xs leading-relaxed text-mist/68">
+                          每人僅限一次。
+                        </p>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <p className="font-heading text-lg font-black text-neon">
+                          免費
+                        </p>
+                        {freeTrialOption.compareAtLabel && (
+                          <p className="mt-0.5 text-[11px] text-mist/45">
+                            一般{' '}
+                            <span className="line-through">
+                              {freeTrialOption.compareAtLabel}
+                            </span>
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={freeTrialOption.remaining <= 0}
+                      onClick={() => onPurchase(freeTrialOption)}
+                      data-interaction-hint
+                      className="interaction-hint mt-4 w-full rounded-xl bg-blaze px-4 py-3 text-sm font-heading font-black text-abyss transition-colors hover:bg-pearl disabled:cursor-not-allowed disabled:opacity-45"
+                    >
+                      免費保留這堂
+                    </button>
+                  </div>
+                )}
+
+              </>
+            ) : !isBootCampDetail && (
               <>
                 <p className="text-xs font-heading uppercase tracking-[0.2em] text-blaze">
                   {reserveLabel}
@@ -1665,24 +1725,26 @@ function CourseDetailModal({
                 )}
                 <p className="mt-1 text-sm text-mist/68">{reservationLine}</p>
 
-                {primaryOption && primaryOption.remaining > 0 ? (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => onPurchase(primaryOption)}
-                      data-interaction-hint
-                      className="interaction-hint mt-4 w-full rounded-xl bg-blaze px-4 py-3 text-sm font-heading font-black text-abyss transition-colors hover:bg-pearl"
-                    >
-                      {getPurchaseButtonLabel(primaryOption)}
-                    </button>
-                    {detail.isPurchaseLocked && detail.lockedPurchaseNote && (
-                      <p className="mt-3 text-center text-xs leading-relaxed text-mist/55">
-                        {detail.lockedPurchaseNote}
-                      </p>
-                    )}
-                  </>
-                ) : (
-                  <DisabledCta className="mt-4">這堂已售完</DisabledCta>
+                {!showPackageOptions && (
+                  primaryOption && primaryOption.remaining > 0 ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => onPurchase(primaryOption)}
+                        data-interaction-hint
+                        className="interaction-hint mt-4 w-full rounded-xl bg-blaze px-4 py-3 text-sm font-heading font-black text-abyss transition-colors hover:bg-pearl"
+                      >
+                        {getPurchaseButtonLabel(primaryOption)}
+                      </button>
+                      {detail.isPurchaseLocked && detail.lockedPurchaseNote && (
+                        <p className="mt-3 text-center text-xs leading-relaxed text-mist/55">
+                          {detail.lockedPurchaseNote}
+                        </p>
+                      )}
+                    </>
+                  ) : (
+                    <DisabledCta className="mt-4">這堂已售完</DisabledCta>
+                  )
                 )}
               </>
             )}
@@ -1694,7 +1756,7 @@ function CourseDetailModal({
                 }
               >
                 <p className="text-xs font-heading uppercase tracking-[0.18em] text-mist/55">
-                  選擇堂數
+                  {isChoiceDetail ? '確認這堂體驗' : '選擇堂數'}
                 </p>
                 <div className="mt-3 grid gap-2">
                   {detail.packageOptions.map((option) => {
@@ -1791,13 +1853,13 @@ function CourseDetailModal({
   )
 }
 
-type CheckoutBuyer = {
+export type CheckoutBuyer = {
   name: string
   phone: string
   email: string
 }
 
-type BookingIntent = 'checkout' | 'free_trial'
+type BookingIntent = 'checkout' | 'free_trial' | 'choice'
 
 type FreeTrialReservationResult = {
   referenceId: string
@@ -1836,34 +1898,8 @@ function normalizeTaiwanMobilePhone(value: string) {
   return `+886${nationalNumber}`
 }
 
-function readCookie(name: string) {
-  if (typeof document === 'undefined') return ''
-  const match = document.cookie
-    .split('; ')
-    .find((row) => row.startsWith(`${encodeURIComponent(name)}=`))
-  return match ? decodeURIComponent(match.split('=').slice(1).join('=')) : ''
-}
-
-function buildFacebookClickCookie() {
-  if (typeof window === 'undefined') return ''
-  const fbclid = new URLSearchParams(window.location.search).get('fbclid')
-  if (!fbclid) return ''
-  return `fb.1.${Date.now()}.${fbclid}`
-}
-
-function getCheckoutTrackingContext() {
-  if (typeof window === 'undefined') return {}
-
-  return {
-    fbp: readCookie('_fbp'),
-    fbc: readCookie('_fbc') || buildFacebookClickCookie(),
-    sourceUrl: window.location.href,
-    referrer: document.referrer,
-  }
-}
-
-type PendingCheckout = {
-  intent: BookingIntent
+export type PendingCheckout = {
+  intent: Exclude<BookingIntent, 'choice'>
   course: WeeklyCourse
   packageSize: 1 | 2 | 4
   remaining: number
@@ -1876,23 +1912,31 @@ type PendingCheckout = {
   route: BootCampRoute | null
 }
 
+export type FreeTrialDraft = PendingCheckout & {
+  intent: 'free_trial'
+  buyer: CheckoutBuyer
+}
+
 function CheckoutContactModal({
   pending,
   error,
   isSubmitting,
+  initialBuyer,
   onClose,
   onSubmit,
 }: {
   pending: PendingCheckout
   error: string | null
   isSubmitting: boolean
+  initialBuyer?: CheckoutBuyer | null
   onClose: () => void
   onSubmit: (buyer: CheckoutBuyer) => void
 }) {
-  const [name, setName] = useState('')
-  const [phone, setPhone] = useState('')
-  const [email, setEmail] = useState('')
+  const [name, setName] = useState(initialBuyer?.name ?? '')
+  const [phone, setPhone] = useState(initialBuyer?.phone ?? '')
+  const [email, setEmail] = useState(initialBuyer?.email ?? '')
   const isFreeTrial = pending.intent === 'free_trial'
+  const isUsingSavedBuyer = !isFreeTrial && Boolean(initialBuyer?.name && initialBuyer.phone)
   const packageLabel =
     isFreeTrial
       ? '首堂免費體驗'
@@ -1937,7 +1981,7 @@ function CheckoutContactModal({
               {isFreeTrial ? 'FREE TRIAL' : 'SHOPLINE CHECKOUT'}
             </p>
             <h3 className="mt-2 font-heading text-2xl font-black leading-tight text-pearl">
-              {isFreeTrial ? '確認免費預約' : '確認付款資訊'}
+              {isFreeTrial ? '確認資料，看首購優惠' : '確認付款資訊'}
             </h3>
           </div>
           <button
@@ -1979,9 +2023,20 @@ function CheckoutContactModal({
               </span>
             </p>
           )}
+          {!isFreeTrial && pending.packageSize > 1 && (
+            <p className="mt-1 text-xs font-heading text-mist/68">
+              平均 NT{Math.round(pending.value / pending.packageSize).toLocaleString('en-US')} / 堂
+            </p>
+          )}
         </div>
 
         <TechniqueCourseNotice course={pending.course} compact className="mt-3" />
+
+        {isUsingSavedBuyer && (
+          <p className="mt-3 rounded-xl border border-neon/18 bg-neon/8 px-4 py-3 text-sm leading-relaxed text-mist/74">
+            已沿用剛剛填寫的聯絡資訊，確認無誤後即可前往付款。
+          </p>
+        )}
 
         <div className="mt-5 grid gap-3">
           <label className="grid gap-1.5 text-sm font-heading text-mist/72">
@@ -2036,10 +2091,10 @@ function CheckoutContactModal({
         >
           {isSubmitting
             ? isFreeTrial
-              ? '建立預約中...'
+              ? '整理優惠中...'
               : '建立付款中...'
             : isFreeTrial
-              ? '完成免費預約'
+              ? '查看 618 首購優惠'
               : '前往 SHOPLINE 付款'}
         </Button>
       </motion.form>
@@ -2111,7 +2166,7 @@ function FreeTrialSuccessModal({
         </div>
 
         <p className="mt-5 text-sm leading-relaxed text-mist/76">
-          現在可用 618 首購限定優惠加購其他課程，不用入會、不綁約。
+          618 首購可選 Boot Camp 基礎／技巧，或 Fight Night 體適能。
         </p>
 
         <div className="mt-5 grid gap-3">
@@ -2121,7 +2176,7 @@ function FreeTrialSuccessModal({
             onClick={onViewAddOns}
             data-cta="free-trial-view-add-ons"
           >
-            查看其他課程與價格
+            查看 618 首購方案
           </Button>
           <Button
             variant="secondary"
@@ -2130,7 +2185,7 @@ function FreeTrialSuccessModal({
             onClick={onKeepOnly}
             data-cta="free-trial-keep-only"
           >
-            放棄首購限定優惠，僅保留免費預約體驗
+            先只保留免費體驗
           </Button>
         </div>
       </motion.div>
@@ -2149,10 +2204,15 @@ type Props = {
   showCategoryTabs?: boolean
   showVenueFilter?: boolean
   showBootCampRouteFilter?: boolean
+  showCategoryLead?: boolean
+  categoryTabsPlacement?: 'top' | 'bottom'
+  footnoteText?: string
+  categorySwitchHeading?: Partial<Record<CourseCategory, string>>
   title?: string
   subtitle?: string
   embedded?: boolean
   bookingMode?: 'standard' | 'bootcamp'
+  bootCampPackageFilter?: 2 | 4
   className?: string
   displayLimit?: number
   featuredCourseNames?: string[]
@@ -2160,14 +2220,18 @@ type Props = {
   bookingIntent?: BookingIntent
   freeTrialCtaLabel?: string
   freeTrialBadgeLabel?: string
+  checkoutBuyer?: CheckoutBuyer | null
+  beforeCheckoutSubmit?: () => Promise<void> | void
   isPurchaseLocked?: boolean
   lockedPurchaseCtaLabel?: string
   lockedPurchaseNote?: string
   lockedOfferBadgeLabel?: string
   onLockedPurchase?: () => void
   firstPurchaseOfferEligible?: boolean
+  onFreeTrialDraftSubmit?: (draft: FreeTrialDraft) => void
   onFreeTrialReserved?: (reservation: FreeTrialReservationResult) => void
   onFreeTrialAddOnClick?: () => void
+  onFreeTrialKeepOnly?: () => void
 }
 
 export function WeeklyScheduleSection({
@@ -2180,10 +2244,15 @@ export function WeeklyScheduleSection({
   showCategoryTabs = categories.length > 1,
   showVenueFilter = false,
   showBootCampRouteFilter = true,
+  showCategoryLead = true,
+  categoryTabsPlacement = 'top',
+  footnoteText = weeklyScheduleSectionContent.footnote,
+  categorySwitchHeading,
   title = weeklyScheduleSectionContent.title,
   subtitle = weeklyScheduleSectionContent.subtitle,
   embedded = false,
   bookingMode = 'standard',
+  bootCampPackageFilter,
   className = '',
   displayLimit = SCHEDULE_DISPLAY_LIMIT,
   featuredCourseNames = EMPTY_FEATURED_COURSE_NAMES,
@@ -2191,14 +2260,18 @@ export function WeeklyScheduleSection({
   bookingIntent = 'checkout',
   freeTrialCtaLabel = '免費預約這堂',
   freeTrialBadgeLabel = '首堂免費體驗',
+  checkoutBuyer = null,
+  beforeCheckoutSubmit,
   isPurchaseLocked = false,
   lockedPurchaseCtaLabel = '登入看此課首購價',
   lockedPurchaseNote,
   lockedOfferBadgeLabel,
   onLockedPurchase,
   firstPurchaseOfferEligible = false,
+  onFreeTrialDraftSubmit,
   onFreeTrialReserved,
   onFreeTrialAddOnClick,
+  onFreeTrialKeepOnly,
 }: Props = {}) {
   const { track, trackCoursePurchaseClick } = useTracking()
   const fallbackCategory = categories[0] ?? 'FIGHT_NIGHT'
@@ -2212,6 +2285,13 @@ export function WeeklyScheduleSection({
       : internalCategory
   const isFreeTrialMode =
     bookingIntent === 'free_trial' && activeCategory === 'FIGHT_NIGHT'
+  const isChoiceMode =
+    bookingIntent === 'choice' && activeCategory === 'FIGHT_NIGHT'
+  const hasFreeTrialOption = (isFreeTrialMode || isChoiceMode) && !isPurchaseLocked
+  const bootCampPackageSizes = useMemo<Array<2 | 4>>(
+    () => (bootCampPackageFilter ? [bootCampPackageFilter] : [2, 4]),
+    [bootCampPackageFilter],
+  )
   const activeBootCampRoute =
     activeCategory === 'BOOT_CAMP'
       ? controlledBootCampRoute ?? internalBootCampRoute
@@ -2225,6 +2305,7 @@ export function WeeklyScheduleSection({
     else setInternalBootCampRoute(route)
   }, [onBootCampRouteChange])
   const scrollerRef = useRef<HTMLDivElement>(null)
+  const venueFilterRef = useRef<HTMLDivElement>(null)
   const [activeVenueId, setActiveVenueId] = useState<string | null>(null)
   const [hasTouchedVenueFilter, setHasTouchedVenueFilter] = useState(false)
   const [activeDateIso, setActiveDateIso] = useState<string | null>(null)
@@ -2486,16 +2567,18 @@ export function WeeklyScheduleSection({
       pricingTier: CoachPricingTier,
       originalValue?: number,
       offerApplied?: boolean,
+      intentOverride?: Exclude<BookingIntent, 'choice'>,
     ) => {
       if (isPurchaseLocked) {
         onLockedPurchase?.()
         return
       }
 
-      const intent: BookingIntent =
-        isFreeTrialMode && course.category === 'FIGHT_NIGHT' && packageSize === 1
+      const intent: Exclude<BookingIntent, 'choice'> =
+        intentOverride ??
+        (isFreeTrialMode && course.category === 'FIGHT_NIGHT' && packageSize === 1
           ? 'free_trial'
-          : 'checkout'
+          : 'checkout')
 
       const series =
         packageSize === 1
@@ -2531,8 +2614,6 @@ export function WeeklyScheduleSection({
             0,
             pricingTier,
           ),
-          metaStandardEvent: 'Lead',
-          lineEventName: 'FreeTrialClick',
         })
         return
       }
@@ -2570,8 +2651,42 @@ export function WeeklyScheduleSection({
       setIsCheckoutSubmitting(true)
       setCheckoutError(null)
 
+      let failureReason = ''
+
       try {
         if (pendingCheckout.intent === 'free_trial') {
+          if (onFreeTrialDraftSubmit) {
+            const draft: FreeTrialDraft = {
+              ...pendingCheckout,
+              intent: 'free_trial',
+              buyer: {
+                ...buyer,
+                phone: normalizedPhone,
+              },
+            }
+
+            track({
+              event: 'free_trial_contact_submit',
+              params: {
+                ...buildCourseTrackingParams(
+                  pendingCheckout.course,
+                  pendingCheckout.packageSize,
+                  pendingCheckout.remaining,
+                  0,
+                  pendingCheckout.pricingTier,
+                ),
+                original_value: pendingCheckout.originalValue,
+              },
+              metaStandardEvent: 'Lead',
+              lineEventName: 'FreeTrialContactSubmit',
+            })
+
+            setPendingCheckout(null)
+            setIsCheckoutSubmitting(false)
+            onFreeTrialDraftSubmit(draft)
+            return
+          }
+
           const response = await fetch('/api/free-trial-reservation', {
             method: 'POST',
             headers: {
@@ -2605,11 +2720,16 @@ export function WeeklyScheduleSection({
                 referenceId?: string
                 reservation?: Partial<FreeTrialReservationResult>
                 lineNotify?: { status?: string }
+                reason?: string
                 error?: string
               }
             | null
 
           if (!response.ok || !data?.referenceId) {
+            failureReason =
+              typeof data?.reason === 'string'
+                ? data.reason
+                : `http_${response.status}`
             throw new Error(data?.error || '免費預約建立失敗，請稍後再試。')
           }
 
@@ -2659,6 +2779,10 @@ export function WeeklyScheduleSection({
           return
         }
 
+        if (beforeCheckoutSubmit) {
+          await beforeCheckoutSubmit()
+        }
+
         const response = await fetch('/api/shopline/checkout-session', {
           method: 'POST',
           headers: {
@@ -2695,10 +2819,19 @@ export function WeeklyScheduleSection({
         })
 
         const data = (await response.json().catch(() => null)) as
-          | { referenceId?: string; sessionUrl?: string; error?: string }
+          | {
+              referenceId?: string
+              sessionUrl?: string
+              reason?: string
+              error?: string
+            }
           | null
 
         if (!response.ok || !data?.sessionUrl) {
+          failureReason =
+            typeof data?.reason === 'string'
+              ? data.reason
+              : `http_${response.status}`
           throw new Error(data?.error || 'SHOPLINE 付款建立失敗，請稍後再試。')
         }
 
@@ -2727,15 +2860,61 @@ export function WeeklyScheduleSection({
 
         window.location.href = data.sessionUrl
       } catch (error) {
-        setCheckoutError(
+        const message =
           error instanceof Error
             ? error.message
-            : 'SHOPLINE 付款建立失敗，請稍後再試。',
-        )
+            : 'SHOPLINE 付款建立失敗，請稍後再試。'
+        const reason =
+          typeof error === 'object' &&
+          error !== null &&
+          'reason' in error &&
+          typeof error.reason === 'string'
+            ? error.reason
+            : failureReason || 'unknown'
+        const alreadyTracked =
+          typeof error === 'object' &&
+          error !== null &&
+          'tracked' in error &&
+          error.tracked === true
+        const isFreeTrial = pendingCheckout.intent === 'free_trial'
+        if (!alreadyTracked) {
+          track({
+            event: isFreeTrial
+              ? 'free_trial_reservation_error'
+              : 'shopline_checkout_error',
+            params: {
+              ...buildCourseTrackingParams(
+                pendingCheckout.course,
+                pendingCheckout.packageSize,
+                pendingCheckout.remaining,
+                isFreeTrial ? 0 : pendingCheckout.value,
+                pendingCheckout.pricingTier,
+              ),
+              original_value: pendingCheckout.originalValue,
+              discount_code: pendingCheckout.offerApplied
+                ? '618_MIDYEAR_FIRST_PURCHASE_HALF'
+                : undefined,
+              discount_label: pendingCheckout.offerApplied
+                ? '618 首購半價'
+                : undefined,
+              booking_intent: pendingCheckout.intent,
+              error_reason: reason,
+              error_message: message,
+            },
+          })
+        }
+        setCheckoutError(message)
         setIsCheckoutSubmitting(false)
       }
     },
-    [buildCourseTrackingParams, onFreeTrialReserved, pendingCheckout, track],
+    [
+      beforeCheckoutSubmit,
+      buildCourseTrackingParams,
+      onFreeTrialDraftSubmit,
+      onFreeTrialReserved,
+      pendingCheckout,
+      track,
+    ],
   )
 
   const getPackageAvailability = useCallback(
@@ -2842,6 +3021,70 @@ export function WeeklyScheduleSection({
   const earliestLabel = earliest && !isBootCampBookingMode
     ? `最早可購買 ${formatShortDate(earliest.date)} 週${earliest.weekday} ${earliest.startTime}`
     : null
+  const shouldShowFootnote = !(embedded && isPurchaseLocked)
+  const isBottomCategorySwitch = categoryTabsPlacement === 'bottom'
+  const bottomCategorySwitchHeading =
+    categorySwitchHeading?.[activeCategory] ?? footnoteText
+  const categoryTabs = showCategoryTabs ? (
+    <div
+      role="tablist"
+      aria-label="選擇課程方向"
+      className={
+        isBottomCategorySwitch
+          ? 'grid grid-cols-1 gap-2 sm:grid-cols-2'
+          : 'flex flex-wrap justify-center gap-2 md:gap-3 mb-4 md:mb-6'
+      }
+    >
+      {categories.map((cat) => {
+        const active = cat === activeCategory
+        const m = categoryMeta[cat]
+        const buttonClass = isBottomCategorySwitch
+          ? `interaction-hint min-h-[3.25rem] rounded-xl border px-4 py-3 text-center text-sm font-heading font-black tracking-wide transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-neon/70 md:text-base ${
+              active
+                ? `${m.tabActiveClass} shadow-[0_16px_38px_rgba(0,0,0,0.28)]`
+                : 'border-pearl/18 bg-pearl/[0.06] text-pearl hover:border-pearl/35 hover:bg-pearl/[0.1] hover:text-white'
+            }`
+          : `interaction-hint px-5 py-2.5 rounded-full text-sm md:text-base font-heading font-semibold tracking-[0.15em] transition-colors border ${
+              active
+                ? m.tabActiveClass
+                : 'bg-black/30 text-mist border-pearl/15 hover:border-pearl/35 hover:text-pearl'
+            }`
+        return (
+          <button
+            key={cat}
+            role="tab"
+            type="button"
+            aria-selected={active}
+            onClick={() => {
+              setActiveCategory(cat)
+              if (isBottomCategorySwitch && showVenueFilter) {
+                window.setTimeout(() => {
+                  venueFilterRef.current?.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start',
+                  })
+                }, 80)
+              }
+            }}
+            data-cta={`${id}-category-${cat.toLowerCase()}`}
+            data-interaction-hint
+            className={buttonClass}
+          >
+            {m.label}
+          </button>
+        )
+      })}
+    </div>
+  ) : null
+  const footnote = shouldShowFootnote ? (
+    <p
+      className={`text-center text-xs md:text-sm text-mist/50 max-w-2xl mx-auto ${
+        categoryTabsPlacement === 'bottom' ? 'mt-0' : 'mt-8 md:mt-12'
+      }`}
+    >
+      {footnoteText}
+    </p>
+  ) : null
 
   const content = (
     <>
@@ -2852,37 +3095,9 @@ export function WeeklyScheduleSection({
         className={embedded ? 'mb-5 md:mb-7' : ''}
       />
 
-      {showCategoryTabs && (
-        <div
-          role="tablist"
-          aria-label="選擇課程方向"
-          className="flex flex-wrap justify-center gap-2 md:gap-3 mb-4 md:mb-6"
-        >
-          {categories.map((cat) => {
-            const active = cat === activeCategory
-            const m = categoryMeta[cat]
-            return (
-              <button
-                key={cat}
-                role="tab"
-                type="button"
-                aria-selected={active}
-                onClick={() => setActiveCategory(cat)}
-                data-interaction-hint
-                className={`interaction-hint px-5 py-2.5 rounded-full text-sm md:text-base font-heading font-semibold tracking-[0.15em] transition-colors border ${
-                  active
-                    ? m.tabActiveClass
-                    : 'bg-black/30 text-mist border-pearl/15 hover:border-pearl/35 hover:text-pearl'
-                }`}
-              >
-                {m.label}
-              </button>
-            )
-          })}
-        </div>
-      )}
+      {categoryTabsPlacement === 'top' && categoryTabs}
 
-      {!isBootCampBookingMode && (
+      {showCategoryLead && !isBootCampBookingMode && (
         <p className="mx-auto mb-2 max-w-2xl text-center text-sm leading-snug text-mist/75 md:mb-3 md:text-base">
           {meta.lead}
         </p>
@@ -2908,7 +3123,9 @@ export function WeeklyScheduleSection({
       <div className="max-w-6xl mx-auto">
         {showVenueFilter && upcomingCourses.length > 0 && (
           <div
-            className={`relative mb-5 overflow-hidden rounded-2xl border bg-black/25 p-4 transition-all duration-300 md:mb-6 md:p-5 ${
+            ref={venueFilterRef}
+            id={`${id}-venue-filter`}
+            className={`relative mb-5 scroll-mt-24 overflow-hidden rounded-2xl border bg-black/25 p-4 transition-all duration-300 md:mb-6 md:scroll-mt-28 md:p-5 ${
               hasTouchedVenueFilter
                 ? 'border-pearl/10'
                 : 'venue-step-focus border-neon/35 shadow-[0_0_0_1px_rgba(191,90,242,0.12),0_22px_70px_rgba(191,90,242,0.10)]'
@@ -2938,6 +3155,7 @@ export function WeeklyScheduleSection({
                   setHasTouchedVenueFilter(true)
                   setActiveVenueId(null)
                 }}
+                data-cta={`${id}-venue-all`}
                 className={`relative min-h-[5.75rem] overflow-hidden rounded-xl border px-3.5 py-3 text-left transition-all duration-300 ${
                   isBootCampBookingMode ? 'min-w-[8.5rem] snap-start' : ''
                 } ${
@@ -2969,6 +3187,7 @@ export function WeeklyScheduleSection({
                     setHasTouchedVenueFilter(true)
                     setActiveVenueId(venue.id)
                   }}
+                  data-cta={`${id}-venue-${venue.id}`}
                   className={`relative min-h-[5.75rem] overflow-hidden rounded-xl border px-3.5 py-3 text-left transition-all duration-300 ${
                     isBootCampBookingMode ? 'min-w-[9.5rem] snap-start' : ''
                   } ${
@@ -3023,6 +3242,7 @@ export function WeeklyScheduleSection({
                     type="button"
                     aria-pressed={active}
                     onClick={() => setActiveDateIso(option.date)}
+                    data-cta={`${id}-date-${option.date}`}
                     data-interaction-hint
                     className={`interaction-hint min-w-[5.75rem] snap-start rounded-xl border px-3 py-3 text-left transition-colors ${
                       active
@@ -3068,6 +3288,7 @@ export function WeeklyScheduleSection({
                       type="button"
                       aria-pressed={active}
                       onClick={() => setActiveBootCampRoute(route)}
+                      data-cta={`${id}-route-${route ?? 'all'}`}
                       data-interaction-hint
                       className={`interaction-hint rounded-xl border px-3.5 py-3 text-left transition-colors ${
                         active
@@ -3107,6 +3328,7 @@ export function WeeklyScheduleSection({
                   type="button"
                   aria-label="上一堂課"
                   onClick={() => scrollSchedule(-1)}
+                  data-cta={`${id}-schedule-prev`}
                   data-interaction-hint
                   className="interaction-hint h-10 px-3 rounded-full border border-pearl/15 bg-black/35 text-sm font-heading text-mist hover:text-pearl hover:border-pearl/30 transition-colors"
                 >
@@ -3116,6 +3338,7 @@ export function WeeklyScheduleSection({
                   type="button"
                   aria-label="下一堂課"
                   onClick={() => scrollSchedule(1)}
+                  data-cta={`${id}-schedule-next`}
                   data-interaction-hint
                   className="interaction-hint h-10 px-3 rounded-full border border-pearl/15 bg-black/35 text-sm font-heading text-mist hover:text-pearl hover:border-pearl/30 transition-colors"
                 >
@@ -3205,29 +3428,49 @@ export function WeeklyScheduleSection({
                   1,
                   firstPurchaseOfferEligible,
                 )
-                const bootCamp2Price = getCoursePriceModel({
+                const bootCamp2BasePrice = getCoursePriceModel({
                   course: c,
                   pricingTier: coachPricingTier,
                   packageSize: 2,
                   remaining: bootCamp2Availability.remaining,
                   coachId: coachProfile?.id,
                 })
-                const bootCamp4Price = getCoursePriceModel({
+                const bootCamp4BasePrice = getCoursePriceModel({
                   course: c,
                   pricingTier: coachPricingTier,
                   packageSize: 4,
                   remaining: bootCamp4Availability.remaining,
                   coachId: coachProfile?.id,
                 })
+                const bootCamp2Price = applyFirstPurchaseOfferToPrice(
+                  bootCamp2BasePrice,
+                  c,
+                  2,
+                  firstPurchaseOfferEligible,
+                )
+                const bootCamp4Price = applyFirstPurchaseOfferToPrice(
+                  bootCamp4BasePrice,
+                  c,
+                  4,
+                  firstPurchaseOfferEligible,
+                )
                 const primaryCardPriceLabel =
                   activeCategory === 'FIGHT_NIGHT'
-                    ? isFreeTrialMode
+                    ? isPurchaseLocked
+                      ? '首堂免費體驗'
+                      : isChoiceMode
+                        ? '首堂免費可用'
+                      : isFreeTrialMode
                       ? fightNightBasePrice.label
                       : fightNightPrice.label
                     : `${bootCamp2Price.label} 起`
                 const primaryCardCompareAtLabel =
                   activeCategory === 'FIGHT_NIGHT'
-                    ? isFreeTrialMode
+                    ? isPurchaseLocked
+                      ? fightNightBasePrice.label
+                      : isChoiceMode
+                        ? fightNightBasePrice.label
+                      : isFreeTrialMode
                       ? undefined
                       : fightNightPrice.compareAtLabel
                     : bootCamp2Price.compareAtLabel
@@ -3235,20 +3478,29 @@ export function WeeklyScheduleSection({
                   firstPurchaseOfferEligible &&
                   isFirstPurchaseOfferCourseEligible(c, 1) &&
                   fightNightPrice.amount < fightNightBasePrice.amount
+                const bootCampOfferApplied =
+                  activeCategory === 'BOOT_CAMP' &&
+                  firstPurchaseOfferEligible &&
+                  (bootCamp2Price.tags.includes(FIRST_PURCHASE_OFFER_BADGE) ||
+                    bootCamp4Price.tags.includes(FIRST_PURCHASE_OFFER_BADGE))
                 const shouldShowLockedOfferBadge =
                   activeCategory === 'FIGHT_NIGHT' &&
                   isPurchaseLocked &&
                   Boolean(lockedOfferBadgeLabel) &&
                   isFirstPurchaseOfferCourseEligible(c, 1)
                 const shouldShowFreeTrialBadge =
-                  isFreeTrialMode && isFirstPurchaseOfferCourseEligible(c, 1)
-                const displayCourseFeatureTags = fightNightOfferApplied
-                  ? Array.from(new Set([FIRST_PURCHASE_OFFER_BADGE, ...courseFeatureTags]))
-                  : shouldShowFreeTrialBadge
-                    ? Array.from(new Set([freeTrialBadgeLabel, ...courseFeatureTags]))
-                  : shouldShowLockedOfferBadge
-                    ? Array.from(new Set([lockedOfferBadgeLabel!, ...courseFeatureTags]))
-                    : courseFeatureTags
+                  hasFreeTrialOption && isFirstPurchaseOfferCourseEligible(c, 1)
+                const displayCourseFeatureTags = Array.from(
+                  new Set([
+                    ...(fightNightOfferApplied
+                      ? [FIRST_PURCHASE_OFFER_BADGE]
+                      : []),
+                    ...(bootCampOfferApplied ? [FIRST_PURCHASE_OFFER_BADGE] : []),
+                    ...(shouldShowFreeTrialBadge ? [freeTrialBadgeLabel] : []),
+                    ...(shouldShowLockedOfferBadge ? [lockedOfferBadgeLabel!] : []),
+                    ...courseFeatureTags,
+                  ]),
+                )
                 const fightNightSession = [
                   {
                     id: getSessionInventoryId(c),
@@ -3259,13 +3511,15 @@ export function WeeklyScheduleSection({
                 ]
                 const courseDetailPackageOptions: CourseDetailPackageOption[] =
                   activeCategory === 'BOOT_CAMP'
-                    ? ([2, 4] as const).map((packageSize) => {
+                    ? bootCampPackageSizes.map((packageSize) => {
                         const availability =
                           packageSize === 2
                             ? bootCamp2Availability
                             : bootCamp4Availability
                         const price =
                           packageSize === 2 ? bootCamp2Price : bootCamp4Price
+                        const offerApplied =
+                          price.tags.includes(FIRST_PURCHASE_OFFER_BADGE)
                         return {
                           packageSize,
                           label: `${bootCampPackageMeta[packageSize].label} Boot Camp`,
@@ -3273,6 +3527,10 @@ export function WeeklyScheduleSection({
                           priceLabel: price.label,
                           compareAtLabel: price.compareAtLabel,
                           value: price.amount,
+                          originalValue: offerApplied
+                            ? price.compareAtAmount
+                            : undefined,
+                          offerApplied,
                           remaining: availability.remaining,
                           series:
                             packageSize === 2 ? bootCampSeries2 : bootCampSeries4,
@@ -3281,26 +3539,44 @@ export function WeeklyScheduleSection({
                       })
                     : [
                         {
+                          intent: 'checkout',
                           packageSize: 1,
-                          label: 'Fight Night Pass',
-                          description: isFreeTrialMode
-                            ? '首堂免費體驗，先把這個晚上留給自己'
-                            : '單堂體驗，先把這個晚上留給自己',
-                          priceLabel: isFreeTrialMode ? '免費' : fightNightPrice.label,
-                          compareAtLabel: isFreeTrialMode
-                            ? fightNightBasePrice.label
-                            : fightNightPrice.compareAtLabel,
-                          value: isFreeTrialMode ? 0 : fightNightPrice.amount,
-                          originalValue: isFreeTrialMode
+                          label: fightNightOfferApplied
+                            ? '首購限定加購'
+                            : '線上付款保留',
+                          description: fightNightOfferApplied
+                            ? '想多上一堂時，可用首購限定價加購。'
+                            : '線上付款完成後保留名額，不用入會、不綁約。',
+                          priceLabel: fightNightPrice.label,
+                          compareAtLabel: fightNightPrice.compareAtLabel,
+                          value: fightNightPrice.amount,
+                          originalValue: fightNightOfferApplied
                             ? fightNightBasePrice.amount
-                            : fightNightOfferApplied
-                              ? fightNightBasePrice.amount
-                              : undefined,
-                          offerApplied: isFreeTrialMode ? false : fightNightOfferApplied,
+                            : undefined,
+                          offerApplied: fightNightOfferApplied,
                           remaining: sessionAvailability.remaining,
                           series: fightNightSession,
-                          primary: true,
+                          primary: !hasFreeTrialOption,
                         },
+                        ...(hasFreeTrialOption
+                          ? [
+                              {
+                                intent: 'free_trial' as const,
+                                packageSize: 1 as const,
+                                label: '免費保留體驗名額',
+                                description:
+                                  '每人僅限一次。',
+                                priceLabel: '免費',
+                                compareAtLabel: fightNightBasePrice.label,
+                                value: 0,
+                                originalValue: fightNightBasePrice.amount,
+                                offerApplied: false,
+                                remaining: sessionAvailability.remaining,
+                                series: fightNightSession,
+                                primary: true,
+                              },
+                            ]
+                          : []),
                       ]
                 const coachProofTag = getCoachProofTag(c.coach, coachProfile)
                 const courseDetail: SelectedCourseDetail = {
@@ -3324,7 +3600,11 @@ export function WeeklyScheduleSection({
                   remaining: merchandisingRemaining,
                   decisionSignals: courseDecisionSignals,
                   packageOptions: courseDetailPackageOptions,
-                  bookingIntent: isFreeTrialMode ? 'free_trial' : 'checkout',
+                  bookingIntent: isChoiceMode
+                    ? 'choice'
+                    : isFreeTrialMode
+                      ? 'free_trial'
+                      : 'checkout',
                   isPurchaseLocked,
                   lockedPurchaseCtaLabel,
                   lockedPurchaseNote,
@@ -3415,7 +3695,7 @@ export function WeeklyScheduleSection({
                           {courseCardPitch}
                         </p>
                         <div className="mt-3 flex flex-wrap items-center gap-2">
-                          {displayCourseFeatureTags.slice(0, 3).map((tag) => (
+                          {displayCourseFeatureTags.map((tag) => (
                             <span
                               key={tag}
                               className={`rounded-full border px-2.5 py-1 text-[11px] font-heading tracking-wide ${getCourseFeatureTagClass(tag)}`}
@@ -3478,8 +3758,8 @@ export function WeeklyScheduleSection({
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-2">
-                          {([2, 4] as const).map((packageSize) => {
+                        <div className={`grid gap-2 ${bootCampPackageFilter ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                          {bootCampPackageSizes.map((packageSize) => {
                             const availability =
                               packageSize === 2
                                 ? bootCamp2Availability
@@ -3487,6 +3767,8 @@ export function WeeklyScheduleSection({
                             const packagePrice =
                               packageSize === 2 ? bootCamp2Price : bootCamp4Price
                             const soldOut = availability.remaining <= 0
+                            const packageOfferApplied =
+                              packagePrice.tags.includes(FIRST_PURCHASE_OFFER_BADGE)
 
                             return soldOut ? (
                               <DisabledCta key={packageSize}>
@@ -3509,6 +3791,10 @@ export function WeeklyScheduleSection({
                                     availability.remaining,
                                     packagePrice.amount,
                                     coachPricingTier,
+                                    packageOfferApplied
+                                      ? packagePrice.compareAtAmount
+                                      : undefined,
+                                    packageOfferApplied,
                                   )
                                 }
                                 data-cta={`schedule-${c.id}-bootcamp-${packageSize}`}
@@ -3601,7 +3887,7 @@ export function WeeklyScheduleSection({
                             {getRemainingLabel(displayAvailability.remaining)}
                           </p>
                         )}
-                        {displayCourseFeatureTags.slice(0, 3).map((tag) => (
+                        {displayCourseFeatureTags.map((tag) => (
                           <p
                             key={tag}
                             className={`inline-flex w-fit rounded-full border px-2.5 py-1 text-[11px] font-heading tracking-wide ${getCourseFeatureTagClass(tag)}`}
@@ -3638,49 +3924,52 @@ export function WeeklyScheduleSection({
                     <div className="mt-auto space-y-2 px-4 pb-4 pt-3 md:px-5">
                       {activeCategory === 'BOOT_CAMP' ? (
                         <div className="space-y-2">
-                          <div className="grid grid-cols-2 gap-2">
-                            {bootCamp2Availability.remaining > 0 ? (
-                              <Button
-                                variant="secondary"
-                                size="sm"
-                                className="w-full border-neon/25 bg-neon/10 text-pearl"
-                                onClick={() =>
-                                  openShoplineCheckout(
-                                    c,
-                                    2,
-                                    bootCamp2Availability.remaining,
-                                    bootCamp2Price.amount,
-                                    coachPricingTier,
-                                  )
-                                }
-                                data-cta={`schedule-${c.id}-bootcamp-2`}
-                              >
-                                保留兩堂 · {bootCamp2Price.label}
-                              </Button>
-                            ) : (
-                              <DisabledCta>兩堂已售完</DisabledCta>
-                            )}
-                            {bootCamp4Availability.remaining > 0 ? (
-                              <Button
-                                variant="primary"
-                                size="sm"
-                                className="w-full"
-                                onClick={() =>
-                                  openShoplineCheckout(
-                                    c,
-                                    4,
-                                    bootCamp4Availability.remaining,
-                                    bootCamp4Price.amount,
-                                    coachPricingTier,
-                                  )
-                                }
-                                data-cta={`schedule-${c.id}-bootcamp-4`}
-                              >
-                                保留四堂 · {bootCamp4Price.label}
-                              </Button>
-                            ) : (
-                              <DisabledCta>四堂已售完</DisabledCta>
-                            )}
+                          <div className={`grid gap-2 ${bootCampPackageFilter ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                            {bootCampPackageSizes.map((packageSize) => {
+                              const availability =
+                                packageSize === 2
+                                  ? bootCamp2Availability
+                                  : bootCamp4Availability
+                              const packagePrice =
+                                packageSize === 2 ? bootCamp2Price : bootCamp4Price
+                              const soldOut = availability.remaining <= 0
+                              const packageOfferApplied =
+                                packagePrice.tags.includes(FIRST_PURCHASE_OFFER_BADGE)
+
+                              return soldOut ? (
+                                <DisabledCta key={packageSize}>
+                                  {`${bootCampPackageMeta[packageSize].label}已售完`}
+                                </DisabledCta>
+                              ) : (
+                                <Button
+                                  key={packageSize}
+                                  variant={packageSize === 4 ? 'primary' : 'secondary'}
+                                  size="sm"
+                                  className={
+                                    packageSize === 4
+                                      ? 'w-full'
+                                      : 'w-full border-neon/25 bg-neon/10 text-pearl'
+                                  }
+                                  onClick={() =>
+                                    openShoplineCheckout(
+                                      c,
+                                      packageSize,
+                                      availability.remaining,
+                                      packagePrice.amount,
+                                      coachPricingTier,
+                                      packageOfferApplied
+                                        ? packagePrice.compareAtAmount
+                                        : undefined,
+                                      packageOfferApplied,
+                                    )
+                                  }
+                                  data-cta={`schedule-${c.id}-bootcamp-${packageSize}`}
+                                >
+                                  保留{bootCampPackageMeta[packageSize].label} ·{' '}
+                                  {packagePrice.label}
+                                </Button>
+                              )
+                            })}
                           </div>
                         </div>
                       ) : (
@@ -3688,7 +3977,11 @@ export function WeeklyScheduleSection({
                           <>
                             <div className="flex items-end justify-between gap-3 border-t border-pearl/10 pt-3">
                               <p className="text-[10px] font-heading tracking-[0.18em] text-neon/75">
-                                {isFreeTrialMode ? '一般單堂' : '單堂入場'}
+                                {isPurchaseLocked
+                                  ? '熱門範例'
+                                  : isFreeTrialMode
+                                    ? '一般單堂'
+                                    : '單堂入場'}
                               </p>
                               <div className="text-right">
                                 <p className="font-heading text-lg font-black text-pearl">
@@ -3706,8 +3999,16 @@ export function WeeklyScheduleSection({
                             </div>
                             <Button
                               variant="primary"
-                              className="w-full"
-                              onClick={() =>
+                              className="w-full whitespace-normal px-3 text-center leading-snug"
+                              onClick={() => {
+                                if (isPurchaseLocked) {
+                                  onLockedPurchase?.()
+                                  return
+                                }
+                                if (isChoiceMode) {
+                                  openCourseDetail()
+                                  return
+                                }
                                 openShoplineCheckout(
                                   c,
                                   1,
@@ -3721,15 +4022,19 @@ export function WeeklyScheduleSection({
                                     : undefined,
                                   isFreeTrialMode ? false : fightNightOfferApplied,
                                 )
-                              }
+                              }}
                               data-cta={
-                                isFreeTrialMode
+                                isChoiceMode
+                                  ? `schedule-${c.id}-select`
+                                  : isFreeTrialMode
                                   ? `schedule-${c.id}-free-trial`
                                   : `schedule-${c.id}-fight-night`
                               }
                             >
                               {isPurchaseLocked
                                 ? lockedPurchaseCtaLabel
+                                : isChoiceMode
+                                  ? '選這堂免費體驗'
                                 : isFreeTrialMode
                                   ? freeTrialCtaLabel
                                   : fightNightOfferApplied
@@ -3756,46 +4061,16 @@ export function WeeklyScheduleSection({
         )}
       </div>
 
-      {activeCategory === 'BOOT_CAMP' && displayCourses.length > 0 && (
-        <div className="mx-auto mt-8 max-w-5xl border-y border-neon/20 bg-neon/8 px-4 py-5 md:mt-10 md:flex md:items-center md:justify-between md:gap-6 md:px-6 md:py-6">
-          <div className="max-w-xl">
-            <p className="font-heading text-xs uppercase tracking-[0.26em] text-neon/80">
-              只想先體驗一次？
-            </p>
-            <p className="mt-2 font-heading text-2xl font-black leading-tight text-pearl md:text-3xl">
-              先選一堂 Fight Night 感受現場
-            </p>
-          </div>
-          <div className="mt-5 md:mt-0 md:w-64">
-            <Button
-              variant="secondary"
-              size="lg"
-              href="/#ticket"
-              className="w-full border-neon/35 bg-neon/8 text-neon hover:border-neon/55 hover:bg-neon/14 hover:text-pearl"
-              onClick={() =>
-                track({
-                  event: 'bootcamp_single_class_redirect_click',
-                  params: {
-                    surface: 'bootcamp_schedule_block',
-                    active_route: activeBootCampRoute ?? 'all',
-                    active_venue_id: activeVenueId ?? 'all',
-                    active_date: activeDateIso ?? 'all',
-                  },
-                  metaStandardEvent: 'ViewContent',
-                  lineEventName: 'SingleClassRedirect',
-                })
-              }
-              data-cta="bootcamp-single-class-redirect"
-            >
-              回到 Fight Night 選課
-            </Button>
-          </div>
+      {categoryTabsPlacement === 'top' && footnote}
+
+      {categoryTabsPlacement === 'bottom' && (
+        <div className="mx-auto mt-8 max-w-3xl border-t border-pearl/12 pt-5 md:mt-10 md:pt-6">
+          <p className="text-center font-heading text-base font-black leading-snug text-pearl md:text-lg">
+            {bottomCategorySwitchHeading}
+          </p>
+          <div className="mt-4 md:mt-5">{categoryTabs}</div>
         </div>
       )}
-
-      <p className="text-center text-xs md:text-sm text-mist/50 max-w-2xl mx-auto mt-8 md:mt-12">
-        {weeklyScheduleSectionContent.footnote}
-      </p>
 
       {selectedCourseDetail && (
         <CourseDetailModal
@@ -3811,6 +4086,7 @@ export function WeeklyScheduleSection({
               selectedCourseDetail.pricingTier,
               option.originalValue,
               option.offerApplied,
+              option.intent,
             )
           }}
           onOpenCoach={() => {
@@ -3839,6 +4115,9 @@ export function WeeklyScheduleSection({
           pending={pendingCheckout}
           error={checkoutError}
           isSubmitting={isCheckoutSubmitting}
+          initialBuyer={
+            pendingCheckout.intent === 'checkout' ? checkoutBuyer : null
+          }
           onClose={() => {
             if (isCheckoutSubmitting) return
             setPendingCheckout(null)
@@ -3859,8 +4138,6 @@ export function WeeklyScheduleSection({
                 course_id: freeTrialSuccess.courseId,
                 course_name: freeTrialSuccess.courseName,
               },
-              metaStandardEvent: 'Lead',
-              lineEventName: 'FreeTrialAddOnView',
             })
             setFreeTrialSuccess(null)
             onFreeTrialAddOnClick?.()
@@ -3876,6 +4153,7 @@ export function WeeklyScheduleSection({
               lineEventName: 'FreeTrialKeepOnly',
             })
             setFreeTrialSuccess(null)
+            onFreeTrialKeepOnly?.()
           }}
         />
       )}

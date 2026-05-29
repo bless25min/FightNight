@@ -116,6 +116,99 @@ function resolveClientUserAgent(request, snapshot) {
   return firstPresent(snapshot.client?.userAgent, request.headers.get('user-agent'))
 }
 
+function resolveLeadEventSourceUrl(lead, request) {
+  const trackingUrl = lead?.tracking?.sourceUrl
+  if (trackingUrl) return trackingUrl
+
+  const sourcePath = String(lead?.sourcePath || '')
+  if (sourcePath.startsWith('http')) return sourcePath
+
+  try {
+    const origin = new URL(request.url).origin
+    return new URL(sourcePath || '/', origin).toString()
+  } catch {
+    return ''
+  }
+}
+
+export async function sendMetaLeadEvent({ env, request, lead }) {
+  const pixelId = getMetaPixelId(env)
+  const accessToken = getMetaAccessToken(env)
+  const lineUserId = String(lead?.lineUserId || '').trim()
+  const lineUserHash = await sha256Hex(lineUserId)
+  const eventId = lead?.eventId || `line_lead.${lineUserHash || Date.now()}`
+
+  if (!pixelId || !accessToken) {
+    return {
+      ok: false,
+      skipped: true,
+      eventId,
+      status: 'skipped',
+      error: !pixelId ? 'Missing Meta Pixel ID' : 'Missing Meta CAPI access token',
+    }
+  }
+
+  const emailHash = await sha256Hex(normalizeEmail(lead?.email))
+  const externalIdHash = lineUserHash
+  const payload = cleanObject({
+    data: [
+      {
+        event_name: 'Lead',
+        event_time: Math.floor(Date.now() / 1000),
+        event_id: eventId,
+        action_source: 'website',
+        event_source_url: resolveLeadEventSourceUrl(lead, request),
+        user_data: {
+          em: emailHash,
+          external_id: externalIdHash,
+          client_ip_address: firstPresent(
+            lead?.client?.ip,
+            request.headers.get('CF-Connecting-IP'),
+            request.headers.get('x-forwarded-for'),
+          ),
+          client_user_agent: firstPresent(
+            lead?.client?.userAgent,
+            request.headers.get('user-agent'),
+          ),
+          fbp: lead?.tracking?.fbp,
+          fbc: lead?.tracking?.fbc,
+        },
+        custom_data: {
+          content_name: 'LINE Login',
+          content_category: 'lead',
+          placement: lead?.placement,
+          source_path: lead?.sourcePath,
+          line_is_friend: lead?.isFriend === true,
+        },
+      },
+    ],
+    test_event_code: firstPresent(env.META_TEST_EVENT_CODE),
+  })
+
+  const graphVersion = getGraphApiVersion(env)
+  const response = await fetch(
+    `https://graph.facebook.com/${graphVersion}/${encodeURIComponent(pixelId)}/events?access_token=${encodeURIComponent(accessToken)}`,
+    {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    },
+  )
+  const data = await response.json().catch(() => null)
+
+  return {
+    ok: response.ok && !data?.error,
+    skipped: false,
+    eventId,
+    status: response.ok && !data?.error ? 'sent' : 'failed',
+    httpStatus: response.status,
+    response: data,
+    error: data?.error?.message || null,
+  }
+}
+
 export async function sendMetaPurchaseEvent({ env, request, order }) {
   const pixelId = getMetaPixelId(env)
   const accessToken = getMetaAccessToken(env)

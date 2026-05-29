@@ -867,6 +867,7 @@ export function trackAnalyticsEvent(
   params?: TrackingParams,
   options: {
     metaStandardEvent?: MetaStandardEvent
+    metaEventId?: string
     lineEventName?: string
   } = {},
 ) {
@@ -879,7 +880,7 @@ export function trackAnalyticsEvent(
     event_id: eventId,
   })
   const lineTagId = getLineTagId()
-  const metaOptions: MetaPixelOptions = { eventID: eventId }
+  const metaOptions: MetaPixelOptions = { eventID: options.metaEventId || eventId }
 
   window.gtag?.('event', event, normalizedParams)
   if (options.metaStandardEvent) {

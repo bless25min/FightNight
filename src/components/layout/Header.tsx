@@ -4,12 +4,18 @@ import { siteConfig } from '../../data/landingContent'
 import { Button } from '../ui/Button'
 import logo from '../../assets/ufcgymtaiwan_logo.svg'
 
+function getCurrentRoutePath() {
+  if (typeof window === 'undefined') return '/'
+
+  const hashPath = window.location.hash.replace(/^#/, '')
+  if (hashPath.startsWith('/')) return hashPath
+
+  return window.location.pathname
+}
+
 export function Header() {
   const [scrolled, setScrolled] = useState(false)
-  const pathname =
-    typeof window !== 'undefined'
-      ? window.location.hash.replace(/^#/, '') || window.location.pathname
-      : '/'
+  const pathname = getCurrentRoutePath()
   const isOffersPage =
     pathname.startsWith('/offers')
   const isBootCampPage =
@@ -42,7 +48,7 @@ export function Header() {
     ? 'boot-camp-routes'
     : isOffersPage
       ? 'offers-plans'
-      : 'ticket'
+      : 'fight-night-pass'
   const ctaHref = isUtilityPage ? '/boot-camp' : `#${ctaTargetId}`
 
   return (
