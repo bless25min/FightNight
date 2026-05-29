@@ -1,5 +1,5 @@
 import { motion, useInView } from 'framer-motion'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   fightNightPassPlan,
   siteConfig,
@@ -7,6 +7,7 @@ import {
 } from '../../data/landingContent'
 import { useLiffGate } from '../../hooks/useLiffGate'
 import { useTracking } from '../../hooks/useTracking'
+import { getLineRequestContext } from '../../lib/lineContext'
 import { Button } from '../ui/Button'
 import { LockedContent } from '../ui/LockedContent'
 import { SectionHeading } from '../ui/SectionHeading'
@@ -14,8 +15,15 @@ import { SectionWrapper } from '../ui/SectionWrapper'
 import { StickyActionBar } from '../ui/StickyActionBar'
 import { WeeklyScheduleSection } from './WeeklyScheduleSection'
 
+const featuredPreviewCourseNames = ['拳擊體適能', '泰拳體適能', '戰鬥體適能']
+const offerCtaLabel = '查看首購半價與可訂場次'
+const offerCtaNote = 'LINE 登入用來確認首購資格，不會自動付款。'
+
+type FirstPurchaseOfferState = 'idle' | 'checking' | 'eligible' | 'ineligible' | 'error'
+
 export function TicketSection() {
   const {
+    track,
     trackTicketView,
     trackTicketCta,
     trackGateAccess,
@@ -27,6 +35,9 @@ export function TicketSection() {
   const titleRef = useRef<HTMLDivElement>(null)
   const isInView = useInView(ref, { once: true })
   const tracked = useRef(false)
+  const offerPreviewTracked = useRef(false)
+  const [firstPurchaseOfferState, setFirstPurchaseOfferState] =
+    useState<FirstPurchaseOfferState>('idle')
 
   useEffect(() => {
     if (isInView && !tracked.current) {
@@ -34,6 +45,68 @@ export function TicketSection() {
       trackTicketView()
     }
   }, [isInView, trackTicketView])
+
+  useEffect(() => {
+    if (!isInView || gateState.status === 'unlocked' || offerPreviewTracked.current) {
+      return
+    }
+
+    offerPreviewTracked.current = true
+    track({
+      event: 'first_purchase_offer_preview_view',
+      params: {
+        offer_code: '618_MIDYEAR_FIRST_PURCHASE_HALF',
+        preview_courses: featuredPreviewCourseNames.join(','),
+      },
+      metaStandardEvent: 'ViewContent',
+      lineEventName: 'OfferPreview',
+    })
+  }, [gateState.status, isInView, track])
+
+  useEffect(() => {
+    if (gateState.status !== 'unlocked') {
+      setFirstPurchaseOfferState('idle')
+      return
+    }
+
+    let active = true
+    setFirstPurchaseOfferState('checking')
+
+    fetch('/api/shopline/first-purchase-offer', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        accept: 'application/json',
+      },
+      body: JSON.stringify({
+        lineContext: getLineRequestContext(),
+      }),
+    })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => {
+        if (!active) return
+        const eligible = data?.eligible === true
+        setFirstPurchaseOfferState(eligible ? 'eligible' : 'ineligible')
+        track({
+          event: 'first_purchase_offer_check',
+          params: {
+            offer_code: '618_MIDYEAR_FIRST_PURCHASE_HALF',
+            eligible,
+            reason: typeof data?.reason === 'string' ? data.reason : '',
+          },
+          metaStandardEvent: eligible ? 'Lead' : undefined,
+          lineEventName: eligible ? 'OfferEligible' : undefined,
+        })
+      })
+      .catch(() => {
+        if (!active) return
+        setFirstPurchaseOfferState('error')
+      })
+
+    return () => {
+      active = false
+    }
+  }, [gateState.status, track])
 
   useEffect(() => {
     if (gateState.status !== 'unlocked') return
@@ -59,6 +132,15 @@ export function TicketSection() {
       ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
   const handleGateAction = () => {
+    track({
+      event: 'first_purchase_offer_cta_click',
+      params: {
+        offer_code: '618_MIDYEAR_FIRST_PURCHASE_HALF',
+        gate_status: gateState.status,
+      },
+      metaStandardEvent: 'Lead',
+      lineEventName: 'OfferClick',
+    })
     trackGateAccess('ticket_section', gateState.status)
     if (!loginUrl) void requestGateAccess()
   }
@@ -97,24 +179,72 @@ export function TicketSection() {
           </div>
 
           <div className="relative">
-            <LockedContent
-              gateState={gateState}
-              title="登入後查看可購買場次"
-              description="登入後可查看可購買日期與即時剩餘名額。"
-              loginUrl={loginUrl}
-              onGateAction={handleGateAction}
-            >
-              <div>
+            {gateState.status !== 'unlocked' && (
+              <div className="mb-8">
                 <WeeklyScheduleSection
-                  id="fight-night-schedule"
+                  id="fight-night-preview-schedule"
                   activeCategory="FIGHT_NIGHT"
                   categories={['FIGHT_NIGHT']}
                   showCategoryTabs={false}
-                  showVenueFilter
-                  title="選一堂 Fight Night"
-                  subtitle="先選你方便到場的館別、日期與時段。"
+                  showVenueFilter={false}
+                  title="先看本週 3 場精選"
+                  subtitle="拳擊體適能、泰拳體適能、戰鬥體適能，先選一個你有感覺的一晚。"
                   embedded
+                  displayLimit={3}
+                  featuredCourseNames={featuredPreviewCourseNames}
+                  isPurchaseLocked
+                  lockedPurchaseCtaLabel={offerCtaLabel}
+                  lockedPurchaseNote={offerCtaNote}
+                  onLockedPurchase={handleGateAction}
                 />
+                <p className="mx-auto mt-4 max-w-2xl text-center text-xs leading-relaxed text-mist/55">
+                  先看 3 場精選；登入後可查看 618 首購半價資格與更多可線上預訂場次。
+                </p>
+              </div>
+            )}
+
+            <LockedContent
+              gateState={gateState}
+              title="618 年中慶首購半價"
+              description="LINE 登入後確認首購資格、即時剩餘名額與目前開放線上預訂的場次。"
+              loginUrl={loginUrl}
+              onGateAction={handleGateAction}
+              lockedEyebrow="首購限時優惠"
+              actionLabel={offerCtaLabel}
+              actionNote={offerCtaNote}
+            >
+              <div>
+                {firstPurchaseOfferState === 'checking' ||
+                firstPurchaseOfferState === 'idle' ? (
+                  <p className="rounded-2xl border border-neon/18 bg-neon/8 px-4 py-5 text-center text-sm leading-relaxed text-mist/72">
+                    正在確認 618 首購半價資格...
+                  </p>
+                ) : firstPurchaseOfferState === 'error' ? (
+                  <p className="rounded-2xl border border-blaze/30 bg-blaze/10 px-4 py-5 text-center text-sm leading-relaxed text-blaze">
+                    首購資格暫時無法確認，請重新登入 LINE 或稍後再試。
+                  </p>
+                ) : (
+                  <WeeklyScheduleSection
+                    id="fight-night-schedule"
+                    activeCategory="FIGHT_NIGHT"
+                    categories={['FIGHT_NIGHT']}
+                    showCategoryTabs={false}
+                    showVenueFilter
+                    title="目前開放線上預訂的場次"
+                    subtitle={
+                      firstPurchaseOfferState === 'eligible'
+                        ? '618 年中慶首購半價已套用，先選你方便到場的館別、日期與時段。'
+                        : '先選你方便到場的館別、日期與時段。'
+                    }
+                    embedded
+                    firstPurchaseOfferEligible={firstPurchaseOfferState === 'eligible'}
+                  />
+                )}
+                {firstPurchaseOfferState === 'ineligible' && (
+                  <p className="mx-auto mt-4 max-w-2xl text-center text-xs leading-relaxed text-mist/55">
+                    此 LINE 帳號已有網站購買紀錄，無法使用首購半價；仍可依一般價格線上預訂。
+                  </p>
+                )}
               </div>
             </LockedContent>
 

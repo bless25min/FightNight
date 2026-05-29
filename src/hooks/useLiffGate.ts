@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { loadLiffSdk } from '../lib/liff'
+import { saveLineContext } from '../lib/lineContext'
 
 export type LiffGateStatus =
   | 'loading'
@@ -16,7 +17,6 @@ export type LiffGateState = {
 }
 
 const buildTimeLiffId = import.meta.env.VITE_LINE_LIFF_ID
-const lineContextKey = 'fightnight_line_context'
 const missingConfigMessage = '找不到 LINE LIFF ID，請先補上正式環境變數。'
 const liffErrorMessage = 'LIFF 驗證失敗，請稍後再試。'
 
@@ -49,23 +49,6 @@ function getRuntimeLiffId(data: unknown) {
   if (!data || typeof data !== 'object') return undefined
   const value = (data as { lineLiffId?: unknown }).lineLiffId
   return typeof value === 'string' && value.trim() ? value.trim() : undefined
-}
-
-function saveLineContext(context: {
-  lineUserId: string
-  displayName?: string
-  pictureUrl?: string
-  email?: string
-  isFriend: boolean
-}) {
-  if (typeof window === 'undefined') return
-  if (!context.lineUserId) return
-
-  try {
-    window.localStorage.setItem(lineContextKey, JSON.stringify(context))
-  } catch {
-    // Checkout still works if browser storage is blocked.
-  }
 }
 
 function getLiffEmail() {

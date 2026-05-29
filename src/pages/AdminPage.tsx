@@ -226,6 +226,7 @@ type TrafficSection = {
   views: number
   sessions: number
   clicks: number
+  avgDurationMs: number
   lastAt?: string | null
 }
 

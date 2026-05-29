@@ -81,10 +81,14 @@ type PageState = {
   firedScrollDepths: Set<number>
   viewedSections: Set<string>
   engagementSentAt: number
+  activeSectionId?: string
+  activeSectionStartedAt?: number
 }
 
 let pageState: PageState | undefined
 let sectionObserver: IntersectionObserver | undefined
+const minSectionDurationMs = 700
+const maxSectionDurationMs = 5 * 60 * 1000
 
 declare global {
   interface Window {
@@ -565,6 +569,12 @@ function flushPageEngagement(eventName = 'page_exit') {
   const now = Date.now()
   const durationMs = Math.max(0, now - state.startedAt)
 
+  if (eventName === 'page_exit') {
+    flushActiveSectionEngagement(state, now, 'page_exit')
+    state.activeSectionId = undefined
+    state.activeSectionStartedAt = undefined
+  }
+
   if (eventName !== 'page_exit' && now - state.engagementSentAt < 20_000) return
   state.engagementSentAt = now
   state.maxScrollDepth = Math.max(state.maxScrollDepth, getScrollDepth())
@@ -580,6 +590,40 @@ function flushPageEngagement(eventName = 'page_exit') {
     },
     createEventId(eventName),
   )
+}
+
+function flushActiveSectionEngagement(
+  state: PageState,
+  now = Date.now(),
+  nextSectionId?: string,
+) {
+  if (!state.activeSectionId || !state.activeSectionStartedAt) return
+
+  const rawDurationMs = Math.max(0, now - state.activeSectionStartedAt)
+  if (rawDurationMs < minSectionDurationMs) return
+
+  const durationMs = Math.min(rawDurationMs, maxSectionDurationMs)
+
+  postServerEvent(
+    'section_engagement',
+    {
+      page_path: state.path,
+      section_id: state.activeSectionId,
+      duration_ms: durationMs,
+      next_section_id: nextSectionId,
+      duration_capped: rawDurationMs > maxSectionDurationMs,
+    },
+    createEventId('section_engagement'),
+  )
+}
+
+function markActiveSection(state: PageState, sectionId: string) {
+  if (state.activeSectionId === sectionId) return
+
+  const now = Date.now()
+  flushActiveSectionEngagement(state, now, sectionId)
+  state.activeSectionId = sectionId
+  state.activeSectionStartedAt = now
 }
 
 function resetPageState(path = getRoutePath()) {
@@ -611,8 +655,10 @@ function refreshSectionObserver() {
         if (!entry.isIntersecting || entry.intersectionRatio < 0.35) continue
         const target = entry.target as HTMLElement
         const sectionId = target.dataset.section || target.id
-        if (!sectionId || state.viewedSections.has(sectionId)) continue
+        if (!sectionId) continue
 
+        markActiveSection(state, sectionId)
+        if (state.viewedSections.has(sectionId)) continue
         state.viewedSections.add(sectionId)
         postServerEvent(
           'section_view',

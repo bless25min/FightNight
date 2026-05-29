@@ -394,6 +394,10 @@ async function ensureOrderTrackingColumns(env) {
     ['line_payment_notified_at', 'TEXT'],
     ['line_payment_notify_response_json', 'TEXT'],
     ['line_payment_notify_error', 'TEXT'],
+    ['original_amount_value', 'INTEGER'],
+    ['discount_code', 'TEXT'],
+    ['discount_label', 'TEXT'],
+    ['discount_amount_value', 'INTEGER NOT NULL DEFAULT 0'],
   ]
 
   for (const [name, type] of columns) {
@@ -1036,6 +1040,7 @@ async function getTraffic(env, url) {
             COALESCE(SUM(CASE WHEN event_name = 'section_view' THEN 1 ELSE 0 END), 0) AS views,
             COUNT(DISTINCT CASE WHEN event_name = 'section_view' THEN session_id ELSE NULL END) AS sessions,
             COALESCE(SUM(CASE WHEN event_name = 'ui_click' THEN 1 ELSE 0 END), 0) AS clicks,
+            ROUND(AVG(CASE WHEN event_name = 'section_engagement' THEN duration_ms END)) AS avg_duration_ms,
             MAX(created_at) AS last_at
      FROM tracking_events
      WHERE created_at >= datetime('now', '${lookbackSql}')
@@ -1156,6 +1161,7 @@ async function getTraffic(env, url) {
       views: toNumber(row.views),
       sessions: toNumber(row.sessions),
       clicks: toNumber(row.clicks),
+      avgDurationMs: toNumber(row.avg_duration_ms),
       lastAt: row.last_at,
     })),
     exits: exitRows.map((row) => ({

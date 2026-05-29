@@ -35,6 +35,12 @@ const basePackagePrice: Record<1 | 2 | 4, number> = {
   4: 2680,
 }
 
+export const FIRST_PURCHASE_OFFER_CODE = '618_MIDYEAR_FIRST_PURCHASE_HALF'
+export const FIRST_PURCHASE_OFFER_LABEL = '618 首購半價'
+export const FIRST_PURCHASE_OFFER_BADGE = '618首購半價'
+export const FIRST_PURCHASE_OFFER_END_AT_TW = '2026-06-18T23:59:59+08:00'
+export const FIRST_PURCHASE_OFFER_DISCOUNT_RATE = 0.5
+
 function uniqueTags(tags: Array<string | undefined>) {
   return Array.from(new Set(tags.filter((tag): tag is string => Boolean(tag))))
 }
@@ -165,6 +171,46 @@ function getPackageFactorMultiplier(multiplier: number, packageSize: 1 | 2 | 4) 
 
 export function formatCoursePrice(amount: number) {
   return `NT$${amount.toLocaleString('en-US')}`
+}
+
+export function isFirstPurchaseOfferActive(date = new Date()) {
+  return date.getTime() <= Date.parse(FIRST_PURCHASE_OFFER_END_AT_TW)
+}
+
+export function isFirstPurchaseOfferCourseEligible(
+  course: WeeklyCourse,
+  packageSize: 1 | 2 | 4,
+) {
+  return course.category === 'FIGHT_NIGHT' && packageSize === 1
+}
+
+export function getFirstPurchaseOfferAmount(amount: number) {
+  return Math.max(0, Math.round(amount * FIRST_PURCHASE_OFFER_DISCOUNT_RATE))
+}
+
+export function applyFirstPurchaseOfferToPrice(
+  price: CoursePriceModel,
+  course: WeeklyCourse,
+  packageSize: 1 | 2 | 4,
+  isEligible: boolean,
+): CoursePriceModel {
+  if (
+    !isEligible ||
+    !isFirstPurchaseOfferActive() ||
+    !isFirstPurchaseOfferCourseEligible(course, packageSize)
+  ) {
+    return price
+  }
+
+  const amount = getFirstPurchaseOfferAmount(price.amount)
+
+  return {
+    amount,
+    label: formatCoursePrice(amount),
+    compareAtAmount: price.amount,
+    compareAtLabel: price.label,
+    tags: uniqueTags([...price.tags, FIRST_PURCHASE_OFFER_BADGE]),
+  }
 }
 
 export function getCoursePriceModel({

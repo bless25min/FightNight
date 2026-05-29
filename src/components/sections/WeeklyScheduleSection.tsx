@@ -24,7 +24,14 @@ import {
 } from '../../data/weeklySchedule'
 import { useSessionAvailability } from '../../hooks/useSessionAvailability'
 import { useTracking } from '../../hooks/useTracking'
-import { getCoursePriceModel, getTaipeiTodayIso } from '../../lib/coursePricing'
+import {
+  FIRST_PURCHASE_OFFER_BADGE,
+  applyFirstPurchaseOfferToPrice,
+  getCoursePriceModel,
+  getTaipeiTodayIso,
+  isFirstPurchaseOfferCourseEligible,
+} from '../../lib/coursePricing'
+import { getLineRequestContext } from '../../lib/lineContext'
 import type { BootCampRoute, CourseCategory, WeeklyCourse } from '../../types'
 import { Button } from '../ui/Button'
 import { SectionHeading } from '../ui/SectionHeading'
@@ -38,6 +45,7 @@ const BOOT_CAMP_ROUTE_ORDER: Array<BootCampRoute | null> = [
   'BOXING',
   'MUAY_THAI',
 ]
+const EMPTY_FEATURED_COURSE_NAMES: string[] = []
 const INTERACTION_HINT_SEEN_STORAGE_KEY =
   'fightnight_seen_interaction_hints_v1'
 
@@ -200,6 +208,27 @@ function venueShortName(fullName: string) {
 function sortByVenueThenName(a: WeeklyCourse, b: WeeklyCourse) {
   if (a.venueId !== b.venueId) return a.venueId < b.venueId ? -1 : 1
   return a.name < b.name ? -1 : a.name > b.name ? 1 : 0
+}
+
+function prioritizeFeaturedCourses(
+  courses: WeeklyCourse[],
+  featuredNames: string[],
+) {
+  if (featuredNames.length === 0) return courses
+
+  const selected = new Map<string, WeeklyCourse>()
+  for (const name of featuredNames) {
+    const match = courses.find(
+      (course) => course.name === name && !selected.has(course.id),
+    )
+    if (match) selected.set(match.id, match)
+  }
+
+  const selectedIds = new Set(selected.keys())
+  return [
+    ...selected.values(),
+    ...courses.filter((course) => !selectedIds.has(course.id)),
+  ]
 }
 
 function getBootCampRoute(course: WeeklyCourse): BootCampRoute | null {
@@ -726,7 +755,8 @@ function getCourseFeatureTagClass(tag: string) {
     tag === '精選場' ||
     tag === '國際場' ||
     tag === '泰國靶師' ||
-    tag === '拳擊冠軍'
+    tag === '拳擊冠軍' ||
+    tag === FIRST_PURCHASE_OFFER_BADGE
   ) {
     return 'border-blaze/45 bg-blaze/15 text-blaze'
   }
@@ -1139,6 +1169,8 @@ type CourseDetailPackageOption = {
   priceLabel: string
   compareAtLabel?: string
   value: number
+  originalValue?: number
+  offerApplied?: boolean
   remaining: number
   series: CourseDetailSession[]
   primary: boolean
@@ -1164,6 +1196,9 @@ type SelectedCourseDetail = {
   remaining: number
   decisionSignals: CourseDecisionSignal[]
   packageOptions: CourseDetailPackageOption[]
+  isPurchaseLocked: boolean
+  lockedPurchaseCtaLabel?: string
+  lockedPurchaseNote?: string
 }
 
 function getCourseDisciplineLabel(course: WeeklyCourse) {
@@ -1421,6 +1456,11 @@ function CourseDetailModal({
   const isBootCampDetail = detail.activeCategory === 'BOOT_CAMP'
   const reserveLabel =
     isBootCampDetail ? '保留這組日期' : '保留這堂'
+  const getPurchaseButtonLabel = (option: CourseDetailPackageOption) => {
+    if (detail.isPurchaseLocked) return detail.lockedPurchaseCtaLabel ?? '查看可訂場次'
+    if (option.offerApplied) return `使用首購半價保留這堂 · ${option.priceLabel}`
+    return `${reserveLabel} · ${option.priceLabel}`
+  }
   const reservationLine = shouldShowRemainingBadge(detail.remaining)
     ? `${getRemainingLabel(detail.remaining)} · ${detail.dateLabel} ${detail.timeLabel}`
     : `${detail.dateLabel} ${detail.timeLabel}`
@@ -1620,14 +1660,21 @@ function CourseDetailModal({
                 <p className="mt-1 text-sm text-mist/68">{reservationLine}</p>
 
                 {primaryOption && primaryOption.remaining > 0 ? (
-                  <button
-                    type="button"
-                    onClick={() => onPurchase(primaryOption)}
-                    data-interaction-hint
-                    className="interaction-hint mt-4 w-full rounded-xl bg-blaze px-4 py-3 text-sm font-heading font-black text-abyss transition-colors hover:bg-pearl"
-                  >
-                    {reserveLabel} · {primaryOption.priceLabel}
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => onPurchase(primaryOption)}
+                      data-interaction-hint
+                      className="interaction-hint mt-4 w-full rounded-xl bg-blaze px-4 py-3 text-sm font-heading font-black text-abyss transition-colors hover:bg-pearl"
+                    >
+                      {getPurchaseButtonLabel(primaryOption)}
+                    </button>
+                    {detail.isPurchaseLocked && detail.lockedPurchaseNote && (
+                      <p className="mt-3 text-center text-xs leading-relaxed text-mist/55">
+                        {detail.lockedPurchaseNote}
+                      </p>
+                    )}
+                  </>
                 ) : (
                   <DisabledCta className="mt-4">這堂已售完</DisabledCta>
                 )}
@@ -1713,6 +1760,11 @@ function CourseDetailModal({
                             ))}
                           </div>
                         )}
+                        {option.offerApplied && (
+                          <p className="mt-2 text-xs font-heading text-blaze">
+                            618 年中慶首購半價已套用
+                          </p>
+                        )}
                       </button>
                     )
                   })}
@@ -1762,50 +1814,6 @@ function normalizeTaiwanMobilePhone(value: string) {
   return `+886${nationalNumber}`
 }
 
-type CheckoutLineContext = {
-  lineUserId: string
-  displayName?: string
-  pictureUrl?: string
-  email?: string
-  isFriend?: boolean
-  accessToken?: string
-  idToken?: string
-}
-
-const lineContextKey = 'fightnight_line_context'
-
-function getCheckoutLineContext(): CheckoutLineContext | null {
-  if (typeof window === 'undefined') return null
-
-  try {
-    const raw = window.localStorage.getItem(lineContextKey)
-    if (!raw) return null
-    const parsed = JSON.parse(raw) as Partial<CheckoutLineContext>
-    if (!parsed.lineUserId || typeof parsed.lineUserId !== 'string') return null
-    const decodedEmail = window.liff?.getDecodedIDToken?.()?.email
-    const lineEmail =
-      typeof decodedEmail === 'string' && decodedEmail.trim()
-        ? decodedEmail.trim()
-        : typeof parsed.email === 'string'
-          ? parsed.email
-          : undefined
-
-    return {
-      lineUserId: parsed.lineUserId,
-      displayName:
-        typeof parsed.displayName === 'string' ? parsed.displayName : undefined,
-      pictureUrl:
-        typeof parsed.pictureUrl === 'string' ? parsed.pictureUrl : undefined,
-      email: lineEmail,
-      isFriend: parsed.isFriend === true,
-      accessToken: window.liff?.getAccessToken?.() || undefined,
-      idToken: window.liff?.getIDToken?.() || undefined,
-    }
-  } catch {
-    return null
-  }
-}
-
 function readCookie(name: string) {
   if (typeof document === 'undefined') return ''
   const match = document.cookie
@@ -1837,6 +1845,8 @@ type PendingCheckout = {
   packageSize: 1 | 2 | 4
   remaining: number
   value: number
+  originalValue?: number
+  offerApplied?: boolean
   pricingTier: CoachPricingTier
   sessionIds: string[]
   seriesDates: string[]
@@ -1926,8 +1936,17 @@ function CheckoutContactModal({
             {pending.course.weekday} {pending.course.startTime}
           </p>
           <p className="mt-2 font-heading text-lg font-black text-neon">
+            {pending.offerApplied ? '618 首購半價 ' : ''}
             NT${pending.value.toLocaleString('en-US')}
           </p>
+          {pending.offerApplied && pending.originalValue && (
+            <p className="mt-0.5 text-xs text-mist/55">
+              一般{' '}
+              <span className="line-through">
+                NT${pending.originalValue.toLocaleString('en-US')}
+              </span>
+            </p>
+          )}
         </div>
 
         <TechniqueCourseNotice course={pending.course} compact className="mt-3" />
@@ -2006,6 +2025,13 @@ type Props = {
   embedded?: boolean
   bookingMode?: 'standard' | 'bootcamp'
   className?: string
+  displayLimit?: number
+  featuredCourseNames?: string[]
+  isPurchaseLocked?: boolean
+  lockedPurchaseCtaLabel?: string
+  lockedPurchaseNote?: string
+  onLockedPurchase?: () => void
+  firstPurchaseOfferEligible?: boolean
 }
 
 export function WeeklyScheduleSection({
@@ -2023,6 +2049,13 @@ export function WeeklyScheduleSection({
   embedded = false,
   bookingMode = 'standard',
   className = '',
+  displayLimit = SCHEDULE_DISPLAY_LIMIT,
+  featuredCourseNames = EMPTY_FEATURED_COURSE_NAMES,
+  isPurchaseLocked = false,
+  lockedPurchaseCtaLabel = '查看首購半價與可訂場次',
+  lockedPurchaseNote,
+  onLockedPurchase,
+  firstPurchaseOfferEligible = false,
 }: Props = {}) {
   const { track, trackCoursePurchaseClick } = useTracking()
   const fallbackCategory = categories[0] ?? 'FIGHT_NIGHT'
@@ -2217,8 +2250,17 @@ export function WeeklyScheduleSection({
         ? venueFilteredCourses.filter((course) => course.date === activeDateIso)
         : venueFilteredCourses
 
-    return dateFilteredCourses.slice(0, SCHEDULE_DISPLAY_LIMIT)
-  }, [activeDateIso, isBootCampBookingMode, venueFilteredCourses])
+    return prioritizeFeaturedCourses(dateFilteredCourses, featuredCourseNames).slice(
+      0,
+      displayLimit,
+    )
+  }, [
+    activeDateIso,
+    displayLimit,
+    featuredCourseNames,
+    isBootCampBookingMode,
+    venueFilteredCourses,
+  ])
 
   const availabilitySessionIds = useMemo(() => {
     return displayCourses.flatMap((course) => {
@@ -2268,16 +2310,21 @@ export function WeeklyScheduleSection({
       remaining: number,
       value: number,
       pricingTier: CoachPricingTier,
+      originalValue?: number,
+      offerApplied?: boolean,
     ) => {
-      trackCoursePurchaseClick(
-        buildCourseTrackingParams(
+      trackCoursePurchaseClick({
+        ...buildCourseTrackingParams(
           course,
           packageSize,
           remaining,
           value,
           pricingTier,
         ),
-      )
+        original_value: originalValue,
+        discount_code: offerApplied ? '618_MIDYEAR_FIRST_PURCHASE_HALF' : undefined,
+        discount_label: offerApplied ? '618 首購半價' : undefined,
+      })
     },
     [buildCourseTrackingParams, trackCoursePurchaseClick],
   )
@@ -2289,7 +2336,14 @@ export function WeeklyScheduleSection({
       remaining: number,
       value: number,
       pricingTier: CoachPricingTier,
+      originalValue?: number,
+      offerApplied?: boolean,
     ) => {
+      if (isPurchaseLocked) {
+        onLockedPurchase?.()
+        return
+      }
+
       const series =
         packageSize === 1
           ? [
@@ -2306,14 +2360,24 @@ export function WeeklyScheduleSection({
         packageSize,
         remaining,
         value,
+        originalValue,
+        offerApplied,
         pricingTier,
         sessionIds: series.map((session) => session.id),
         seriesDates: series.map((session) => session.date),
         route: getBootCampRoute(course),
       })
-      trackCoursePurchase(course, packageSize, remaining, value, pricingTier)
+      trackCoursePurchase(
+        course,
+        packageSize,
+        remaining,
+        value,
+        pricingTier,
+        originalValue,
+        offerApplied,
+      )
     },
-    [trackCoursePurchase],
+    [isPurchaseLocked, onLockedPurchase, trackCoursePurchase],
   )
 
   const submitShoplineCheckout = useCallback(
@@ -2340,10 +2404,14 @@ export function WeeklyScheduleSection({
               ...buyer,
               phone: normalizedPhone,
             },
-            lineContext: getCheckoutLineContext(),
+            lineContext: getLineRequestContext(),
             course: pendingCheckout.course,
             packageSize: pendingCheckout.packageSize,
             quotedAmountValue: pendingCheckout.value,
+            quotedOriginalAmountValue: pendingCheckout.originalValue,
+            requestedOfferCode: pendingCheckout.offerApplied
+              ? '618_MIDYEAR_FIRST_PURCHASE_HALF'
+              : undefined,
             route: pendingCheckout.route,
             sessionIds: pendingCheckout.sessionIds,
             seriesDates: pendingCheckout.seriesDates,
@@ -2379,6 +2447,13 @@ export function WeeklyScheduleSection({
               pendingCheckout.value,
               pendingCheckout.pricingTier,
             ),
+            original_value: pendingCheckout.originalValue,
+            discount_code: pendingCheckout.offerApplied
+              ? '618_MIDYEAR_FIRST_PURCHASE_HALF'
+              : undefined,
+            discount_label: pendingCheckout.offerApplied
+              ? '618 首購半價'
+              : undefined,
             reference_id: data.referenceId,
           },
           metaStandardEvent: 'InitiateCheckout',
@@ -2852,13 +2927,19 @@ export function WeeklyScheduleSection({
                   c,
                   coachProfile,
                 )
-                const fightNightPrice = getCoursePriceModel({
+                const fightNightBasePrice = getCoursePriceModel({
                   course: c,
                   pricingTier: coachPricingTier,
                   packageSize: 1,
                   remaining: sessionAvailability.remaining,
                   coachId: coachProfile?.id,
                 })
+                const fightNightPrice = applyFirstPurchaseOfferToPrice(
+                  fightNightBasePrice,
+                  c,
+                  1,
+                  firstPurchaseOfferEligible,
+                )
                 const bootCamp2Price = getCoursePriceModel({
                   course: c,
                   pricingTier: coachPricingTier,
@@ -2881,6 +2962,13 @@ export function WeeklyScheduleSection({
                   activeCategory === 'FIGHT_NIGHT'
                     ? fightNightPrice.compareAtLabel
                     : bootCamp2Price.compareAtLabel
+                const fightNightOfferApplied =
+                  firstPurchaseOfferEligible &&
+                  isFirstPurchaseOfferCourseEligible(c, 1) &&
+                  fightNightPrice.amount < fightNightBasePrice.amount
+                const displayCourseFeatureTags = fightNightOfferApplied
+                  ? Array.from(new Set([FIRST_PURCHASE_OFFER_BADGE, ...courseFeatureTags]))
+                  : courseFeatureTags
                 const fightNightSession = [
                   {
                     id: getSessionInventoryId(c),
@@ -2919,6 +3007,10 @@ export function WeeklyScheduleSection({
                           priceLabel: fightNightPrice.label,
                           compareAtLabel: fightNightPrice.compareAtLabel,
                           value: fightNightPrice.amount,
+                          originalValue: fightNightOfferApplied
+                            ? fightNightBasePrice.amount
+                            : undefined,
+                          offerApplied: fightNightOfferApplied,
                           remaining: sessionAvailability.remaining,
                           series: fightNightSession,
                           primary: true,
@@ -2929,7 +3021,7 @@ export function WeeklyScheduleSection({
                   course: c,
                   activeCategory,
                   productTitle: courseProductTitle,
-                  featureTags: courseFeatureTags,
+                  featureTags: displayCourseFeatureTags,
                   routeLabel: routeContent?.label ?? bootCampRouteLabel,
                   routeBadge: routeContent?.shortLabel ?? bootCampRouteLabel,
                   routeSkills: routeContent?.skills.slice(0, 4) ?? [],
@@ -2946,6 +3038,9 @@ export function WeeklyScheduleSection({
                   remaining: merchandisingRemaining,
                   decisionSignals: courseDecisionSignals,
                   packageOptions: courseDetailPackageOptions,
+                  isPurchaseLocked,
+                  lockedPurchaseCtaLabel,
+                  lockedPurchaseNote,
                 }
                 const openCourseDetail = () => {
                   const primaryOption =
@@ -3033,7 +3128,7 @@ export function WeeklyScheduleSection({
                           {courseCardPitch}
                         </p>
                         <div className="mt-3 flex flex-wrap items-center gap-2">
-                          {courseFeatureTags.slice(0, 3).map((tag) => (
+                          {displayCourseFeatureTags.slice(0, 3).map((tag) => (
                             <span
                               key={tag}
                               className={`rounded-full border px-2.5 py-1 text-[11px] font-heading tracking-wide ${getCourseFeatureTagClass(tag)}`}
@@ -3219,7 +3314,7 @@ export function WeeklyScheduleSection({
                             {getRemainingLabel(displayAvailability.remaining)}
                           </p>
                         )}
-                        {courseFeatureTags.slice(0, 3).map((tag) => (
+                        {displayCourseFeatureTags.slice(0, 3).map((tag) => (
                           <p
                             key={tag}
                             className={`inline-flex w-fit rounded-full border px-2.5 py-1 text-[11px] font-heading tracking-wide ${getCourseFeatureTagClass(tag)}`}
@@ -3322,12 +3417,25 @@ export function WeeklyScheduleSection({
                                   sessionAvailability.remaining,
                                   fightNightPrice.amount,
                                   coachPricingTier,
+                                  fightNightOfferApplied
+                                    ? fightNightBasePrice.amount
+                                    : undefined,
+                                  fightNightOfferApplied,
                                 )
                               }
                               data-cta={`schedule-${c.id}-fight-night`}
                             >
-                              保留這一場 · {fightNightPrice.label}
+                              {isPurchaseLocked
+                                ? lockedPurchaseCtaLabel
+                                : fightNightOfferApplied
+                                  ? `使用首購半價保留這一場 · ${fightNightPrice.label}`
+                                  : `保留這一場 · ${fightNightPrice.label}`}
                             </Button>
+                            {isPurchaseLocked && lockedPurchaseNote && (
+                              <p className="mt-2 text-center text-xs leading-relaxed text-mist/55">
+                                {lockedPurchaseNote}
+                              </p>
+                            )}
                           </>
                         ) : (
                           <DisabledCta>本場已售完</DisabledCta>
@@ -3396,6 +3504,8 @@ export function WeeklyScheduleSection({
               option.remaining,
               option.value,
               selectedCourseDetail.pricingTier,
+              option.originalValue,
+              option.offerApplied,
             )
           }}
           onOpenCoach={() => {

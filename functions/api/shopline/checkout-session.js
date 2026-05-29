@@ -6,13 +6,19 @@ import {
   weeklyCourses,
 } from '../../../src/data/weeklySchedule.ts'
 import {
+  FIRST_PURCHASE_OFFER_CODE,
+  FIRST_PURCHASE_OFFER_LABEL,
+  getFirstPurchaseOfferAmount,
   getCoursePriceModel,
   getTaipeiTodayIso,
+  isFirstPurchaseOfferActive,
+  isFirstPurchaseOfferCourseEligible,
 } from '../../../src/lib/coursePricing.ts'
 
 const DEFAULT_CAPACITY = 6
 const CURRENCY = 'TWD'
 const WEEKDAY_LABELS = ['日', '一', '二', '三', '四', '五', '六']
+const PURCHASED_ORDER_STATUSES = ['paid', 'refund_processing', 'refunded']
 
 const foreignFighterNameKeywords = [
   'Andre',
@@ -59,7 +65,7 @@ function getCoachIdFromName(coachName) {
   return ''
 }
 
-function getPriceAmount(course, packageSize, remaining) {
+function getBasePriceAmount(course, packageSize, remaining) {
   if (course.category === 'FIGHT_NIGHT' && packageSize !== 1) {
     throw new Error('Invalid course package')
   }
@@ -79,6 +85,80 @@ function getPriceAmount(course, packageSize, remaining) {
   return {
     value: price.amount,
     pricingTier,
+  }
+}
+
+export async function hasPurchasedOrderForLineUser(env, lineUserId) {
+  if (!lineUserId) return false
+
+  const placeholders = PURCHASED_ORDER_STATUSES.map(() => '?').join(',')
+  const row = await env.DB.prepare(
+    `SELECT reference_id
+     FROM course_orders
+     WHERE line_user_id = ?
+       AND status IN (${placeholders})
+     LIMIT 1`,
+  )
+    .bind(lineUserId, ...PURCHASED_ORDER_STATUSES)
+    .first()
+
+  return Boolean(row?.reference_id)
+}
+
+export async function getFirstPurchaseOfferEligibility(
+  env,
+  lineContext,
+  course,
+  packageSize,
+) {
+  if (!isFirstPurchaseOfferActive()) {
+    return { eligible: false, reason: 'inactive' }
+  }
+  if (!isFirstPurchaseOfferCourseEligible(course, packageSize)) {
+    return { eligible: false, reason: 'course_not_eligible' }
+  }
+  if (!lineContext?.lineUserId) {
+    return { eligible: false, reason: 'line_login_required' }
+  }
+
+  const hasPurchased = await hasPurchasedOrderForLineUser(
+    env,
+    lineContext.lineUserId,
+  )
+  if (hasPurchased) return { eligible: false, reason: 'already_purchased' }
+
+  return {
+    eligible: true,
+    reason: 'first_purchase',
+    code: FIRST_PURCHASE_OFFER_CODE,
+    label: FIRST_PURCHASE_OFFER_LABEL,
+  }
+}
+
+async function getCheckoutPriceQuote({
+  env,
+  course,
+  packageSize,
+  remaining,
+  lineContext,
+}) {
+  const base = getBasePriceAmount(course, packageSize, remaining)
+  const offer = await getFirstPurchaseOfferEligibility(
+    env,
+    lineContext,
+    course,
+    packageSize,
+  )
+  const amountValue = offer.eligible
+    ? getFirstPurchaseOfferAmount(base.value)
+    : base.value
+
+  return {
+    value: amountValue,
+    originalValue: base.value,
+    discountValue: Math.max(0, base.value - amountValue),
+    pricingTier: base.pricingTier,
+    offer,
   }
 }
 
@@ -302,7 +382,7 @@ async function verifyLineIdToken(idToken, env) {
   return response.json().catch(() => null)
 }
 
-async function resolveLineContext(value, env) {
+export async function resolveLineContext(value, env) {
   const submittedContext = normalizeLineContext(value)
   const accessToken = trimText(value?.accessToken, 2000)
   if (!accessToken) return null
@@ -390,7 +470,7 @@ function cleanObject(value) {
   return value
 }
 
-async function ensureTables(env) {
+export async function ensureTables(env) {
   await env.DB.prepare(
     `CREATE TABLE IF NOT EXISTS session_inventory (
       session_id TEXT PRIMARY KEY,
@@ -419,7 +499,11 @@ async function ensureTables(env) {
       route TEXT,
       package_size INTEGER NOT NULL,
       quantity INTEGER NOT NULL DEFAULT 1,
+      original_amount_value INTEGER,
       amount_value INTEGER NOT NULL,
+      discount_code TEXT,
+      discount_label TEXT,
+      discount_amount_value INTEGER NOT NULL DEFAULT 0,
       currency TEXT NOT NULL DEFAULT 'TWD',
       session_ids_json TEXT NOT NULL,
       series_dates_json TEXT NOT NULL,
@@ -484,6 +568,10 @@ async function ensureOrderTrackingColumns(env) {
     ['line_payment_notified_at', 'TEXT'],
     ['line_payment_notify_response_json', 'TEXT'],
     ['line_payment_notify_error', 'TEXT'],
+    ['original_amount_value', 'INTEGER'],
+    ['discount_code', 'TEXT'],
+    ['discount_label', 'TEXT'],
+    ['discount_amount_value', 'INTEGER NOT NULL DEFAULT 0'],
   ]
 
   for (const [name, type] of columns) {
@@ -499,7 +587,7 @@ async function ensureOrderTrackingColumns(env) {
   }
 }
 
-async function upsertLineCustomerFromCheckout(env, lineContext) {
+export async function upsertLineCustomerFromCheckout(env, lineContext) {
   if (!lineContext?.lineUserId) return
 
   await env.DB.batch([
@@ -823,17 +911,27 @@ export async function onRequestPost({ request, env }) {
     }
     const remaining = Math.min(...availability.map((record) => record.remaining))
     const referenceId = createReferenceId()
-    const { value: amountValue, pricingTier } = getPriceAmount(
+    const {
+      value: amountValue,
+      originalValue,
+      discountValue,
+      pricingTier,
+      offer,
+    } = await getCheckoutPriceQuote({
+      env,
       course,
       packageSize,
       remaining,
-    )
+      lineContext,
+    })
     const quotedAmountValue = getQuotedAmountValue(body)
     if (quotedAmountValue !== amountValue) {
       return json(
         {
           error: '價格或名額剛剛更新，請重新整理課表後再建立付款。',
           amountValue,
+          originalAmountValue: originalValue,
+          offer,
         },
         { status: 409 },
       )
@@ -860,6 +958,12 @@ export async function onRequestPost({ request, env }) {
     const localOrderRequest = {
       shoplinePayload,
       lineContext,
+      offer: {
+        ...offer,
+        originalAmountValue: originalValue,
+        discountAmountValue: discountValue,
+        amountValue,
+      },
       tracking:
         body?.tracking && typeof body.tracking === 'object' ? body.tracking : {},
       client: shoplinePayload.client,
@@ -869,11 +973,12 @@ export async function onRequestPost({ request, env }) {
       `INSERT INTO course_orders (
         reference_id, status, event_id, course_id, course_name, category,
         venue_id, venue_name, coach, coach_pricing_tier, route, package_size,
-        quantity, amount_value, currency, session_ids_json, series_dates_json,
+        quantity, original_amount_value, amount_value, discount_code,
+        discount_label, discount_amount_value, currency, session_ids_json, series_dates_json,
         buyer_name, buyer_phone, buyer_email, line_user_id, line_display_name,
         line_picture_url, line_email, line_email_verified, line_is_friend, line_context_json, source_path,
         return_url, raw_request_json
-      ) VALUES (?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
       .bind(
         referenceId,
@@ -887,7 +992,11 @@ export async function onRequestPost({ request, env }) {
         pricingTier,
         route,
         packageSize,
+        originalValue,
         amountValue,
+        offer.eligible ? offer.code : null,
+        offer.eligible ? offer.label : null,
+        discountValue,
         CURRENCY,
         JSON.stringify(sessionIds),
         JSON.stringify(seriesDates),

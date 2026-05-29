@@ -149,7 +149,11 @@ async function ensureTables(env) {
       route TEXT,
       package_size INTEGER NOT NULL,
       quantity INTEGER NOT NULL DEFAULT 1,
+      original_amount_value INTEGER,
       amount_value INTEGER NOT NULL,
+      discount_code TEXT,
+      discount_label TEXT,
+      discount_amount_value INTEGER NOT NULL DEFAULT 0,
       currency TEXT NOT NULL DEFAULT 'TWD',
       session_ids_json TEXT NOT NULL,
       series_dates_json TEXT NOT NULL,
@@ -206,6 +210,10 @@ async function ensureOrderTrackingColumns(env) {
     ['line_email_verified', 'INTEGER'],
     ['line_is_friend', 'INTEGER'],
     ['line_context_json', 'TEXT'],
+    ['original_amount_value', 'INTEGER'],
+    ['discount_code', 'TEXT'],
+    ['discount_label', 'TEXT'],
+    ['discount_amount_value', 'INTEGER NOT NULL DEFAULT 0'],
   ]
 
   for (const [name, type] of columns) {
@@ -304,6 +312,44 @@ function getTradeOrderId(event) {
 
 function getSessionId(event) {
   return event?.data?.sessionId || null
+}
+
+async function findOrderForWebhook(env, event) {
+  const referenceId = getReferenceId(event)
+  const sessionId = getSessionId(event)
+  const tradeOrderId = getTradeOrderId(event)
+
+  if (!referenceId && !sessionId && !tradeOrderId) return null
+
+  return env.DB.prepare(
+    `SELECT reference_id, status, event_id, course_id, course_name, category,
+            venue_id, venue_name, package_size, quantity, amount_value, currency,
+            session_ids_json, buyer_phone, buyer_email, source_path, return_url,
+            raw_request_json
+     FROM course_orders
+     WHERE (? IS NOT NULL AND reference_id = ?)
+        OR (? IS NOT NULL AND shopline_trade_order_id = ?)
+        OR (? IS NOT NULL AND shopline_session_id = ?)
+     ORDER BY CASE
+       WHEN reference_id = ? THEN 0
+       WHEN shopline_trade_order_id = ? THEN 1
+       WHEN shopline_session_id = ? THEN 2
+       ELSE 3
+     END
+     LIMIT 1`,
+  )
+    .bind(
+      referenceId,
+      referenceId,
+      tradeOrderId,
+      tradeOrderId,
+      sessionId,
+      sessionId,
+      referenceId,
+      tradeOrderId,
+      sessionId,
+    )
+    .first()
 }
 
 function getPaidAmountValue(event) {
@@ -575,7 +621,9 @@ export async function onRequestPost({ request, env }) {
     return json({ error: 'Invalid JSON body' }, { status: 400 })
   }
   const referenceId = getReferenceId(event)
-  if (!referenceId) {
+  const sessionId = getSessionId(event)
+  const tradeOrderId = getTradeOrderId(event)
+  if (!referenceId && !sessionId && !tradeOrderId) {
     await finishWebhookAttempt(env, attemptId, {
       verificationStatus: 'verified',
       responseStatus: 400,
@@ -586,16 +634,7 @@ export async function onRequestPost({ request, env }) {
 
   await ensureTables(env)
 
-  const order = await env.DB.prepare(
-    `SELECT reference_id, status, event_id, course_id, course_name, category,
-            venue_id, venue_name, package_size, quantity, amount_value, currency,
-            session_ids_json, buyer_phone, buyer_email, source_path, return_url,
-            raw_request_json
-     FROM course_orders
-     WHERE reference_id = ?`,
-  )
-    .bind(referenceId)
-    .first()
+  const order = await findOrderForWebhook(env, event)
 
   if (!order) {
     await finishWebhookAttempt(env, attemptId, {
@@ -605,6 +644,7 @@ export async function onRequestPost({ request, env }) {
     })
     return json({ error: 'Order not found' }, { status: 404 })
   }
+  const orderReferenceId = order.reference_id
 
   if (isRefundSucceededEvent(event) || isPaidCancellationRefundEvent(event, order)) {
     if (order.status === 'refunded') {
@@ -634,14 +674,14 @@ export async function onRequestPost({ request, env }) {
     const quantity = Math.max(1, Math.min(6, Number(order.quantity || 1)))
 
     if (order.status === 'paid') {
-      const claimed = await claimOrderForRefund(env, referenceId, event, rawBody)
+      const claimed = await claimOrderForRefund(env, orderReferenceId, event, rawBody)
       if (!claimed) {
         const currentOrder = await env.DB.prepare(
           `SELECT status
            FROM course_orders
            WHERE reference_id = ?`,
         )
-          .bind(referenceId)
+          .bind(orderReferenceId)
           .first()
 
         const status = currentOrder?.status || order.status
@@ -656,7 +696,7 @@ export async function onRequestPost({ request, env }) {
       await releasePaidSeats(env, sessionIds, quantity)
     }
 
-    await markOrderStatus(env, referenceId, 'refunded', event, rawBody)
+    await markOrderStatus(env, orderReferenceId, 'refunded', event, rawBody)
     await finishWebhookAttempt(env, attemptId, {
       verificationStatus: 'verified',
       responseStatus: 200,
@@ -671,7 +711,7 @@ export async function onRequestPost({ request, env }) {
       order.status === 'payment_processing'
     ) {
       if (order.status === 'paid') {
-        await notifyLinePaymentSuccess(env, referenceId)
+        await notifyLinePaymentSuccess(env, orderReferenceId)
       }
       await finishWebhookAttempt(env, attemptId, {
         verificationStatus: 'verified',
@@ -683,7 +723,7 @@ export async function onRequestPost({ request, env }) {
 
     const nextStatus = mapNonPaidStatus(event)
     if (nextStatus) {
-      await markNonPaidStatus(env, referenceId, nextStatus, event, rawBody)
+      await markNonPaidStatus(env, orderReferenceId, nextStatus, event, rawBody)
     }
     await finishWebhookAttempt(env, attemptId, {
       verificationStatus: 'verified',
@@ -695,7 +735,7 @@ export async function onRequestPost({ request, env }) {
 
   if (LOCKED_PAID_STATUSES.includes(order.status)) {
     if (order.status === 'paid') {
-      await notifyLinePaymentSuccess(env, referenceId)
+      await notifyLinePaymentSuccess(env, orderReferenceId)
     }
     await finishWebhookAttempt(env, attemptId, {
       verificationStatus: 'verified',
@@ -707,7 +747,7 @@ export async function onRequestPost({ request, env }) {
 
   const paidAmount = getPaidAmountValue(event)
   if (paidAmount && paidAmount < Number(order.amount_value) * 100) {
-    await markOrderStatus(env, referenceId, 'payment_amount_mismatch', event, rawBody)
+    await markOrderStatus(env, orderReferenceId, 'payment_amount_mismatch', event, rawBody)
     await finishWebhookAttempt(env, attemptId, {
       verificationStatus: 'verified',
       responseStatus: 200,
@@ -716,14 +756,14 @@ export async function onRequestPost({ request, env }) {
     return json({ ok: true, status: 'payment_amount_mismatch' })
   }
 
-  const claimed = await claimOrderForPayment(env, referenceId, event, rawBody)
+  const claimed = await claimOrderForPayment(env, orderReferenceId, event, rawBody)
   if (!claimed) {
     const currentOrder = await env.DB.prepare(
       `SELECT status
        FROM course_orders
        WHERE reference_id = ?`,
     )
-      .bind(referenceId)
+      .bind(orderReferenceId)
       .first()
 
     const status = currentOrder?.status || order.status
@@ -741,7 +781,7 @@ export async function onRequestPost({ request, env }) {
 
   const seatsUpdated = await incrementPaidSeats(env, sessionIds, quantity)
   if (!seatsUpdated) {
-    await markOrderStatus(env, referenceId, 'paid_over_capacity', event, rawBody)
+    await markOrderStatus(env, orderReferenceId, 'paid_over_capacity', event, rawBody)
     await finishWebhookAttempt(env, attemptId, {
       verificationStatus: 'verified',
       responseStatus: 200,
@@ -764,7 +804,7 @@ export async function onRequestPost({ request, env }) {
       getSessionId(event),
       getTradeOrderId(event),
       rawBody,
-      referenceId,
+      orderReferenceId,
     )
     .run()
 
@@ -777,11 +817,11 @@ export async function onRequestPost({ request, env }) {
         status: 'paid',
       },
     })
-    await recordMetaCapiResult(env, referenceId, metaResult)
+    await recordMetaCapiResult(env, orderReferenceId, metaResult)
   } catch (error) {
-    await recordMetaCapiResult(env, referenceId, {
+    await recordMetaCapiResult(env, orderReferenceId, {
       status: 'exception',
-      eventId: order.event_id || `purchase.${referenceId}`,
+      eventId: order.event_id || `purchase.${orderReferenceId}`,
       ok: false,
       skipped: false,
       error:
@@ -791,7 +831,7 @@ export async function onRequestPost({ request, env }) {
     })
   }
 
-  await notifyLinePaymentSuccess(env, referenceId)
+  await notifyLinePaymentSuccess(env, orderReferenceId)
 
   await finishWebhookAttempt(env, attemptId, {
     verificationStatus: 'verified',

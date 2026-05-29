@@ -10,6 +10,8 @@ type Props = {
   onGateAction?: () => void
   loginUrl?: string
   lockedEyebrow?: string
+  actionLabel?: string
+  actionNote?: string
   className?: string
 }
 
@@ -27,13 +29,15 @@ export function LockedContent({
   onGateAction,
   loginUrl,
   lockedEyebrow = 'LINE 會員專屬內容',
+  actionLabel: actionLabelOverride,
+  actionNote,
   className = '',
 }: Props) {
   if (gateState.status === 'unlocked' || gateState.status === 'missing-config') {
     return <>{children}</>
   }
 
-  const actionLabel = getActionLabel(gateState)
+  const actionLabel = actionLabelOverride || getActionLabel(gateState)
   const shouldUseLiffLink =
     loginUrl && ['loading', 'logged-out'].includes(gateState.status)
 
@@ -80,6 +84,12 @@ export function LockedContent({
               </Button>
             )
           )
+        )}
+
+        {actionNote && (
+          <p className="mx-auto mt-3 max-w-md text-xs leading-relaxed text-mist/55">
+            {actionNote}
+          </p>
         )}
       </div>
     </div>
