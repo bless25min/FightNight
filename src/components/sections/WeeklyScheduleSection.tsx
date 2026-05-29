@@ -1458,7 +1458,7 @@ function CourseDetailModal({
   const reserveLabel =
     isBootCampDetail ? '保留這組日期' : '保留這堂'
   const getPurchaseButtonLabel = (option: CourseDetailPackageOption) => {
-    if (detail.isPurchaseLocked) return detail.lockedPurchaseCtaLabel ?? '登入購買此課程'
+    if (detail.isPurchaseLocked) return detail.lockedPurchaseCtaLabel ?? '登入看此課首購價'
     if (option.offerApplied) return `以首購價保留這堂 · ${option.priceLabel}`
     return `${reserveLabel} · ${option.priceLabel}`
   }
@@ -2054,7 +2054,7 @@ export function WeeklyScheduleSection({
   displayLimit = SCHEDULE_DISPLAY_LIMIT,
   featuredCourseNames = EMPTY_FEATURED_COURSE_NAMES,
   isPurchaseLocked = false,
-  lockedPurchaseCtaLabel = '登入購買此課程',
+  lockedPurchaseCtaLabel = '登入看此課首購價',
   lockedPurchaseNote,
   lockedOfferBadgeLabel,
   onLockedPurchase,

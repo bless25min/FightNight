@@ -15,9 +15,9 @@ import { StickyActionBar } from '../ui/StickyActionBar'
 import { WeeklyScheduleSection } from './WeeklyScheduleSection'
 
 const featuredPreviewCourseNames = ['拳擊體適能', '泰拳體適能', '戰鬥體適能']
-const lockedCourseCtaLabel = '登入購買此課程'
+const lockedCourseCtaLabel = '登入看此課首購價'
 const lockedOfferBadgeLabel = '618 首購限定'
-const previewSecondaryCtaLabel = '登入看首購限定與其他課程'
+const previewSecondaryCtaLabel = '登入看首購限定與更多場次'
 
 type FirstPurchaseOfferState = 'idle' | 'checking' | 'eligible' | 'ineligible' | 'error'
 
@@ -240,28 +240,30 @@ export function TicketSection() {
               </div>
             )}
 
-            <div className="mt-8 border-y border-neon/20 bg-neon/8 px-4 py-5 md:mt-10 md:flex md:items-center md:justify-between md:gap-6 md:px-6 md:py-6">
-              <div className="max-w-xl">
-                <p className="font-heading text-xs uppercase tracking-[0.26em] text-neon/80">
-                  不只想試一次？
-                </p>
-                <p className="mt-2 font-heading text-2xl font-black leading-tight text-pearl md:text-3xl">
-                  用一個習慣，讓自己產生蛻變
-                </p>
+            {gateState.status === 'unlocked' && (
+              <div className="mt-8 border-y border-neon/20 bg-neon/8 px-4 py-5 md:mt-10 md:flex md:items-center md:justify-between md:gap-6 md:px-6 md:py-6">
+                <div className="max-w-xl">
+                  <p className="font-heading text-xs uppercase tracking-[0.26em] text-neon/80">
+                    不只想試一次？
+                  </p>
+                  <p className="mt-2 font-heading text-2xl font-black leading-tight text-pearl md:text-3xl">
+                    用一個習慣，讓自己產生蛻變
+                  </p>
+                </div>
+                <div className="mt-5 md:mt-0 md:w-64">
+                  <Button
+                    variant="secondary"
+                    size="lg"
+                    href={bootCampHref}
+                    className="w-full border-neon/35 bg-neon/8 text-neon hover:border-neon/55 hover:bg-neon/14 hover:text-pearl"
+                    onClick={() => trackSecondaryCta()}
+                    data-cta="ticket-bootcamp-entry"
+                  >
+                    查看 Boot Camp 計畫
+                  </Button>
+                </div>
               </div>
-              <div className="mt-5 md:mt-0 md:w-64">
-                <Button
-                  variant="secondary"
-                  size="lg"
-                  href={bootCampHref}
-                  className="w-full border-neon/35 bg-neon/8 text-neon hover:border-neon/55 hover:bg-neon/14 hover:text-pearl"
-                  onClick={() => trackSecondaryCta()}
-                  data-cta="ticket-bootcamp-entry"
-                >
-                  查看 Boot Camp 計畫
-                </Button>
-              </div>
-            </div>
+            )}
           </div>
         </motion.div>
 
