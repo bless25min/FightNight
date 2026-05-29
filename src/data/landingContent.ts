@@ -360,7 +360,7 @@ export const bootCampFaqItems: FAQItem[] = [
 export const offersPlanSectionContent = {
   title: '選擇你想留下的改變路徑',
   subtitle: '所有 Boot Camp 都是向職業 Fighter 學習應對壓力；拳擊與泰拳只是兩種不同的期待入口。',
-  footnote: '剩餘名額會依線上訂單即時更新；售完後該場次就不再開放線上購買。',
+  footnote: '名額有限，選定後再把這段訓練留給自己。',
 }
 
 export const bootCampCoreContent = {

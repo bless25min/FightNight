@@ -37,7 +37,7 @@ const basePackagePrice: Record<1 | 2 | 4, number> = {
 
 export const FIRST_PURCHASE_OFFER_CODE = '618_MIDYEAR_FIRST_PURCHASE_HALF'
 export const FIRST_PURCHASE_OFFER_LABEL = '618 首購半價'
-export const FIRST_PURCHASE_OFFER_BADGE = '618首購半價'
+export const FIRST_PURCHASE_OFFER_BADGE = '618 首購限定'
 export const FIRST_PURCHASE_OFFER_END_AT_TW = '2026-06-18T23:59:59+08:00'
 export const FIRST_PURCHASE_OFFER_DISCOUNT_RATE = 0.5
 

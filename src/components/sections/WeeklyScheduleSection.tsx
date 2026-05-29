@@ -756,7 +756,8 @@ function getCourseFeatureTagClass(tag: string) {
     tag === '國際場' ||
     tag === '泰國靶師' ||
     tag === '拳擊冠軍' ||
-    tag === FIRST_PURCHASE_OFFER_BADGE
+    tag === FIRST_PURCHASE_OFFER_BADGE ||
+    tag === '618 首購限定'
   ) {
     return 'border-blaze/45 bg-blaze/15 text-blaze'
   }
@@ -1457,8 +1458,8 @@ function CourseDetailModal({
   const reserveLabel =
     isBootCampDetail ? '保留這組日期' : '保留這堂'
   const getPurchaseButtonLabel = (option: CourseDetailPackageOption) => {
-    if (detail.isPurchaseLocked) return detail.lockedPurchaseCtaLabel ?? '查看可訂場次'
-    if (option.offerApplied) return `使用首購半價保留這堂 · ${option.priceLabel}`
+    if (detail.isPurchaseLocked) return detail.lockedPurchaseCtaLabel ?? '登入購買此課程'
+    if (option.offerApplied) return `以首購價保留這堂 · ${option.priceLabel}`
     return `${reserveLabel} · ${option.priceLabel}`
   }
   const reservationLine = shouldShowRemainingBadge(detail.remaining)
@@ -1762,7 +1763,7 @@ function CourseDetailModal({
                         )}
                         {option.offerApplied && (
                           <p className="mt-2 text-xs font-heading text-blaze">
-                            618 年中慶首購半價已套用
+                            首購價已套用
                           </p>
                         )}
                       </button>
@@ -1936,7 +1937,7 @@ function CheckoutContactModal({
             {pending.course.weekday} {pending.course.startTime}
           </p>
           <p className="mt-2 font-heading text-lg font-black text-neon">
-            {pending.offerApplied ? '618 首購半價 ' : ''}
+            {pending.offerApplied ? '首購價 ' : ''}
             NT${pending.value.toLocaleString('en-US')}
           </p>
           {pending.offerApplied && pending.originalValue && (
@@ -2030,6 +2031,7 @@ type Props = {
   isPurchaseLocked?: boolean
   lockedPurchaseCtaLabel?: string
   lockedPurchaseNote?: string
+  lockedOfferBadgeLabel?: string
   onLockedPurchase?: () => void
   firstPurchaseOfferEligible?: boolean
 }
@@ -2052,8 +2054,9 @@ export function WeeklyScheduleSection({
   displayLimit = SCHEDULE_DISPLAY_LIMIT,
   featuredCourseNames = EMPTY_FEATURED_COURSE_NAMES,
   isPurchaseLocked = false,
-  lockedPurchaseCtaLabel = '查看首購半價與可訂場次',
+  lockedPurchaseCtaLabel = '登入購買此課程',
   lockedPurchaseNote,
+  lockedOfferBadgeLabel,
   onLockedPurchase,
   firstPurchaseOfferEligible = false,
 }: Props = {}) {
@@ -2966,9 +2969,16 @@ export function WeeklyScheduleSection({
                   firstPurchaseOfferEligible &&
                   isFirstPurchaseOfferCourseEligible(c, 1) &&
                   fightNightPrice.amount < fightNightBasePrice.amount
+                const shouldShowLockedOfferBadge =
+                  activeCategory === 'FIGHT_NIGHT' &&
+                  isPurchaseLocked &&
+                  Boolean(lockedOfferBadgeLabel) &&
+                  isFirstPurchaseOfferCourseEligible(c, 1)
                 const displayCourseFeatureTags = fightNightOfferApplied
                   ? Array.from(new Set([FIRST_PURCHASE_OFFER_BADGE, ...courseFeatureTags]))
-                  : courseFeatureTags
+                  : shouldShowLockedOfferBadge
+                    ? Array.from(new Set([lockedOfferBadgeLabel!, ...courseFeatureTags]))
+                    : courseFeatureTags
                 const fightNightSession = [
                   {
                     id: getSessionInventoryId(c),
@@ -3399,14 +3409,24 @@ export function WeeklyScheduleSection({
                       ) : (
                         sessionAvailability.remaining > 0 ? (
                           <>
-                            {primaryCardCompareAtLabel && (
-                              <p className="text-right text-[11px] text-mist/45">
-                                一般{' '}
-                                <span className="line-through">
-                                  {primaryCardCompareAtLabel}
-                                </span>
+                            <div className="flex items-end justify-between gap-3 border-t border-pearl/10 pt-3">
+                              <p className="text-[10px] font-heading tracking-[0.18em] text-neon/75">
+                                單堂入場
                               </p>
-                            )}
+                              <div className="text-right">
+                                <p className="font-heading text-lg font-black text-pearl">
+                                  {primaryCardPriceLabel}
+                                </p>
+                                {primaryCardCompareAtLabel && (
+                                  <p className="mt-0.5 text-[11px] text-mist/45">
+                                    一般{' '}
+                                    <span className="line-through">
+                                      {primaryCardCompareAtLabel}
+                                    </span>
+                                  </p>
+                                )}
+                              </div>
+                            </div>
                             <Button
                               variant="primary"
                               className="w-full"
@@ -3428,7 +3448,7 @@ export function WeeklyScheduleSection({
                               {isPurchaseLocked
                                 ? lockedPurchaseCtaLabel
                                 : fightNightOfferApplied
-                                  ? `使用首購半價保留這一場 · ${fightNightPrice.label}`
+                                  ? `以首購價保留這一場 · ${fightNightPrice.label}`
                                   : `保留這一場 · ${fightNightPrice.label}`}
                             </Button>
                             {isPurchaseLocked && lockedPurchaseNote && (

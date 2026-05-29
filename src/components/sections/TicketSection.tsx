@@ -9,15 +9,15 @@ import { useLiffGate } from '../../hooks/useLiffGate'
 import { useTracking } from '../../hooks/useTracking'
 import { getLineRequestContext } from '../../lib/lineContext'
 import { Button } from '../ui/Button'
-import { LockedContent } from '../ui/LockedContent'
 import { SectionHeading } from '../ui/SectionHeading'
 import { SectionWrapper } from '../ui/SectionWrapper'
 import { StickyActionBar } from '../ui/StickyActionBar'
 import { WeeklyScheduleSection } from './WeeklyScheduleSection'
 
 const featuredPreviewCourseNames = ['拳擊體適能', '泰拳體適能', '戰鬥體適能']
-const offerCtaLabel = '查看首購半價與可訂場次'
-const offerCtaNote = 'LINE 登入用來確認首購資格，不會自動付款。'
+const lockedCourseCtaLabel = '登入購買此課程'
+const lockedOfferBadgeLabel = '618 首購限定'
+const previewSecondaryCtaLabel = '登入看首購限定與其他課程'
 
 type FirstPurchaseOfferState = 'idle' | 'checking' | 'eligible' | 'ineligible' | 'error'
 
@@ -53,13 +53,12 @@ export function TicketSection() {
 
     offerPreviewTracked.current = true
     track({
-      event: 'first_purchase_offer_preview_view',
+      event: 'ticket_schedule_preview_view',
       params: {
-        offer_code: '618_MIDYEAR_FIRST_PURCHASE_HALF',
         preview_courses: featuredPreviewCourseNames.join(','),
       },
       metaStandardEvent: 'ViewContent',
-      lineEventName: 'OfferPreview',
+      lineEventName: 'TicketSchedulePreview',
     })
   }, [gateState.status, isInView, track])
 
@@ -133,16 +132,19 @@ export function TicketSection() {
   }
   const handleGateAction = () => {
     track({
-      event: 'first_purchase_offer_cta_click',
+      event: 'ticket_schedule_gate_click',
       params: {
-        offer_code: '618_MIDYEAR_FIRST_PURCHASE_HALF',
         gate_status: gateState.status,
       },
       metaStandardEvent: 'Lead',
-      lineEventName: 'OfferClick',
+      lineEventName: 'TicketScheduleGate',
     })
     trackGateAccess('ticket_section', gateState.status)
-    if (!loginUrl) void requestGateAccess()
+    if (loginUrl && ['loading', 'logged-out'].includes(gateState.status)) {
+      window.location.href = loginUrl
+      return
+    }
+    void requestGateAccess()
   }
   const bootCampHref =
     typeof window !== 'undefined' &&
@@ -187,41 +189,36 @@ export function TicketSection() {
                   categories={['FIGHT_NIGHT']}
                   showCategoryTabs={false}
                   showVenueFilter={false}
-                  title="先看本週 3 場精選"
+                  title="先選一個你想進場的晚上"
                   subtitle="拳擊體適能、泰拳體適能、戰鬥體適能，先選一個你有感覺的一晚。"
                   embedded
                   displayLimit={3}
                   featuredCourseNames={featuredPreviewCourseNames}
                   isPurchaseLocked
-                  lockedPurchaseCtaLabel={offerCtaLabel}
-                  lockedPurchaseNote={offerCtaNote}
+                  lockedPurchaseCtaLabel={lockedCourseCtaLabel}
+                  lockedOfferBadgeLabel={lockedOfferBadgeLabel}
                   onLockedPurchase={handleGateAction}
                 />
-                <p className="mx-auto mt-4 max-w-2xl text-center text-xs leading-relaxed text-mist/55">
-                  先看 3 場精選；登入後可查看 618 首購半價資格與更多可線上預訂場次。
-                </p>
+                <div className="mt-5 flex justify-center">
+                  <Button
+                    variant="secondary"
+                    size="lg"
+                    onClick={handleGateAction}
+                    data-cta="ticket-preview-all-courses"
+                    className="border-neon/30 bg-neon/8 text-neon hover:border-neon/55 hover:bg-neon/14 hover:text-pearl"
+                  >
+                    {previewSecondaryCtaLabel}
+                  </Button>
+                </div>
               </div>
             )}
 
-            <LockedContent
-              gateState={gateState}
-              title="618 年中慶首購半價"
-              description="LINE 登入後確認首購資格、即時剩餘名額與目前開放線上預訂的場次。"
-              loginUrl={loginUrl}
-              onGateAction={handleGateAction}
-              lockedEyebrow="首購限時優惠"
-              actionLabel={offerCtaLabel}
-              actionNote={offerCtaNote}
-            >
-              <div>
+            {gateState.status === 'unlocked' && (
+              <div className="mt-8">
                 {firstPurchaseOfferState === 'checking' ||
                 firstPurchaseOfferState === 'idle' ? (
                   <p className="rounded-2xl border border-neon/18 bg-neon/8 px-4 py-5 text-center text-sm leading-relaxed text-mist/72">
-                    正在確認 618 首購半價資格...
-                  </p>
-                ) : firstPurchaseOfferState === 'error' ? (
-                  <p className="rounded-2xl border border-blaze/30 bg-blaze/10 px-4 py-5 text-center text-sm leading-relaxed text-blaze">
-                    首購資格暫時無法確認，請重新登入 LINE 或稍後再試。
+                    正在整理本週可入場名額...
                   </p>
                 ) : (
                   <WeeklyScheduleSection
@@ -230,23 +227,18 @@ export function TicketSection() {
                     categories={['FIGHT_NIGHT']}
                     showCategoryTabs={false}
                     showVenueFilter
-                    title="目前開放線上預訂的場次"
+                    title="本週可入場名額"
                     subtitle={
                       firstPurchaseOfferState === 'eligible'
-                        ? '618 年中慶首購半價已套用，先選你方便到場的館別、日期與時段。'
-                        : '先選你方便到場的館別、日期與時段。'
+                        ? '網站首購價已套用，選一個你能到場的晚上。'
+                        : '選一個你能到場的晚上。'
                     }
                     embedded
                     firstPurchaseOfferEligible={firstPurchaseOfferState === 'eligible'}
                   />
                 )}
-                {firstPurchaseOfferState === 'ineligible' && (
-                  <p className="mx-auto mt-4 max-w-2xl text-center text-xs leading-relaxed text-mist/55">
-                    此 LINE 帳號已有網站購買紀錄，無法使用首購半價；仍可依一般價格線上預訂。
-                  </p>
-                )}
               </div>
-            </LockedContent>
+            )}
 
             <div className="mt-8 border-y border-neon/20 bg-neon/8 px-4 py-5 md:mt-10 md:flex md:items-center md:justify-between md:gap-6 md:px-6 md:py-6">
               <div className="max-w-xl">
