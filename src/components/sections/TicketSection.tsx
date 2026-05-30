@@ -457,7 +457,7 @@ export function TicketSection() {
                 actionLabel={
                   gateState.status === 'not-friend'
                     ? undefined
-                    : 'LINE 登入解鎖課程'
+                    : '登入解鎖 首次體驗/近期場次'
                 }
                 actionNote="每人僅限一次。"
               >
