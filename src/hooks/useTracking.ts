@@ -4,7 +4,6 @@ import {
   type MetaStandardEvent,
   type TrackingParams,
 } from '../lib/analytics'
-import { claimLeadEvent } from '../lib/leadEvent'
 
 type TrackingEvent = {
   event: string
@@ -40,25 +39,8 @@ export function useTracking() {
         console.log('[Track]', event, params)
       }
 
-      const leadClaim =
-        metaStandardEvent === 'Lead' ? claimLeadEvent(event) : null
-      const nextParams = leadClaim
-        ? {
-            ...(params ?? {}),
-            lead_event_id: leadClaim.eventId,
-            lead_meta_sent: leadClaim.shouldSendMetaLead,
-          }
-        : params
-
-      trackAnalyticsEvent(event, nextParams, {
-        metaStandardEvent: leadClaim?.shouldSendMetaLead
-          ? 'Lead'
-          : metaStandardEvent === 'Lead'
-            ? undefined
-            : metaStandardEvent,
-        metaEventId: leadClaim?.shouldSendMetaLead
-          ? leadClaim.eventId
-          : undefined,
+      trackAnalyticsEvent(event, params, {
+        metaStandardEvent,
         lineEventName,
       })
     },
@@ -69,8 +51,6 @@ export function useTracking() {
     () =>
       track({
         event: 'hero_cta_click',
-        metaStandardEvent: 'Lead',
-        lineEventName: 'LeadClick',
       }),
     [track],
   )
@@ -95,8 +75,6 @@ export function useTracking() {
       track({
         event: 'ticket_cta_click',
         params: { ticket_id: ticketId },
-        metaStandardEvent: 'Lead',
-        lineEventName: 'LeadClick',
       }),
     [track],
   )
@@ -108,9 +86,10 @@ export function useTracking() {
   )
 
   const trackLineCta = useCallback(
-    () =>
+    (params?: TrackingParams) =>
       track({
         event: 'line_cta_click',
+        params,
         metaStandardEvent: 'Lead',
         lineEventName: 'LineClick',
       }),
@@ -133,7 +112,8 @@ export function useTracking() {
       track({
         event: 'course_purchase_click',
         params,
-        lineEventName: 'CheckoutClick',
+        metaStandardEvent: 'AddToCart',
+        lineEventName: 'AddToCart',
       }),
     [track],
   )

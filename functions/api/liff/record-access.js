@@ -1,4 +1,4 @@
-import { sendMetaLeadEvent } from '../shopline/meta-capi.js'
+import { sendMetaContactEvent } from '../shopline/meta-capi.js'
 
 function json(data, init = {}) {
   return new Response(JSON.stringify(data), {
@@ -229,15 +229,14 @@ export async function onRequestPost({ request, env }) {
       )
       .run()
 
-    let metaLead = null
+    let metaContact = null
     if (isNewCustomer) {
       try {
-        metaLead = await sendMetaLeadEvent({
+        metaContact = await sendMetaContactEvent({
           env,
           request,
           lead: {
             lineUserId,
-            eventId: trimText(body?.leadEventId, 160) || undefined,
             email: lineEmail,
             isFriend: Boolean(isFriend),
             placement,
@@ -253,7 +252,7 @@ export async function onRequestPost({ request, env }) {
           },
         })
       } catch (error) {
-        metaLead = {
+        metaContact = {
           ok: false,
           status: 'failed',
           error:
@@ -272,12 +271,13 @@ export async function onRequestPost({ request, env }) {
       email: lineEmail,
       emailVerified: Boolean(lineEmailVerified),
       isFriend: Boolean(isFriend),
-      metaLead: metaLead
+      metaContact: metaContact
         ? {
-            ok: metaLead.ok === true,
-            skipped: metaLead.skipped === true,
-            status: metaLead.status || 'unknown',
-            eventId: metaLead.eventId || null,
+            ok: metaContact.ok === true,
+            skipped: metaContact.skipped === true,
+            status: metaContact.status || 'unknown',
+            eventId: metaContact.eventId || null,
+            customEventId: metaContact.customEventId || null,
           }
         : null,
     })

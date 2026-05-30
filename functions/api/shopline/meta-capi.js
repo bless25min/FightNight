@@ -131,18 +131,19 @@ function resolveLeadEventSourceUrl(lead, request) {
   }
 }
 
-export async function sendMetaLeadEvent({ env, request, lead }) {
+export async function sendMetaContactEvent({ env, request, lead }) {
   const pixelId = getMetaPixelId(env)
   const accessToken = getMetaAccessToken(env)
   const lineUserId = String(lead?.lineUserId || '').trim()
   const lineUserHash = await sha256Hex(lineUserId)
-  const eventId = lead?.eventId || `line_lead.${lineUserHash || Date.now()}`
+  const contactEventId = `line_contact.${lineUserHash || Date.now()}`
+  const customEventId = `line_identified_lead.${lineUserHash || Date.now()}`
 
   if (!pixelId || !accessToken) {
     return {
       ok: false,
       skipped: true,
-      eventId,
+      eventId: contactEventId,
       status: 'skipped',
       error: !pixelId ? 'Missing Meta Pixel ID' : 'Missing Meta CAPI access token',
     }
@@ -153,9 +154,9 @@ export async function sendMetaLeadEvent({ env, request, lead }) {
   const payload = cleanObject({
     data: [
       {
-        event_name: 'Lead',
+        event_name: 'Contact',
         event_time: Math.floor(Date.now() / 1000),
-        event_id: eventId,
+        event_id: contactEventId,
         action_source: 'website',
         event_source_url: resolveLeadEventSourceUrl(lead, request),
         user_data: {
@@ -175,7 +176,36 @@ export async function sendMetaLeadEvent({ env, request, lead }) {
         },
         custom_data: {
           content_name: 'LINE Login',
-          content_category: 'lead',
+          content_category: 'line_identity',
+          placement: lead?.placement,
+          source_path: lead?.sourcePath,
+          line_is_friend: lead?.isFriend === true,
+        },
+      },
+      {
+        event_name: 'LineIdentifiedLead',
+        event_time: Math.floor(Date.now() / 1000),
+        event_id: customEventId,
+        action_source: 'website',
+        event_source_url: resolveLeadEventSourceUrl(lead, request),
+        user_data: {
+          em: emailHash,
+          external_id: externalIdHash,
+          client_ip_address: firstPresent(
+            lead?.client?.ip,
+            request.headers.get('CF-Connecting-IP'),
+            request.headers.get('x-forwarded-for'),
+          ),
+          client_user_agent: firstPresent(
+            lead?.client?.userAgent,
+            request.headers.get('user-agent'),
+          ),
+          fbp: lead?.tracking?.fbp,
+          fbc: lead?.tracking?.fbc,
+        },
+        custom_data: {
+          content_name: 'LINE Login',
+          content_category: 'line_identity',
           placement: lead?.placement,
           source_path: lead?.sourcePath,
           line_is_friend: lead?.isFriend === true,
@@ -201,7 +231,8 @@ export async function sendMetaLeadEvent({ env, request, lead }) {
   return {
     ok: response.ok && !data?.error,
     skipped: false,
-    eventId,
+    eventId: contactEventId,
+    customEventId,
     status: response.ok && !data?.error ? 'sent' : 'failed',
     httpStatus: response.status,
     response: data,

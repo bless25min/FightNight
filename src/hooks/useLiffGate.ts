@@ -2,10 +2,6 @@ import { useCallback, useEffect, useState } from 'react'
 import { loadLiffSdk } from '../lib/liff'
 import { saveLineContext } from '../lib/lineContext'
 import { getCheckoutTrackingContext } from '../lib/checkoutTracking'
-import {
-  appendLeadEventIdToUrl,
-  getLeadEventIdForIdentity,
-} from '../lib/leadEvent'
 
 export type LiffGateStatus =
   | 'loading'
@@ -76,7 +72,6 @@ function recordLiffAccess(accessToken: string | null | undefined, friendFlag: bo
       friendFlag,
       placement: getLiffPlacement(),
       sourcePath: getSourcePath(),
-      leadEventId: getLeadEventIdForIdentity(),
       tracking: getCheckoutTrackingContext(),
       client: {
         screenWidth: String(window.screen.width),
@@ -99,11 +94,8 @@ export function useLiffGate() {
   const [runtimeLiffId, setRuntimeLiffId] = useState<string | undefined>()
   const [isConfigLoaded, setIsConfigLoaded] = useState(Boolean(buildTimeLiffId))
   const liffId = buildTimeLiffId || runtimeLiffId
-  const baseLiffUrl = liffId
+  const liffUrl = liffId
     ? `https://line.me/R/app/${liffId}`
-    : undefined
-  const liffUrl = baseLiffUrl
-    ? appendLeadEventIdToUrl(baseLiffUrl)
     : undefined
   const loginUrl = isMobileDevice() ? liffUrl : undefined
 

@@ -2677,7 +2677,7 @@ export function WeeklyScheduleSection({
                 ),
                 original_value: pendingCheckout.originalValue,
               },
-              metaStandardEvent: 'Lead',
+              metaStandardEvent: 'CompleteRegistration',
               lineEventName: 'FreeTrialContactSubmit',
             })
 
@@ -2768,7 +2768,7 @@ export function WeeklyScheduleSection({
               reference_id: data.referenceId,
               original_value: pendingCheckout.originalValue,
             },
-            metaStandardEvent: 'CompleteRegistration',
+            metaStandardEvent: 'Schedule',
             lineEventName: 'FreeTrialReserved',
           })
 

@@ -7,9 +7,11 @@ export type MetaStandardEvent =
   | 'PageView'
   | 'ViewContent'
   | 'Lead'
+  | 'Contact'
   | 'InitiateCheckout'
   | 'AddToCart'
   | 'CompleteRegistration'
+  | 'Schedule'
 
 type GtagArguments =
   | ['js', Date]

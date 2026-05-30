@@ -720,7 +720,7 @@ export function BootCampPage() {
         course_name: data.reservation?.courseName ?? freeTrialBridge.courseName,
         line_notify_status: data.lineNotify?.status ?? '',
       },
-      metaStandardEvent: 'CompleteRegistration',
+      metaStandardEvent: 'Schedule',
       lineEventName: 'FreeTrialReserved',
     })
   }, [freeTrialBridge, freeTrialReservationReferenceId, track])
@@ -759,8 +759,6 @@ export function BootCampPage() {
             track({
               event: 'bootcamp_hero_cta_click',
               params: { target: 'routes' },
-              metaStandardEvent: 'Lead',
-              lineEventName: 'LeadClick',
             })
             scrollTo('boot-camp-routes')
           }}
@@ -780,8 +778,6 @@ export function BootCampPage() {
             track({
               event: 'bootcamp_expectation_booking_click',
               params: { target: 'routes' },
-              metaStandardEvent: 'Lead',
-              lineEventName: 'LeadClick',
             })
             scrollTo('boot-camp-routes')
           }}
@@ -837,8 +833,6 @@ export function BootCampPage() {
               target: selectedRoute ? 'booking' : 'routes',
               route: selectedRoute ?? 'none',
             },
-            metaStandardEvent: 'Lead',
-            lineEventName: 'LeadClick',
           })
           scrollTo(selectedRoute ? 'boot-camp-booking' : 'boot-camp-routes')
         }}

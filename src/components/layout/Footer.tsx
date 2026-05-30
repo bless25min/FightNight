@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import { siteConfig, venues } from '../../data/landingContent'
 import { seoGuides } from '../../data/seoGuides'
+import { useTracking } from '../../hooks/useTracking'
 import logo from '../../assets/ufcgymtaiwan_logo.svg'
 
 type FooterProps = {
@@ -8,6 +9,8 @@ type FooterProps = {
 }
 
 export function Footer({ onVenueAction }: FooterProps = {}) {
+  const { trackLineCta } = useTracking()
+
   return (
     <footer className="border-t border-pearl/10 bg-abyss/60">
       <div className="max-w-6xl mx-auto px-3 sm:px-8 py-10 md:py-16">
@@ -48,7 +51,14 @@ export function Footer({ onVenueAction }: FooterProps = {}) {
               {onVenueAction ? (
                 <button
                   type="button"
-                  onClick={() => onVenueAction(venue.lineUrl)}
+                  onClick={() => {
+                    trackLineCta({
+                      cta_id: 'footer-venue-line',
+                      venue_id: venue.id,
+                      venue_name: venue.name,
+                    })
+                    onVenueAction(venue.lineUrl)
+                  }}
                   data-interaction-hint
                   className="interaction-hint inline-flex w-fit items-center gap-1.5 rounded-lg px-2 py-1 text-sm font-medium text-neon hover:text-neon/80 transition-colors mt-1"
                 >
@@ -60,6 +70,13 @@ export function Footer({ onVenueAction }: FooterProps = {}) {
                   href={venue.lineUrl}
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={() =>
+                    trackLineCta({
+                      cta_id: 'footer-venue-line',
+                      venue_id: venue.id,
+                      venue_name: venue.name,
+                    })
+                  }
                   data-interaction-hint
                   className="interaction-hint inline-flex w-fit items-center gap-1.5 rounded-lg px-2 py-1 text-sm font-medium text-neon hover:text-neon/80 transition-colors mt-1"
                 >

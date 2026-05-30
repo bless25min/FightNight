@@ -10,6 +10,7 @@ import { getCheckoutTrackingContext } from '../../lib/checkoutTracking'
 import { writeFreeTrialBridgeState } from '../../lib/freeTrialBridge'
 import { getLineRequestContext } from '../../lib/lineContext'
 import { Button } from '../ui/Button'
+import { LockedContent } from '../ui/LockedContent'
 import { SectionHeading } from '../ui/SectionHeading'
 import { SectionWrapper } from '../ui/SectionWrapper'
 import { StickyActionBar } from '../ui/StickyActionBar'
@@ -18,8 +19,6 @@ import {
   type FreeTrialDraft,
 } from './WeeklyScheduleSection'
 
-const featuredPreviewCourseNames = ['拳擊體適能', '泰拳體適能', '戰鬥體適能']
-const lockedCourseCtaLabel = 'LINE 登入看全部時段・首堂免費'
 const lockedOfferBadgeLabel = '首堂可免費體驗'
 
 type FirstPurchaseOfferState = 'idle' | 'checking' | 'eligible' | 'ineligible' | 'error'
@@ -127,7 +126,6 @@ export function TicketSection() {
   const titleRef = useRef<HTMLDivElement>(null)
   const isInView = useInView(ref, { once: true })
   const tracked = useRef(false)
-  const offerPreviewTracked = useRef(false)
   const [firstPurchaseOfferState, setFirstPurchaseOfferState] =
     useState<FirstPurchaseOfferState>('idle')
   const [freeTrialDraft, setFreeTrialDraft] = useState<FreeTrialDraft | null>(
@@ -148,22 +146,6 @@ export function TicketSection() {
       trackTicketView()
     }
   }, [isInView, trackTicketView])
-
-  useEffect(() => {
-    if (!isInView || gateState.status === 'unlocked' || offerPreviewTracked.current) {
-      return
-    }
-
-    offerPreviewTracked.current = true
-    track({
-      event: 'ticket_schedule_preview_view',
-      params: {
-        preview_courses: featuredPreviewCourseNames.join(','),
-      },
-      metaStandardEvent: 'ViewContent',
-      lineEventName: 'TicketSchedulePreview',
-    })
-  }, [gateState.status, isInView, track])
 
   useEffect(() => {
     if (gateState.status !== 'unlocked') {
@@ -353,7 +335,7 @@ export function TicketSection() {
           reference_id: reservation.referenceId,
           original_value: draft.originalValue,
         },
-        metaStandardEvent: 'CompleteRegistration',
+        metaStandardEvent: 'Schedule',
         lineEventName: 'FreeTrialReserved',
       })
       return reservation
@@ -465,25 +447,22 @@ export function TicketSection() {
 
           <div className="relative">
             {gateState.status !== 'unlocked' && (
-              <div className="mb-8">
-                <WeeklyScheduleSection
-                  id="fight-night-preview-schedule"
-                  activeCategory="FIGHT_NIGHT"
-                  categories={['FIGHT_NIGHT']}
-                  showCategoryTabs={false}
-                  showVenueFilter={false}
-                  title="先看幾種最受歡迎的體驗"
-                  subtitle="這裡只是熱門範例；登入後可查看目前開放線上預約的全部課程。"
-                  embedded
-                  displayLimit={3}
-                  featuredCourseNames={featuredPreviewCourseNames}
-                  bookingIntent="choice"
-                  isPurchaseLocked
-                  lockedPurchaseCtaLabel={lockedCourseCtaLabel}
-                  lockedOfferBadgeLabel={lockedOfferBadgeLabel}
-                  onLockedPurchase={handleGateAction}
-                />
-              </div>
+              <LockedContent
+                gateState={gateState}
+                title="LINE 登入解鎖首堂免費體驗"
+                description="登入後查看目前可免費預約的 Fight Night 體適能課程。"
+                onGateAction={handleGateAction}
+                loginUrl={loginUrl}
+                lockedEyebrow="FIGHT NIGHT FREE TRIAL"
+                actionLabel={
+                  gateState.status === 'not-friend'
+                    ? undefined
+                    : 'LINE 登入解鎖課程'
+                }
+                actionNote="每人僅限一次。"
+              >
+                <div />
+              </LockedContent>
             )}
 
             {gateState.status === 'unlocked' && (

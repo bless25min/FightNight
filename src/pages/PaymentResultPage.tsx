@@ -3,6 +3,7 @@ import { Footer } from '../components/layout/Footer'
 import { Header } from '../components/layout/Header'
 import { Button } from '../components/ui/Button'
 import { siteConfig } from '../data/landingContent'
+import { useTracking } from '../hooks/useTracking'
 
 type OrderStatus =
   | 'pending'
@@ -188,6 +189,7 @@ function providerStatusLabel(provider: OrderStatusResponse['provider']) {
 }
 
 export function PaymentResultPage() {
+  const { trackLineCta } = useTracking()
   const [data, setData] = useState<OrderStatusResponse | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const params = new URLSearchParams(window.location.search)
@@ -295,7 +297,17 @@ export function PaymentResultPage() {
             <Button href={siteConfig.offersUrl} variant="primary">
               回到課程頁
             </Button>
-            <Button href={siteConfig.lineUrl} variant="secondary">
+            <Button
+              href={siteConfig.lineUrl}
+              variant="secondary"
+              onClick={() =>
+                trackLineCta({
+                  cta_id: 'payment-result-line',
+                  reference_id: referenceId,
+                  order_status: order?.status ?? '',
+                })
+              }
+            >
               加入 LINE 確認
             </Button>
           </div>

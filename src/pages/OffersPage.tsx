@@ -589,24 +589,42 @@ export function OffersPage() {
 
   const handlePlanCta = useCallback(
     (url: string, planId: string) => {
-      track({
-        event: 'plan_cta_click',
-        params: { plan_id: planId },
-        metaStandardEvent: 'Lead',
-        lineEventName: 'LeadClick',
-      })
-
       if (planId === fightNightPassPlan.id) {
+        track({
+          event: 'plan_cta_click',
+          params: {
+            plan_id: planId,
+            action_type: 'schedule_nav',
+          },
+        })
         navigateToSchedule('FIGHT_NIGHT')
         return
       }
 
       const target = planScheduleTargetMap[planId]
       if (target) {
+        track({
+          event: 'plan_cta_click',
+          params: {
+            plan_id: planId,
+            action_type: 'schedule_nav',
+            category: target.category,
+            route: target.route ?? 'none',
+          },
+        })
         navigateToSchedule(target.category, target.route)
         return
       }
 
+      track({
+        event: 'plan_cta_click',
+        params: {
+          plan_id: planId,
+          action_type: 'line_gate',
+        },
+        metaStandardEvent: 'Lead',
+        lineEventName: 'LeadClick',
+      })
       void openWhenUnlocked(url)
     },
     [navigateToSchedule, openWhenUnlocked, track],
