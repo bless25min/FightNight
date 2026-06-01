@@ -53,8 +53,14 @@ const CHECKOUT_INTENT_EVENTS = [
   'shopline_checkout_submit',
 ]
 
+const LEAD_INTENT_EVENTS = [
+  'gate_access_click',
+  'line_cta_click',
+]
+
 const TRAFFIC_ACTION_EVENT_SQL = TRAFFIC_ACTION_EVENTS.map(sqlString).join(', ')
 const CHECKOUT_INTENT_EVENT_SQL = CHECKOUT_INTENT_EVENTS.map(sqlString).join(', ')
+const LEAD_INTENT_EVENT_SQL = LEAD_INTENT_EVENTS.map(sqlString).join(', ')
 
 function sqlString(value) {
   return `'${String(value).replace(/'/g, "''")}'`
@@ -1020,154 +1026,329 @@ async function getTraffic(env, url) {
   const lookbackDays = getLookbackDays(url, 7, 30)
   const lookbackSql = `-${lookbackDays} days`
 
-  const sourceRows = await safeAll(
-    env,
-    `SELECT COALESCE(source_channel, 'direct') AS source_channel,
-            COUNT(DISTINCT session_id) AS sessions,
-            COUNT(DISTINCT anonymous_id) AS visitors,
-            COUNT(DISTINCT CASE WHEN visitor_type = 'new' THEN session_id ELSE NULL END) AS new_sessions,
-            COUNT(DISTINCT CASE WHEN visitor_type = 'returning' THEN session_id ELSE NULL END) AS returning_sessions,
-            COALESCE(SUM(CASE WHEN event_name = 'page_view' THEN 1 ELSE 0 END), 0) AS page_views,
-            COALESCE(SUM(CASE WHEN event_name IN (${TRAFFIC_ACTION_EVENT_SQL}) THEN 1 ELSE 0 END), 0) AS actions,
-            COALESCE(SUM(CASE WHEN event_name IN (${CHECKOUT_INTENT_EVENT_SQL}) THEN 1 ELSE 0 END), 0) AS checkout_intents,
-            COALESCE(SUM(CASE WHEN event_name = 'page_exit' AND is_bounce = 1 THEN 1 ELSE 0 END), 0) AS bounces,
-            COALESCE(SUM(CASE WHEN event_name = 'page_exit' THEN 1 ELSE 0 END), 0) AS exits,
-            ROUND(AVG(CASE WHEN event_name = 'page_exit' THEN duration_ms END)) AS avg_duration_ms,
-            ROUND(AVG(CASE WHEN event_name = 'page_exit' THEN max_scroll_depth END)) AS avg_scroll_depth
-     FROM tracking_events
-     WHERE created_at >= datetime('now', '${lookbackSql}')
-     GROUP BY COALESCE(source_channel, 'direct')
-     ORDER BY sessions DESC
-     LIMIT 12`,
-  )
-
-  const campaignRows = await safeAll(
-    env,
-    `SELECT COALESCE(utm_source, '(none)') AS utm_source,
-            COALESCE(utm_medium, '(none)') AS utm_medium,
-            COALESCE(utm_campaign, '(none)') AS utm_campaign,
-            COALESCE(click_id_type, '') AS click_id_type,
-            COUNT(DISTINCT session_id) AS sessions,
-            COALESCE(SUM(CASE WHEN event_name IN (${CHECKOUT_INTENT_EVENT_SQL}) THEN 1 ELSE 0 END), 0) AS checkout_intents,
-            COALESCE(SUM(CASE WHEN event_name IN (${TRAFFIC_ACTION_EVENT_SQL}) THEN 1 ELSE 0 END), 0) AS actions
-     FROM tracking_events
-     WHERE created_at >= datetime('now', '${lookbackSql}')
-       AND (
-         utm_source IS NOT NULL OR utm_medium IS NOT NULL OR utm_campaign IS NOT NULL
-         OR click_id_type IS NOT NULL
+  const [
+    overviewRows,
+    orderSummaryRows,
+    dailyRows,
+    orderDailyRows,
+    sourceRows,
+    campaignRows,
+    pageRows,
+    sectionRows,
+    dropoffRows,
+    exitRows,
+    deviceRows,
+    browserRows,
+    networkRows,
+    geographyRows,
+    recentEventRows,
+  ] = await Promise.all([
+    safeAll(
+      env,
+      `SELECT COUNT(DISTINCT CASE WHEN event_name = 'page_view' THEN session_id ELSE NULL END) AS sessions,
+              COUNT(DISTINCT CASE WHEN event_name = 'page_view' THEN anonymous_id ELSE NULL END) AS visitors,
+              COUNT(DISTINCT CASE WHEN event_name = 'page_view' AND COALESCE(first_source_channel, source_channel, '') = 'paid' THEN session_id ELSE NULL END) AS paid_sessions,
+              COUNT(DISTINCT CASE WHEN event_name = 'page_view' AND click_id_type IS NOT NULL THEN session_id ELSE NULL END) AS click_id_sessions,
+              COUNT(DISTINCT CASE WHEN event_name = 'page_view' AND (utm_source IS NOT NULL OR utm_medium IS NOT NULL OR utm_campaign IS NOT NULL) THEN session_id ELSE NULL END) AS utm_sessions,
+              COUNT(DISTINCT CASE WHEN event_name = 'ticket_view' THEN session_id ELSE NULL END) AS ticket_sessions,
+              COUNT(DISTINCT CASE WHEN event_name IN (${LEAD_INTENT_EVENT_SQL}) THEN session_id ELSE NULL END) AS lead_sessions,
+              COUNT(DISTINCT CASE WHEN event_name = 'free_trial_reservation_submit' THEN session_id ELSE NULL END) AS free_trial_sessions,
+              COUNT(DISTINCT CASE WHEN event_name = 'course_purchase_click' THEN session_id ELSE NULL END) AS purchase_click_sessions,
+              COUNT(DISTINCT CASE WHEN event_name = 'shopline_checkout_submit' THEN session_id ELSE NULL END) AS checkout_sessions,
+              COUNT(DISTINCT CASE WHEN event_name = 'scroll_depth' AND COALESCE(scroll_depth, max_scroll_depth, 0) >= 50 THEN session_id ELSE NULL END) AS scroll_50_sessions,
+              COUNT(DISTINCT CASE WHEN event_name = 'page_exit' THEN session_id ELSE NULL END) AS exit_sessions,
+              COUNT(DISTINCT CASE WHEN event_name = 'page_exit' AND is_bounce = 1 THEN session_id ELSE NULL END) AS bounce_sessions
+       FROM tracking_events
+       WHERE created_at >= datetime('now', '${lookbackSql}')`,
+    ),
+    safeAll(
+      env,
+      `SELECT COUNT(*) AS orders,
+              COALESCE(SUM(CASE WHEN status = 'paid' THEN 1 ELSE 0 END), 0) AS paid_orders,
+              COALESCE(SUM(CASE WHEN status = 'free_reserved' THEN 1 ELSE 0 END), 0) AS free_orders,
+              COALESCE(SUM(CASE WHEN status = 'paid' THEN amount_value ELSE 0 END), 0) AS revenue
+       FROM course_orders
+       WHERE created_at >= datetime('now', '${lookbackSql}')`,
+    ),
+    safeAll(
+      env,
+      `SELECT date(datetime(created_at, '+8 hours')) AS day_tw,
+              COUNT(DISTINCT CASE WHEN event_name = 'page_view' THEN session_id ELSE NULL END) AS sessions,
+              COUNT(DISTINCT CASE WHEN event_name = 'page_view' AND COALESCE(first_source_channel, source_channel, '') = 'paid' THEN session_id ELSE NULL END) AS paid_sessions,
+              COUNT(DISTINCT CASE WHEN event_name = 'page_view' AND click_id_type IS NOT NULL THEN session_id ELSE NULL END) AS click_id_sessions,
+              COUNT(DISTINCT CASE WHEN event_name = 'page_view' AND (utm_source IS NOT NULL OR utm_medium IS NOT NULL OR utm_campaign IS NOT NULL) THEN session_id ELSE NULL END) AS utm_sessions,
+              COUNT(DISTINCT CASE WHEN event_name = 'ticket_view' THEN session_id ELSE NULL END) AS ticket_sessions,
+              COUNT(DISTINCT CASE WHEN event_name IN (${LEAD_INTENT_EVENT_SQL}) THEN session_id ELSE NULL END) AS lead_sessions,
+              COUNT(DISTINCT CASE WHEN event_name = 'free_trial_reservation_submit' THEN session_id ELSE NULL END) AS free_trial_sessions,
+              COUNT(DISTINCT CASE WHEN event_name = 'course_purchase_click' THEN session_id ELSE NULL END) AS purchase_click_sessions,
+              COUNT(DISTINCT CASE WHEN event_name = 'shopline_checkout_submit' THEN session_id ELSE NULL END) AS checkout_sessions
+       FROM tracking_events
+       WHERE created_at >= datetime('now', '${lookbackSql}')
+       GROUP BY day_tw
+       ORDER BY day_tw DESC`,
+    ),
+    safeAll(
+      env,
+      `SELECT date(datetime(created_at, '+8 hours')) AS day_tw,
+              COALESCE(SUM(CASE WHEN status = 'paid' THEN 1 ELSE 0 END), 0) AS paid_orders,
+              COALESCE(SUM(CASE WHEN status = 'free_reserved' THEN 1 ELSE 0 END), 0) AS free_orders,
+              COALESCE(SUM(CASE WHEN status = 'paid' THEN amount_value ELSE 0 END), 0) AS revenue
+       FROM course_orders
+       WHERE created_at >= datetime('now', '${lookbackSql}')
+       GROUP BY day_tw`,
+    ),
+    safeAll(
+      env,
+      `SELECT COALESCE(source_channel, 'direct') AS source_channel,
+              COUNT(DISTINCT CASE WHEN event_name = 'page_view' THEN session_id ELSE NULL END) AS sessions,
+              COUNT(DISTINCT CASE WHEN event_name = 'page_view' THEN anonymous_id ELSE NULL END) AS visitors,
+              COUNT(DISTINCT CASE WHEN event_name = 'page_view' AND visitor_type = 'new' THEN session_id ELSE NULL END) AS new_sessions,
+              COUNT(DISTINCT CASE WHEN event_name = 'page_view' AND visitor_type = 'returning' THEN session_id ELSE NULL END) AS returning_sessions,
+              COALESCE(SUM(CASE WHEN event_name = 'page_view' THEN 1 ELSE 0 END), 0) AS page_views,
+              COUNT(DISTINCT CASE WHEN event_name = 'ticket_view' THEN session_id ELSE NULL END) AS ticket_sessions,
+              COUNT(DISTINCT CASE WHEN event_name IN (${LEAD_INTENT_EVENT_SQL}) THEN session_id ELSE NULL END) AS lead_sessions,
+              COUNT(DISTINCT CASE WHEN event_name = 'free_trial_reservation_submit' THEN session_id ELSE NULL END) AS free_trial_sessions,
+              COUNT(DISTINCT CASE WHEN event_name = 'course_purchase_click' THEN session_id ELSE NULL END) AS purchase_click_sessions,
+              COALESCE(SUM(CASE WHEN event_name IN (${TRAFFIC_ACTION_EVENT_SQL}) THEN 1 ELSE 0 END), 0) AS actions,
+              COALESCE(SUM(CASE WHEN event_name IN (${CHECKOUT_INTENT_EVENT_SQL}) THEN 1 ELSE 0 END), 0) AS checkout_intents,
+              COALESCE(SUM(CASE WHEN event_name = 'page_exit' AND is_bounce = 1 THEN 1 ELSE 0 END), 0) AS bounces,
+              COALESCE(SUM(CASE WHEN event_name = 'page_exit' THEN 1 ELSE 0 END), 0) AS exits,
+              ROUND(AVG(CASE WHEN event_name = 'page_exit' THEN duration_ms END)) AS avg_duration_ms,
+              ROUND(AVG(CASE WHEN event_name = 'page_exit' THEN max_scroll_depth END)) AS avg_scroll_depth
+       FROM tracking_events
+       WHERE created_at >= datetime('now', '${lookbackSql}')
+       GROUP BY COALESCE(source_channel, 'direct')
+       ORDER BY sessions DESC
+       LIMIT 12`,
+    ),
+    safeAll(
+      env,
+      `SELECT COALESCE(utm_source, '(none)') AS utm_source,
+              COALESCE(utm_medium, '(none)') AS utm_medium,
+              COALESCE(utm_campaign, '(none)') AS utm_campaign,
+              COALESCE(utm_content, '(none)') AS utm_content,
+              COALESCE(utm_term, '(none)') AS utm_term,
+              COALESCE(click_id_type, '') AS click_id_type,
+              COUNT(DISTINCT CASE WHEN event_name = 'page_view' THEN session_id ELSE NULL END) AS sessions,
+              COUNT(DISTINCT CASE WHEN event_name = 'page_view' AND COALESCE(first_source_channel, source_channel, '') = 'paid' THEN session_id ELSE NULL END) AS paid_sessions,
+              COUNT(DISTINCT CASE WHEN event_name = 'ticket_view' THEN session_id ELSE NULL END) AS ticket_sessions,
+              COUNT(DISTINCT CASE WHEN event_name IN (${LEAD_INTENT_EVENT_SQL}) THEN session_id ELSE NULL END) AS lead_sessions,
+              COUNT(DISTINCT CASE WHEN event_name = 'free_trial_reservation_submit' THEN session_id ELSE NULL END) AS free_trial_sessions,
+              COUNT(DISTINCT CASE WHEN event_name = 'course_purchase_click' THEN session_id ELSE NULL END) AS purchase_click_sessions,
+              COUNT(DISTINCT CASE WHEN event_name = 'shopline_checkout_submit' THEN session_id ELSE NULL END) AS checkout_sessions,
+              COALESCE(SUM(CASE WHEN event_name IN (${CHECKOUT_INTENT_EVENT_SQL}) THEN 1 ELSE 0 END), 0) AS checkout_intents,
+              COALESCE(SUM(CASE WHEN event_name IN (${TRAFFIC_ACTION_EVENT_SQL}) THEN 1 ELSE 0 END), 0) AS actions,
+              MIN(datetime(created_at, '+8 hours')) AS first_seen_tw,
+              MAX(datetime(created_at, '+8 hours')) AS last_seen_tw
+       FROM tracking_events
+       WHERE created_at >= datetime('now', '${lookbackSql}')
+         AND (
+           utm_source IS NOT NULL OR utm_medium IS NOT NULL OR utm_campaign IS NOT NULL
+           OR utm_content IS NOT NULL OR utm_term IS NOT NULL OR click_id_type IS NOT NULL
+           OR COALESCE(first_source_channel, source_channel, '') = 'paid'
+         )
+       GROUP BY COALESCE(utm_source, '(none)'), COALESCE(utm_medium, '(none)'),
+                COALESCE(utm_campaign, '(none)'), COALESCE(utm_content, '(none)'),
+                COALESCE(utm_term, '(none)'), COALESCE(click_id_type, '')
+       HAVING sessions > 0
+       ORDER BY sessions DESC
+       LIMIT 50`,
+    ),
+    safeAll(
+      env,
+      `SELECT COALESCE(route_path, '(unknown)') AS route_path,
+              COUNT(DISTINCT CASE WHEN event_name = 'page_view' THEN session_id ELSE NULL END) AS sessions,
+              COALESCE(SUM(CASE WHEN event_name = 'page_view' THEN 1 ELSE 0 END), 0) AS page_views,
+              COUNT(DISTINCT CASE WHEN event_name = 'ticket_view' THEN session_id ELSE NULL END) AS ticket_sessions,
+              COUNT(DISTINCT CASE WHEN event_name IN (${LEAD_INTENT_EVENT_SQL}) THEN session_id ELSE NULL END) AS lead_sessions,
+              COUNT(DISTINCT CASE WHEN event_name = 'free_trial_reservation_submit' THEN session_id ELSE NULL END) AS free_trial_sessions,
+              COALESCE(SUM(CASE WHEN event_name IN (${CHECKOUT_INTENT_EVENT_SQL}) THEN 1 ELSE 0 END), 0) AS checkout_intents,
+              COALESCE(SUM(CASE WHEN event_name IN (${TRAFFIC_ACTION_EVENT_SQL}) THEN 1 ELSE 0 END), 0) AS actions,
+              COALESCE(SUM(CASE WHEN event_name = 'page_exit' THEN 1 ELSE 0 END), 0) AS exits,
+              COALESCE(SUM(CASE WHEN event_name = 'page_exit' AND is_bounce = 1 THEN 1 ELSE 0 END), 0) AS bounces,
+              ROUND(AVG(CASE WHEN event_name = 'page_exit' THEN duration_ms END)) AS avg_duration_ms,
+              ROUND(AVG(CASE WHEN event_name = 'page_exit' THEN max_scroll_depth END)) AS avg_scroll_depth
+       FROM tracking_events
+       WHERE created_at >= datetime('now', '${lookbackSql}')
+       GROUP BY COALESCE(route_path, '(unknown)')
+       HAVING sessions > 0 OR actions > 0
+       ORDER BY sessions DESC
+       LIMIT 30`,
+    ),
+    safeAll(
+      env,
+      `SELECT section_id,
+              COALESCE(SUM(CASE WHEN event_name = 'section_view' THEN 1 ELSE 0 END), 0) AS views,
+              COUNT(DISTINCT CASE WHEN event_name = 'section_view' THEN session_id ELSE NULL END) AS sessions,
+              COALESCE(SUM(CASE WHEN event_name = 'ui_click' THEN 1 ELSE 0 END), 0) AS clicks,
+              ROUND(AVG(CASE WHEN event_name = 'section_engagement' THEN duration_ms END)) AS avg_duration_ms,
+              MAX(created_at) AS last_at
+       FROM tracking_events
+       WHERE created_at >= datetime('now', '${lookbackSql}')
+         AND section_id IS NOT NULL
+       GROUP BY section_id
+       ORDER BY views DESC, clicks DESC
+       LIMIT 40`,
+    ),
+    safeAll(
+      env,
+      `WITH exits AS (
+         SELECT session_id, route_path, duration_ms, max_scroll_depth, is_bounce, created_at
+         FROM tracking_events
+         WHERE event_name = 'page_exit'
+           AND created_at >= datetime('now', '${lookbackSql}')
+       ),
+       ranked_sections AS (
+         SELECT session_id, section_id, created_at,
+                ROW_NUMBER() OVER (PARTITION BY session_id ORDER BY datetime(created_at) DESC, id DESC) AS rn
+         FROM tracking_events
+         WHERE created_at >= datetime('now', '${lookbackSql}')
+           AND section_id IS NOT NULL
        )
-     GROUP BY COALESCE(utm_source, '(none)'), COALESCE(utm_medium, '(none)'),
-              COALESCE(utm_campaign, '(none)'), COALESCE(click_id_type, '')
-     ORDER BY sessions DESC
-     LIMIT 20`,
-  )
+       SELECT COALESCE(ranked_sections.section_id, exits.route_path, '(unknown)') AS last_section,
+              COUNT(*) AS dropoffs,
+              COALESCE(SUM(CASE WHEN exits.is_bounce = 1 THEN 1 ELSE 0 END), 0) AS bounces,
+              ROUND(AVG(exits.duration_ms)) AS avg_duration_ms,
+              ROUND(AVG(exits.max_scroll_depth)) AS avg_scroll_depth,
+              MAX(exits.created_at) AS last_at
+       FROM exits
+       LEFT JOIN ranked_sections
+         ON ranked_sections.session_id = exits.session_id
+        AND ranked_sections.rn = 1
+       GROUP BY COALESCE(ranked_sections.section_id, exits.route_path, '(unknown)')
+       ORDER BY dropoffs DESC, avg_scroll_depth ASC
+       LIMIT 30`,
+    ),
+    safeAll(
+      env,
+      `SELECT COALESCE(route_path, '(unknown)') AS route_path,
+              COUNT(*) AS exits,
+              COALESCE(SUM(CASE WHEN is_bounce = 1 THEN 1 ELSE 0 END), 0) AS bounces,
+              ROUND(AVG(duration_ms)) AS avg_duration_ms,
+              ROUND(AVG(max_scroll_depth)) AS avg_scroll_depth,
+              MAX(created_at) AS last_at
+       FROM tracking_events
+       WHERE event_name = 'page_exit'
+         AND created_at >= datetime('now', '${lookbackSql}')
+       GROUP BY COALESCE(route_path, '(unknown)')
+       ORDER BY exits DESC
+       LIMIT 20`,
+    ),
+    safeAll(
+      env,
+      `SELECT COALESCE(device_type, 'unknown') AS device_type,
+              COUNT(DISTINCT CASE WHEN event_name = 'page_view' THEN session_id ELSE NULL END) AS sessions,
+              COUNT(DISTINCT CASE WHEN event_name IN (${LEAD_INTENT_EVENT_SQL}) THEN session_id ELSE NULL END) AS lead_sessions,
+              COALESCE(SUM(CASE WHEN event_name IN (${CHECKOUT_INTENT_EVENT_SQL}) THEN 1 ELSE 0 END), 0) AS checkout_intents,
+              ROUND(AVG(CASE WHEN event_name = 'page_exit' THEN max_scroll_depth END)) AS avg_scroll_depth
+       FROM tracking_events
+       WHERE created_at >= datetime('now', '${lookbackSql}')
+       GROUP BY COALESCE(device_type, 'unknown')
+       ORDER BY sessions DESC`,
+    ),
+    safeAll(
+      env,
+      `SELECT COALESCE(browser_name, 'unknown') AS browser_name,
+              COALESCE(os_name, 'unknown') AS os_name,
+              COALESCE(in_app_browser, '') AS in_app_browser,
+              COUNT(DISTINCT CASE WHEN event_name = 'page_view' THEN session_id ELSE NULL END) AS sessions,
+              COUNT(DISTINCT CASE WHEN event_name IN (${LEAD_INTENT_EVENT_SQL}) THEN session_id ELSE NULL END) AS lead_sessions,
+              COALESCE(SUM(CASE WHEN event_name IN (${CHECKOUT_INTENT_EVENT_SQL}) THEN 1 ELSE 0 END), 0) AS checkout_intents,
+              ROUND(AVG(CASE WHEN event_name = 'page_exit' THEN max_scroll_depth END)) AS avg_scroll_depth
+       FROM tracking_events
+       WHERE created_at >= datetime('now', '${lookbackSql}')
+       GROUP BY COALESCE(browser_name, 'unknown'), COALESCE(os_name, 'unknown'), COALESCE(in_app_browser, '')
+       ORDER BY sessions DESC
+       LIMIT 20`,
+    ),
+    safeAll(
+      env,
+      `SELECT COALESCE(cf_as_organization, 'unknown') AS as_organization,
+              COALESCE(cf_asn, 0) AS asn,
+              COALESCE(cf_colo, '') AS colo,
+              COUNT(DISTINCT CASE WHEN event_name = 'page_view' THEN session_id ELSE NULL END) AS sessions,
+              COUNT(DISTINCT CASE WHEN event_name IN (${LEAD_INTENT_EVENT_SQL}) THEN session_id ELSE NULL END) AS lead_sessions,
+              COALESCE(SUM(CASE WHEN event_name IN (${CHECKOUT_INTENT_EVENT_SQL}) THEN 1 ELSE 0 END), 0) AS checkout_intents
+       FROM tracking_events
+       WHERE created_at >= datetime('now', '${lookbackSql}')
+       GROUP BY COALESCE(cf_as_organization, 'unknown'), COALESCE(cf_asn, 0), COALESCE(cf_colo, '')
+       ORDER BY sessions DESC
+       LIMIT 20`,
+    ),
+    safeAll(
+      env,
+      `SELECT COALESCE(cf_country, 'unknown') AS country,
+              COALESCE(cf_region, '') AS region,
+              COALESCE(cf_city, '') AS city,
+              COUNT(DISTINCT CASE WHEN event_name = 'page_view' THEN session_id ELSE NULL END) AS sessions,
+              COUNT(DISTINCT CASE WHEN COALESCE(first_source_channel, source_channel, '') = 'paid' AND event_name = 'page_view' THEN session_id ELSE NULL END) AS paid_sessions,
+              COUNT(DISTINCT CASE WHEN event_name IN (${LEAD_INTENT_EVENT_SQL}) THEN session_id ELSE NULL END) AS lead_sessions,
+              COALESCE(SUM(CASE WHEN event_name IN (${CHECKOUT_INTENT_EVENT_SQL}) THEN 1 ELSE 0 END), 0) AS checkout_intents
+       FROM tracking_events
+       WHERE created_at >= datetime('now', '${lookbackSql}')
+       GROUP BY COALESCE(cf_country, 'unknown'), COALESCE(cf_region, ''), COALESCE(cf_city, '')
+       ORDER BY sessions DESC
+       LIMIT 30`,
+    ),
+    safeAll(
+      env,
+      `SELECT datetime(created_at, '+8 hours') AS created_tw,
+              event_name, route_path, section_id, cta_id, target_text,
+              duration_ms, scroll_depth, max_scroll_depth,
+              source_channel, utm_campaign, utm_content,
+              browser_name, in_app_browser, cf_city, cf_country
+       FROM tracking_events
+       WHERE created_at >= datetime('now', '${lookbackSql}')
+         AND (
+           event_name IN (${TRAFFIC_ACTION_EVENT_SQL})
+           OR event_name IN ('page_view', 'ticket_view', 'page_exit')
+         )
+       ORDER BY created_at DESC
+       LIMIT 80`,
+    ),
+  ])
 
-  const pageRows = await safeAll(
-    env,
-    `SELECT COALESCE(route_path, '(unknown)') AS route_path,
-            COUNT(DISTINCT session_id) AS sessions,
-            COALESCE(SUM(CASE WHEN event_name = 'page_view' THEN 1 ELSE 0 END), 0) AS page_views,
-            COALESCE(SUM(CASE WHEN event_name IN (${CHECKOUT_INTENT_EVENT_SQL}) THEN 1 ELSE 0 END), 0) AS checkout_intents,
-            COALESCE(SUM(CASE WHEN event_name IN (${TRAFFIC_ACTION_EVENT_SQL}) THEN 1 ELSE 0 END), 0) AS actions,
-            COALESCE(SUM(CASE WHEN event_name = 'page_exit' THEN 1 ELSE 0 END), 0) AS exits,
-            COALESCE(SUM(CASE WHEN event_name = 'page_exit' AND is_bounce = 1 THEN 1 ELSE 0 END), 0) AS bounces,
-            ROUND(AVG(CASE WHEN event_name = 'page_exit' THEN duration_ms END)) AS avg_duration_ms,
-            ROUND(AVG(CASE WHEN event_name = 'page_exit' THEN max_scroll_depth END)) AS avg_scroll_depth
-     FROM tracking_events
-     WHERE created_at >= datetime('now', '${lookbackSql}')
-     GROUP BY COALESCE(route_path, '(unknown)')
-     ORDER BY sessions DESC
-     LIMIT 30`,
-  )
-
-  const sectionRows = await safeAll(
-    env,
-    `SELECT section_id,
-            COALESCE(SUM(CASE WHEN event_name = 'section_view' THEN 1 ELSE 0 END), 0) AS views,
-            COUNT(DISTINCT CASE WHEN event_name = 'section_view' THEN session_id ELSE NULL END) AS sessions,
-            COALESCE(SUM(CASE WHEN event_name = 'ui_click' THEN 1 ELSE 0 END), 0) AS clicks,
-            ROUND(AVG(CASE WHEN event_name = 'section_engagement' THEN duration_ms END)) AS avg_duration_ms,
-            MAX(created_at) AS last_at
-     FROM tracking_events
-     WHERE created_at >= datetime('now', '${lookbackSql}')
-       AND section_id IS NOT NULL
-     GROUP BY section_id
-     ORDER BY views DESC, clicks DESC
-     LIMIT 40`,
-  )
-
-  const exitRows = await safeAll(
-    env,
-    `SELECT COALESCE(route_path, '(unknown)') AS route_path,
-            COUNT(*) AS exits,
-            COALESCE(SUM(CASE WHEN is_bounce = 1 THEN 1 ELSE 0 END), 0) AS bounces,
-            ROUND(AVG(duration_ms)) AS avg_duration_ms,
-            ROUND(AVG(max_scroll_depth)) AS avg_scroll_depth,
-            MAX(created_at) AS last_at
-     FROM tracking_events
-     WHERE event_name = 'page_exit'
-       AND created_at >= datetime('now', '${lookbackSql}')
-     GROUP BY COALESCE(route_path, '(unknown)')
-     ORDER BY exits DESC
-     LIMIT 20`,
-  )
-
-  const deviceRows = await safeAll(
-    env,
-    `SELECT COALESCE(device_type, 'unknown') AS device_type,
-            COUNT(DISTINCT session_id) AS sessions,
-            COALESCE(SUM(CASE WHEN event_name IN (${CHECKOUT_INTENT_EVENT_SQL}) THEN 1 ELSE 0 END), 0) AS checkout_intents,
-            ROUND(AVG(CASE WHEN event_name = 'page_exit' THEN max_scroll_depth END)) AS avg_scroll_depth
-     FROM tracking_events
-     WHERE created_at >= datetime('now', '${lookbackSql}')
-     GROUP BY COALESCE(device_type, 'unknown')
-     ORDER BY sessions DESC`,
-  )
-
-  const browserRows = await safeAll(
-    env,
-    `SELECT COALESCE(browser_name, 'unknown') AS browser_name,
-            COALESCE(os_name, 'unknown') AS os_name,
-            COALESCE(in_app_browser, '') AS in_app_browser,
-            COUNT(DISTINCT session_id) AS sessions,
-            COALESCE(SUM(CASE WHEN event_name IN (${CHECKOUT_INTENT_EVENT_SQL}) THEN 1 ELSE 0 END), 0) AS checkout_intents,
-            ROUND(AVG(CASE WHEN event_name = 'page_exit' THEN max_scroll_depth END)) AS avg_scroll_depth
-     FROM tracking_events
-     WHERE created_at >= datetime('now', '${lookbackSql}')
-     GROUP BY COALESCE(browser_name, 'unknown'), COALESCE(os_name, 'unknown'), COALESCE(in_app_browser, '')
-     ORDER BY sessions DESC
-     LIMIT 20`,
-  )
-
-  const networkRows = await safeAll(
-    env,
-    `SELECT COALESCE(cf_as_organization, 'unknown') AS as_organization,
-            COALESCE(cf_asn, 0) AS asn,
-            COALESCE(cf_colo, '') AS colo,
-            COUNT(DISTINCT session_id) AS sessions,
-            COALESCE(SUM(CASE WHEN event_name IN (${CHECKOUT_INTENT_EVENT_SQL}) THEN 1 ELSE 0 END), 0) AS checkout_intents
-     FROM tracking_events
-     WHERE created_at >= datetime('now', '${lookbackSql}')
-     GROUP BY COALESCE(cf_as_organization, 'unknown'), COALESCE(cf_asn, 0), COALESCE(cf_colo, '')
-     ORDER BY sessions DESC
-     LIMIT 20`,
-  )
-
-  const geographyRows = await safeAll(
-    env,
-    `SELECT COALESCE(cf_country, 'unknown') AS country,
-            COALESCE(cf_region, '') AS region,
-            COALESCE(cf_city, '') AS city,
-            COUNT(DISTINCT session_id) AS sessions,
-            COALESCE(SUM(CASE WHEN event_name IN (${CHECKOUT_INTENT_EVENT_SQL}) THEN 1 ELSE 0 END), 0) AS checkout_intents
-     FROM tracking_events
-     WHERE created_at >= datetime('now', '${lookbackSql}')
-     GROUP BY COALESCE(cf_country, 'unknown'), COALESCE(cf_region, ''), COALESCE(cf_city, '')
-     ORDER BY sessions DESC
-     LIMIT 30`,
-  )
+  const overview = overviewRows[0] || {}
+  const orderSummary = orderSummaryRows[0] || {}
+  const ordersByDay = new Map(orderDailyRows.map((row) => [row.day_tw, row]))
 
   return {
+    overview: {
+      sessions: toNumber(overview.sessions),
+      visitors: toNumber(overview.visitors),
+      paidSessions: toNumber(overview.paid_sessions),
+      clickIdSessions: toNumber(overview.click_id_sessions),
+      utmSessions: toNumber(overview.utm_sessions),
+      ticketSessions: toNumber(overview.ticket_sessions),
+      leadSessions: toNumber(overview.lead_sessions),
+      freeTrialSessions: toNumber(overview.free_trial_sessions),
+      purchaseClickSessions: toNumber(overview.purchase_click_sessions),
+      checkoutSessions: toNumber(overview.checkout_sessions),
+      scroll50Sessions: toNumber(overview.scroll_50_sessions),
+      exitSessions: toNumber(overview.exit_sessions),
+      bounceSessions: toNumber(overview.bounce_sessions),
+      paidOrders: toNumber(orderSummary.paid_orders),
+      freeOrders: toNumber(orderSummary.free_orders),
+      revenue: toNumber(orderSummary.revenue),
+    },
+    daily: dailyRows.map((row) => {
+      const orderRow = ordersByDay.get(row.day_tw) || {}
+      return {
+        day: row.day_tw,
+        sessions: toNumber(row.sessions),
+        paidSessions: toNumber(row.paid_sessions),
+        clickIdSessions: toNumber(row.click_id_sessions),
+        utmSessions: toNumber(row.utm_sessions),
+        ticketSessions: toNumber(row.ticket_sessions),
+        leadSessions: toNumber(row.lead_sessions),
+        freeTrialSessions: toNumber(row.free_trial_sessions),
+        purchaseClickSessions: toNumber(row.purchase_click_sessions),
+        checkoutSessions: toNumber(row.checkout_sessions),
+        paidOrders: toNumber(orderRow.paid_orders),
+        freeOrders: toNumber(orderRow.free_orders),
+        revenue: toNumber(orderRow.revenue),
+      }
+    }),
     sources: sourceRows.map((row) => ({
       sourceChannel: row.source_channel,
       sessions: toNumber(row.sessions),
@@ -1175,6 +1356,10 @@ async function getTraffic(env, url) {
       newSessions: toNumber(row.new_sessions),
       returningSessions: toNumber(row.returning_sessions),
       pageViews: toNumber(row.page_views),
+      ticketSessions: toNumber(row.ticket_sessions),
+      leadSessions: toNumber(row.lead_sessions),
+      freeTrialSessions: toNumber(row.free_trial_sessions),
+      purchaseClickSessions: toNumber(row.purchase_click_sessions),
       actions: toNumber(row.actions),
       checkoutIntents: toNumber(row.checkout_intents),
       exits: toNumber(row.exits),
@@ -1186,15 +1371,28 @@ async function getTraffic(env, url) {
       utmSource: row.utm_source,
       utmMedium: row.utm_medium,
       utmCampaign: row.utm_campaign,
+      utmContent: row.utm_content,
+      utmTerm: row.utm_term,
       clickIdType: row.click_id_type,
       sessions: toNumber(row.sessions),
+      paidSessions: toNumber(row.paid_sessions),
+      ticketSessions: toNumber(row.ticket_sessions),
+      leadSessions: toNumber(row.lead_sessions),
+      freeTrialSessions: toNumber(row.free_trial_sessions),
+      purchaseClickSessions: toNumber(row.purchase_click_sessions),
+      checkoutSessions: toNumber(row.checkout_sessions),
       actions: toNumber(row.actions),
       checkoutIntents: toNumber(row.checkout_intents),
+      firstSeenAt: row.first_seen_tw,
+      lastSeenAt: row.last_seen_tw,
     })),
     pages: pageRows.map((row) => ({
       routePath: row.route_path,
       sessions: toNumber(row.sessions),
       pageViews: toNumber(row.page_views),
+      ticketSessions: toNumber(row.ticket_sessions),
+      leadSessions: toNumber(row.lead_sessions),
+      freeTrialSessions: toNumber(row.free_trial_sessions),
       actions: toNumber(row.actions),
       checkoutIntents: toNumber(row.checkout_intents),
       exits: toNumber(row.exits),
@@ -1210,6 +1408,14 @@ async function getTraffic(env, url) {
       avgDurationMs: toNumber(row.avg_duration_ms),
       lastAt: row.last_at,
     })),
+    dropoffs: dropoffRows.map((row) => ({
+      lastSection: row.last_section,
+      dropoffs: toNumber(row.dropoffs),
+      bounces: toNumber(row.bounces),
+      avgDurationMs: toNumber(row.avg_duration_ms),
+      avgScrollDepth: toNumber(row.avg_scroll_depth),
+      lastAt: row.last_at,
+    })),
     exits: exitRows.map((row) => ({
       routePath: row.route_path,
       exits: toNumber(row.exits),
@@ -1221,6 +1427,7 @@ async function getTraffic(env, url) {
     devices: deviceRows.map((row) => ({
       deviceType: row.device_type,
       sessions: toNumber(row.sessions),
+      leadSessions: toNumber(row.lead_sessions),
       checkoutIntents: toNumber(row.checkout_intents),
       avgScrollDepth: toNumber(row.avg_scroll_depth),
     })),
@@ -1229,6 +1436,7 @@ async function getTraffic(env, url) {
       osName: row.os_name,
       inAppBrowser: row.in_app_browser,
       sessions: toNumber(row.sessions),
+      leadSessions: toNumber(row.lead_sessions),
       checkoutIntents: toNumber(row.checkout_intents),
       avgScrollDepth: toNumber(row.avg_scroll_depth),
     })),
@@ -1237,6 +1445,7 @@ async function getTraffic(env, url) {
       asn: toNumber(row.asn),
       colo: row.colo,
       sessions: toNumber(row.sessions),
+      leadSessions: toNumber(row.lead_sessions),
       checkoutIntents: toNumber(row.checkout_intents),
     })),
     geography: geographyRows.map((row) => ({
@@ -1244,7 +1453,27 @@ async function getTraffic(env, url) {
       region: row.region,
       city: row.city,
       sessions: toNumber(row.sessions),
+      paidSessions: toNumber(row.paid_sessions),
+      leadSessions: toNumber(row.lead_sessions),
       checkoutIntents: toNumber(row.checkout_intents),
+    })),
+    recentEvents: recentEventRows.map((row) => ({
+      createdAt: row.created_tw,
+      eventName: row.event_name,
+      routePath: row.route_path,
+      sectionId: row.section_id,
+      ctaId: row.cta_id,
+      targetText: row.target_text,
+      durationMs: toNumber(row.duration_ms),
+      scrollDepth: toNumber(row.scroll_depth),
+      maxScrollDepth: toNumber(row.max_scroll_depth),
+      sourceChannel: row.source_channel,
+      utmCampaign: row.utm_campaign,
+      utmContent: row.utm_content,
+      browserName: row.browser_name,
+      inAppBrowser: row.in_app_browser,
+      city: row.cf_city,
+      country: row.cf_country,
     })),
   }
 }

@@ -183,6 +183,10 @@ type TrafficSource = {
   newSessions: number
   returningSessions: number
   pageViews: number
+  ticketSessions: number
+  leadSessions: number
+  freeTrialSessions: number
+  purchaseClickSessions: number
   actions: number
   checkoutIntents: number
   exits: number
@@ -195,16 +199,29 @@ type TrafficCampaign = {
   utmSource: string
   utmMedium: string
   utmCampaign: string
+  utmContent?: string | null
+  utmTerm?: string | null
   clickIdType?: string | null
   sessions: number
+  paidSessions: number
+  ticketSessions: number
+  leadSessions: number
+  freeTrialSessions: number
+  purchaseClickSessions: number
+  checkoutSessions: number
   actions: number
   checkoutIntents: number
+  firstSeenAt?: string | null
+  lastSeenAt?: string | null
 }
 
 type TrafficPage = {
   routePath: string
   sessions: number
   pageViews: number
+  ticketSessions: number
+  leadSessions: number
+  freeTrialSessions: number
   actions: number
   checkoutIntents: number
   exits: number
@@ -216,6 +233,15 @@ type TrafficPage = {
 type TrafficExit = {
   routePath: string
   exits: number
+  bounces: number
+  avgDurationMs: number
+  avgScrollDepth: number
+  lastAt?: string | null
+}
+
+type TrafficDropoff = {
+  lastSection: string
+  dropoffs: number
   bounces: number
   avgDurationMs: number
   avgScrollDepth: number
@@ -234,6 +260,7 @@ type TrafficSection = {
 type TrafficDevice = {
   deviceType: string
   sessions: number
+  leadSessions: number
   checkoutIntents: number
   avgScrollDepth: number
 }
@@ -243,6 +270,7 @@ type TrafficBrowser = {
   osName: string
   inAppBrowser?: string | null
   sessions: number
+  leadSessions: number
   checkoutIntents: number
   avgScrollDepth: number
 }
@@ -252,6 +280,7 @@ type TrafficNetwork = {
   asn: number
   colo?: string | null
   sessions: number
+  leadSessions: number
   checkoutIntents: number
 }
 
@@ -260,19 +289,79 @@ type TrafficGeo = {
   region?: string | null
   city?: string | null
   sessions: number
+  paidSessions: number
+  leadSessions: number
   checkoutIntents: number
 }
 
+type TrafficOverview = {
+  sessions: number
+  visitors: number
+  paidSessions: number
+  clickIdSessions: number
+  utmSessions: number
+  ticketSessions: number
+  leadSessions: number
+  freeTrialSessions: number
+  purchaseClickSessions: number
+  checkoutSessions: number
+  scroll50Sessions: number
+  exitSessions: number
+  bounceSessions: number
+  paidOrders: number
+  freeOrders: number
+  revenue: number
+}
+
+type TrafficDaily = {
+  day: string
+  sessions: number
+  paidSessions: number
+  clickIdSessions: number
+  utmSessions: number
+  ticketSessions: number
+  leadSessions: number
+  freeTrialSessions: number
+  purchaseClickSessions: number
+  checkoutSessions: number
+  paidOrders: number
+  freeOrders: number
+  revenue: number
+}
+
+type TrafficRecentEvent = {
+  createdAt: string
+  eventName: string
+  routePath?: string | null
+  sectionId?: string | null
+  ctaId?: string | null
+  targetText?: string | null
+  durationMs?: number | null
+  scrollDepth?: number | null
+  maxScrollDepth?: number | null
+  sourceChannel?: string | null
+  utmCampaign?: string | null
+  utmContent?: string | null
+  browserName?: string | null
+  inAppBrowser?: string | null
+  city?: string | null
+  country?: string | null
+}
+
 type TrafficData = {
+  overview?: TrafficOverview
+  daily?: TrafficDaily[]
   sources: TrafficSource[]
   campaigns: TrafficCampaign[]
   pages: TrafficPage[]
   sections: TrafficSection[]
+  dropoffs?: TrafficDropoff[]
   exits: TrafficExit[]
   devices: TrafficDevice[]
   browsers: TrafficBrowser[]
   networks: TrafficNetwork[]
   geography: TrafficGeo[]
+  recentEvents?: TrafficRecentEvent[]
 }
 
 type JourneyEvent = {
@@ -410,6 +499,13 @@ function formatDuration(ms?: number | null) {
 function formatPercent(value?: number | null) {
   if (!value) return '0%'
   return `${Math.max(0, Math.min(100, Math.round(value)))}%`
+}
+
+function formatRate(numerator?: number | null, denominator?: number | null) {
+  const total = Number(denominator || 0)
+  if (total <= 0) return '0%'
+  const value = (Number(numerator || 0) / total) * 100
+  return `${Number(value.toFixed(value >= 10 ? 1 : 2))}%`
 }
 
 function bounceRate(bounces: number, exits: number) {
@@ -1137,18 +1233,165 @@ function LineCustomersTableV2({
 function TrafficDashboard({ traffic }: { traffic?: TrafficData }) {
   if (!traffic) return <EmptyState>流量資料讀取中。</EmptyState>
 
+  const overview = traffic.overview
+  const daily = traffic.daily || []
+  const dropoffs = traffic.dropoffs || []
+  const recentEvents = traffic.recentEvents || []
+
   return (
     <div className="space-y-6">
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        {traffic.sources.slice(0, 4).map((source) => (
-          <MetricCard
-            key={source.sourceChannel}
-            label={source.sourceChannel}
-            value={`${source.sessions}`}
-            detail={`新 ${source.newSessions} · 回訪 ${source.returningSessions} · 結帳 ${source.checkoutIntents}`}
-          />
-        ))}
+        <MetricCard
+          label="Sessions"
+          value={`${overview?.sessions ?? 0}`}
+          detail={`Paid ${overview?.paidSessions ?? 0} · Visitors ${overview?.visitors ?? 0}`}
+        />
+        <MetricCard
+          label="LINE / 登入"
+          value={`${overview?.leadSessions ?? 0}`}
+          detail={`Rate ${formatRate(overview?.leadSessions, overview?.sessions)} · UTM ${overview?.utmSessions ?? 0}`}
+        />
+        <MetricCard
+          label="Fight Night Pass"
+          value={`${overview?.ticketSessions ?? 0}`}
+          detail={`View rate ${formatRate(overview?.ticketSessions, overview?.sessions)} · Scroll 50% ${overview?.scroll50Sessions ?? 0}`}
+        />
+        <MetricCard
+          label="購買意圖"
+          value={`${overview?.purchaseClickSessions ?? 0}`}
+          detail={`Checkout ${overview?.checkoutSessions ?? 0} · Paid ${overview?.paidOrders ?? 0}`}
+        />
+        <MetricCard
+          label="免費預約"
+          value={`${overview?.freeTrialSessions ?? 0}`}
+          detail={`已保留 ${overview?.freeOrders ?? 0} · Lead to free ${formatRate(overview?.freeTrialSessions, overview?.leadSessions)}`}
+        />
+        <MetricCard
+          label="付款營收"
+          value={formatMoney(overview?.revenue ?? 0)}
+          detail={`Paid orders ${overview?.paidOrders ?? 0} · Checkout rate ${formatRate(overview?.checkoutSessions, overview?.sessions)}`}
+        />
+        <MetricCard
+          label="Dropoffs"
+          value={`${overview?.exitSessions ?? 0}`}
+          detail={`Bounce ${overview?.bounceSessions ?? 0} · ${bounceRate(overview?.bounceSessions ?? 0, overview?.exitSessions ?? 0)}`}
+        />
+        <MetricCard
+          label="Attribution"
+          value={`${overview?.paidSessions ?? 0}`}
+          detail={`fbclid/click ${overview?.clickIdSessions ?? 0} · UTM ${overview?.utmSessions ?? 0}`}
+        />
       </div>
+
+      {daily.length > 0 && (
+        <section className="rounded-lg border border-pearl/10 bg-black/24 p-4">
+          <p className="font-heading text-sm tracking-[0.18em] text-mist/60">
+            每日漏斗
+          </p>
+          <div className="mt-3 overflow-x-auto">
+            <table className="min-w-[1040px] w-full text-left text-sm">
+              <thead className="font-heading text-xs tracking-[0.16em] text-mist/55">
+                <tr>
+                  <th className="py-2 pr-4">日期</th>
+                  <th className="py-2 pr-4">Sessions</th>
+                  <th className="py-2 pr-4">Paid</th>
+                  <th className="py-2 pr-4">課程區</th>
+                  <th className="py-2 pr-4">LINE/登入</th>
+                  <th className="py-2 pr-4">登入率</th>
+                  <th className="py-2 pr-4">免費預約</th>
+                  <th className="py-2 pr-4">購買點擊</th>
+                  <th className="py-2 pr-4">結帳</th>
+                  <th className="py-2 pr-4">付款</th>
+                  <th className="py-2 pr-4">營收</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-pearl/8">
+                {daily.map((row) => (
+                  <tr key={row.day}>
+                    <td className="py-3 pr-4 font-heading text-pearl">{row.day}</td>
+                    <td className="py-3 pr-4 text-mist/75">{row.sessions}</td>
+                    <td className="py-3 pr-4 text-mist/75">{row.paidSessions}</td>
+                    <td className="py-3 pr-4 text-mist/75">{row.ticketSessions}</td>
+                    <td className="py-3 pr-4 text-neon">{row.leadSessions}</td>
+                    <td className="py-3 pr-4 text-mist/75">
+                      {formatRate(row.leadSessions, row.sessions)}
+                    </td>
+                    <td className="py-3 pr-4 text-mist/75">{row.freeTrialSessions}</td>
+                    <td className="py-3 pr-4 text-mist/75">{row.purchaseClickSessions}</td>
+                    <td className="py-3 pr-4 text-gold">{row.checkoutSessions}</td>
+                    <td className="py-3 pr-4 text-neon">{row.paidOrders}</td>
+                    <td className="py-3 pr-4 text-mist/75">{formatMoney(row.revenue)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
+      {traffic.campaigns.length > 0 && (
+        <section className="rounded-lg border border-pearl/10 bg-black/24 p-4">
+          <p className="font-heading text-sm tracking-[0.18em] text-mist/60">
+            Campaign / Content
+          </p>
+          <div className="mt-3 overflow-x-auto">
+            <table className="min-w-[1180px] w-full text-left text-sm">
+              <thead className="font-heading text-xs tracking-[0.16em] text-mist/55">
+                <tr>
+                  <th className="py-2 pr-4">Campaign</th>
+                  <th className="py-2 pr-4">Content</th>
+                  <th className="py-2 pr-4">Ad set</th>
+                  <th className="py-2 pr-4">Sessions</th>
+                  <th className="py-2 pr-4">Paid</th>
+                  <th className="py-2 pr-4">課程區</th>
+                  <th className="py-2 pr-4">LINE/登入</th>
+                  <th className="py-2 pr-4">登入率</th>
+                  <th className="py-2 pr-4">免費</th>
+                  <th className="py-2 pr-4">購買點擊</th>
+                  <th className="py-2 pr-4">結帳</th>
+                  <th className="py-2 pr-4">First / Last</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-pearl/8">
+                {traffic.campaigns.map((campaign, index) => (
+                  <tr
+                    key={`${campaign.utmCampaign}-${campaign.utmContent}-${campaign.utmTerm}-${index}`}
+                  >
+                    <td className="max-w-[180px] py-3 pr-4">
+                      <span className="line-clamp-2 break-all font-mono text-[11px] text-pearl">
+                        {campaign.utmCampaign || '-'}
+                      </span>
+                    </td>
+                    <td className="max-w-[180px] py-3 pr-4">
+                      <span className="line-clamp-2 break-all font-mono text-[11px] text-mist/80">
+                        {campaign.utmContent || '-'}
+                      </span>
+                    </td>
+                    <td className="max-w-[160px] py-3 pr-4">
+                      <span className="line-clamp-2 break-all font-mono text-[11px] text-mist/60">
+                        {campaign.utmTerm || campaign.clickIdType || '-'}
+                      </span>
+                    </td>
+                    <td className="py-3 pr-4 text-mist/75">{campaign.sessions}</td>
+                    <td className="py-3 pr-4 text-mist/75">{campaign.paidSessions}</td>
+                    <td className="py-3 pr-4 text-mist/75">{campaign.ticketSessions}</td>
+                    <td className="py-3 pr-4 text-neon">{campaign.leadSessions}</td>
+                    <td className="py-3 pr-4 text-mist/75">
+                      {formatRate(campaign.leadSessions, campaign.sessions)}
+                    </td>
+                    <td className="py-3 pr-4 text-mist/75">{campaign.freeTrialSessions}</td>
+                    <td className="py-3 pr-4 text-mist/75">{campaign.purchaseClickSessions}</td>
+                    <td className="py-3 pr-4 text-gold">{campaign.checkoutSessions}</td>
+                    <td className="py-3 pr-4 text-xs text-mist/55">
+                      {[campaign.firstSeenAt, campaign.lastSeenAt].filter(Boolean).join(' / ')}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
 
       <section className="rounded-lg border border-pearl/10 bg-black/24 p-4">
         <p className="font-heading text-sm tracking-[0.18em] text-mist/60">
@@ -1160,6 +1403,9 @@ function TrafficDashboard({ traffic }: { traffic?: TrafficData }) {
               <tr>
                 <th className="py-2 pr-4">來源</th>
                 <th className="py-2 pr-4">Sessions</th>
+                <th className="py-2 pr-4">課程區</th>
+                <th className="py-2 pr-4">LINE/登入</th>
+                <th className="py-2 pr-4">免費</th>
                 <th className="py-2 pr-4">CTA</th>
                 <th className="py-2 pr-4">結帳意圖</th>
                 <th className="py-2 pr-4">平均停留</th>
@@ -1174,6 +1420,9 @@ function TrafficDashboard({ traffic }: { traffic?: TrafficData }) {
                     {source.sourceChannel}
                   </td>
                   <td className="py-3 pr-4 text-mist/75">{source.sessions}</td>
+                  <td className="py-3 pr-4 text-mist/75">{source.ticketSessions}</td>
+                  <td className="py-3 pr-4 text-neon">{source.leadSessions}</td>
+                  <td className="py-3 pr-4 text-mist/75">{source.freeTrialSessions}</td>
                   <td className="py-3 pr-4 text-mist/75">{source.actions}</td>
                   <td className="py-3 pr-4 text-neon">{source.checkoutIntents}</td>
                   <td className="py-3 pr-4 text-mist/75">
@@ -1203,6 +1452,9 @@ function TrafficDashboard({ traffic }: { traffic?: TrafficData }) {
                 <th className="py-2 pr-4">頁面</th>
                 <th className="py-2 pr-4">Sessions</th>
                 <th className="py-2 pr-4">PV</th>
+                <th className="py-2 pr-4">課程區</th>
+                <th className="py-2 pr-4">LINE/登入</th>
+                <th className="py-2 pr-4">免費</th>
                 <th className="py-2 pr-4">CTA</th>
                 <th className="py-2 pr-4">結帳意圖</th>
                 <th className="py-2 pr-4">平均停留</th>
@@ -1220,6 +1472,9 @@ function TrafficDashboard({ traffic }: { traffic?: TrafficData }) {
                   </td>
                   <td className="py-3 pr-4 text-mist/75">{page.sessions}</td>
                   <td className="py-3 pr-4 text-mist/75">{page.pageViews}</td>
+                  <td className="py-3 pr-4 text-mist/75">{page.ticketSessions}</td>
+                  <td className="py-3 pr-4 text-neon">{page.leadSessions}</td>
+                  <td className="py-3 pr-4 text-mist/75">{page.freeTrialSessions}</td>
                   <td className="py-3 pr-4 text-mist/75">{page.actions}</td>
                   <td className="py-3 pr-4 text-neon">{page.checkoutIntents}</td>
                   <td className="py-3 pr-4 text-mist/75">
@@ -1253,7 +1508,7 @@ function TrafficDashboard({ traffic }: { traffic?: TrafficData }) {
                   #{section.sectionId}
                 </span>
                 <span className="shrink-0 text-sm text-mist/70">
-                  看見 {section.views} · 點擊 {section.clicks}
+                  看見 {section.views} · 點擊 {section.clicks} · {formatDuration(section.avgDurationMs)}
                 </span>
               </div>
             ))}
@@ -1265,35 +1520,25 @@ function TrafficDashboard({ traffic }: { traffic?: TrafficData }) {
 
         <div className="rounded-lg border border-pearl/10 bg-black/24 p-4">
           <p className="font-heading text-sm tracking-[0.18em] text-mist/60">
-            裝置與區域
+            Drop-off Sections
           </p>
           <div className="mt-3 grid gap-2">
-            {traffic.devices.map((device) => (
+            {dropoffs.slice(0, 14).map((dropoff) => (
               <div
-                key={device.deviceType}
+                key={dropoff.lastSection}
                 className="flex items-center justify-between gap-3 rounded-lg border border-pearl/8 bg-black/24 px-3 py-2"
               >
-                <span className="font-heading text-pearl">{device.deviceType}</span>
+                <span className="min-w-0 truncate font-heading text-pearl">
+                  {dropoff.lastSection}
+                </span>
                 <span className="text-sm text-mist/70">
-                  {device.sessions} sessions · 滾動 {formatPercent(device.avgScrollDepth)}
+                  離開 {dropoff.dropoffs} · 滾動 {formatPercent(dropoff.avgScrollDepth)}
                 </span>
               </div>
             ))}
-          </div>
-          <div className="mt-4 grid gap-2">
-            {traffic.geography.slice(0, 8).map((geo) => (
-              <div
-                key={`${geo.country}-${geo.region}-${geo.city}`}
-                className="flex items-center justify-between gap-3 rounded-lg border border-pearl/8 bg-black/24 px-3 py-2"
-              >
-                <span className="min-w-0 truncate text-mist/80">
-                  {[geo.city, geo.region, geo.country].filter(Boolean).join(' / ')}
-                </span>
-                <span className="shrink-0 text-sm text-neon">
-                  {geo.sessions}
-                </span>
-              </div>
-            ))}
+            {dropoffs.length === 0 && (
+              <p className="text-sm text-mist/55">尚無離開區塊資料。</p>
+            )}
           </div>
         </div>
       </section>
@@ -1315,7 +1560,7 @@ function TrafficDashboard({ traffic }: { traffic?: TrafficData }) {
                     .join(' / ')}
                 </span>
                 <span className="shrink-0 text-sm text-neon">
-                  {browser.sessions}
+                  {browser.sessions} · LINE {browser.leadSessions}
                 </span>
               </div>
             ))}
@@ -1341,7 +1586,7 @@ function TrafficDashboard({ traffic }: { traffic?: TrafficData }) {
                     .join(' / ')}
                 </span>
                 <span className="shrink-0 text-sm text-neon">
-                  {network.sessions}
+                  {network.sessions} · LINE {network.leadSessions}
                 </span>
               </div>
             ))}
@@ -1352,28 +1597,105 @@ function TrafficDashboard({ traffic }: { traffic?: TrafficData }) {
         </div>
       </section>
 
-      {traffic.campaigns.length > 0 && (
+      <section className="rounded-lg border border-pearl/10 bg-black/24 p-4">
+        <p className="font-heading text-sm tracking-[0.18em] text-mist/60">
+          裝置與區域
+        </p>
+        <div className="mt-3 overflow-x-auto">
+          <table className="min-w-[900px] w-full text-left text-sm">
+            <thead className="font-heading text-xs tracking-[0.16em] text-mist/55">
+              <tr>
+                <th className="py-2 pr-4">類型</th>
+                <th className="py-2 pr-4">Sessions</th>
+                <th className="py-2 pr-4">LINE/登入</th>
+                <th className="py-2 pr-4">結帳</th>
+                <th className="py-2 pr-4">滾動</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-pearl/8">
+              {traffic.devices.map((device) => (
+                <tr key={device.deviceType}>
+                  <td className="py-3 pr-4 font-heading text-pearl">
+                    {device.deviceType}
+                  </td>
+                  <td className="py-3 pr-4 text-mist/75">{device.sessions}</td>
+                  <td className="py-3 pr-4 text-neon">{device.leadSessions}</td>
+                  <td className="py-3 pr-4 text-gold">{device.checkoutIntents}</td>
+                  <td className="py-3 pr-4 text-mist/75">
+                    {formatPercent(device.avgScrollDepth)}
+                  </td>
+                </tr>
+              ))}
+              {traffic.geography.slice(0, 10).map((geo) => (
+                <tr key={`${geo.country}-${geo.region}-${geo.city}`}>
+                  <td className="py-3 pr-4 text-mist/80">
+                    {[geo.city, geo.region, geo.country].filter(Boolean).join(' / ')}
+                  </td>
+                  <td className="py-3 pr-4 text-mist/75">{geo.sessions}</td>
+                  <td className="py-3 pr-4 text-neon">{geo.leadSessions}</td>
+                  <td className="py-3 pr-4 text-gold">{geo.checkoutIntents}</td>
+                  <td className="py-3 pr-4 text-mist/45">-</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {recentEvents.length > 0 && (
         <section className="rounded-lg border border-pearl/10 bg-black/24 p-4">
           <p className="font-heading text-sm tracking-[0.18em] text-mist/60">
-            UTM / 廣告活動
+            Recent Journey Events
           </p>
-          <div className="mt-3 grid gap-2 md:grid-cols-2">
-            {traffic.campaigns.map((campaign) => (
-              <div
-                key={`${campaign.utmSource}-${campaign.utmMedium}-${campaign.utmCampaign}-${campaign.clickIdType}`}
-                className="rounded-lg border border-pearl/8 bg-black/24 p-3"
-              >
-                <p className="font-heading text-pearl">
-                  {campaign.utmCampaign || campaign.clickIdType || '(none)'}
-                </p>
-                <p className="mt-1 text-sm text-mist/60">
-                  {campaign.utmSource} / {campaign.utmMedium}
-                </p>
-                <p className="mt-2 text-sm text-mist/75">
-                  {campaign.sessions} sessions · CTA {campaign.actions} · 結帳 {campaign.checkoutIntents}
-                </p>
-              </div>
-            ))}
+          <div className="mt-3 overflow-x-auto">
+            <table className="min-w-[980px] w-full text-left text-sm">
+              <thead className="font-heading text-xs tracking-[0.16em] text-mist/55">
+                <tr>
+                  <th className="py-2 pr-4">時間</th>
+                  <th className="py-2 pr-4">Event</th>
+                  <th className="py-2 pr-4">位置</th>
+                  <th className="py-2 pr-4">CTA</th>
+                  <th className="py-2 pr-4">來源</th>
+                  <th className="py-2 pr-4">裝置</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-pearl/8">
+                {recentEvents.map((event, index) => (
+                  <tr key={`${event.createdAt}-${event.eventName}-${index}`}>
+                    <td className="whitespace-nowrap py-3 pr-4 text-xs text-mist/55">
+                      {event.createdAt}
+                    </td>
+                    <td className="py-3 pr-4 font-heading text-neon">
+                      {event.eventName}
+                    </td>
+                    <td className="max-w-[260px] py-3 pr-4 text-mist/75">
+                      <span className="line-clamp-2 break-all">
+                        {event.sectionId ? `#${event.sectionId}` : event.routePath || '-'}
+                        {event.maxScrollDepth ? ` · ${event.maxScrollDepth}%` : ''}
+                        {event.durationMs ? ` · ${formatDuration(event.durationMs)}` : ''}
+                      </span>
+                    </td>
+                    <td className="max-w-[240px] py-3 pr-4 text-mist/65">
+                      <span className="line-clamp-2">
+                        {[event.ctaId, event.targetText].filter(Boolean).join(' · ') || '-'}
+                      </span>
+                    </td>
+                    <td className="max-w-[260px] py-3 pr-4 text-mist/65">
+                      <span className="line-clamp-2 break-all">
+                        {[event.sourceChannel, event.utmCampaign, event.utmContent]
+                          .filter(Boolean)
+                          .join(' · ') || '-'}
+                      </span>
+                    </td>
+                    <td className="py-3 pr-4 text-mist/55">
+                      {[event.browserName, event.inAppBrowser, event.city || event.country]
+                        .filter(Boolean)
+                        .join(' / ') || '-'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </section>
       )}

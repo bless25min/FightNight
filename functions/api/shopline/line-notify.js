@@ -74,16 +74,21 @@ function getDateTimeLabel(order) {
 function buildConfirmationText(order) {
   const venue = getVenueShortName(order.venue_name)
   const dateTime = getDateTimeLabel(order)
+  const packageLabel = getPackageLabel(order)
+  const amountLabel = formatMoney(order.amount_value, order.currency)
   const lines = [
-    `確認報名｜${venue}｜${dateTime}`,
+    `確認報名｜${venue}`,
     `課程：${order.course_name}`,
+    `時間：${dateTime || '-'}`,
+    `方案：${packageLabel}`,
+    `金額：${amountLabel}`,
+    `訂單：${order.reference_id}`,
     `聯絡人：${order.buyer_name || '-'}`,
     `電話：${order.buyer_phone || '-'}`,
-    `訂單：${order.reference_id}`,
   ]
 
   if (order.buyer_email) {
-    lines.splice(4, 0, `Email：${order.buyer_email}`)
+    lines.push(`Email：${order.buyer_email}`)
   }
 
   return lines.join('\n').slice(0, 300)
