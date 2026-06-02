@@ -12,6 +12,7 @@ import { FAQSection } from './components/sections/FAQSection'
 import { FinalCTASection } from './components/sections/FinalCTASection'
 import { Footer } from './components/layout/Footer'
 import { BootCampPage } from './pages/BootCampPage'
+import { FightNightEventPage } from './pages/FightNightEventPage'
 import { OffersPage } from './pages/OffersPage'
 import { PaymentResultPage } from './pages/PaymentResultPage'
 import { AdminPage } from './pages/AdminPage'
@@ -29,6 +30,7 @@ function getCurrentRoutePath() {
   if (
     hashPath.startsWith('/offers') ||
     hashPath.startsWith('/boot-camp') ||
+    hashPath.startsWith('/fight-night-event') ||
     hashPath.startsWith('/payment/success') ||
     hashPath.startsWith('/admin') ||
     hashPath.startsWith('/privacy-policy') ||
@@ -41,6 +43,7 @@ function getCurrentRoutePath() {
   const pathname = window.location.pathname
   if (pathname.endsWith('/offers.html')) return '/offers'
   if (pathname.endsWith('/boot-camp.html')) return '/boot-camp'
+  if (pathname.endsWith('/fight-night-event.html')) return '/fight-night-event'
   if (pathname.endsWith('/admin.html')) return '/admin'
   if (pathname.endsWith('/privacy-policy.html')) return '/privacy-policy'
   if (pathname.endsWith('/refund-policy.html')) return '/refund-policy'
@@ -151,6 +154,10 @@ function App() {
 
   if (pathname.startsWith('/boot-camp')) {
     return <BootCampPage />
+  }
+
+  if (pathname.startsWith('/fight-night-event')) {
+    return <FightNightEventPage />
   }
 
   if (pathname.startsWith('/payment/success')) {

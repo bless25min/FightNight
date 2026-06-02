@@ -43,6 +43,7 @@ function getSourcePath() {
 function getLiffPlacement() {
   const sourcePath = getSourcePath()
   if (sourcePath.includes('boot-camp')) return 'boot_camp_gate'
+  if (sourcePath.includes('fight-night-event')) return 'event_gate'
   if (sourcePath.includes('offers')) return 'offers_gate'
   return 'ticket_gate'
 }

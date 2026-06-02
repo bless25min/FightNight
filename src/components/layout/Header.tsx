@@ -20,6 +20,8 @@ export function Header() {
     pathname.startsWith('/offers')
   const isBootCampPage =
     pathname.startsWith('/boot-camp')
+  const isEventPage =
+    pathname.startsWith('/fight-night-event')
   const isGuidePage =
     pathname.startsWith('/guides/')
   const isUtilityPage =
@@ -39,6 +41,8 @@ export function Header() {
 
   const ctaLabel = isBootCampPage
     ? '選路徑與梯次'
+    : isEventPage
+      ? '保留入場名額'
     : isOffersPage
       ? '選 Boot Camp 場次'
       : isUtilityPage
@@ -46,6 +50,8 @@ export function Header() {
         : '選日期購買'
   const ctaTargetId = isBootCampPage
     ? 'boot-camp-routes'
+    : isEventPage
+      ? 'event-entry'
     : isOffersPage
       ? 'offers-plans'
       : 'fight-night-pass'
@@ -62,11 +68,17 @@ export function Header() {
     >
       <div className="max-w-6xl mx-auto px-3 sm:px-8 flex items-center justify-between">
         <a
-          href={isOffersPage || isBootCampPage || isUtilityPage ? '/' : '#hero'}
+          href={
+            isOffersPage || isBootCampPage || isUtilityPage
+              ? '/'
+              : isEventPage
+                ? '#event-hero'
+                : '#hero'
+          }
           onClick={(e) => {
             if (!isOffersPage && !isBootCampPage && !isUtilityPage) {
               e.preventDefault()
-              scrollTo('hero')
+              scrollTo(isEventPage ? 'event-hero' : 'hero')
             }
           }}
           className="flex items-center"
