@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { saveBuyerContact } from '../lib/buyerContact'
 import { loadLiffSdk } from '../lib/liff'
 import { saveLineContext } from '../lib/lineContext'
 import { getCheckoutTrackingContext } from '../lib/checkoutTracking'
@@ -57,34 +58,76 @@ function getLiffEmail() {
   return typeof email === 'string' && email.trim() ? email.trim() : undefined
 }
 
-function recordLiffAccess(accessToken: string | null | undefined, friendFlag: boolean) {
+function getRecordAccessBuyerContact(
+  data: unknown,
+  fallbackLineUserId?: string | null,
+) {
+  if (!data || typeof data !== 'object') return null
+  const responseLineUserId =
+    typeof (data as { lineUserId?: unknown }).lineUserId === 'string'
+      ? (data as { lineUserId: string }).lineUserId.trim()
+      : ''
+  const buyerContact = (data as { buyerContact?: unknown }).buyerContact
+  if (!buyerContact || typeof buyerContact !== 'object') return null
+  const value = buyerContact as {
+    lineUserId?: unknown
+    name?: unknown
+    phone?: unknown
+    email?: unknown
+  }
+  const contactLineUserId =
+    typeof value.lineUserId === 'string' ? value.lineUserId.trim() : ''
+  const lineUserId =
+    contactLineUserId || responseLineUserId || fallbackLineUserId?.trim() || ''
+  const name = typeof value.name === 'string' ? value.name.trim() : ''
+  const phone = typeof value.phone === 'string' ? value.phone.trim() : ''
+  const email = typeof value.email === 'string' ? value.email.trim() : ''
+  if (!lineUserId) return null
+  if (!name && !phone && !email) return null
+  return { lineUserId, name, phone, email }
+}
+
+async function recordLiffAccess(
+  accessToken: string | null | undefined,
+  friendFlag: boolean,
+  lineUserId?: string | null,
+) {
   if (!accessToken) return
 
-  void fetch('/api/liff/record-access', {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify({
-      accessToken,
-      idToken: window.liff?.getIDToken?.() || undefined,
-      email: getLiffEmail(),
-      friendFlag,
-      placement: getLiffPlacement(),
-      sourcePath: getSourcePath(),
-      tracking: getCheckoutTrackingContext(),
-      client: {
-        screenWidth: String(window.screen.width),
-        screenHeight: String(window.screen.height),
-        timeZoneOffset: String(new Date().getTimezoneOffset()),
-        transactionWebSite: window.location.origin,
-        userAgent: window.navigator.userAgent,
-        language: window.navigator.language,
-        colorDepth: String(window.screen.colorDepth),
+  try {
+    const response = await fetch('/api/liff/record-access', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
       },
-    }),
-    keepalive: true,
-  }).catch(() => undefined)
+      body: JSON.stringify({
+        accessToken,
+        idToken: window.liff?.getIDToken?.() || undefined,
+        email: getLiffEmail(),
+        friendFlag,
+        placement: getLiffPlacement(),
+        sourcePath: getSourcePath(),
+        tracking: getCheckoutTrackingContext(),
+        client: {
+          screenWidth: String(window.screen.width),
+          screenHeight: String(window.screen.height),
+          timeZoneOffset: String(new Date().getTimezoneOffset()),
+          transactionWebSite: window.location.origin,
+          userAgent: window.navigator.userAgent,
+          language: window.navigator.language,
+          colorDepth: String(window.screen.colorDepth),
+        },
+      }),
+    })
+
+    if (!response.ok) return
+
+    const data = await response.json().catch(() => null)
+    const buyerContact = getRecordAccessBuyerContact(data, lineUserId)
+    if (buyerContact) saveBuyerContact(buyerContact, buyerContact.lineUserId)
+  } catch {
+    // LIFF access tracking and prefill must not block the booking gate.
+  }
 }
 
 export function useLiffGate() {
@@ -162,7 +205,11 @@ export function useLiffGate() {
         email: getLiffEmail(),
         isFriend: friendship.friendFlag,
       })
-      recordLiffAccess(liff.getAccessToken?.(), friendship.friendFlag)
+      await recordLiffAccess(
+        liff.getAccessToken?.(),
+        friendship.friendFlag,
+        profile.userId,
+      )
 
       if (friendship.friendFlag) {
         setGateState({

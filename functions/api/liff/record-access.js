@@ -132,7 +132,40 @@ async function fetchLineProfile(accessToken) {
   return response.json()
 }
 
-export async function onRequestPost({ request, env }) {
+async function getLatestBuyerContact(env, lineUserId) {
+  try {
+    const row = await env.DB.prepare(
+      `SELECT buyer_name, buyer_phone, buyer_email
+       FROM course_orders
+       WHERE line_user_id = ?
+         AND (
+           COALESCE(buyer_name, '') <> ''
+           OR COALESCE(buyer_phone, '') <> ''
+           OR COALESCE(buyer_email, '') <> ''
+         )
+       ORDER BY created_at DESC
+       LIMIT 1`,
+    )
+      .bind(lineUserId)
+      .first()
+
+    if (!row) return null
+
+    const contact = {
+      lineUserId,
+      name: trimText(row.buyer_name, 120),
+      phone: trimText(row.buyer_phone, 32),
+      email: trimText(row.buyer_email, 320),
+    }
+
+    if (!contact.name && !contact.phone && !contact.email) return null
+    return contact
+  } catch {
+    return null
+  }
+}
+
+export async function onRequestPost({ request, env, waitUntil }) {
   if (!env.DB) {
     return json({ error: 'Missing D1 binding DB' }, { status: 503 })
   }
@@ -229,37 +262,46 @@ export async function onRequestPost({ request, env }) {
       )
       .run()
 
+    const buyerContact = await getLatestBuyerContact(env, lineUserId)
+
     let metaContact = null
     if (isNewCustomer) {
-      try {
-        metaContact = await sendMetaContactEvent({
-          env,
-          request,
-          lead: {
-            lineUserId,
-            email: lineEmail,
-            isFriend: Boolean(isFriend),
-            placement,
-            sourcePath,
-            tracking:
-              body?.tracking && typeof body.tracking === 'object'
-                ? body.tracking
-                : {},
-            client:
-              body?.client && typeof body.client === 'object'
-                ? body.client
-                : {},
-          },
-        })
-      } catch (error) {
+      const metaContactEvent = sendMetaContactEvent({
+        env,
+        request,
+        lead: {
+          lineUserId,
+          email: lineEmail,
+          isFriend: Boolean(isFriend),
+          placement,
+          sourcePath,
+          tracking:
+            body?.tracking && typeof body.tracking === 'object'
+              ? body.tracking
+              : {},
+          client:
+            body?.client && typeof body.client === 'object'
+              ? body.client
+              : {},
+        },
+      }).catch((error) => ({
+        ok: false,
+        status: 'failed',
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Failed to send Meta Lead event',
+      }))
+
+      if (typeof waitUntil === 'function') {
+        waitUntil(metaContactEvent)
         metaContact = {
-          ok: false,
-          status: 'failed',
-          error:
-            error instanceof Error
-              ? error.message
-              : 'Failed to send Meta Lead event',
+          ok: true,
+          skipped: false,
+          status: 'queued',
         }
+      } else {
+        metaContact = await metaContactEvent
       }
     }
 
@@ -271,6 +313,7 @@ export async function onRequestPost({ request, env }) {
       email: lineEmail,
       emailVerified: Boolean(lineEmailVerified),
       isFriend: Boolean(isFriend),
+      buyerContact,
       metaContact: metaContact
         ? {
             ok: metaContact.ok === true,

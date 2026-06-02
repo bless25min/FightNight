@@ -31,6 +31,10 @@ import {
   getTaipeiTodayIso,
   isFirstPurchaseOfferCourseEligible,
 } from '../../lib/coursePricing'
+import {
+  getSavedBuyerContact,
+  saveBuyerContact,
+} from '../../lib/buyerContact'
 import { getCheckoutTrackingContext } from '../../lib/checkoutTracking'
 import { getLineRequestContext } from '../../lib/lineContext'
 import type { BootCampRoute, CourseCategory, WeeklyCourse } from '../../types'
@@ -1898,6 +1902,14 @@ function normalizeTaiwanMobilePhone(value: string) {
   return `+886${nationalNumber}`
 }
 
+function formatTaiwanMobilePhoneForInput(
+  normalizedPhone: string,
+  fallback: string,
+) {
+  const match = normalizedPhone.match(/^\+886(9\d{8})$/)
+  return match ? `0${match[1]}` : fallback.trim()
+}
+
 export type PendingCheckout = {
   intent: Exclude<BookingIntent, 'choice'>
   course: WeeklyCourse
@@ -1932,10 +1944,28 @@ function CheckoutContactModal({
   onClose: () => void
   onSubmit: (buyer: CheckoutBuyer) => void
 }) {
-  const [name, setName] = useState(initialBuyer?.name ?? '')
-  const [phone, setPhone] = useState(initialBuyer?.phone ?? '')
-  const [email, setEmail] = useState(initialBuyer?.email ?? '')
   const isFreeTrial = pending.intent === 'free_trial'
+  const linePrefill = getLineRequestContext()
+  const savedBuyer = getSavedBuyerContact(linePrefill?.lineUserId)
+  const initialName =
+    initialBuyer?.name?.trim() ||
+    savedBuyer?.name ||
+    linePrefill?.displayName?.trim() ||
+    ''
+  const initialBuyerPhone = initialBuyer?.phone?.trim() || ''
+  const initialPhone = initialBuyerPhone
+    ? formatTaiwanMobilePhoneForInput(initialBuyerPhone, initialBuyerPhone)
+    : savedBuyer?.phone || ''
+  const initialEmail =
+    initialBuyer?.email?.trim() ||
+    savedBuyer?.email ||
+    linePrefill?.email?.trim() ||
+    ''
+  const shouldFocusPhoneFirst =
+    isFreeTrial && Boolean(initialName) && !initialPhone
+  const [name, setName] = useState(initialName)
+  const [phone, setPhone] = useState(initialPhone)
+  const [email, setEmail] = useState(initialEmail)
   const isUsingSavedBuyer = !isFreeTrial && Boolean(initialBuyer?.name && initialBuyer.phone)
   const packageLabel =
     isFreeTrial
@@ -2045,6 +2075,7 @@ function CheckoutContactModal({
               value={name}
               onChange={(event) => setName(event.target.value)}
               required
+              autoFocus={isFreeTrial && !shouldFocusPhoneFirst}
               autoComplete="name"
               className="rounded-xl border border-pearl/12 bg-black/35 px-4 py-3 text-base text-pearl outline-none transition-colors placeholder:text-mist/35 focus:border-neon/45"
               placeholder="王小明"
@@ -2057,6 +2088,7 @@ function CheckoutContactModal({
               onChange={(event) => setPhone(event.target.value)}
               required
               inputMode="tel"
+              autoFocus={shouldFocusPhoneFirst}
               autoComplete="tel"
               maxLength={24}
               className="rounded-xl border border-pearl/12 bg-black/35 px-4 py-3 text-base text-pearl outline-none transition-colors placeholder:text-mist/35 focus:border-neon/45"
@@ -2648,6 +2680,28 @@ export function WeeklyScheduleSection({
         return
       }
 
+      const submittedBuyer: CheckoutBuyer = {
+        name: buyer.name.trim(),
+        phone: buyer.phone.trim(),
+        email: buyer.email.trim(),
+      }
+      const requestBuyer: CheckoutBuyer = {
+        ...submittedBuyer,
+        phone: normalizedPhone,
+      }
+      const lineContext = getLineRequestContext()
+
+      saveBuyerContact(
+        {
+          ...submittedBuyer,
+          phone: formatTaiwanMobilePhoneForInput(
+            normalizedPhone,
+            submittedBuyer.phone,
+          ),
+        },
+        lineContext?.lineUserId,
+      )
+
       setIsCheckoutSubmitting(true)
       setCheckoutError(null)
 
@@ -2659,10 +2713,7 @@ export function WeeklyScheduleSection({
             const draft: FreeTrialDraft = {
               ...pendingCheckout,
               intent: 'free_trial',
-              buyer: {
-                ...buyer,
-                phone: normalizedPhone,
-              },
+              buyer: requestBuyer,
             }
 
             track({
@@ -2693,11 +2744,8 @@ export function WeeklyScheduleSection({
               'content-type': 'application/json',
             },
             body: JSON.stringify({
-              buyer: {
-                ...buyer,
-                phone: normalizedPhone,
-              },
-              lineContext: getLineRequestContext(),
+              buyer: requestBuyer,
+              lineContext,
               course: pendingCheckout.course,
               sessionIds: pendingCheckout.sessionIds,
               seriesDates: pendingCheckout.seriesDates,
@@ -2789,11 +2837,8 @@ export function WeeklyScheduleSection({
             'content-type': 'application/json',
           },
           body: JSON.stringify({
-            buyer: {
-              ...buyer,
-              phone: normalizedPhone,
-            },
-            lineContext: getLineRequestContext(),
+            buyer: requestBuyer,
+            lineContext,
             course: pendingCheckout.course,
             packageSize: pendingCheckout.packageSize,
             quotedAmountValue: pendingCheckout.value,
