@@ -1,10 +1,20 @@
 import andrePhoto from '../assets/coaches/andre.jpg'
 import brunoPhoto from '../assets/coaches/bruno.jpg'
+import edwardPhoto from '../assets/coaches/edward.jpg'
+import flyPhoto from '../assets/coaches/fly.jpg'
+import giloPhoto from '../assets/coaches/gilo.jpg'
 import gotPhoto from '../assets/coaches/got.jpg'
+import howardPhoto from '../assets/coaches/howard.jpg'
+import joycePhoto from '../assets/coaches/joyce.jpg'
 import marioPhoto from '../assets/coaches/mario.jpg'
 import mengyanPhoto from '../assets/coaches/mengyan.jpg'
 import rafaelPhoto from '../assets/coaches/rafael.jpg'
+import renPhoto from '../assets/coaches/ren.jpg'
+import ruruPhoto from '../assets/coaches/ruru.jpg'
 import simPhoto from '../assets/coaches/sim.jpg'
+import simonPhoto from '../assets/coaches/simon.jpg'
+import tonyPhoto from '../assets/coaches/tony.jpg'
+import willisPhoto from '../assets/coaches/willis.jpg'
 
 export type CoachPricingTier = 'foreign-fighter' | 'domestic-teacher'
 
@@ -330,6 +340,304 @@ export const coachProfiles: CoachProfile[] = [
       '2008 年北京奧運培訓代表隊',
       '2008 年泰皇盃拳擊錦標賽代表隊',
       '2007 & 2008 年 2 屆世界青少年拳擊代表隊',
+    ],
+  },
+  {
+    id: 'ruru',
+    aliases: ['內科館 — 朱如潔/RuRu', '朱如潔/RuRu', 'RuRu', 'Ruru'],
+    displayName: '內科館 — 朱如潔/RuRu',
+    shortName: '朱如潔 / RuRu',
+    pricingTier: 'domestic-teacher',
+    role: '拳擊 / 踢拳教練',
+    venues: ['內科模範館'],
+    specialties: ['拳擊', '踢拳', '運動按摩', '備賽訓練', '功能性訓練', '綜合體能訓練'],
+    photo: ruruPhoto,
+    intro:
+      '專長為拳擊、踢拳、運動按摩與綜合體能訓練，具拳擊教練與裁判資格。',
+    trustPoints: [
+      '中華民國拳擊協會 C 級教練證',
+      '新北市體育總會拳擊委員會 C 級裁判證',
+      '2016 全國總統盃拳擊錦標賽女子第二量級冠軍',
+    ],
+    certifications: [
+      '中華民國拳擊協會 C 級教練證',
+      '新北市體育總會拳擊委員會 C 級裁判證',
+    ],
+    achievements: [
+      '2020 全國總統盃拳擊錦標賽女子第二量級第三名',
+      '2019 全國大專院校運動會女子組第二量級第三名',
+      '2018 全國大專院校運動會女子組第二量級第二名',
+      '2017 全國大專院校運動會女子組第二量級第一名',
+      '2017 全國總統盃拳擊錦標賽女子第二量級第三名',
+      '2017 全國運動會武術 52 公斤第四名',
+      '2016 全國大專院校運動會女子組第二量級第二名',
+      '2016 全國總統盃拳擊錦標賽女子第二量級冠軍',
+      '2014 全國中等學校武術錦標賽 52 公斤冠軍',
+      '2014 全國中等學校運動會武術 52 公斤第三名',
+    ],
+  },
+  {
+    id: 'joyce',
+    aliases: ['台中館 — 江郁欣/Joyce', '江郁欣/Joyce', 'Joyce'],
+    displayName: '台中館 — 江郁欣/Joyce',
+    shortName: '江郁欣 / Joyce',
+    pricingTier: 'domestic-teacher',
+    role: '拳擊 / 肌力訓練教練',
+    venues: ['台中館'],
+    specialties: ['拳擊', '繩流', '肌力訓練', '增肌減脂', '備賽訓練'],
+    photo: joycePhoto,
+    intro:
+      '專長為拳擊、繩流、肌力訓練與備賽訓練，具拳擊教練與裁判資格。',
+    trustPoints: [
+      '國立高雄師範大學性別教育研究所碩士',
+      '中華民國拳擊協會 B 級教練與 C 級裁判',
+      '2022 全國總統盃拳擊錦標賽社女組 54 公斤級銅牌',
+    ],
+    certifications: [
+      '中華民國拳擊協會 B 級教練',
+      '中華民國拳擊協會 C 級裁判',
+      'WBC 進階拳擊教練',
+      'Beat 拳擊節奏訓練系統 LV.1 訓練師',
+      'Thump Boxing LV.2 教練',
+      '中華民國拳擊武術有氧體適能協會 B 級教練',
+    ],
+    experience: ['國立高雄師範大學性別教育研究所碩士'],
+    achievements: [
+      '2022 全國總統盃拳擊錦標賽社女組 54 公斤級銅牌（最佳精神獎）',
+      '2019 全國總統盃拳擊錦標賽社女組 57 公斤級銅牌',
+      '2018 全國總統盃拳擊錦標賽社女組 57 公斤級銅牌',
+    ],
+  },
+  {
+    id: 'fly',
+    aliases: ['敦南館 — 呂昶褘/Fly', '呂昶褘/Fly', 'Fly'],
+    displayName: '敦南館 — 呂昶褘/Fly',
+    shortName: '呂昶褘 / Fly',
+    pricingTier: 'domestic-teacher',
+    role: '教練部主任',
+    venues: ['敦南旗艦館'],
+    specialties: ['綜合體能訓練', '拳擊', '備賽訓練'],
+    photo: flyPhoto,
+    intro:
+      '專長為綜合體能、拳擊與備賽訓練，具抗阻力、健力、救護與伸展相關教練資歷。',
+    trustPoints: [
+      'RTS 國際抗阻力教練證照',
+      'Myofascial Stretch Instructor 肌筋膜伸展師',
+      '2006 國際青年邀請賽 51 公斤第一名',
+    ],
+    certifications: [
+      'RTS 國際抗阻力教練證照',
+      '中華民國健力協會健力 C 級教練證',
+      'EMT-1 LICENSE 初級救護技術員',
+      'PES-Education 生物力學與訓練動作執行',
+      'Myofascial Stretch Instructor 肌筋膜伸展師',
+    ],
+    achievements: [
+      '2007 大專盃 51 公斤第一名',
+      '2007 全國運動會 51 公斤第二名',
+      '2006 國際青年邀請賽 51 公斤第一名',
+      '2005 亞洲青年盃國手',
+      '2005 年全國運動會 51 公斤第三名',
+      '2004 奧運培訓隊',
+    ],
+  },
+  {
+    id: 'gilo',
+    aliases: ['敦南館 — 謝玟賢/Gilo', '謝玟賢/Gilo', 'Gilo'],
+    displayName: '敦南館 — 謝玟賢/Gilo',
+    shortName: '謝玟賢 / Gilo',
+    pricingTier: 'domestic-teacher',
+    role: '拳擊 / 體能訓練教練',
+    venues: ['敦南旗艦館'],
+    specialties: ['拳擊', '備賽訓練', '功能性訓練', '綜合體能訓練'],
+    photo: giloPhoto,
+    intro:
+      '專長為拳擊、備賽訓練、功能性訓練與綜合體能訓練，具拳擊教練與體適能指導員資格。',
+    trustPoints: [
+      'CPR & AED Certified',
+      '中華民國拳擊 C 級教練訓練證',
+      '2011 台北市中正盃拳擊錦標賽 64 公斤第二名',
+    ],
+    certifications: [
+      'CPR & AED Certified',
+      '中華民國拳擊 C 級教練訓練證',
+      '中華民國體適能 C 級健身指導員',
+    ],
+    achievements: [
+      '2011 台北市中正盃拳擊錦標賽 64 公斤第二名',
+      '2008 中等學校拳擊錦標賽 63 公斤第三名',
+      '2007 台北市青年盃 63-66 公斤級第一名',
+      '2007 全國中等學校拳擊錦標賽第 8 量級第一名',
+      '2007 教育盃中等學校拳擊錦標賽第 8 量級第二名',
+      '2006 台北市青年盃 64 公斤第二名',
+      '2006 全國中等學校拳擊錦標賽第 9 量級第一名',
+      '2005 全國總統盃 63 公斤第三名',
+      '2004 台北市青年盃中丁級第一名',
+    ],
+  },
+  {
+    id: 'ren',
+    aliases: ['敦南館 — 陳軍任/Ren', '陳軍任/Ren', 'Ren'],
+    displayName: '敦南館 — 陳軍任/Ren',
+    shortName: '陳軍任 / Ren',
+    pricingTier: 'domestic-teacher',
+    role: '踢拳 / 跆拳道教練',
+    venues: ['敦南旗艦館'],
+    specialties: ['肌力訓練', '增肌減脂', '功能性訓練', '綜合體能訓練', '踢拳', '跆拳道'],
+    photo: renPhoto,
+    intro:
+      '專長為踢拳、跆拳道、肌力與功能性訓練，具跆拳道教練、裁判與體適能資格。',
+    trustPoints: [
+      '中華民國跆拳道協會 C 級教練證',
+      '中華民國跆拳道協會 C 級裁判證',
+      '2015 世界漢馬登跆拳道錦標賽金牌',
+    ],
+    certifications: [
+      '中華民國跆拳道協會 C 級教練證',
+      '中華民國跆拳道協會 C 級裁判證',
+      '中華民國健身運動協會 C 級體適能教練證',
+      'AFAA 美國有氧體適能協會重量訓練指導員',
+      'Myofascial Stretch Instructor 肌筋膜伸展師',
+    ],
+    achievements: [
+      '2016 全國中等學校運動會銀牌',
+      '2015 世界漢馬登跆拳道錦標賽金牌',
+      '2014 韓國慶州跆拳道國際公開賽銀牌',
+      '2011 韓國春川跆拳道國際公開賽金牌',
+    ],
+  },
+  {
+    id: 'willis',
+    aliases: ['敦南館 — 賴緯綸/Willis', '賴緯綸/Willis', 'Willis'],
+    displayName: '敦南館 — 賴緯綸/Willis',
+    shortName: '賴緯綸 / Willis',
+    pricingTier: 'domestic-teacher',
+    role: '拳擊 / 體能訓練教練',
+    venues: ['敦南旗艦館'],
+    specialties: ['拳擊', '備賽訓練', '肌力訓練', '增肌減脂', '功能性訓練', '綜合體能訓練'],
+    photo: willisPhoto,
+    intro:
+      '專長為拳擊、備賽訓練、肌力與功能性訓練，具進階拳擊與私人教練認證。',
+    trustPoints: [
+      '國際 WBC 進階拳擊教練認證',
+      'ACE-CPT 美國運動委員會認證私人教練',
+      '2025 台灣踢拳協會 T1 09 拳擊積分賽菁英組 67 公斤冠軍',
+    ],
+    certifications: [
+      'AFT C 級健身教練',
+      'CPR & AED Certified',
+      '國際 WBC 進階拳擊教練認證',
+      'ACE-CPT 美國運動委員會認證私人教練',
+    ],
+    achievements: [
+      '2025 台灣踢拳協會 T1 09 拳擊積分賽菁英組 67 公斤冠軍',
+      '2020 全國中等學校運動會季軍',
+      '2020 全國總統盃拳擊錦標賽季軍',
+      '2019 亞洲青年國手拳擊選拔賽亞軍',
+      '2018 全國中等學校運動會冠軍',
+    ],
+  },
+  {
+    id: 'simon',
+    aliases: ['內科館 — 張哲維/Simon', '張哲維/Simon', 'Simon'],
+    displayName: '內科館 — 張哲維/Simon',
+    shortName: '張哲維 / Simon',
+    pricingTier: 'domestic-teacher',
+    role: '教練部主任',
+    venues: ['內科模範館'],
+    specialties: ['泰拳', '踢拳', '飲食觀念', '增肌減脂', '肌力訓練', '功能性訓練', '健力式訓練'],
+    photo: simonPhoto,
+    intro:
+      '專長為泰拳、踢拳、肌力訓練與飲食觀念，具泰拳、壺鈴與體適能相關資歷。',
+    trustPoints: [
+      'WBC 皇家泰拳教練',
+      '中華民國泰拳協會 C 級裁判',
+      'KETTLEBELL QUEST 壺鈴教練',
+    ],
+    certifications: [
+      'WBC 皇家泰拳教練',
+      '中華民國泰拳協會 C 級裁判',
+      'KETTLEBELL QUEST 壺鈴教練',
+      '中華民國健身運動協會體適能健身 C 級指導員',
+    ],
+  },
+  {
+    id: 'edward',
+    aliases: ['內科館 — 陳建豪/Edward', '陳建豪/Edward', 'Edward'],
+    displayName: '內科館 — 陳建豪/Edward',
+    shortName: '陳建豪 / Edward',
+    pricingTier: 'domestic-teacher',
+    role: '散打 / 肌力訓練教練',
+    venues: ['內科模範館'],
+    specialties: ['散打', '角力', '增肌減脂', '運動按摩', '肌力訓練', '功能性訓練', '矯正恢復訓練'],
+    photo: edwardPhoto,
+    intro:
+      '專長為散打、角力、肌力訓練與矯正恢復訓練，具踢拳教練與裁判資格。',
+    trustPoints: [
+      '中華踢拳協會 C 級教練',
+      '中華踢拳協會 C 級裁判',
+      '2022 中山盃全球邀請賽武術散打亞軍',
+    ],
+    certifications: [
+      '中華踢拳協會 C 級教練',
+      '中華踢拳協會 C 級裁判',
+    ],
+    achievements: [
+      '2022 中山盃全球邀請賽武術散打亞軍',
+      '2016 清華盃大專乙組散打錦標賽最佳教練',
+      '2014 新竹國際國武術邀請賽散打冠軍',
+      '2013 全國大專盃國武術錦標賽季軍',
+      '2012 教育盃國武術錦標賽冠軍',
+    ],
+  },
+  {
+    id: 'tony',
+    aliases: ['內科館 — 高家輝/Tony', '高家輝/Tony', 'Tony'],
+    displayName: '內科館 — 高家輝/Tony',
+    shortName: '高家輝 / Tony',
+    pricingTier: 'domestic-teacher',
+    role: '教練部主任',
+    venues: ['內科模範館'],
+    specialties: ['拳擊', '踢拳', '跆拳道', '肌力訓練', '增肌減脂', '功能性訓練'],
+    photo: tonyPhoto,
+    intro:
+      '專長為拳擊、踢拳、跆拳道、肌力與功能性訓練，具跆拳道與體適能相關證照。',
+    trustPoints: [
+      '中華民國跆拳道協會黑帶四段',
+      '中華民國跆拳道協會 C 級裁判與教練',
+      '2014 六縣市跆拳道邀請賽鰭量級金牌',
+    ],
+    certifications: [
+      'CPR.AED 急救技能證明',
+      'IPTFA 國際康體健身指導員',
+      '中華民國跆拳道協會黑帶四段',
+      'TRX STC 懸吊系統訓練師認證',
+      '中華民國跆拳道協會 C 級裁判與教練',
+      '中華民國健身運動協會體適能健身 C 級指導員',
+    ],
+    achievements: [
+      '2018 WOTD 武跆王職業賽鰭量級參賽',
+      '2017 全國跆拳道大專盃鰭量級第八名',
+      '2014 六縣市跆拳道邀請賽鰭量級金牌',
+      '2014 台北市跆拳道選拔賽鰭量級銀牌',
+    ],
+  },
+  {
+    id: 'howard',
+    aliases: ['總部團課 — 李泉緯/Howard', '李泉緯/Howard', 'Howard'],
+    displayName: '總部團課 — 李泉緯/Howard',
+    shortName: '李泉緯 / Howard',
+    pricingTier: 'domestic-teacher',
+    role: '拳擊 / 戰鬥體適能教練',
+    venues: ['敦南旗艦館'],
+    specialties: ['戰鬥體適能', '基礎拳擊', '拳擊技巧訓練'],
+    photo: howardPhoto,
+    intro:
+      '目前課表負責戰鬥體適能、基礎拳擊與拳擊技巧訓練，帶學員從基本動作與回合節奏建立拳擊訓練感。',
+    trustPoints: [
+      '敦南旗艦館課表教練',
+      '負責 Fight Fit 戰鬥體適能',
+      '負責基礎拳擊與拳擊技巧訓練',
     ],
   },
 ]
