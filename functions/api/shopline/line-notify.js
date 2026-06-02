@@ -14,6 +14,13 @@ function safeJsonParse(value, fallback) {
   }
 }
 
+function createLineMessageId(prefix) {
+  if (globalThis.crypto?.randomUUID) {
+    return `${prefix}_${globalThis.crypto.randomUUID()}`
+  }
+  return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`
+}
+
 function formatMoney(value, currency = 'TWD') {
   const amount = Number(value || 0)
   if (currency !== 'TWD') return `${currency} ${amount.toLocaleString('en-US')}`
@@ -364,6 +371,95 @@ export async function ensureLineNotificationColumns(env) {
   }
 }
 
+export async function ensureLineMessageSendsTable(env) {
+  await env.DB.batch([
+    env.DB.prepare(
+      `CREATE TABLE IF NOT EXISTS line_message_sends (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        message_id TEXT NOT NULL UNIQUE,
+        line_user_id TEXT,
+        reference_id TEXT,
+        source TEXT NOT NULL,
+        message_type TEXT NOT NULL,
+        template_id TEXT,
+        target_url TEXT,
+        status TEXT NOT NULL DEFAULT 'sending',
+        message_json TEXT,
+        response_json TEXT,
+        error TEXT,
+        attempted_at TEXT NOT NULL DEFAULT (datetime('now')),
+        sent_at TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      )`,
+    ),
+    env.DB.prepare(
+      `CREATE INDEX IF NOT EXISTS idx_line_message_sends_user
+       ON line_message_sends (line_user_id, created_at)`,
+    ),
+    env.DB.prepare(
+      `CREATE INDEX IF NOT EXISTS idx_line_message_sends_reference
+       ON line_message_sends (reference_id, message_type)`,
+    ),
+    env.DB.prepare(
+      `CREATE INDEX IF NOT EXISTS idx_line_message_sends_status
+       ON line_message_sends (status, created_at)`,
+    ),
+  ])
+}
+
+async function insertLineMessageSend(
+  env,
+  {
+    messageId,
+    lineUserId,
+    referenceId,
+    source,
+    messageType,
+    templateId,
+    targetUrl,
+    message,
+  },
+) {
+  await ensureLineMessageSendsTable(env)
+  await env.DB.prepare(
+    `INSERT INTO line_message_sends (
+       message_id, line_user_id, reference_id, source, message_type,
+       template_id, target_url, status, message_json, attempted_at
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, 'sending', ?, datetime('now'))`,
+  )
+    .bind(
+      messageId,
+      lineUserId || null,
+      referenceId || null,
+      source,
+      messageType,
+      templateId || null,
+      targetUrl || null,
+      message ? JSON.stringify(message).slice(0, 8000) : null,
+    )
+    .run()
+}
+
+async function updateLineMessageSend(env, messageId, result) {
+  await env.DB.prepare(
+    `UPDATE line_message_sends
+     SET status = ?,
+         response_json = ?,
+         error = ?,
+         sent_at = CASE WHEN ? = 'sent' THEN datetime('now') ELSE sent_at END,
+         attempted_at = datetime('now')
+     WHERE message_id = ?`,
+  )
+    .bind(
+      trimText(result.status, 80),
+      result.response ? JSON.stringify(result.response).slice(0, 8000) : null,
+      result.error ? trimText(result.error, 1000) : null,
+      result.status,
+      messageId,
+    )
+    .run()
+}
+
 async function recordLineNotifyStatus(env, referenceId, result) {
   await env.DB.prepare(
     `UPDATE course_orders
@@ -454,9 +550,23 @@ export async function notifyLinePaymentSuccess(env, referenceId) {
     return { status: 'skipped_in_progress_or_sent' }
   }
 
+  const message = buildReservationConfirmationCard(order)
+  const messageId = createLineMessageId('lms_paid')
+
+  await insertLineMessageSend(env, {
+    messageId,
+    lineUserId: order.line_user_id,
+    referenceId,
+    source: 'auto',
+    messageType: 'paid_confirmation',
+    templateId: 'paid_confirmation',
+    targetUrl: null,
+    message,
+  })
+
   const payload = {
     to: order.line_user_id,
-    messages: [buildReservationConfirmationCard(order)],
+    messages: [message],
   }
 
   try {
@@ -476,6 +586,7 @@ export async function notifyLinePaymentSuccess(env, referenceId) {
         response: responseBody,
         error: `LINE push failed with HTTP ${response.status}`,
       }
+      await updateLineMessageSend(env, messageId, result)
       await recordLineNotifyStatus(env, referenceId, result)
       return result
     }
@@ -484,6 +595,7 @@ export async function notifyLinePaymentSuccess(env, referenceId) {
       status: 'sent',
       response: responseBody || { ok: true },
     }
+    await updateLineMessageSend(env, messageId, result)
     await recordLineNotifyStatus(env, referenceId, result)
     return result
   } catch (error) {
@@ -492,8 +604,9 @@ export async function notifyLinePaymentSuccess(env, referenceId) {
       error:
         error instanceof Error
           ? error.message
-          : 'LINE push request failed',
+        : 'LINE push request failed',
     }
+    await updateLineMessageSend(env, messageId, result)
     await recordLineNotifyStatus(env, referenceId, result)
     return result
   }
@@ -568,9 +681,23 @@ export async function notifyLineFreeTrialReservation(env, referenceId) {
     return { status: 'skipped_in_progress_or_sent' }
   }
 
+  const message = buildFreeTrialConfirmationCard(order)
+  const messageId = createLineMessageId('lms_free')
+
+  await insertLineMessageSend(env, {
+    messageId,
+    lineUserId: order.line_user_id,
+    referenceId,
+    source: 'auto',
+    messageType: 'free_trial_confirmation',
+    templateId: 'free_trial_confirmation',
+    targetUrl: null,
+    message,
+  })
+
   const payload = {
     to: order.line_user_id,
-    messages: [buildFreeTrialConfirmationCard(order)],
+    messages: [message],
   }
 
   try {
@@ -590,6 +717,7 @@ export async function notifyLineFreeTrialReservation(env, referenceId) {
         response: responseBody,
         error: `LINE push failed with HTTP ${response.status}`,
       }
+      await updateLineMessageSend(env, messageId, result)
       await recordLineNotifyStatus(env, referenceId, result)
       return result
     }
@@ -598,6 +726,7 @@ export async function notifyLineFreeTrialReservation(env, referenceId) {
       status: 'sent',
       response: responseBody || { ok: true },
     }
+    await updateLineMessageSend(env, messageId, result)
     await recordLineNotifyStatus(env, referenceId, result)
     return result
   } catch (error) {
@@ -606,8 +735,9 @@ export async function notifyLineFreeTrialReservation(env, referenceId) {
       error:
         error instanceof Error
           ? error.message
-          : 'LINE push request failed',
+        : 'LINE push request failed',
     }
+    await updateLineMessageSend(env, messageId, result)
     await recordLineNotifyStatus(env, referenceId, result)
     return result
   }

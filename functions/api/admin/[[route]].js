@@ -1,4 +1,7 @@
-import { notifyLinePaymentSuccess } from '../shopline/line-notify.js'
+import {
+  ensureLineMessageSendsTable,
+  notifyLinePaymentSuccess,
+} from '../shopline/line-notify.js'
 
 const LINE_PUSH_ENDPOINT = 'https://api.line.me/v2/bot/message/push'
 const DEFAULT_PUBLIC_ORIGIN = 'https://fightnight.25min.co'
@@ -198,6 +201,7 @@ async function ensureAdminCoreTables(env) {
   await ensureLineCustomerColumns(env)
   await ensureOrderTrackingColumns(env)
   await ensureLineRecoveryTables(env)
+  await ensureLineMessageSendsTable(env)
 }
 
 async function ensureCustomerTrackingTables(env) {
@@ -976,6 +980,154 @@ async function listLineCustomers(env, url) {
   )
 
   return rows.map(normalizeLineCustomer)
+}
+
+function normalizeLineMessage(row) {
+  const message = parseJson(row.message_json, null)
+  const title =
+    message?.contents?.body?.contents?.find?.(
+      (item) => item?.type === 'text' && item?.size === 'xl',
+    )?.text || null
+
+  return {
+    messageId: row.message_id,
+    lineUserId: row.line_user_id || null,
+    displayName: row.display_name || null,
+    pictureUrl: row.picture_url || null,
+    buyerName: row.buyer_name || null,
+    buyerPhone: row.buyer_phone || null,
+    buyerEmail: row.buyer_email || null,
+    referenceId: row.reference_id || null,
+    courseName: row.course_name || null,
+    source: row.source,
+    messageType: row.message_type,
+    templateId: row.template_id || null,
+    targetUrl: row.target_url || null,
+    status: row.status,
+    title,
+    altText: message?.altText || null,
+    error: row.error || null,
+    attemptedAt: row.attempted_at || null,
+    sentAt: row.sent_at || null,
+    createdAt: row.created_at || null,
+  }
+}
+
+async function listLineMessages(env, url) {
+  const limit = getLimit(url, 80, 200)
+  const rows = await safeAll(
+    env,
+    `WITH order_messages AS (
+       SELECT 'legacy_' || co.reference_id || '_' ||
+              CASE
+                WHEN co.status = 'free_reserved' THEN 'free_trial_confirmation'
+                ELSE 'paid_confirmation'
+              END AS message_id,
+              co.line_user_id,
+              COALESCE(lc.display_name, co.line_display_name) AS display_name,
+              COALESCE(lc.picture_url, co.line_picture_url) AS picture_url,
+              co.buyer_name,
+              co.buyer_phone,
+              co.buyer_email,
+              co.reference_id,
+              co.course_name,
+              'auto' AS source,
+              CASE
+                WHEN co.status = 'free_reserved' THEN 'free_trial_confirmation'
+                ELSE 'paid_confirmation'
+              END AS message_type,
+              CASE
+                WHEN co.status = 'free_reserved' THEN 'free_trial_confirmation'
+                ELSE 'paid_confirmation'
+              END AS template_id,
+              NULL AS target_url,
+              co.line_payment_notify_status AS status,
+              NULL AS message_json,
+              co.line_payment_notify_response_json AS response_json,
+              co.line_payment_notify_error AS error,
+              co.line_payment_notify_attempted_at AS attempted_at,
+              co.line_payment_notified_at AS sent_at,
+              co.created_at
+       FROM course_orders co
+       LEFT JOIN line_customers lc ON lc.line_user_id = co.line_user_id
+       WHERE co.line_payment_notify_status IS NOT NULL
+         AND co.status IN ('paid', 'free_reserved')
+         AND NOT EXISTS (
+           SELECT 1
+           FROM line_message_sends existing
+           WHERE existing.reference_id = co.reference_id
+             AND existing.message_type = CASE
+               WHEN co.status = 'free_reserved' THEN 'free_trial_confirmation'
+               ELSE 'paid_confirmation'
+             END
+         )
+     ),
+     recovery_messages AS (
+       SELECT lrm.recovery_id AS message_id,
+              lrm.line_user_id,
+              lc.display_name,
+              lc.picture_url,
+              NULL AS buyer_name,
+              NULL AS buyer_phone,
+              NULL AS buyer_email,
+              NULL AS reference_id,
+              NULL AS course_name,
+              'admin_manual' AS source,
+              'manual_recovery' AS message_type,
+              lrm.template_id,
+              lrm.target_url,
+              lrm.status,
+              lrm.message_json,
+              lrm.response_json,
+              lrm.error,
+              lrm.attempted_at,
+              lrm.sent_at,
+              lrm.created_at
+       FROM line_recovery_messages lrm
+       LEFT JOIN line_customers lc ON lc.line_user_id = lrm.line_user_id
+       WHERE NOT EXISTS (
+         SELECT 1
+         FROM line_message_sends existing
+         WHERE existing.message_id = lrm.recovery_id
+       )
+     ),
+     unified_messages AS (
+       SELECT lms.message_id,
+              lms.line_user_id,
+              COALESCE(lc.display_name, co.line_display_name) AS display_name,
+              COALESCE(lc.picture_url, co.line_picture_url) AS picture_url,
+              co.buyer_name,
+              co.buyer_phone,
+              co.buyer_email,
+              lms.reference_id,
+              co.course_name,
+              lms.source,
+              lms.message_type,
+              lms.template_id,
+              lms.target_url,
+              lms.status,
+              lms.message_json,
+              lms.response_json,
+              lms.error,
+              lms.attempted_at,
+              lms.sent_at,
+              lms.created_at
+       FROM line_message_sends lms
+       LEFT JOIN line_customers lc ON lc.line_user_id = lms.line_user_id
+       LEFT JOIN course_orders co ON co.reference_id = lms.reference_id
+       UNION ALL
+       SELECT * FROM order_messages
+       UNION ALL
+       SELECT * FROM recovery_messages
+     )
+     SELECT *
+     FROM unified_messages
+     ORDER BY datetime(COALESCE(sent_at, attempted_at, created_at)) DESC
+     LIMIT ?`,
+    [limit],
+  )
+
+  return rows.map(normalizeLineMessage)
 }
 
 async function getLineCustomer(env, lineUserId) {
@@ -1793,7 +1945,7 @@ function chooseRecoveryTemplate(customer, requestedTemplateId) {
   return 'newcomer_entry'
 }
 
-function buildRecoveryMessage({ customer, templateId, targetUrl }) {
+function getRecoveryMessageCopy(customer, templateId) {
   const latestCourseName = trimText(customer.latest_order_course_name, 80)
   const latestAmount =
     customer.latest_order_amount_value == null
@@ -1827,7 +1979,12 @@ function buildRecoveryMessage({ customer, templateId, targetUrl }) {
       button: '看 Fight Night 課程',
     },
   }
-  const copy = copyByTemplate[templateId] || copyByTemplate.newcomer_entry
+
+  return copyByTemplate[templateId] || copyByTemplate.newcomer_entry
+}
+
+function buildRecoveryMessage({ customer, templateId, targetUrl }) {
+  const copy = getRecoveryMessageCopy(customer, templateId)
 
   return {
     type: 'flex',
@@ -1893,6 +2050,101 @@ function buildRecoveryMessage({ customer, templateId, targetUrl }) {
       },
     },
   }
+}
+
+function buildRecoveryPreview({ customer, templateId, targetUrl }) {
+  const copy = getRecoveryMessageCopy(customer, templateId)
+  return {
+    templateId,
+    targetUrl,
+    altText: `${copy.title}｜${copy.button}`,
+    eyebrow: copy.eyebrow,
+    title: copy.title,
+    body: copy.body,
+    meta: copy.meta,
+    button: copy.button,
+    targetKind:
+      templateId === 'pending_checkout' &&
+      customer.latest_order_shopline_session_url &&
+      String(customer.latest_order_status || '') === 'pending'
+        ? 'shopline_checkout'
+        : 'site_recovery',
+  }
+}
+
+function getRecoveryBlockers(customer, env) {
+  const blockers = []
+  if (!customer?.is_friend) blockers.push('這位用戶不是 LINE 好友，無法主動推播。')
+  if (toNumber(customer?.paid_orders) > 0) blockers.push('這位用戶已有付款紀錄，不發喚回訊息。')
+  if (!env.LINE_CHANNEL_ACCESS_TOKEN) blockers.push('Missing LINE_CHANNEL_ACCESS_TOKEN')
+  return blockers
+}
+
+function buildRecoveryTarget(env, request, customer, recoveryId, templateId) {
+  if (
+    templateId === 'pending_checkout' &&
+    customer.latest_order_shopline_session_url &&
+    String(customer.latest_order_status || '') === 'pending'
+  ) {
+    return customer.latest_order_shopline_session_url
+  }
+
+  return buildRecoveryTicketUrl(env, request, recoveryId, templateId)
+}
+
+async function previewLineRecoveryMessage(env, request, lineUserId, requestedTemplateId) {
+  const customer = await getRecoveryCustomer(env, lineUserId)
+  if (!customer) return { error: 'LINE customer not found', status: 404 }
+
+  const templateId = chooseRecoveryTemplate(customer, requestedTemplateId)
+  const targetUrl = buildRecoveryTarget(env, request, customer, 'preview', templateId)
+  const blockers = getRecoveryBlockers(customer, env)
+
+  return {
+    ok: true,
+    canSend: blockers.length === 0,
+    blockers,
+    preview: buildRecoveryPreview({ customer, templateId, targetUrl }),
+  }
+}
+
+async function insertManualLineMessageLog(env, { recoveryId, customer, templateId, targetUrl, message }) {
+  await ensureLineMessageSendsTable(env)
+  await env.DB.prepare(
+    `INSERT INTO line_message_sends (
+       message_id, line_user_id, reference_id, source, message_type,
+       template_id, target_url, status, message_json, attempted_at
+     ) VALUES (?, ?, ?, 'admin_manual', 'manual_recovery', ?, ?, 'sending', ?, datetime('now'))`,
+  )
+    .bind(
+      recoveryId,
+      customer.line_user_id,
+      customer.latest_order_reference_id || null,
+      templateId,
+      targetUrl,
+      JSON.stringify(message).slice(0, 8000),
+    )
+    .run()
+}
+
+async function updateManualLineMessageLog(env, recoveryId, result) {
+  await env.DB.prepare(
+    `UPDATE line_message_sends
+     SET status = ?,
+         response_json = ?,
+         error = ?,
+         sent_at = CASE WHEN ? = 'sent' THEN datetime('now') ELSE sent_at END,
+         attempted_at = datetime('now')
+     WHERE message_id = ?`,
+  )
+    .bind(
+      trimText(result.status, 80),
+      result.response ? JSON.stringify(result.response).slice(0, 8000) : null,
+      result.error ? trimText(result.error, 1000) : null,
+      result.status,
+      recoveryId,
+    )
+    .run()
 }
 
 async function getRecoveryCustomer(env, lineUserId) {
@@ -1970,7 +2222,7 @@ async function sendLineRecoveryMessage(env, request, lineUserId, body = {}) {
   if (!customer.is_friend) {
     return { error: '這位用戶不是 LINE 好友，無法主動推播。', status: 409 }
   }
-  if (toNumber(customer.paid_orders) > 0 && !body?.force) {
+  if (toNumber(customer.paid_orders) > 0) {
     return { error: '這位用戶已有付款紀錄，已略過喚回訊息。', status: 409 }
   }
   if (!env.LINE_CHANNEL_ACCESS_TOKEN) {
@@ -1982,12 +2234,7 @@ async function sendLineRecoveryMessage(env, request, lineUserId, body = {}) {
     customer,
     trimText(body?.templateId, 80),
   )
-  const targetUrl =
-    templateId === 'pending_checkout' &&
-    customer.latest_order_shopline_session_url &&
-    String(customer.latest_order_status || '') === 'pending'
-      ? customer.latest_order_shopline_session_url
-      : buildRecoveryTicketUrl(env, request, recoveryId, templateId)
+  const targetUrl = buildRecoveryTarget(env, request, customer, recoveryId, templateId)
   const message = buildRecoveryMessage({ customer, templateId, targetUrl })
 
   await env.DB.prepare(
@@ -2004,6 +2251,13 @@ async function sendLineRecoveryMessage(env, request, lineUserId, body = {}) {
       JSON.stringify(message),
     )
     .run()
+  await insertManualLineMessageLog(env, {
+    recoveryId,
+    customer,
+    templateId,
+    targetUrl,
+    message,
+  })
 
   try {
     const response = await fetch(LINE_PUSH_ENDPOINT, {
@@ -2036,6 +2290,12 @@ async function sendLineRecoveryMessage(env, request, lineUserId, body = {}) {
         )
         .run()
 
+      await updateManualLineMessageLog(env, recoveryId, {
+        status: 'failed',
+        response: responseBody,
+        error,
+      })
+
       return { error, status: 502, recoveryId, templateId, response: responseBody }
     }
 
@@ -2052,6 +2312,10 @@ async function sendLineRecoveryMessage(env, request, lineUserId, body = {}) {
         recoveryId,
       )
       .run()
+    await updateManualLineMessageLog(env, recoveryId, {
+      status: 'sent',
+      response: responseBody || { ok: true },
+    })
 
     return {
       ok: true,
@@ -2072,6 +2336,10 @@ async function sendLineRecoveryMessage(env, request, lineUserId, body = {}) {
     )
       .bind(messageText, recoveryId)
       .run()
+    await updateManualLineMessageLog(env, recoveryId, {
+      status: 'failed',
+      error: messageText,
+    })
 
     return { error: messageText, status: 502, recoveryId, templateId }
   }
@@ -2088,6 +2356,7 @@ export async function onRequestGet({ request, env }) {
   const { url, parts } = routeParts(request)
   const resource = parts[0] || 'summary'
   const id = parts[1] ? decodeURIComponent(parts[1]) : ''
+  const action = parts[2] || ''
   const needsFullTrackingEnsure =
     resource === 'traffic' ||
     resource === 'journeys' ||
@@ -2129,6 +2398,17 @@ export async function onRequestGet({ request, env }) {
     return json({ ok: true, journeys: await listJourneys(env, url) })
   }
 
+  if (resource === 'line-customers' && id && action === 'recovery-preview') {
+    const result = await previewLineRecoveryMessage(
+      env,
+      request,
+      id,
+      trimText(url.searchParams.get('templateId'), 80),
+    )
+    if (result.ok) return json(result)
+    return json({ error: result.error, ...result }, { status: result.status || 500 })
+  }
+
   if (resource === 'line-customers' && id) {
     const customer = await getLineCustomer(env, id)
     return customer
@@ -2138,6 +2418,10 @@ export async function onRequestGet({ request, env }) {
 
   if (resource === 'line-customers') {
     return json({ ok: true, customers: await listLineCustomers(env, url) })
+  }
+
+  if (resource === 'line-messages') {
+    return json({ ok: true, messages: await listLineMessages(env, url) })
   }
 
   return json({ error: 'Not found' }, { status: 404 })

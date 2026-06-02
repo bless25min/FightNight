@@ -1981,7 +1981,7 @@ function CheckoutContactModal({
               {isFreeTrial ? 'FREE TRIAL' : 'SHOPLINE CHECKOUT'}
             </p>
             <h3 className="mt-2 font-heading text-2xl font-black leading-tight text-pearl">
-              {isFreeTrial ? '確認資料，看首購優惠' : '確認付款資訊'}
+              {isFreeTrial ? '確認資料，保留此場預約' : '確認付款資訊'}
             </h3>
           </div>
           <button
@@ -2091,10 +2091,10 @@ function CheckoutContactModal({
         >
           {isSubmitting
             ? isFreeTrial
-              ? '整理優惠中...'
+              ? '保留預約中...'
               : '建立付款中...'
             : isFreeTrial
-              ? '查看 618 首購優惠'
+              ? '保留此場預約'
               : '前往 SHOPLINE 付款'}
         </Button>
       </motion.form>
@@ -2160,8 +2160,8 @@ function FreeTrialSuccessModal({
           </p>
           <p className="mt-2 text-sm leading-relaxed text-mist/72">
             {reservation.lineNotifyStatus === 'sent'
-              ? 'LINE 預約確認卡已送出，點擊卡片即可在聊天室確認預約資訊。'
-              : '預約已成立；若 LINE 確認卡稍晚才出現，仍可先保留這堂體驗。'}
+              ? 'LINE 預約確認卡已送出，請到 LINE 聊天室點擊卡片確認預約。'
+              : '預約已成立；若 LINE 確認卡稍晚才出現，請稍候到 LINE 聊天室確認。'}
           </p>
         </div>
 
