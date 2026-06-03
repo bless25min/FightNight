@@ -1867,6 +1867,7 @@ type BookingIntent = 'checkout' | 'free_trial' | 'choice'
 
 type FreeTrialReservationResult = {
   referenceId: string
+  alreadyReserved?: boolean
   courseId: string
   courseName: string
   venueName: string
@@ -1878,6 +1879,8 @@ type FreeTrialReservationResult = {
   currency?: string
   lineNotifyStatus?: string
   lineNotifyError?: string
+  lineNotifyMessageType?: string
+  lineNotifyTemplateId?: string
 }
 
 function normalizeTaiwanMobilePhone(value: string) {
@@ -2145,12 +2148,19 @@ function FreeTrialSuccessModal({
   onViewAddOns: () => void
   onKeepOnly: () => void
 }) {
+  const isAlreadyReserved = reservation.alreadyReserved === true
   const lineConfirmationText =
-    reservation.lineNotifyStatus === 'sent'
-      ? 'LINE 預約確認卡已送出，請到 LINE 聊天室點擊卡片確認預約。'
-      : reservation.lineNotifyStatus
-        ? '預約已成立，但 LINE 自動確認卡目前沒有成功送出。請保留這個預約編號，或傳訊息給官方 LINE 協助確認。'
-        : '預約已成立；LINE 確認卡如果稍晚才出現，請稍候到 LINE 聊天室確認。'
+    isAlreadyReserved
+      ? reservation.lineNotifyStatus === 'sent'
+        ? '你已經保留過免費體驗。剛剛已把 618 首購方案連結送到 LINE，可以直接去看付費方案。'
+        : reservation.lineNotifyStatus
+          ? '已確認你有免費體驗預約紀錄，但付費方案卡目前沒有成功送出。你仍可直接點下方按鈕查看 618 首購。'
+          : '已確認你有免費體驗預約紀錄。你可以直接查看 618 首購方案，往下一步完成付費。'
+      : reservation.lineNotifyStatus === 'sent'
+        ? 'LINE 預約確認卡已送出，請到 LINE 聊天室點擊卡片確認預約。'
+        : reservation.lineNotifyStatus
+          ? '預約已成立，但 LINE 自動確認卡目前沒有成功送出。請保留這個預約編號，或傳訊息給官方 LINE 協助確認。'
+          : '預約已成立；LINE 確認卡如果稍晚才出現，請稍候到 LINE 聊天室確認。'
 
   return createPortal(
     <motion.div
@@ -2160,7 +2170,7 @@ function FreeTrialSuccessModal({
       exit={{ opacity: 0 }}
       role="dialog"
       aria-modal="true"
-      aria-label="免費體驗已預約"
+      aria-label={isAlreadyReserved ? '已保留過免費體驗' : '免費體驗已預約'}
       onClick={onKeepOnly}
     >
       <motion.div
@@ -2173,10 +2183,10 @@ function FreeTrialSuccessModal({
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="font-heading text-xs uppercase tracking-[0.24em] text-neon/80">
-              RESERVED
+              {isAlreadyReserved ? 'ALREADY RESERVED' : 'RESERVED'}
             </p>
             <h3 className="mt-2 font-heading text-2xl font-black leading-tight text-pearl">
-              這堂已為你保留
+              {isAlreadyReserved ? '你已經保留過免費體驗' : '這堂已為你保留'}
             </h3>
           </div>
           <button
@@ -2213,7 +2223,9 @@ function FreeTrialSuccessModal({
         </div>
 
         <p className="mt-5 text-sm leading-relaxed text-mist/76">
-          618 首購可選 Boot Camp 基礎／技巧，或 Fight Night 體適能。
+          {isAlreadyReserved
+            ? '免費體驗只能保留一次。下一步如果想固定開始，可以直接看 618 首購方案，不用現場被推銷。'
+            : '618 首購可選 Boot Camp 基礎／技巧，或 Fight Night 體適能。'}
         </p>
 
         <div className="mt-5 grid gap-3">
@@ -2232,7 +2244,7 @@ function FreeTrialSuccessModal({
             onClick={onKeepOnly}
             data-cta="free-trial-keep-only"
           >
-            先只保留免費體驗
+            {isAlreadyReserved ? '先保留原預約' : '先只保留免費體驗'}
           </Button>
         </div>
       </motion.div>
@@ -2705,6 +2717,16 @@ export function WeeklyScheduleSection({
         phone: normalizedPhone,
       }
       const lineContext = getLineRequestContext()
+      if (pendingCheckout.intent === 'free_trial') {
+        if (!lineContext?.accessToken) {
+          setCheckoutError('請先完成 LINE 登入後，再保留免費體驗。')
+          return
+        }
+        if (lineContext.isFriend !== true) {
+          setCheckoutError('請先加入官方 LINE 好友，再保留免費體驗。這樣預約確認卡才送得到。')
+          return
+        }
+      }
 
       saveBuyerContact(
         {
@@ -2781,8 +2803,14 @@ export function WeeklyScheduleSection({
           const data = (await response.json().catch(() => null)) as
             | {
                 referenceId?: string
+                alreadyReserved?: boolean
                 reservation?: Partial<FreeTrialReservationResult>
-                lineNotify?: { status?: string; error?: string }
+                lineNotify?: {
+                  status?: string
+                  error?: string
+                  messageType?: string
+                  templateId?: string
+                }
                 reason?: string
                 error?: string
               }
@@ -2798,6 +2826,7 @@ export function WeeklyScheduleSection({
 
           const reservation: FreeTrialReservationResult = {
             referenceId: data.referenceId,
+            alreadyReserved: data.alreadyReserved === true,
             courseId:
               data.reservation?.courseId ?? pendingCheckout.course.id,
             courseName:
@@ -2817,6 +2846,8 @@ export function WeeklyScheduleSection({
             currency: data.reservation?.currency ?? 'TWD',
             lineNotifyStatus: data.lineNotify?.status,
             lineNotifyError: data.lineNotify?.error,
+            lineNotifyMessageType: data.lineNotify?.messageType,
+            lineNotifyTemplateId: data.lineNotify?.templateId,
           }
 
           track({
@@ -2830,10 +2861,14 @@ export function WeeklyScheduleSection({
                 pendingCheckout.pricingTier,
               ),
               reference_id: data.referenceId,
+              already_reserved: data.alreadyReserved === true,
               original_value: pendingCheckout.originalValue,
             },
             metaStandardEvent: 'Schedule',
-            lineEventName: 'FreeTrialReserved',
+            lineEventName:
+              data.alreadyReserved === true
+                ? 'FreeTrialAlreadyReserved'
+                : 'FreeTrialReserved',
           })
 
           setPendingCheckout(null)

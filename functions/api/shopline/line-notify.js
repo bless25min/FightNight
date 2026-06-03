@@ -1,6 +1,7 @@
 import { weeklyCourses } from '../../../src/data/weeklySchedule.ts'
 
 const LINE_PUSH_ENDPOINT = 'https://api.line.me/v2/bot/message/push'
+const DEFAULT_PUBLIC_ORIGIN = 'https://fightnight.25min.co'
 
 function trimText(value, maxLength) {
   return String(value || '').trim().slice(0, maxLength)
@@ -345,6 +346,135 @@ function buildFreeTrialConfirmationCard(order) {
   }
 }
 
+function getPublicOrigin(env) {
+  const configured =
+    env.PUBLIC_SITE_URL ||
+    env.SITE_ORIGIN ||
+    env.PUBLIC_ORIGIN ||
+    env.VITE_PUBLIC_SITE_URL
+
+  if (configured) {
+    try {
+      return new URL(configured).origin
+    } catch {
+      // Fall through to the production origin.
+    }
+  }
+
+  return DEFAULT_PUBLIC_ORIGIN
+}
+
+function buildFirstPurchaseOfferUrl(env, referenceId) {
+  const url = new URL('/boot-camp', getPublicOrigin(env))
+  url.searchParams.set('from', 'line-auto')
+  url.searchParams.set('utm_source', 'line')
+  url.searchParams.set('utm_medium', 'auto')
+  url.searchParams.set('utm_campaign', 'free_trial_already_reserved')
+  if (referenceId) {
+    url.searchParams.set('reference_id', referenceId)
+  }
+  return url.toString()
+}
+
+function buildFreeTrialAlreadyReservedOfferCard(order, targetUrl) {
+  const venue = getVenueShortName(order.venue_name)
+  const dateTime = getDateTimeLabel(order)
+
+  return {
+    type: 'flex',
+    altText: '你已經保留免費體驗，可以查看 618 首購方案',
+    contents: {
+      type: 'bubble',
+      size: 'mega',
+      body: {
+        type: 'box',
+        layout: 'vertical',
+        spacing: 'md',
+        contents: [
+          {
+            type: 'text',
+            text: '你已經保留過免費體驗',
+            weight: 'bold',
+            size: 'xl',
+            color: '#111111',
+            wrap: true,
+          },
+          {
+            type: 'text',
+            text: '不用再重填一次資料。原本的預約仍然保留，當天照 LINE 確認資訊到場即可。',
+            size: 'sm',
+            color: '#666666',
+            wrap: true,
+          },
+          {
+            type: 'separator',
+            margin: 'md',
+          },
+          {
+            type: 'box',
+            layout: 'vertical',
+            spacing: 'sm',
+            margin: 'md',
+            contents: [
+              {
+                type: 'box',
+                layout: 'baseline',
+                spacing: 'sm',
+                contents: [
+                  { type: 'text', text: '場館', color: '#999999', size: 'sm', flex: 2 },
+                  { type: 'text', text: venue || '-', color: '#111111', size: 'sm', flex: 5, wrap: true },
+                ],
+              },
+              {
+                type: 'box',
+                layout: 'baseline',
+                spacing: 'sm',
+                contents: [
+                  { type: 'text', text: '時間', color: '#999999', size: 'sm', flex: 2 },
+                  { type: 'text', text: dateTime || '-', color: '#111111', size: 'sm', flex: 5, wrap: true },
+                ],
+              },
+              {
+                type: 'box',
+                layout: 'baseline',
+                spacing: 'sm',
+                contents: [
+                  { type: 'text', text: '編號', color: '#999999', size: 'sm', flex: 2 },
+                  { type: 'text', text: order.reference_id, color: '#111111', size: 'sm', flex: 5, wrap: true },
+                ],
+              },
+            ],
+          },
+          {
+            type: 'text',
+            text: '如果你想把這次體驗接成固定開始，可以先在線上看 618 首購方案；這不是現場推銷，也不需要入會。',
+            size: 'sm',
+            color: '#666666',
+            wrap: true,
+            margin: 'lg',
+          },
+        ],
+      },
+      footer: {
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          {
+            type: 'button',
+            style: 'primary',
+            color: '#E3242B',
+            action: {
+              type: 'uri',
+              label: '查看 618 首購',
+              uri: targetUrl,
+            },
+          },
+        ],
+      },
+    },
+  }
+}
+
 export async function ensureLineNotificationColumns(env) {
   const columns = [
     ['line_payment_notify_status', 'TEXT'],
@@ -481,7 +611,8 @@ async function recordLineNotifyStatus(env, referenceId, result) {
     .run()
 }
 
-export async function notifyLinePaymentSuccess(env, referenceId) {
+export async function notifyLinePaymentSuccess(env, referenceId, options = {}) {
+  const force = options?.force === true
   if (!env.DB || !referenceId) {
     return { status: 'skipped_invalid_request' }
   }
@@ -503,7 +634,7 @@ export async function notifyLinePaymentSuccess(env, referenceId) {
   if (!order || order.status !== 'paid') {
     return { status: 'skipped_not_paid' }
   }
-  if (order.line_payment_notified_at) {
+  if (order.line_payment_notified_at && !force) {
     return { status: 'skipped_already_sent' }
   }
   if (!order.line_user_id) {
@@ -523,28 +654,43 @@ export async function notifyLinePaymentSuccess(env, referenceId) {
     return result
   }
 
-  const claim = await env.DB.prepare(
-    `UPDATE course_orders
-     SET line_payment_notify_status = 'sending',
-         line_payment_notify_attempted_at = datetime('now'),
-         line_payment_notify_error = NULL,
-         updated_at = datetime('now')
-     WHERE reference_id = ?
-       AND status = 'paid'
-       AND line_user_id IS NOT NULL
-       AND line_user_id != ''
-       AND line_payment_notified_at IS NULL
-       AND (
-         line_payment_notify_status IS NULL
-         OR line_payment_notify_status IN ('failed', 'skipped_missing_token', 'skipped_no_line_user')
-         OR (
-           line_payment_notify_status = 'sending'
-           AND datetime(line_payment_notify_attempted_at) <= datetime('now', '-5 minutes')
-         )
-       )`,
-  )
-    .bind(referenceId)
-    .run()
+  const claim = force
+    ? await env.DB.prepare(
+        `UPDATE course_orders
+         SET line_payment_notify_status = 'sending',
+             line_payment_notify_attempted_at = datetime('now'),
+             line_payment_notified_at = NULL,
+             line_payment_notify_error = NULL,
+             updated_at = datetime('now')
+         WHERE reference_id = ?
+           AND status = 'paid'
+           AND line_user_id IS NOT NULL
+           AND line_user_id != ''`,
+      )
+        .bind(referenceId)
+        .run()
+    : await env.DB.prepare(
+        `UPDATE course_orders
+         SET line_payment_notify_status = 'sending',
+             line_payment_notify_attempted_at = datetime('now'),
+             line_payment_notify_error = NULL,
+             updated_at = datetime('now')
+         WHERE reference_id = ?
+           AND status = 'paid'
+           AND line_user_id IS NOT NULL
+           AND line_user_id != ''
+           AND line_payment_notified_at IS NULL
+           AND (
+             line_payment_notify_status IS NULL
+             OR line_payment_notify_status IN ('failed', 'skipped_missing_token', 'skipped_no_line_user')
+             OR (
+               line_payment_notify_status = 'sending'
+               AND datetime(line_payment_notify_attempted_at) <= datetime('now', '-5 minutes')
+             )
+           )`,
+      )
+        .bind(referenceId)
+        .run()
 
   if (!claim.meta?.changes) {
     return { status: 'skipped_in_progress_or_sent' }
@@ -612,7 +758,108 @@ export async function notifyLinePaymentSuccess(env, referenceId) {
   }
 }
 
-export async function notifyLineFreeTrialReservation(env, referenceId) {
+export async function notifyLineFreeTrialAlreadyReservedOffer(env, referenceId) {
+  if (!env.DB || !referenceId) {
+    return { status: 'skipped_invalid_request' }
+  }
+
+  const order = await env.DB.prepare(
+    `SELECT reference_id, status, course_id, course_name, venue_name,
+            package_size, amount_value, currency, series_dates_json,
+            buyer_name, buyer_phone, buyer_email, line_user_id,
+            line_display_name
+     FROM course_orders
+     WHERE reference_id = ?`,
+  )
+    .bind(referenceId)
+    .first()
+
+  if (!order || !['free_reserved', 'free_attended'].includes(String(order.status || ''))) {
+    return { status: 'skipped_not_free_trial' }
+  }
+  if (!order.line_user_id) {
+    return {
+      status: 'skipped_no_line_user',
+      error: 'Reservation has no linked LINE user',
+    }
+  }
+  if (!env.LINE_CHANNEL_ACCESS_TOKEN) {
+    return {
+      status: 'skipped_missing_token',
+      error: 'Missing LINE_CHANNEL_ACCESS_TOKEN',
+    }
+  }
+
+  const targetUrl = buildFirstPurchaseOfferUrl(env, referenceId)
+  const message = buildFreeTrialAlreadyReservedOfferCard(order, targetUrl)
+  const messageId = createLineMessageId('lms_reserved_offer')
+  const resultMeta = {
+    messageType: 'free_trial_already_reserved_offer',
+    templateId: 'reserved_to_first_purchase',
+    targetUrl,
+  }
+
+  await insertLineMessageSend(env, {
+    messageId,
+    lineUserId: order.line_user_id,
+    referenceId,
+    source: 'auto',
+    messageType: resultMeta.messageType,
+    templateId: resultMeta.templateId,
+    targetUrl,
+    message,
+  })
+
+  const payload = {
+    to: order.line_user_id,
+    messages: [message],
+  }
+
+  try {
+    const response = await fetch(LINE_PUSH_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${env.LINE_CHANNEL_ACCESS_TOKEN}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    })
+    const responseBody = await response.json().catch(() => null)
+
+    if (!response.ok) {
+      const result = {
+        ...resultMeta,
+        status: 'failed',
+        response: responseBody,
+        error: `LINE push failed with HTTP ${response.status}`,
+      }
+      await updateLineMessageSend(env, messageId, result)
+      return result
+    }
+
+    const result = {
+      ...resultMeta,
+      status: 'sent',
+      response: responseBody || { ok: true },
+    }
+    await updateLineMessageSend(env, messageId, result)
+    return result
+  } catch (error) {
+    const result = {
+      ...resultMeta,
+      status: 'failed',
+      error:
+        error instanceof Error
+          ? error.message
+          : 'LINE push request failed',
+    }
+    await updateLineMessageSend(env, messageId, result)
+    return result
+  }
+}
+
+export async function notifyLineFreeTrialReservation(env, referenceId, options = {}) {
+  const force = options?.force === true
   if (!env.DB || !referenceId) {
     return { status: 'skipped_invalid_request' }
   }
@@ -634,7 +881,7 @@ export async function notifyLineFreeTrialReservation(env, referenceId) {
   if (!order || order.status !== 'free_reserved') {
     return { status: 'skipped_not_free_reserved' }
   }
-  if (order.line_payment_notified_at) {
+  if (order.line_payment_notified_at && !force) {
     return { status: 'skipped_already_sent' }
   }
   if (!order.line_user_id) {
@@ -654,28 +901,43 @@ export async function notifyLineFreeTrialReservation(env, referenceId) {
     return result
   }
 
-  const claim = await env.DB.prepare(
-    `UPDATE course_orders
-     SET line_payment_notify_status = 'sending',
-         line_payment_notify_attempted_at = datetime('now'),
-         line_payment_notify_error = NULL,
-         updated_at = datetime('now')
-     WHERE reference_id = ?
-       AND status = 'free_reserved'
-       AND line_user_id IS NOT NULL
-       AND line_user_id != ''
-       AND line_payment_notified_at IS NULL
-       AND (
-         line_payment_notify_status IS NULL
-         OR line_payment_notify_status IN ('failed', 'skipped_missing_token', 'skipped_no_line_user')
-         OR (
-           line_payment_notify_status = 'sending'
-           AND datetime(line_payment_notify_attempted_at) <= datetime('now', '-5 minutes')
-         )
-       )`,
-  )
-    .bind(referenceId)
-    .run()
+  const claim = force
+    ? await env.DB.prepare(
+        `UPDATE course_orders
+         SET line_payment_notify_status = 'sending',
+             line_payment_notify_attempted_at = datetime('now'),
+             line_payment_notified_at = NULL,
+             line_payment_notify_error = NULL,
+             updated_at = datetime('now')
+         WHERE reference_id = ?
+           AND status = 'free_reserved'
+           AND line_user_id IS NOT NULL
+           AND line_user_id != ''`,
+      )
+        .bind(referenceId)
+        .run()
+    : await env.DB.prepare(
+        `UPDATE course_orders
+         SET line_payment_notify_status = 'sending',
+             line_payment_notify_attempted_at = datetime('now'),
+             line_payment_notify_error = NULL,
+             updated_at = datetime('now')
+         WHERE reference_id = ?
+           AND status = 'free_reserved'
+           AND line_user_id IS NOT NULL
+           AND line_user_id != ''
+           AND line_payment_notified_at IS NULL
+           AND (
+             line_payment_notify_status IS NULL
+             OR line_payment_notify_status IN ('failed', 'skipped_missing_token', 'skipped_no_line_user')
+             OR (
+               line_payment_notify_status = 'sending'
+               AND datetime(line_payment_notify_attempted_at) <= datetime('now', '-5 minutes')
+             )
+           )`,
+      )
+        .bind(referenceId)
+        .run()
 
   if (!claim.meta?.changes) {
     return { status: 'skipped_in_progress_or_sent' }

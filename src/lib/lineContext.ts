@@ -25,6 +25,9 @@ export function getLineRequestContext(): LineRequestContext | null {
   if (typeof window === 'undefined') return null
 
   try {
+    const accessToken = window.liff?.getAccessToken?.() || undefined
+    if (!accessToken) return null
+
     const raw = window.localStorage.getItem(lineContextKey)
     if (!raw) return null
     const parsed = JSON.parse(raw) as Partial<LineRequestContext>
@@ -45,7 +48,7 @@ export function getLineRequestContext(): LineRequestContext | null {
         typeof parsed.pictureUrl === 'string' ? parsed.pictureUrl : undefined,
       email: lineEmail,
       isFriend: parsed.isFriend === true,
-      accessToken: window.liff?.getAccessToken?.() || undefined,
+      accessToken,
       idToken: window.liff?.getIDToken?.() || undefined,
     }
   } catch {

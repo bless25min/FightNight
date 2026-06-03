@@ -33,7 +33,7 @@ export function LockedContent({
   actionNote,
   className = '',
 }: Props) {
-  if (gateState.status === 'unlocked' || gateState.status === 'missing-config') {
+  if (gateState.status === 'unlocked') {
     return <>{children}</>
   }
 

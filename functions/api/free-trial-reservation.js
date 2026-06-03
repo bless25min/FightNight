@@ -11,7 +11,10 @@ import {
   resolveLineContext,
   upsertLineCustomerFromCheckout,
 } from './shopline/checkout-session.js'
-import { notifyLineFreeTrialReservation } from './shopline/line-notify.js'
+import {
+  notifyLineFreeTrialAlreadyReservedOffer,
+  notifyLineFreeTrialReservation,
+} from './shopline/line-notify.js'
 
 const CURRENCY = 'TWD'
 const FREE_TRIAL_STATUS = 'free_reserved'
@@ -51,21 +54,51 @@ function createFreeTrialReferenceId() {
   return `FR${Date.now().toString(36).toUpperCase()}${randomHex(5).toUpperCase()}`.slice(0, 32)
 }
 
-async function hasExistingFreeTrial(env, lineUserId) {
-  if (!lineUserId) return false
+function safeJsonParse(value, fallback) {
+  try {
+    return value ? JSON.parse(value) : fallback
+  } catch {
+    return fallback
+  }
+}
+
+function getCourseBaseId(courseId) {
+  return String(courseId || '').replace(/-\d{4}-\d{2}-\d{2}$/, '')
+}
+
+function getExistingReservationPayload(order, fallbackCourse) {
+  const seriesDates = safeJsonParse(order?.series_dates_json, [])
+  const date = seriesDates[0] || fallbackCourse?.date || ''
+  return {
+    courseId: order.course_id,
+    courseName: order.course_name,
+    venueName: order.venue_name,
+    date,
+    weekday: fallbackCourse?.weekday || '',
+    startTime: fallbackCourse?.startTime || '',
+    endTime: fallbackCourse?.endTime || '',
+    originalAmountValue: Number(order.original_amount_value || 0) || undefined,
+    currency: order.currency || CURRENCY,
+  }
+}
+
+async function getExistingFreeTrial(env, lineUserId) {
+  if (!lineUserId) return null
 
   const placeholders = EXISTING_FREE_TRIAL_STATUSES.map(() => '?').join(',')
   const row = await env.DB.prepare(
-    `SELECT reference_id
+    `SELECT reference_id, status, course_id, course_name, venue_name,
+            original_amount_value, currency, series_dates_json
      FROM course_orders
      WHERE line_user_id = ?
        AND status IN (${placeholders})
+     ORDER BY created_at DESC
      LIMIT 1`,
   )
     .bind(lineUserId, ...EXISTING_FREE_TRIAL_STATUSES)
     .first()
 
-  return Boolean(row?.reference_id)
+  return row || null
 }
 
 async function getFreeTrialReservationCounts(env, sessionIds) {
@@ -165,6 +198,15 @@ export async function onRequestPost({ request, env }) {
         { status: 401 },
       )
     }
+    if (lineContext.isFriend !== true) {
+      return json(
+        {
+          error: '請先加入官方 LINE 好友，再保留免費體驗。這樣預約確認卡才送得到。',
+          reason: 'line_friend_required',
+        },
+        { status: 403 },
+      )
+    }
 
     await upsertLineCustomerFromCheckout(env, lineContext)
 
@@ -178,14 +220,31 @@ export async function onRequestPost({ request, env }) {
       )
     }
 
-    if (await hasExistingFreeTrial(env, lineContext.lineUserId)) {
-      return json(
-        {
-          error: '你已經保留一堂免費體驗，可以到 LINE 查看預約確認。',
-          reason: 'free_trial_already_reserved',
-        },
-        { status: 409 },
+    const existingFreeTrial = await getExistingFreeTrial(env, lineContext.lineUserId)
+    if (existingFreeTrial) {
+      let baseCourse = null
+      try {
+        baseCourse = resolveCourseFromCatalog({
+          id: getCourseBaseId(existingFreeTrial.course_id),
+          category: 'FIGHT_NIGHT',
+        })
+      } catch {
+        baseCourse = null
+      }
+
+      const lineNotify = await notifyLineFreeTrialAlreadyReservedOffer(
+        env,
+        existingFreeTrial.reference_id,
       )
+
+      return json({
+        ok: true,
+        alreadyReserved: true,
+        referenceId: existingFreeTrial.reference_id,
+        status: existingFreeTrial.status || FREE_TRIAL_STATUS,
+        lineNotify,
+        reservation: getExistingReservationPayload(existingFreeTrial, baseCourse),
+      })
     }
 
     const { sessionIds, seriesDates } = buildSessionIds(course, 1)
