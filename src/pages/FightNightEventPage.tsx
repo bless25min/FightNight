@@ -1,13 +1,13 @@
 import { motion } from 'framer-motion'
 import type { ChangeEvent, FormEvent } from 'react'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import heroPoster from '../assets/landing/hero-poster.jpg'
 import { Footer } from '../components/layout/Footer'
 import { Header } from '../components/layout/Header'
 import { Seo } from '../components/Seo'
-import { FAQSection } from '../components/sections/FAQSection'
 import { ExperienceFlowSection } from '../components/sections/ExperienceFlowSection'
+import { FAQSection } from '../components/sections/FAQSection'
 import { FormulaSection } from '../components/sections/FormulaSection'
 import { HeroSection } from '../components/sections/HeroSection'
 import { IdentitySection } from '../components/sections/IdentitySection'
@@ -18,6 +18,7 @@ import { Button } from '../components/ui/Button'
 import { SectionHeading } from '../components/ui/SectionHeading'
 import { SectionWrapper } from '../components/ui/SectionWrapper'
 import { StickyActionBar } from '../components/ui/StickyActionBar'
+import { findCoachProfile } from '../data/coachProfiles'
 import {
   ONLINE_BOOKING_START_OFFSET_DAYS,
   ONLINE_SALES_SEAT_LIMIT,
@@ -25,18 +26,28 @@ import {
   isWeeklyCourseAvailableForCategory,
   weeklyCourses,
 } from '../data/weeklySchedule'
-import { findCoachProfile } from '../data/coachProfiles'
-import { getTaipeiTodayIso } from '../lib/coursePricing'
-import { getSavedBuyerContact, saveBuyerContact } from '../lib/buyerContact'
-import { getCheckoutTrackingContext } from '../lib/checkoutTracking'
-import { getLineRequestContext } from '../lib/lineContext'
 import { useLiffGate } from '../hooks/useLiffGate'
 import {
   type SessionAvailability,
   useSessionAvailability,
 } from '../hooks/useSessionAvailability'
 import { useTracking } from '../hooks/useTracking'
+import { getSavedBuyerContact, saveBuyerContact } from '../lib/buyerContact'
+import { getCheckoutTrackingContext } from '../lib/checkoutTracking'
+import {
+  formatCoursePrice,
+  getCoursePriceModel,
+  getFirstPurchaseOfferAmount,
+  getTaipeiTodayIso,
+} from '../lib/coursePricing'
+import { getLineRequestContext } from '../lib/lineContext'
 import type { FAQItem, WeeklyCourse } from '../types'
+
+type BuyerContactForm = {
+  name: string
+  phone: string
+  email: string
+}
 
 type EventTicket = {
   id: string
@@ -50,23 +61,21 @@ type EventTicket = {
   coachLabel: string
 }
 
-type BuyerContactForm = {
-  name: string
-  phone: string
-  email: string
+type EventTicketPrice = {
+  amount: number
+  label: string
+  originalAmount: number
+  originalLabel: string
+  offerApplied: boolean
+  pricingTier: 'foreign-fighter' | 'domestic-teacher'
 }
 
-type ReservationSuccess = {
-  referenceId: string
-  ticket: EventTicket
-  lineNotifyStatus?: string
-}
+type OfferState = 'idle' | 'checking' | 'eligible' | 'ineligible' | 'error'
 
-const landingVariant = 'fightnight_event_homepage_plus_v1'
+const landingVariant = 'fightnight_event_no_membership_paid_v1'
 const eventName = 'After Work Fight Night'
 const eventDescription =
-  '下班後進一場由教練帶節奏的 Fight Night。第一次來也可以跟上，先保留這場入場名額，再到 LINE 收預約確認。'
-const originalPriceLabel = '一般 NT$880'
+  '不用入會、不被推銷，完成一次簡單付款，就能進場享受一場完整編排的 Fight Night 情緒體驗。'
 
 const venueLabelMap: Record<string, string> = {
   'venue-dunnan': '敦南旗艦館',
@@ -76,28 +85,28 @@ const venueLabelMap: Record<string, string> = {
 
 const eventFaqItems: FAQItem[] = [
   {
+    id: 'event-no-membership',
+    question: '我需要加入會員或先聽方案介紹嗎？',
+    answer:
+      '不用。這個活動頁賣的是一場完整 Fight Night 體驗，不是入會諮詢。你完成線上付款後，只需要依照 LINE 入場確認到現場。',
+  },
+  {
+    id: 'event-no-sales',
+    question: '到現場會不會被推銷課程或會員？',
+    answer:
+      '這一頁的承諾是完整體驗不被打擾。你買的是這一場，現場流程以教練帶領與體驗為主，不會在課程中安排銷售諮詢。',
+  },
+  {
     id: 'event-first-time',
     question: '完全沒有拳擊或泰拳經驗，可以參加嗎？',
     answer:
-      '可以。這場不是考核，也不是比賽。教練會先把節奏帶慢，讓你知道站哪裡、怎麼出拳、什麼時候跟上，強度可以依照當下狀態調整。',
+      '可以。Fight Night 不是格鬥比賽，也不是動作考核。教練會從暖身、站位、出拳節奏開始帶，第一次來也可以跟上。',
   },
   {
-    id: 'event-alone',
-    question: '一個人來會不會很尷尬？',
+    id: 'event-payment',
+    question: '付款後會收到什麼？',
     answer:
-      '不會。Fight Night 本來就適合一個人進場，因為你很快會把注意力放在教練、音樂、倒數和拳套聲上。現場是一起完成，不是互相比較。',
-  },
-  {
-    id: 'event-after-submit',
-    question: '送出保留後，下一步是什麼？',
-    answer:
-      '送出後，這場名額會先為你保留。你會在 LINE 收到免費體驗預約確認卡，確認場次、時間、地點；確認預約後，也可以順手查看 618 首購優惠。',
-  },
-  {
-    id: 'event-offer-order',
-    question: '這會不會只是叫我先買課？',
-    answer:
-      '不是。這一頁的第一步是保留一場免費體驗入場名額。優惠會放在預約確認之後，讓你先知道自己要去的是哪一場，再決定要不要看首購方案。',
+      '付款完成後，系統會依付款 webhook 確認訂單，並透過 LINE 發送已付款入場確認卡。你可以在 LINE 裡確認場次、時間與地點。',
   },
 ]
 
@@ -168,6 +177,10 @@ function getCoachLabel(course: WeeklyCourse) {
   return findCoachProfile(course.coach)?.shortName ?? 'UFC GYM Coach'
 }
 
+function getCoachPricingTier(course: WeeklyCourse) {
+  return findCoachProfile(course.coach)?.pricingTier ?? 'domestic-teacher'
+}
+
 function getEventTickets(limit = 4): EventTicket[] {
   const bookableFromIso = addDays(
     getTaipeiTodayIso(),
@@ -187,7 +200,7 @@ function getEventTickets(limit = 4): EventTicket[] {
       id: course.id,
       course,
       sessionId: course.id,
-      title: eventName,
+      title: `${eventName} 完整體驗`,
       dateLabel: formatDateLabel(course.date),
       timeLabel: `${course.startTime}-${course.endTime}`,
       venueLabel: getVenueLabel(course),
@@ -200,10 +213,39 @@ function getRemainingLabel(
   availability: SessionAvailability,
   hasLiveData: boolean,
 ) {
-  if (!hasLiveData) return `線上開放 ${availability.capacity || ONLINE_SALES_SEAT_LIMIT} 位`
+  if (!hasLiveData) {
+    return `線上開放 ${availability.capacity || ONLINE_SALES_SEAT_LIMIT} 位`
+  }
   if (availability.remaining <= 0) return '候補中'
   if (availability.remaining <= 2) return `最後 ${availability.remaining} 位`
   return `剩餘 ${availability.remaining} 位`
+}
+
+function getEventTicketPrice(
+  ticket: EventTicket,
+  availability: SessionAvailability,
+  offerEligible: boolean,
+): EventTicketPrice {
+  const pricingTier = getCoachPricingTier(ticket.course)
+  const basePrice = getCoursePriceModel({
+    course: ticket.course,
+    pricingTier,
+    packageSize: 1,
+    remaining: availability.remaining,
+  })
+  const offerAmount = offerEligible
+    ? getFirstPurchaseOfferAmount(basePrice.amount)
+    : basePrice.amount
+  const amount = Math.min(basePrice.amount, offerAmount)
+
+  return {
+    amount,
+    label: formatCoursePrice(amount),
+    originalAmount: basePrice.amount,
+    originalLabel: basePrice.label,
+    offerApplied: amount < basePrice.amount,
+    pricingTier,
+  }
 }
 
 function getClientContext() {
@@ -225,26 +267,17 @@ function getSourcePath() {
   return `${window.location.pathname}${window.location.search}${window.location.hash}`
 }
 
-function navigateToFirstPurchaseOffer(referenceId?: string) {
-  const params = new URLSearchParams({
-    from: 'free-trial',
-    source: 'fight-night-event',
-  })
-  if (referenceId) params.set('reference', referenceId)
-  window.history.pushState({}, '', `/boot-camp?${params.toString()}`)
-  window.dispatchEvent(new PopStateEvent('popstate'))
-  window.setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 0)
-}
-
-function EventSnapshotSection({
+function EventPromiseSection({
   featuredTicket,
   availability,
   hasLiveData,
+  price,
   onPrimaryAction,
 }: {
   featuredTicket?: EventTicket
   availability?: SessionAvailability
   hasLiveData: boolean
+  price?: EventTicketPrice
   onPrimaryAction: () => void
 }) {
   const remainingLabel =
@@ -253,7 +286,7 @@ function EventSnapshotSection({
       : `線上開放 ${ONLINE_SALES_SEAT_LIMIT} 位`
 
   return (
-    <SectionWrapper id="event-snapshot" padding="pt-0 pb-10 md:pb-20">
+    <SectionWrapper id="event-promise" padding="pt-0 pb-10 md:pb-20">
       <motion.div
         initial={{ opacity: 0, y: 24 }}
         whileInView={{ opacity: 1, y: 0 }}
@@ -264,46 +297,41 @@ function EventSnapshotSection({
         <div className="grid gap-0 md:grid-cols-[1.05fr_0.95fr]">
           <div className="px-5 py-7 sm:px-8 md:px-10 md:py-12">
             <p className="font-heading text-xs tracking-[0.32em] text-neon/80">
-              EVENT ENTRY
+              NO MEMBERSHIP. NO SALES TALK.
             </p>
             <h1 className="mt-4 max-w-2xl text-3xl font-heading font-bold leading-tight text-pearl sm:text-4xl md:text-6xl">
-              這不是選課，是保留一場下班後的 Fight Night。
+              不想入會，也可以買一場讓身體醒過來的夜晚。
             </h1>
             <p className="mt-5 max-w-xl text-base leading-relaxed text-mist/78 md:text-lg">
-              首頁已經告訴你 Fight Night 是什麼；這一頁把那個體驗落到一場可以進場的夜晚。你只需要先保留名額，到 LINE 收確認卡，再決定要不要看 618 首購優惠。
+              Fight Night 把拳擊、泰拳、音樂節奏與教練帶領，編排成一場完整的情緒釋放體驗。你不用入會、不用被推銷、不用先談方案；完成一次付款，就能進場享受整場氛圍。
             </p>
 
-            <div className="mt-7 grid gap-3 text-sm text-mist/78 sm:grid-cols-3">
-              <div className="border-t border-pearl/10 pt-3">
-                <p className="font-heading text-pearl">先保留</p>
-                <p className="mt-1">不用先付款，先卡住這一場入場名額。</p>
-              </div>
-              <div className="border-t border-pearl/10 pt-3">
-                <p className="font-heading text-pearl">LINE 確認</p>
-                <p className="mt-1">送出後收到免費體驗預約確認卡。</p>
-              </div>
-              <div className="border-t border-pearl/10 pt-3">
-                <p className="font-heading text-pearl">再看優惠</p>
-                <p className="mt-1">確認預約後才接 618 首購方案。</p>
-              </div>
+            <div className="mt-7 grid gap-3 text-sm text-mist/78 sm:grid-cols-4">
+              {['不用入會', '不安排銷售諮詢', '一次付款', '完整體驗'].map(
+                (item) => (
+                  <div key={item} className="border-t border-pearl/10 pt-3">
+                    <p className="font-heading text-pearl">{item}</p>
+                  </div>
+                ),
+              )}
             </div>
 
             <Button
               size="lg"
               className="mt-8 w-full sm:w-auto"
               onClick={onPrimaryAction}
-              data-cta="event-snapshot-primary"
+              data-cta="event-promise-primary"
             >
-              保留這場入場名額
+              購買這場完整體驗
             </Button>
           </div>
 
           <div className="border-t border-pearl/10 bg-obsidian/70 px-5 py-7 sm:px-8 md:border-l md:border-t-0 md:px-10 md:py-12">
             <p className="font-heading text-xs tracking-[0.28em] text-blaze/80">
-              NEXT DROP
+              NEXT SESSION
             </p>
             <h2 className="mt-4 text-2xl font-heading font-bold text-pearl md:text-4xl">
-              {featuredTicket?.title ?? eventName}
+              {featuredTicket?.title ?? `${eventName} 完整體驗`}
             </h2>
             <div className="mt-6 space-y-4 text-sm text-mist/78">
               <div className="flex items-start justify-between gap-4 border-b border-pearl/10 pb-4">
@@ -323,13 +351,13 @@ function EventSnapshotSection({
               <div className="flex items-start justify-between gap-4 border-b border-pearl/10 pb-4">
                 <span>入場</span>
                 <strong className="text-right font-heading text-neon">
-                  首場免費體驗
+                  付款確認，不需入會
                 </strong>
               </div>
               <div className="flex items-start justify-between gap-4">
-                <span>{originalPriceLabel}</span>
+                <span>{remainingLabel}</span>
                 <strong className="text-right font-heading text-blaze">
-                  {remainingLabel}
+                  {price?.label ?? '即時報價'}
                 </strong>
               </div>
             </div>
@@ -340,79 +368,65 @@ function EventSnapshotSection({
   )
 }
 
-function EventDecisionSection() {
-  const decisions = [
-    {
-      title: '把首頁的感覺，變成這一場',
-      body: '你不是被丟進課表自己選。這一頁先保留首頁的完整世界觀，再把終點變成一張明確活動票。',
-    },
-    {
-      title: '新手知道自己會怎麼進場',
-      body: '不用先研究課程種類。你只要知道時間、地點、教練會帶、第一次可以跟上，心理負擔就會低很多。',
-    },
-    {
-      title: '優惠不搶走預約動作',
-      body: '先完成保留，LINE 收到確認卡，再接 618 首購優惠。順序清楚，按鈕才不會讓人誤會。',
-    },
-  ]
-
+function EventReframeSection() {
   return (
-    <SectionWrapper id="event-decision">
+    <SectionWrapper id="event-reframe">
       <SectionHeading
-        title="首頁負責讓你想來，這裡負責讓你真的進場。"
-        subtitle="廣告流量需要的不是另一張課程表，而是把期待、流程、名額和下一步說清楚。"
+        title="大家都知道運動很好，但很多人不想走進健身房。"
+        subtitle="不是你不知道該運動，而是你不想面對入會、推銷、合約，或一堂又一堂無聊的課。"
       />
 
-      <div className="grid gap-3 md:grid-cols-3 md:gap-5">
-        {decisions.map((decision, index) => (
-          <motion.div
-            key={decision.title}
-            initial={{ opacity: 0, y: 18 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: index * 0.08 }}
-            className="rounded-2xl border border-pearl/10 bg-pearl/[0.03] p-5 shadow-[0_20px_60px_rgba(0,0,0,0.24)] md:p-6"
-          >
-            <p className="font-heading text-xs tracking-[0.28em] text-neon/70">
-              0{index + 1}
-            </p>
-            <h3 className="mt-4 text-xl font-heading font-bold text-pearl">
-              {decision.title}
-            </h3>
-            <p className="mt-3 text-sm leading-relaxed text-mist/72">
-              {decision.body}
-            </p>
-          </motion.div>
-        ))}
+      <div className="mx-auto grid max-w-5xl gap-4 md:grid-cols-[0.95fr_1.05fr] md:gap-6">
+        <div className="rounded-2xl border border-pearl/10 bg-pearl/[0.035] p-5 md:p-7">
+          <p className="font-heading text-xs tracking-[0.28em] text-blaze/80">
+            OLD GYM SCRIPT
+          </p>
+          <h3 className="mt-4 text-2xl font-heading font-bold text-pearl">
+            你以為自己要面對的是健身房流程。
+          </h3>
+          <p className="mt-4 text-sm leading-relaxed text-mist/74 md:text-base">
+            填表、諮詢、參觀、方案介紹、會員價格、教練課推薦。很多人不是不想動，而是不想一開始就被拉進這套流程。
+          </p>
+        </div>
+        <div className="rounded-2xl border border-neon/20 bg-neon/[0.055] p-5 md:p-7">
+          <p className="font-heading text-xs tracking-[0.28em] text-neon/80">
+            FIGHT NIGHT
+          </p>
+          <h3 className="mt-4 text-2xl font-heading font-bold text-pearl">
+            我們把課程重新編排成一場情緒價值體驗。
+          </h3>
+          <p className="mt-4 text-sm leading-relaxed text-mist/74 md:text-base">
+            你不用自己找動力。音樂、倒數、教練口令、拳套聲和旁邊的人，會一起把你帶進那個節奏。你買的是一段完整體驗，不是被銷售打擾的試用。
+          </p>
+        </div>
       </div>
     </SectionWrapper>
   )
 }
 
-function EventArrivalSection() {
-  const flow = [
-    ['入場報到', '不用先懂拳擊，先到現場讓教練帶你進節奏。'],
-    ['暖身與基本節奏', '站位、出拳、呼吸、強度都會被拆開帶過。'],
-    ['進入主段', '音樂、倒數、拳套聲和旁邊的人一起把你推進狀態。'],
-    ['最後一輪', '不是為了變強給別人看，而是讓身體真的醒過來。'],
-    ['LINE 確認後續', '預約確認卡先到，再自然接 618 首購優惠。'],
+function EventNoSalesSection() {
+  const items = [
+    ['不會要求入會', '你買的是這一場完整體驗，不需要先承諾長期方案。'],
+    ['不會中途推銷', '現場重點是教練帶領、節奏、動作和氛圍，不會把體驗切斷拿來談銷售。'],
+    ['不需要先會拳擊', '第一次來也可以跟，動作與強度會被拆開帶。'],
+    ['付款後 LINE 確認', '付款完成後會收到已付款入場確認卡，場次資訊清楚留在 LINE。'],
   ]
 
   return (
-    <SectionWrapper id="event-arrival">
+    <SectionWrapper id="event-no-sales">
       <SectionHeading
-        title="你不是來上一堂冷冰冰的課。"
-        subtitle="你是進一場有人帶、有節奏、有結束點的下班後活動。"
+        title="你只需要完成付款，然後進場享受。"
+        subtitle="這一頁的重點不是把你帶進銷售流程，而是讓你安心買一次完整體驗。"
       />
 
       <div className="mx-auto max-w-4xl border-y border-pearl/10">
-        {flow.map(([title, body], index) => (
+        {items.map(([title, body], index) => (
           <div
             key={title}
             className="grid gap-3 border-b border-pearl/10 py-5 last:border-b-0 md:grid-cols-[120px_1fr] md:items-start md:py-6"
           >
             <p className="font-heading text-sm tracking-[0.24em] text-blaze/75">
-              STEP {index + 1}
+              0{index + 1}
             </p>
             <div>
               <h3 className="text-xl font-heading font-bold text-pearl">
@@ -433,16 +447,19 @@ function EventTicketCard({
   ticket,
   availability,
   hasLiveData,
-  onReserve,
+  offerEligible,
+  onPurchase,
   featured,
 }: {
   ticket: EventTicket
   availability: SessionAvailability
   hasLiveData: boolean
-  onReserve: (ticket: EventTicket) => void
+  offerEligible: boolean
+  onPurchase: (ticket: EventTicket) => void
   featured?: boolean
 }) {
   const remainingLabel = getRemainingLabel(availability, hasLiveData)
+  const price = getEventTicketPrice(ticket, availability, offerEligible)
   const disabled = hasLiveData && availability.remaining <= 0
 
   return (
@@ -459,17 +476,17 @@ function EventTicketCard({
     >
       {featured && (
         <p className="mb-4 inline-flex rounded-full border border-neon/25 bg-neon/10 px-3 py-1 text-xs font-heading tracking-[0.24em] text-neon">
-          建議先保留
+          建議先進這場
         </p>
       )}
       <p className="font-heading text-xs tracking-[0.28em] text-blaze/80">
-        EVENT TICKET
+        COMPLETE EXPERIENCE
       </p>
       <h3 className="mt-3 text-2xl font-heading font-bold text-pearl">
         {ticket.title}
       </h3>
       <p className="mt-2 text-sm text-mist/70">
-        首堂免費體驗 · {ticket.styleLabel}
+        {ticket.styleLabel} · 不用入會 · 不被推銷
       </p>
 
       <div className="mt-6 space-y-3 text-sm">
@@ -491,23 +508,35 @@ function EventTicketCard({
             {ticket.coachLabel}
           </strong>
         </div>
-        <div className="flex justify-between gap-4">
-          <span className="text-mist/62">{originalPriceLabel}</span>
+        <div className="flex justify-between gap-4 border-b border-pearl/10 pb-3">
+          <span className="text-mist/62">名額</span>
           <strong className="text-right font-heading text-neon">
             {remainingLabel}
           </strong>
         </div>
+        <div className="flex justify-between gap-4">
+          <span className="text-mist/62">一次付款</span>
+          <strong className="text-right font-heading text-blaze">
+            {price.label}
+          </strong>
+        </div>
       </div>
+
+      {price.offerApplied && (
+        <p className="mt-3 text-xs leading-relaxed text-mist/55">
+          系統已套用目前可用的線上活動價；現場不需要再談方案。
+        </p>
+      )}
 
       <Button
         size="lg"
         className="mt-6 w-full"
         disabled={disabled}
-        onClick={() => onReserve(ticket)}
-        data-cta="event-ticket-reserve"
+        onClick={() => onPurchase(ticket)}
+        data-cta="event-ticket-purchase"
         data-ticket={ticket.id}
       >
-        {disabled ? '本場候補中' : '保留這場入場名額'}
+        {disabled ? '本場候補中' : '購買這場完整體驗'}
       </Button>
     </motion.article>
   )
@@ -517,18 +546,20 @@ function EventTicketDropSection({
   tickets,
   getAvailability,
   hasLiveData,
-  onReserve,
+  offerEligible,
+  onPurchase,
 }: {
   tickets: EventTicket[]
   getAvailability: (sessionId: string) => SessionAvailability
   hasLiveData: boolean
-  onReserve: (ticket: EventTicket) => void
+  offerEligible: boolean
+  onPurchase: (ticket: EventTicket) => void
 }) {
   return (
     <SectionWrapper id="event-entry" className="pb-28 md:pb-32">
       <SectionHeading
-        title="選一場你可以進場的 Fight Night。"
-        subtitle="這裡不是課程表。每一張都是一場活動入場卡，先保留，LINE 再收預約確認。"
+        title="選一場，像買活動一樣完成付款。"
+        subtitle="付款後保留名額，LINE 收入場確認。你買的是一場完整體驗，不是入會前導。"
       />
 
       <div className="grid gap-4 md:grid-cols-2 md:gap-6">
@@ -538,32 +569,37 @@ function EventTicketDropSection({
             ticket={ticket}
             availability={getAvailability(ticket.sessionId)}
             hasLiveData={hasLiveData}
+            offerEligible={offerEligible}
             featured={index === 0}
-            onReserve={onReserve}
+            onPurchase={onPurchase}
           />
         ))}
       </div>
 
       <div className="mx-auto mt-8 max-w-3xl rounded-2xl border border-pearl/10 bg-black/35 p-5 text-center md:p-7">
         <p className="text-base font-heading font-bold text-pearl md:text-xl">
-          送出後，先收到 LINE 免費體驗預約確認。
+          付款完成後，這場體驗就是你的。
         </p>
         <p className="mx-auto mt-2 max-w-2xl text-sm leading-relaxed text-mist/70 md:text-base">
-          預約確認完成後，才接著看 618 首購優惠。這樣用戶知道自己已經保留場次，不會把「查看優惠」誤認成預約動作。
+          你不需要現場談會員，也不需要先聽方案。照著 LINE 入場確認到場，完整跟著教練與節奏走完這一場。
         </p>
       </div>
     </SectionWrapper>
   )
 }
 
-function ReservationModal({
+function CheckoutModal({
   selectedTicket,
+  availability,
+  offerEligible,
+  refreshOfferEligibility,
   onClose,
-  onOfferClick,
 }: {
   selectedTicket: EventTicket | null
+  availability: SessionAvailability | null
+  offerEligible: boolean
+  refreshOfferEligibility: () => Promise<boolean>
   onClose: () => void
-  onOfferClick: (referenceId?: string) => void
 }) {
   const { track } = useTracking()
   const [form, setForm] = useState<BuyerContactForm>({
@@ -573,7 +609,6 @@ function ReservationModal({
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
-  const [success, setSuccess] = useState<ReservationSuccess | null>(null)
 
   useEffect(() => {
     if (!selectedTicket) return
@@ -587,10 +622,17 @@ function ReservationModal({
       email: savedContact?.email || lineContext?.email || '',
     })
     setSubmitError('')
-    setSuccess(null)
   }, [selectedTicket])
 
-  if (!selectedTicket || typeof document === 'undefined') return null
+  if (!selectedTicket || !availability || typeof document === 'undefined') {
+    return null
+  }
+
+  const displayPrice = getEventTicketPrice(
+    selectedTicket,
+    availability,
+    offerEligible,
+  )
 
   const handleChange =
     (field: keyof BuyerContactForm) =>
@@ -607,7 +649,7 @@ function ReservationModal({
 
     const lineContext = getLineRequestContext()
     if (!lineContext?.lineUserId) {
-      setSubmitError('請先完成 LINE 登入，才能保留這場入場名額。')
+      setSubmitError('請先完成 LINE 登入，付款後才能收到入場確認卡。')
       return
     }
 
@@ -623,20 +665,15 @@ function ReservationModal({
       lineContext.lineUserId,
     )
 
-    track({
-      event: 'free_trial_reservation_submit',
-      params: {
-        source: landingVariant,
-        course_id: selectedTicket.course.id,
-        course_name: selectedTicket.course.name,
-        session_id: selectedTicket.sessionId,
-      },
-      metaStandardEvent: 'CompleteRegistration',
-      lineEventName: 'FreeTrialReservationSubmit',
-    })
-
     try {
-      const response = await fetch('/api/free-trial-reservation', {
+      const latestOfferEligible = await refreshOfferEligibility()
+      const checkoutPrice = getEventTicketPrice(
+        selectedTicket,
+        availability,
+        latestOfferEligible,
+      )
+
+      const response = await fetch('/api/shopline/checkout-session', {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
@@ -644,67 +681,87 @@ function ReservationModal({
         },
         body: JSON.stringify({
           buyer: form,
-          course: selectedTicket.course,
           lineContext,
+          course: selectedTicket.course,
+          packageSize: 1,
+          quotedAmountValue: checkoutPrice.amount,
+          quotedOriginalAmountValue: checkoutPrice.originalAmount,
+          requestedOfferCode: checkoutPrice.offerApplied
+            ? '618_MIDYEAR_FIRST_PURCHASE_HALF'
+            : undefined,
+          sessionIds: [selectedTicket.sessionId],
+          seriesDates: [selectedTicket.course.date],
           sourcePath: getSourcePath(),
           tracking: {
             ...getCheckoutTrackingContext(),
             landingVariant,
             eventName,
             ticketId: selectedTicket.id,
+            noMembershipSalesFlow: true,
           },
           client: getClientContext(),
         }),
       })
 
-      const data = await response.json().catch(() => null)
-      if (!response.ok) {
+      const data = (await response.json().catch(() => null)) as
+        | {
+            referenceId?: string
+            sessionUrl?: string
+            reason?: string
+            error?: string
+          }
+        | null
+
+      if (!response.ok || !data?.sessionUrl) {
         throw new Error(
-          typeof data?.error === 'string'
-            ? data.error
-            : '目前無法保留這場，請稍後再試。',
+          data?.error || '目前無法建立付款連結，請稍後再試。',
         )
       }
 
-      const referenceId =
-        typeof data?.referenceId === 'string' ? data.referenceId : ''
-
-      setSuccess({
-        referenceId,
-        ticket: selectedTicket,
-        lineNotifyStatus:
-          typeof data?.lineNotify?.status === 'string'
-            ? data.lineNotify.status
-            : undefined,
-      })
-
       track({
-        event: 'free_trial_reservation_success',
+        event: 'shopline_checkout_submit',
         params: {
           source: landingVariant,
-          reference_id: referenceId,
+          reference_id: data.referenceId,
           course_id: selectedTicket.course.id,
-          session_id: selectedTicket.sessionId,
+          course_name: selectedTicket.course.name,
+          category: selectedTicket.course.category,
+          venue_id: selectedTicket.course.venueId,
+          venue_name: selectedTicket.course.venueName,
+          date: selectedTicket.course.date,
+          start_time: selectedTicket.course.startTime,
+          coach: selectedTicket.course.coach,
+          coach_pricing_tier: checkoutPrice.pricingTier,
+          package_size: 1,
+          value: checkoutPrice.amount,
+          original_value: checkoutPrice.originalAmount,
+          currency: 'TWD',
+          remaining: availability.remaining,
+          event_product: 'complete_experience_no_membership',
+          discount_code: checkoutPrice.offerApplied
+            ? '618_MIDYEAR_FIRST_PURCHASE_HALF'
+            : undefined,
         },
-        metaStandardEvent: 'Lead',
-        lineEventName: 'FreeTrialReservationSuccess',
+        metaStandardEvent: 'InitiateCheckout',
+        lineEventName: 'CheckoutSubmit',
       })
+
+      window.location.href = data.sessionUrl
     } catch (error) {
       const message =
         error instanceof Error
           ? error.message
-          : '目前無法保留這場，請稍後再試。'
+          : '目前無法建立付款連結，請稍後再試。'
       setSubmitError(message)
       track({
-        event: 'free_trial_reservation_error',
+        event: 'shopline_checkout_error',
         params: {
           source: landingVariant,
           course_id: selectedTicket.course.id,
           session_id: selectedTicket.sessionId,
-          error: message,
+          error_message: message,
         },
       })
-    } finally {
       setIsSubmitting(false)
     }
   }
@@ -725,131 +782,86 @@ function ReservationModal({
           ×
         </button>
 
-        {success ? (
-          <div>
-            <p className="font-heading text-xs tracking-[0.32em] text-neon/80">
-              RESERVED
-            </p>
-            <h2 className="mt-3 text-3xl font-heading font-bold text-pearl">
-              這場名額已先為你保留。
-            </h2>
-            <p className="mt-4 text-sm leading-relaxed text-mist/72 md:text-base">
-              請到 LINE 裡查看免費體驗預約確認卡，確認場次、時間與地點。確認後，可以接著查看 618 首購優惠。
-            </p>
+        <form onSubmit={handleSubmit}>
+          <p className="font-heading text-xs tracking-[0.32em] text-neon/80">
+            COMPLETE EXPERIENCE
+          </p>
+          <h2 className="mt-3 text-3xl font-heading font-bold text-pearl">
+            確認資料，前往付款
+          </h2>
 
-            <div className="mt-6 rounded-2xl border border-pearl/10 bg-black/35 p-4">
-              <p className="font-heading font-bold text-pearl">
-                {success.ticket.title}
-              </p>
-              <p className="mt-2 text-sm text-mist/70">
-                {success.ticket.venueLabel} · {success.ticket.dateLabel}{' '}
-                {success.ticket.timeLabel}
-              </p>
-              <p className="mt-3 text-xs text-mist/55">
-                預約編號：{success.referenceId}
-              </p>
-            </div>
-
-            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-              <Button
-                size="lg"
-                className="w-full"
-                onClick={() => onOfferClick(success.referenceId)}
-                data-cta="event-success-offer"
-              >
-                查看 618 首購優惠
-              </Button>
-              <Button
-                size="lg"
-                variant="secondary"
-                className="w-full"
-                onClick={onClose}
-                data-cta="event-success-close"
-              >
-                先回活動頁
-              </Button>
-            </div>
+          <div className="mt-5 rounded-2xl border border-neon/20 bg-neon/[0.04] p-4">
+            <p className="font-heading font-bold text-pearl">
+              {selectedTicket.title}
+            </p>
+            <p className="mt-2 text-sm text-mist/70">
+              {selectedTicket.venueLabel} · {selectedTicket.dateLabel}{' '}
+              {selectedTicket.timeLabel}
+            </p>
+            <p className="mt-3 text-2xl font-heading font-bold text-neon">
+              {displayPrice.label}
+            </p>
+            <p className="mt-2 text-sm leading-relaxed text-mist/62">
+              一次付款，不需入會，不安排銷售諮詢。付款完成後會透過 LINE 收到入場確認。
+            </p>
           </div>
-        ) : (
-          <form onSubmit={handleSubmit}>
-            <p className="font-heading text-xs tracking-[0.32em] text-neon/80">
-              FREE TRIAL
+
+          <div className="mt-5 space-y-4">
+            <label className="block">
+              <span className="text-sm font-heading text-pearl">姓名</span>
+              <input
+                value={form.name}
+                onChange={handleChange('name')}
+                required
+                autoComplete="name"
+                className="mt-2 w-full rounded-xl border border-pearl/20 bg-black/35 px-4 py-3 text-pearl outline-none transition focus:border-neon/60"
+                placeholder="王小明"
+              />
+            </label>
+            <label className="block">
+              <span className="text-sm font-heading text-pearl">手機</span>
+              <input
+                value={form.phone}
+                onChange={handleChange('phone')}
+                required
+                inputMode="tel"
+                autoComplete="tel"
+                className="mt-2 w-full rounded-xl border border-pearl/20 bg-black/35 px-4 py-3 text-pearl outline-none transition focus:border-neon/60"
+                placeholder="0912345678"
+              />
+            </label>
+            <label className="block">
+              <span className="text-sm font-heading text-pearl">Email</span>
+              <input
+                value={form.email}
+                onChange={handleChange('email')}
+                inputMode="email"
+                autoComplete="email"
+                className="mt-2 w-full rounded-xl border border-pearl/20 bg-black/35 px-4 py-3 text-pearl outline-none transition focus:border-neon/60"
+                placeholder="name@example.com"
+              />
+            </label>
+          </div>
+
+          {submitError && (
+            <p className="mt-4 rounded-xl border border-blaze/25 bg-blaze/10 px-4 py-3 text-sm leading-relaxed text-blaze">
+              {submitError}
             </p>
-            <h2 className="mt-3 text-3xl font-heading font-bold text-pearl">
-              確認資料，保留此場預約
-            </h2>
+          )}
 
-            <div className="mt-5 rounded-2xl border border-neon/20 bg-neon/[0.04] p-4">
-              <p className="font-heading font-bold text-pearl">
-                首堂免費體驗 · {selectedTicket.styleLabel}
-              </p>
-              <p className="mt-2 text-sm text-mist/70">
-                {selectedTicket.venueLabel} · {selectedTicket.dateLabel}{' '}
-                {selectedTicket.timeLabel}
-              </p>
-              <p className="mt-3 text-xl font-heading font-bold text-neon">
-                免費
-              </p>
-              <p className="mt-1 text-sm text-mist/55">{originalPriceLabel}</p>
-            </div>
-
-            <div className="mt-5 space-y-4">
-              <label className="block">
-                <span className="text-sm font-heading text-pearl">姓名</span>
-                <input
-                  value={form.name}
-                  onChange={handleChange('name')}
-                  required
-                  autoComplete="name"
-                  className="mt-2 w-full rounded-xl border border-pearl/20 bg-black/35 px-4 py-3 text-pearl outline-none transition focus:border-neon/60"
-                  placeholder="王小明"
-                />
-              </label>
-              <label className="block">
-                <span className="text-sm font-heading text-pearl">手機</span>
-                <input
-                  value={form.phone}
-                  onChange={handleChange('phone')}
-                  required
-                  inputMode="tel"
-                  autoComplete="tel"
-                  className="mt-2 w-full rounded-xl border border-pearl/20 bg-black/35 px-4 py-3 text-pearl outline-none transition focus:border-neon/60"
-                  placeholder="0912345678"
-                />
-              </label>
-              <label className="block">
-                <span className="text-sm font-heading text-pearl">Email</span>
-                <input
-                  value={form.email}
-                  onChange={handleChange('email')}
-                  inputMode="email"
-                  autoComplete="email"
-                  className="mt-2 w-full rounded-xl border border-pearl/20 bg-black/35 px-4 py-3 text-pearl outline-none transition focus:border-neon/60"
-                  placeholder="name@example.com"
-                />
-              </label>
-            </div>
-
-            {submitError && (
-              <p className="mt-4 rounded-xl border border-blaze/25 bg-blaze/10 px-4 py-3 text-sm leading-relaxed text-blaze">
-                {submitError}
-              </p>
-            )}
-
-            <Button
-              type="submit"
-              size="lg"
-              disabled={isSubmitting}
-              className="mt-6 w-full"
-              data-cta="event-reservation-submit"
-            >
-              {isSubmitting ? '正在保留名額...' : '保留此場預約'}
-            </Button>
-            <p className="mt-3 text-center text-xs leading-relaxed text-mist/55">
-              送出後會儲存這次填寫的資料，下次預約或購買課程會自動帶入。
-            </p>
-          </form>
-        )}
+          <Button
+            type="submit"
+            size="lg"
+            disabled={isSubmitting}
+            className="mt-6 w-full"
+            data-cta="event-checkout-submit"
+          >
+            {isSubmitting ? '正在建立付款連結...' : '前往付款，確認這場體驗'}
+          </Button>
+          <p className="mt-3 text-center text-xs leading-relaxed text-mist/55">
+            送出後會儲存這次填寫的資料，下次預約或購買課程會自動帶入。
+          </p>
+        </form>
       </motion.div>
     </div>,
     document.body,
@@ -866,10 +878,53 @@ export function FightNightEventPage() {
   const { gateState, requestGateAccess, loginUrl } = useLiffGate()
   const { track, trackGateAccess } = useTracking()
   const [selectedTicket, setSelectedTicket] = useState<EventTicket | null>(null)
+  const [offerState, setOfferState] = useState<OfferState>('idle')
+  const offerEligible = offerState === 'eligible'
   const featuredTicket = tickets[0]
   const featuredAvailability = featuredTicket
     ? getAvailability(featuredTicket.sessionId)
     : undefined
+  const featuredPrice =
+    featuredTicket && featuredAvailability
+      ? getEventTicketPrice(featuredTicket, featuredAvailability, offerEligible)
+      : undefined
+
+  const refreshOfferEligibility = useCallback(async () => {
+    const lineContext = getLineRequestContext()
+    if (!lineContext?.lineUserId) {
+      setOfferState('ineligible')
+      return false
+    }
+
+    setOfferState('checking')
+    try {
+      const response = await fetch('/api/shopline/first-purchase-offer', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          accept: 'application/json',
+        },
+        body: JSON.stringify({
+          lineContext,
+        }),
+      })
+      const data = await response.json().catch(() => null)
+      const eligible = response.ok && data?.eligible === true
+      setOfferState(eligible ? 'eligible' : 'ineligible')
+      track({
+        event: 'first_purchase_offer_check',
+        params: {
+          source: landingVariant,
+          eligible,
+          reason: typeof data?.reason === 'string' ? data.reason : '',
+        },
+      })
+      return eligible
+    } catch {
+      setOfferState('error')
+      return false
+    }
+  }, [track])
 
   useEffect(() => {
     track({
@@ -877,13 +932,23 @@ export function FightNightEventPage() {
       params: {
         source: landingVariant,
         event_name: eventName,
+        paid_experience_flow: true,
       },
       metaStandardEvent: 'ViewContent',
       lineEventName: 'EventPageView',
     })
   }, [track])
 
-  const openReservation = async (ticket?: EventTicket) => {
+  useEffect(() => {
+    if (gateState.status === 'unlocked' && offerState === 'idle') {
+      const timer = window.setTimeout(() => {
+        void refreshOfferEligibility()
+      }, 0)
+      return () => window.clearTimeout(timer)
+    }
+  }, [gateState.status, offerState, refreshOfferEligibility])
+
+  const openCheckout = async (ticket?: EventTicket) => {
     const targetTicket = ticket ?? featuredTicket
     if (!targetTicket) return
 
@@ -894,13 +959,14 @@ export function FightNightEventPage() {
         ticket_id: targetTicket.id,
         course_id: targetTicket.course.id,
         gate_status: gateState.status,
+        event_product: 'complete_experience_no_membership',
       },
-      metaStandardEvent: 'Lead',
+      metaStandardEvent: 'AddToCart',
       lineEventName: 'EventTicketClick',
     })
 
     if (gateState.status !== 'unlocked') {
-      trackGateAccess('event_ticket_card', gateState.status)
+      trackGateAccess('event_paid_experience', gateState.status)
       if (loginUrl && ['loading', 'logged-out'].includes(gateState.status)) {
         window.location.href = loginUrl
         return
@@ -910,13 +976,17 @@ export function FightNightEventPage() {
       if (!unlocked) return
     }
 
+    if (offerState === 'idle' || offerState === 'error') {
+      void refreshOfferEligibility()
+    }
+
     setSelectedTicket(targetTicket)
   }
 
   const structuredData = featuredTicket
     ? {
         '@type': 'Event',
-        name: eventName,
+        name: `${eventName} 完整體驗`,
         description: eventDescription,
         startDate: `${featuredTicket.course.date}T${featuredTicket.course.startTime}:00+08:00`,
         endDate: `${featuredTicket.course.date}T${featuredTicket.course.endTime}:00+08:00`,
@@ -929,7 +999,7 @@ export function FightNightEventPage() {
         },
         offers: {
           '@type': 'Offer',
-          price: '0',
+          price: String(featuredPrice?.amount ?? ''),
           priceCurrency: 'TWD',
           availability: 'https://schema.org/InStock',
         },
@@ -939,16 +1009,16 @@ export function FightNightEventPage() {
   return (
     <div className="relative w-full overflow-x-hidden bg-abyss">
       <Seo
-        title="After Work Fight Night｜首場免費體驗入場"
+        title="After Work Fight Night｜不用入會的一次完整體驗"
         description={eventDescription}
         canonicalPath="/fight-night-event"
         keywords={[
           'Fight Night',
           'UFC GYM',
-          '免費體驗',
           '拳擊體驗',
           '泰拳體驗',
           '下班活動',
+          '不用入會',
         ]}
         image={heroPoster}
         structuredData={structuredData}
@@ -956,46 +1026,52 @@ export function FightNightEventPage() {
       <Header />
       <main>
         <HeroSection />
-        <EventSnapshotSection
+        <EventPromiseSection
           featuredTicket={featuredTicket}
           availability={featuredAvailability}
           hasLiveData={hasLiveData}
-          onPrimaryAction={() => openReservation()}
+          price={featuredPrice}
+          onPrimaryAction={() => openCheckout()}
         />
         <PainSection />
+        <EventReframeSection />
         <OldFrameworkBreakSection />
         <NewModelSection />
-        <EventDecisionSection />
         <FormulaSection />
         <ExperienceFlowSection />
-        <EventArrivalSection />
+        <EventNoSalesSection />
         <IdentitySection />
         <FAQSection />
         <FAQSection
           id="event-faq"
-          title="第一次進場前，先把疑慮說清楚。"
-          subtitle="保留的是一場免費體驗入場名額，不是要你立刻買課。"
+          title="第一次買這場體驗前，先把疑慮說清楚。"
+          subtitle="你買的是一次完整 Fight Night，不是入會諮詢，也不是免費體驗後的推銷流程。"
           items={eventFaqItems}
         />
         <EventTicketDropSection
           tickets={tickets}
           getAvailability={getAvailability}
           hasLiveData={hasLiveData}
-          onReserve={openReservation}
+          offerEligible={offerEligible}
+          onPurchase={openCheckout}
         />
       </main>
       <Footer />
       <StickyActionBar
-        eyebrow="FREE TRIAL"
+        eyebrow="NO MEMBERSHIP"
         title="After Work Fight Night"
-        detail="先保留入場名額，LINE 再確認"
-        actionLabel="保留名額"
+        detail="一次付款，完整體驗"
+        actionLabel="購買體驗"
         onAction={() => scrollToId('event-entry')}
       />
-      <ReservationModal
+      <CheckoutModal
         selectedTicket={selectedTicket}
+        availability={
+          selectedTicket ? getAvailability(selectedTicket.sessionId) : null
+        }
+        offerEligible={offerEligible}
+        refreshOfferEligibility={refreshOfferEligibility}
         onClose={() => setSelectedTicket(null)}
-        onOfferClick={navigateToFirstPurchaseOffer}
       />
     </div>
   )
