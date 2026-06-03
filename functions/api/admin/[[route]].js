@@ -5,6 +5,21 @@ import {
 
 const LINE_PUSH_ENDPOINT = 'https://api.line.me/v2/bot/message/push'
 const DEFAULT_PUBLIC_ORIGIN = 'https://fightnight.25min.co'
+const LINE_RECOVERY_BATCH_LIMIT = 50
+const LINE_RECOVERY_TEMPLATE_VERSION = '2026-06-03-admin-story-carousel-v2'
+const LINE_STORY_CARD_BLUE = '#073DAE'
+const LINE_STORY_CARD_TEXT = '#253349'
+const LINE_STORY_CARD_MUTED = '#65718A'
+const LINE_STORY_CARD_BG = '#F7FBFF'
+
+const LINE_RECOVERY_TEMPLATE_IDS = [
+  'pending_checkout',
+  'weekly_trial_invite',
+  'reserved_to_first_purchase',
+  'offer_viewed_unpaid',
+  'course_reminder',
+  'newcomer_entry',
+]
 
 const ATTENTION_STATUSES = [
   'payment_processing',
@@ -202,6 +217,7 @@ async function ensureAdminCoreTables(env) {
   await ensureOrderTrackingColumns(env)
   await ensureLineRecoveryTables(env)
   await ensureLineMessageSendsTable(env)
+  await ensureLineMessageSendMetadataColumns(env)
 }
 
 async function ensureCustomerTrackingTables(env) {
@@ -498,12 +514,17 @@ async function ensureLineRecoveryTables(env) {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         recovery_id TEXT NOT NULL UNIQUE,
         line_user_id TEXT NOT NULL,
+        batch_id TEXT,
         template_id TEXT NOT NULL,
+        segment TEXT,
         target_url TEXT,
         status TEXT NOT NULL DEFAULT 'sending',
         message_json TEXT,
         response_json TEXT,
         error TEXT,
+        blocker_reason TEXT,
+        staff_note TEXT,
+        template_version TEXT,
         attempted_at TEXT NOT NULL DEFAULT (datetime('now')),
         sent_at TEXT,
         created_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -518,7 +539,84 @@ async function ensureLineRecoveryTables(env) {
       `CREATE INDEX IF NOT EXISTS idx_line_recovery_messages_status
        ON line_recovery_messages (status, created_at)`,
     ),
+    env.DB.prepare(
+      `CREATE TABLE IF NOT EXISTS line_recovery_batches (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        batch_id TEXT NOT NULL UNIQUE,
+        template_id TEXT NOT NULL,
+        segment TEXT,
+        selected_count INTEGER NOT NULL DEFAULT 0,
+        sendable_count INTEGER NOT NULL DEFAULT 0,
+        blocked_count INTEGER NOT NULL DEFAULT 0,
+        sent_count INTEGER NOT NULL DEFAULT 0,
+        failed_count INTEGER NOT NULL DEFAULT 0,
+        status TEXT NOT NULL DEFAULT 'created',
+        staff_note TEXT,
+        created_by TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        confirmed_at TEXT,
+        completed_at TEXT
+      )`,
+    ),
+    env.DB.prepare(
+      `CREATE INDEX IF NOT EXISTS idx_line_recovery_batches_created
+       ON line_recovery_batches (created_at)`,
+    ),
   ])
+
+  await addColumnsIfMissing(env, 'line_recovery_messages', [
+    ['batch_id', 'TEXT'],
+    ['segment', 'TEXT'],
+    ['blocker_reason', 'TEXT'],
+    ['staff_note', 'TEXT'],
+    ['template_version', 'TEXT'],
+  ])
+}
+
+async function addColumnsIfMissing(env, tableName, columns) {
+  for (const [name, type] of columns) {
+    try {
+      await env.DB.prepare(
+        `ALTER TABLE ${tableName} ADD COLUMN ${name} ${type}`,
+      ).run()
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        (/duplicate column/i.test(error.message) || /no such table/i.test(error.message))
+      ) {
+        continue
+      }
+      throw error
+    }
+  }
+}
+
+async function ensureLineMessageSendMetadataColumns(env) {
+  await addColumnsIfMissing(env, 'line_message_sends', [
+    ['batch_id', 'TEXT'],
+    ['segment', 'TEXT'],
+    ['blocker_reason', 'TEXT'],
+    ['staff_note', 'TEXT'],
+    ['template_version', 'TEXT'],
+  ])
+
+  try {
+    await env.DB.batch([
+      env.DB.prepare(
+        `CREATE INDEX IF NOT EXISTS idx_line_message_sends_batch
+         ON line_message_sends (batch_id, created_at)`,
+      ),
+      env.DB.prepare(
+        `CREATE INDEX IF NOT EXISTS idx_line_message_sends_segment
+         ON line_message_sends (segment, created_at)`,
+      ),
+    ])
+  } catch (error) {
+    if (error instanceof Error && /no such table/i.test(error.message)) {
+      return
+    }
+    throw error
+  }
 }
 
 function normalizeOrder(row) {
@@ -758,6 +856,16 @@ async function listEvents(env, url) {
 }
 
 function normalizeLineCustomer(row) {
+  const customer = {
+    ...row,
+    paid_orders: toNumber(row.paid_orders),
+    pending_orders: toNumber(row.pending_orders),
+    free_reserved_orders: toNumber(row.free_reserved_orders),
+    access_count: toNumber(row.access_count),
+  }
+  const suggestedTemplateId = chooseRecoveryTemplate(customer, 'auto')
+  const recoverySegment = getRecoverySegment(customer)
+
   return {
     lineUserId: row.line_user_id,
     displayName: row.display_name,
@@ -772,6 +880,7 @@ function normalizeLineCustomer(row) {
     totalOrders: toNumber(row.total_orders),
     paidOrders: toNumber(row.paid_orders),
     pendingOrders: toNumber(row.pending_orders),
+    freeReservedOrders: toNumber(row.free_reserved_orders),
     paidRevenue: toNumber(row.paid_revenue),
     latestOrderReferenceId: row.latest_order_reference_id || null,
     latestOrderStatus: row.latest_order_status || null,
@@ -795,6 +904,8 @@ function normalizeLineCustomer(row) {
     latestRecoverySentAt: row.latest_recovery_sent_at || null,
     latestRecoveryAttemptedAt: row.latest_recovery_attempted_at || null,
     latestRecoveryError: row.latest_recovery_error || null,
+    suggestedRecoveryTemplateId: suggestedTemplateId,
+    recoverySegment,
   }
 }
 
@@ -823,6 +934,7 @@ async function listLineCustomers(env, url) {
        SELECT lc.line_user_id, lc.display_name, lc.picture_url, lc.status_message,
               lc.email, lc.email_verified, lc.is_friend, lc.access_count, lc.first_seen_at, lc.last_seen_at,
               0 AS total_orders, 0 AS paid_orders, 0 AS pending_orders,
+              0 AS free_reserved_orders,
               0 AS paid_revenue,
               lr.template_id AS latest_recovery_template_id,
               lr.status AS latest_recovery_status,
@@ -854,6 +966,7 @@ async function listLineCustomers(env, url) {
          SELECT lc.line_user_id, lc.display_name, lc.picture_url, lc.status_message,
                 lc.email, lc.email_verified, lc.is_friend, lc.access_count, lc.first_seen_at, lc.last_seen_at,
                 0 AS total_orders, 0 AS paid_orders, 0 AS pending_orders,
+                0 AS free_reserved_orders,
                 0 AS paid_revenue,
                 lr.template_id AS latest_recovery_template_id,
                 lr.status AS latest_recovery_status,
@@ -877,6 +990,7 @@ async function listLineCustomers(env, url) {
                 COUNT(*) AS total_orders,
                 COALESCE(SUM(CASE WHEN status = 'paid' THEN 1 ELSE 0 END), 0) AS paid_orders,
                 COALESCE(SUM(CASE WHEN status IN ('pending', 'payment_processing', 'session_failed') THEN 1 ELSE 0 END), 0) AS pending_orders,
+                COALESCE(SUM(CASE WHEN status = 'free_reserved' THEN 1 ELSE 0 END), 0) AS free_reserved_orders,
                 COALESCE(SUM(CASE WHEN status = 'paid' THEN amount_value ELSE 0 END), 0) AS paid_revenue
          FROM course_orders
          WHERE line_user_id IS NOT NULL AND line_user_id != ''
@@ -896,6 +1010,7 @@ async function listLineCustomers(env, url) {
               COALESCE(os.total_orders, 0) AS total_orders,
               COALESCE(os.paid_orders, 0) AS paid_orders,
               COALESCE(os.pending_orders, 0) AS pending_orders,
+              COALESCE(os.free_reserved_orders, 0) AS free_reserved_orders,
               COALESCE(os.paid_revenue, 0) AS paid_revenue,
               lr.template_id AS latest_recovery_template_id,
               lr.status AS latest_recovery_status,
@@ -934,6 +1049,7 @@ async function listLineCustomers(env, url) {
               COUNT(*) AS total_orders,
               COALESCE(SUM(CASE WHEN status = 'paid' THEN 1 ELSE 0 END), 0) AS paid_orders,
               COALESCE(SUM(CASE WHEN status IN ('pending', 'payment_processing', 'session_failed') THEN 1 ELSE 0 END), 0) AS pending_orders,
+              COALESCE(SUM(CASE WHEN status = 'free_reserved' THEN 1 ELSE 0 END), 0) AS free_reserved_orders,
               COALESCE(SUM(CASE WHEN status = 'paid' THEN amount_value ELSE 0 END), 0) AS paid_revenue
        FROM order_ranked
        GROUP BY line_user_id
@@ -952,6 +1068,7 @@ async function listLineCustomers(env, url) {
             COALESCE(os.total_orders, 0) AS total_orders,
             COALESCE(os.paid_orders, 0) AS paid_orders,
             COALESCE(os.pending_orders, 0) AS pending_orders,
+            COALESCE(os.free_reserved_orders, 0) AS free_reserved_orders,
             COALESCE(os.paid_revenue, 0) AS paid_revenue,
             latest.reference_id AS latest_order_reference_id,
             latest.status AS latest_order_status,
@@ -984,8 +1101,12 @@ async function listLineCustomers(env, url) {
 
 function normalizeLineMessage(row) {
   const message = parseJson(row.message_json, null)
+  const bodyContents =
+    message?.contents?.type === 'carousel'
+      ? message?.contents?.contents?.[0]?.body?.contents
+      : message?.contents?.body?.contents
   const title =
-    message?.contents?.body?.contents?.find?.(
+    bodyContents?.find?.(
       (item) => item?.type === 'text' && item?.size === 'xl',
     )?.text || null
 
@@ -1004,6 +1125,10 @@ function normalizeLineMessage(row) {
     templateId: row.template_id || null,
     targetUrl: row.target_url || null,
     status: row.status,
+    batchId: row.batch_id || null,
+    segment: row.segment || null,
+    staffNote: row.staff_note || null,
+    templateVersion: row.template_version || null,
     title,
     altText: message?.altText || null,
     error: row.error || null,
@@ -1042,6 +1167,10 @@ async function listLineMessages(env, url) {
               END AS template_id,
               NULL AS target_url,
               co.line_payment_notify_status AS status,
+              NULL AS batch_id,
+              NULL AS segment,
+              NULL AS staff_note,
+              NULL AS template_version,
               NULL AS message_json,
               co.line_payment_notify_response_json AS response_json,
               co.line_payment_notify_error AS error,
@@ -1077,6 +1206,10 @@ async function listLineMessages(env, url) {
               lrm.template_id,
               lrm.target_url,
               lrm.status,
+              lrm.batch_id,
+              lrm.segment,
+              lrm.staff_note,
+              lrm.template_version,
               lrm.message_json,
               lrm.response_json,
               lrm.error,
@@ -1106,6 +1239,10 @@ async function listLineMessages(env, url) {
               lms.template_id,
               lms.target_url,
               lms.status,
+              lms.batch_id,
+              lms.segment,
+              lms.staff_note,
+              lms.template_version,
               lms.message_json,
               lms.response_json,
               lms.error,
@@ -1887,6 +2024,13 @@ function createRecoveryId() {
   return `lr_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`
 }
 
+function createRecoveryBatchId() {
+  if (globalThis.crypto?.randomUUID) {
+    return `lrb_${globalThis.crypto.randomUUID()}`
+  }
+  return `lrb_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`
+}
+
 function formatLineMoney(value, currency = 'TWD') {
   const amount = Number(value || 0)
   if (currency !== 'TWD') return `${currency} ${amount.toLocaleString('en-US')}`
@@ -1931,18 +2075,48 @@ function isPendingOrderStatus(status) {
   )
 }
 
+function getAllowedRecoveryTemplateId(requestedTemplateId) {
+  return LINE_RECOVERY_TEMPLATE_IDS.includes(requestedTemplateId)
+    ? requestedTemplateId
+    : null
+}
+
+function getRecoverySegment(customer) {
+  if (toNumber(customer?.paid_orders) > 0) return 'paid'
+  if (toNumber(customer?.pending_orders) > 0) return 'checkout_started_unpaid'
+  if (toNumber(customer?.free_reserved_orders) > 0) return 'free_reserved_unpaid'
+  if (toNumber(customer?.total_orders) <= 0 && toNumber(customer?.access_count) > 1) {
+    return 'multi_visit_unreserved'
+  }
+  if (toNumber(customer?.total_orders) <= 0) return 'line_friend_unreserved'
+  return 'unpaid_unknown'
+}
+
 function chooseRecoveryTemplate(customer, requestedTemplateId) {
-  const allowed = new Set([
-    'pending_checkout',
-    'course_reminder',
-    'newcomer_entry',
-  ])
-  if (allowed.has(requestedTemplateId)) return requestedTemplateId
+  const allowedTemplateId = getAllowedRecoveryTemplateId(requestedTemplateId)
+  if (allowedTemplateId) return allowedTemplateId
   if (customer.latest_order_reference_id && isPendingOrderStatus(customer.latest_order_status)) {
     return 'pending_checkout'
   }
+  if (toNumber(customer.free_reserved_orders) > 0 || customer.latest_order_status === 'free_reserved') {
+    return 'reserved_to_first_purchase'
+  }
   if (toNumber(customer.access_count) > 1) return 'course_reminder'
   return 'newcomer_entry'
+}
+
+function buildLineImageUrl(env, request, fileName) {
+  return `${getPublicOrigin(env, request)}/line-recovery/${fileName}`
+}
+
+function buildRecoveryOfferUrl(env, request, recoveryId, templateId) {
+  const url = new URL('/boot-camp', getPublicOrigin(env, request))
+  url.searchParams.set('from', 'line-recovery')
+  url.searchParams.set('utm_source', 'line')
+  url.searchParams.set('utm_medium', 'recovery')
+  url.searchParams.set('utm_campaign', templateId)
+  url.searchParams.set('recovery_id', recoveryId)
+  return url.toString()
 }
 
 function getRecoveryMessageCopy(customer, templateId) {
@@ -1954,106 +2128,402 @@ function getRecoveryMessageCopy(customer, templateId) {
 
   const copyByTemplate = {
     pending_checkout: {
-      eyebrow: '你剛剛看的課',
-      title: '這堂還可以預訂',
+      eyebrow: 'PAYMENT PAUSED',
+      title: '如果你剛剛停在付款前',
       body: latestCourseName
-        ? `你剛剛建立的 ${latestCourseName} 還沒完成付款。如果還想保留這堂，可以從這裡回去完成。`
-        : '你剛剛建立的課程還沒完成付款。如果還想保留這堂，可以從這裡回去完成。',
-      meta: latestAmount ? `目前價格 ${latestAmount}` : '付款完成後才會保留名額',
-      button: '回去完成付款',
+        ? `你剛剛選的「${latestCourseName}」還沒完成付款。`
+        : '你剛剛建立的預約還沒完成付款。',
+      meta: latestAmount ? `目前金額 ${latestAmount}` : '付款完成後才算正式保留',
+      button: '完成這場預約',
+      cards: [
+        {
+          eyebrow: 'PAYMENT PAUSED',
+          title: '如果你剛剛停在付款前',
+          paragraphs: [
+            '你可能不是不想來，只是還在確認這是不是又一個要入會、要諮詢、要被推銷的健身房流程。',
+            latestCourseName
+              ? `你剛剛選的「${latestCourseName}」還沒完成付款。`
+              : '你剛剛建立的預約還沒完成付款。',
+            '這一場不用談方案。完成一次付款，就把這場 Fight Night 保留下來。',
+          ],
+          meta: latestAmount ? `目前金額 ${latestAmount}` : '付款完成後 LINE 會收到確認',
+          button: '完成這場預約',
+        },
+        {
+          image: 'flow-step-3.jpg',
+          eyebrow: 'NO MEMBERSHIP',
+          title: '不是入會前導',
+          paragraphs: [
+            'Fight Night 是一場已經編排好的夜晚體驗。',
+            '你不用先承諾長期課程，也不需要在現場跟業務談方案。',
+            '到場後跟著音樂、倒數、教練口令和全場節奏完成這 50 分鐘。',
+          ],
+          meta: '一次付款 · 一場完整體驗',
+          button: '完成這場預約',
+        },
+        {
+          image: 'collective-euphoria-card.jpg',
+          eyebrow: 'CONFIRMATION',
+          title: '付款後 LINE 會收到確認',
+          paragraphs: [
+            '完成付款後，確認卡會放在 LINE 裡。',
+            '當天照卡片資訊到場就可以，不用再等人工確認，也不用重新填一次資料。',
+          ],
+          meta: '保留成功後再進場',
+          button: '完成這場預約',
+        },
+      ],
+    },
+    weekly_trial_invite: {
+      eyebrow: 'FREE TRIAL',
+      title: '如果你其實不想去健身房',
+      body: '不用入會，不用先懂拳擊或泰拳。先選一場能進場的時間，到現場跟著教練完成整段體驗。',
+      meta: '新手可進 · 不對打 · LINE 內確認',
+      button: '保留免費體驗',
+      cards: [
+        {
+          eyebrow: 'FREE TRIAL',
+          title: '如果你其實不想去健身房',
+          paragraphs: [
+            '很多人不是不知道該運動。',
+            '是不想入會、不想被推銷，也覺得一般運動課很無聊。',
+            'Fight Night 解決的是這件事：把一堂課變成一場有情緒、有節奏、有現場感的夜晚體驗。',
+          ],
+          meta: '先保留一場，不用先承諾長期課程',
+          button: '保留免費體驗',
+        },
+        {
+          image: 'hero-poster.jpg',
+          eyebrow: 'FIGHT NIGHT',
+          title: '你不是來被上課',
+          paragraphs: [
+            '你是進到一個已經排好的現場。',
+            '音樂、倒數、拳套聲、教練口令和其他人的節奏，會把你帶進去。',
+          ],
+          meta: '50 分鐘教練帶領 · 新手可進',
+          button: '選一場時間',
+        },
+        {
+          image: 'flow-step-5.jpg',
+          eyebrow: 'LINE CONFIRM',
+          title: '保留後在 LINE 裡確認',
+          paragraphs: [
+            '留下資料並保留場次後，LINE 會收到免費體驗確認卡。',
+            '預約先完成，再決定要不要看 618 首購優惠。',
+          ],
+          meta: '先確認預約，再看首購優惠',
+          button: '保留免費體驗',
+        },
+      ],
+    },
+    reserved_to_first_purchase: {
+      eyebrow: '618 OFFER',
+      title: '你的免費體驗已經保留',
+      body: '預約先算完成。接下來如果想把體驗變成固定訓練，可以先看 618 首購優惠。',
+      meta: '確認預約後再看優惠，不會被推銷',
+      button: '查看 618 首購',
+      cards: [
+        {
+          eyebrow: 'RESERVED',
+          title: '你的免費體驗已保留',
+          paragraphs: [
+            latestCourseName
+              ? `「${latestCourseName}」已進入你的 LINE 預約流程。`
+              : '你已完成免費體驗預約流程。',
+            '當天照 LINE 確認資訊到場即可。',
+            '接下來的優惠不是現場推銷，是你可以先在線上自己看的下一步。',
+          ],
+          meta: '預約已完成 · 不用再重填資料',
+          button: '查看 618 首購',
+        },
+        {
+          image: 'offers-hero-octagon-poster.jpg',
+          eyebrow: 'FIRST PURCHASE',
+          title: '想固定開始，再看首購優惠',
+          paragraphs: [
+            '如果你想把一次體驗接成固定訓練，可以先看 618 首購。',
+            '不用在現場談方案，線上看懂再決定。',
+          ],
+          meta: 'Boot Camp 或 Fight Night 都可選',
+          button: '看 618 方案',
+        },
+        {
+          image: 'bootcamp-origin-poster.jpg',
+          eyebrow: 'NEXT STEP',
+          title: '把一次體驗接成下一步',
+          paragraphs: [
+            '如果你想更穩定進步，可以直接選 2 堂或 4 堂 Boot Camp。',
+            '先把節奏建立起來，再決定要走多遠。',
+          ],
+          meta: '平易近人的付款流程',
+          button: '查看方案',
+        },
+      ],
+    },
+    offer_viewed_unpaid: {
+      eyebrow: '618 OFFER',
+      title: '你看過的首購優惠還在',
+      body: '如果你想把 Fight Night 變成固定開始的一步，可以回到 618 首購方案，直接完成付款。',
+      meta: '不用入會 · 不用現場談方案',
+      button: '回到 618 首購',
+      cards: [
+        {
+          eyebrow: '618 OFFER',
+          title: '如果你其實已經想開始',
+          paragraphs: [
+            '你可能已經看過 618 首購，只是還沒決定要不要付款。',
+            '這裡不是入會合約，也不是現場諮詢。',
+            '你只是在線上選一個開始的組合，完成付款後，LINE 收到確認。',
+          ],
+          meta: '首購限定優惠',
+          button: '回到 618 首購',
+        },
+        {
+          image: 'bootcamp-origin-poster.jpg',
+          eyebrow: 'BOOT CAMP',
+          title: '想更穩定，就選 Boot Camp',
+          paragraphs: [
+            '把拳擊或泰拳拆成更容易跟上的幾堂課。',
+            '適合體驗後想繼續，但不想一次被推到長期方案的人。',
+          ],
+          meta: '2 堂或 4 堂可選',
+          button: '查看方案',
+        },
+        {
+          image: 'collective-euphoria-card.jpg',
+          eyebrow: 'FIGHT NIGHT',
+          title: '也可以繼續買單場體驗',
+          paragraphs: [
+            '如果你只想先保留下一場 Fight Night，也可以用單場方式進場。',
+            '一次付款，一場完整體驗。',
+          ],
+          meta: '一次付款 · 一場完整體驗',
+          button: '看可購買場次',
+        },
+      ],
     },
     course_reminder: {
       eyebrow: 'Fight Night',
-      title: '先從一堂能跟上的課開始',
-      body:
-        '如果剛剛有心動但還沒下單，建議先選新手入門或體適能場。教練會用口令、沙包和回合把你帶進節奏。',
-      meta: '不對打、不被打，先體驗一次',
-      button: '看本週可預訂課程',
+      title: '如果你也一直卡在心裡',
+      body: '如果你只是還在看，可以先從一場能跟上的 Fight Night 開始。不用入會，不會中途推銷。',
+      meta: '50 分鐘教練帶領 · 新手可進',
+      button: '看本週可預約',
+      cards: [
+        {
+          eyebrow: 'FIGHT NIGHT',
+          title: '如果你也一直卡在心裡',
+          paragraphs: [
+            '也許你不是沒興趣。',
+            '你只是想到健身房，就想到入會、推銷、合約，或一堂很無聊的運動課。',
+            '這件事不用自己猜到很煩。',
+            '先讓一場 Fight Night 告訴你：運動也可以是一段情緒價值體驗。',
+          ],
+          meta: '不用入會 · 不被推銷',
+          button: '看本週可預約',
+        },
+        {
+          image: 'collective-euphoria-card.jpg',
+          eyebrow: 'ATMOSPHERE',
+          title: '你不用自己找動力',
+          paragraphs: [
+            '現場的音樂、倒數、教練口令和其他人的節奏會把你帶進去。',
+            '你只需要跟上這一場。',
+          ],
+          meta: '不用自己找動力',
+          button: '看本週可預約',
+        },
+        {
+          image: 'train-different-poster.jpg',
+          eyebrow: 'NO SALES',
+          title: '不想入會，也可以買一場',
+          paragraphs: [
+            '不用諮詢，不用談合約。',
+            '你只需要選時間，完成一次預約或付款。',
+          ],
+          meta: '單場體驗路徑',
+          button: '選一場開始',
+        },
+      ],
     },
     newcomer_entry: {
-      eyebrow: '第一次進場',
-      title: '這週可以先體驗一次',
-      body:
-        '不用先有拳擊或泰拳基礎。選一堂 Fight Night，新手也能跟著教練把第一下出拳送進沙包。',
-      meta: '適合第一次嘗試的新手入口',
-      button: '看 Fight Night 課程',
+      eyebrow: 'FIRST NIGHT',
+      title: '這週先保留一場夜晚體驗',
+      body: '你不用先有拳擊或泰拳基礎。先選一場 Fight Night，進場完成一段有節奏的體驗。',
+      meta: '不用入會 · 不對打 · LINE 確認',
+      button: '看 Fight Night 場次',
+      cards: [
+        {
+          eyebrow: 'FIRST NIGHT',
+          title: '這週先保留一場夜晚體驗',
+          paragraphs: [
+            '你不用先喜歡運動，也不用先決定入會。',
+            '先把一場 Fight Night 保留下來。',
+            '進場後，跟著教練、音樂和全場節奏完成 50 分鐘。',
+          ],
+          meta: '首堂免費體驗',
+          button: '看 Fight Night 場次',
+        },
+        {
+          image: 'hero-poster.jpg',
+          eyebrow: 'FIGHT NIGHT',
+          title: '不是冷冰冰的課程表',
+          paragraphs: [
+            '這是一場把拳擊、泰拳、節奏、教練帶領和現場氛圍編排好的體驗。',
+            '你只要選一場，照時間到場。',
+          ],
+          meta: '適合第一次來的人',
+          button: '選一場體驗',
+        },
+        {
+          image: 'flow-step-5.jpg',
+          eyebrow: 'LINE CONFIRM',
+          title: '預約完成後在 LINE 確認',
+          paragraphs: [
+            '送出資料後，你會收到免費體驗確認卡。',
+            '預約先完成，再決定要不要看首購優惠。',
+          ],
+          meta: '先預約，再看優惠',
+          button: '保留免費體驗',
+        },
+      ],
     },
   }
 
   return copyByTemplate[templateId] || copyByTemplate.newcomer_entry
 }
 
-function buildRecoveryMessage({ customer, templateId, targetUrl }) {
+function getRecoveryCardParagraphs(card) {
+  if (Array.isArray(card.paragraphs)) {
+    return card.paragraphs.map((item) => trimText(item, 220)).filter(Boolean)
+  }
+  return String(card.body || '')
+    .split(/\n\s*\n/)
+    .map((item) => trimText(item, 220))
+    .filter(Boolean)
+}
+
+function buildRecoveryCardBubble(card, targetUrl, env, request) {
+  const paragraphs = getRecoveryCardParagraphs(card)
+  const hasImage = Boolean(card.image)
+
+  if (card.imageOnly && hasImage) {
+    return {
+      type: 'bubble',
+      size: 'mega',
+      hero: {
+        type: 'image',
+        url: buildLineImageUrl(env, request, card.image),
+        size: 'full',
+        aspectRatio: card.imageAspectRatio || '3:4',
+        aspectMode: card.imageAspectMode || 'cover',
+      },
+    }
+  }
+
+  return {
+    type: 'bubble',
+    size: 'mega',
+    styles: {
+      body: { backgroundColor: LINE_STORY_CARD_BG },
+      footer: { backgroundColor: LINE_STORY_CARD_BG },
+    },
+    ...(hasImage
+      ? {
+          hero: {
+            type: 'image',
+            url: buildLineImageUrl(env, request, card.image),
+            size: 'full',
+            aspectRatio: card.imageAspectRatio || '20:13',
+            aspectMode: card.imageAspectMode || 'cover',
+          },
+        }
+      : {}),
+    body: {
+      type: 'box',
+      layout: 'vertical',
+      spacing: 'md',
+      paddingAll: 'xl',
+      contents: [
+        {
+          type: 'text',
+          text: card.eyebrow,
+          size: 'xs',
+          weight: 'bold',
+          color: LINE_STORY_CARD_BLUE,
+        },
+        {
+          type: 'text',
+          text: card.title,
+          weight: 'bold',
+          size: 'xl',
+          color: LINE_STORY_CARD_BLUE,
+          wrap: true,
+        },
+        ...paragraphs.map((paragraph, index) => ({
+          type: 'text',
+          text: paragraph,
+          size: 'md',
+          color: LINE_STORY_CARD_TEXT,
+          wrap: true,
+          lineSpacing: '7px',
+          margin: index === 0 ? 'md' : 'lg',
+        })),
+        {
+          type: 'separator',
+          margin: 'xl',
+          color: '#DDE7F5',
+        },
+        {
+          type: 'text',
+          text: card.meta,
+          size: 'sm',
+          color: LINE_STORY_CARD_MUTED,
+          wrap: true,
+          margin: 'md',
+        },
+      ],
+    },
+    footer: {
+      type: 'box',
+      layout: 'vertical',
+      paddingAll: 'xl',
+      paddingTop: 'sm',
+      contents: [
+        {
+          type: 'button',
+          style: 'primary',
+          height: 'md',
+          color: LINE_STORY_CARD_BLUE,
+          action: {
+            type: 'uri',
+            label: card.button,
+            uri: targetUrl,
+          },
+        },
+      ],
+    },
+  }
+}
+
+function buildRecoveryMessage({ customer, templateId, targetUrl, env, request }) {
   const copy = getRecoveryMessageCopy(customer, templateId)
+  const cards = copy.cards || [copy]
 
   return {
     type: 'flex',
     altText: `${copy.title}｜${copy.button}`,
     contents: {
-      type: 'bubble',
-      size: 'mega',
-      body: {
-        type: 'box',
-        layout: 'vertical',
-        spacing: 'md',
-        contents: [
-          {
-            type: 'text',
-            text: copy.eyebrow,
-            size: 'xs',
-            weight: 'bold',
-            color: '#E3242B',
-          },
-          {
-            type: 'text',
-            text: copy.title,
-            weight: 'bold',
-            size: 'xl',
-            color: '#111111',
-            wrap: true,
-          },
-          {
-            type: 'text',
-            text: copy.body,
-            size: 'sm',
-            color: '#555555',
-            wrap: true,
-          },
-          {
-            type: 'separator',
-            margin: 'md',
-          },
-          {
-            type: 'text',
-            text: copy.meta,
-            size: 'sm',
-            color: '#777777',
-            wrap: true,
-          },
-        ],
-      },
-      footer: {
-        type: 'box',
-        layout: 'vertical',
-        contents: [
-          {
-            type: 'button',
-            style: 'primary',
-            color: '#E3242B',
-            action: {
-              type: 'uri',
-              label: copy.button,
-              uri: targetUrl,
-            },
-          },
-        ],
-      },
+      type: 'carousel',
+      contents: cards.map((card) =>
+        buildRecoveryCardBubble(card, targetUrl, env, request),
+      ),
     },
   }
 }
 
-function buildRecoveryPreview({ customer, templateId, targetUrl }) {
+function buildRecoveryPreview({ customer, templateId, targetUrl, env, request }) {
   const copy = getRecoveryMessageCopy(customer, templateId)
+  const cards = copy.cards || [copy]
   return {
     templateId,
     targetUrl,
@@ -2063,6 +2533,21 @@ function buildRecoveryPreview({ customer, templateId, targetUrl }) {
     body: copy.body,
     meta: copy.meta,
     button: copy.button,
+    cards: cards.map((card) => {
+      const paragraphs = getRecoveryCardParagraphs(card)
+      return {
+        eyebrow: card.eyebrow,
+        title: card.title,
+        body: card.body || paragraphs.join('\n\n'),
+        paragraphs,
+        meta: card.meta,
+        button: card.button,
+        imageUrl: card.image ? buildLineImageUrl(env, request, card.image) : null,
+        imageOnly: Boolean(card.imageOnly),
+        imageAspectRatio: card.imageAspectRatio || null,
+        imageAspectMode: card.imageAspectMode || null,
+      }
+    }),
     targetKind:
       templateId === 'pending_checkout' &&
       customer.latest_order_shopline_session_url &&
@@ -2072,11 +2557,37 @@ function buildRecoveryPreview({ customer, templateId, targetUrl }) {
   }
 }
 
-function getRecoveryBlockers(customer, env) {
+function parseD1Time(value) {
+  if (!value) return null
+  const normalized = String(value).includes('T')
+    ? String(value)
+    : `${String(value).replace(' ', 'T')}Z`
+  const time = new Date(normalized).getTime()
+  return Number.isFinite(time) ? time : null
+}
+
+function isWithinHours(value, hours) {
+  const time = parseD1Time(value)
+  if (!time) return false
+  return Date.now() - time < hours * 60 * 60 * 1000
+}
+
+function getRecoveryBlockers(customer, env, templateId) {
   const blockers = []
-  if (!customer?.is_friend) blockers.push('這位用戶不是 LINE 好友，無法主動推播。')
-  if (toNumber(customer?.paid_orders) > 0) blockers.push('這位用戶已有付款紀錄，不發喚回訊息。')
+  if (!customer?.line_user_id) blockers.push('缺少 LINE userId')
+  if (!customer?.is_friend) blockers.push('不是 LINE 好友，不能由後台推播')
+  if (toNumber(customer?.paid_orders) > 0) blockers.push('已有付款紀錄，避免再發喚回訊息')
   if (!env.LINE_CHANNEL_ACCESS_TOKEN) blockers.push('Missing LINE_CHANNEL_ACCESS_TOKEN')
+  if (
+    templateId &&
+    customer?.latest_recovery_template_id === templateId &&
+    isWithinHours(
+      customer.latest_recovery_sent_at || customer.latest_recovery_attempted_at,
+      24,
+    )
+  ) {
+    blockers.push('24 小時內已發過相同喚回卡')
+  }
   return blockers
 }
 
@@ -2089,32 +2600,120 @@ function buildRecoveryTarget(env, request, customer, recoveryId, templateId) {
     return customer.latest_order_shopline_session_url
   }
 
+  if (
+    templateId === 'reserved_to_first_purchase' ||
+    templateId === 'offer_viewed_unpaid'
+  ) {
+    return buildRecoveryOfferUrl(env, request, recoveryId, templateId)
+  }
+
   return buildRecoveryTicketUrl(env, request, recoveryId, templateId)
 }
-
 async function previewLineRecoveryMessage(env, request, lineUserId, requestedTemplateId) {
   const customer = await getRecoveryCustomer(env, lineUserId)
   if (!customer) return { error: 'LINE customer not found', status: 404 }
 
   const templateId = chooseRecoveryTemplate(customer, requestedTemplateId)
   const targetUrl = buildRecoveryTarget(env, request, customer, 'preview', templateId)
-  const blockers = getRecoveryBlockers(customer, env)
+  const blockers = getRecoveryBlockers(customer, env, templateId)
 
   return {
     ok: true,
     canSend: blockers.length === 0,
     blockers,
-    preview: buildRecoveryPreview({ customer, templateId, targetUrl }),
+    preview: buildRecoveryPreview({ customer, templateId, targetUrl, env, request }),
   }
 }
 
-async function insertManualLineMessageLog(env, { recoveryId, customer, templateId, targetUrl, message }) {
+function normalizeLineUserIds(value, max = 100) {
+  const ids = Array.isArray(value) ? value : []
+  const seen = new Set()
+  const normalized = []
+
+  for (const id of ids) {
+    const lineUserId = trimText(id, 160)
+    if (!lineUserId || seen.has(lineUserId)) continue
+    seen.add(lineUserId)
+    normalized.push(lineUserId)
+    if (normalized.length >= max) break
+  }
+
+  return normalized
+}
+
+async function previewLineRecoveryBatch(env, request, body = {}) {
+  const lineUserIds = normalizeLineUserIds(body?.lineUserIds, 100)
+  if (lineUserIds.length === 0) {
+    return { error: '請先勾選 LINE 用戶', status: 400 }
+  }
+
+  const requestedTemplateId = trimText(body?.templateId, 80)
+  const requestedSegment = trimText(body?.segment, 100) || null
+  const recipients = []
+  const previewsByTemplate = new Map()
+
+  for (const lineUserId of lineUserIds) {
+    const customer = await getRecoveryCustomer(env, lineUserId)
+    if (!customer) {
+      recipients.push({
+        lineUserId,
+        displayName: null,
+        templateId: null,
+        segment: requestedSegment || 'missing_customer',
+        canSend: false,
+        blockers: ['找不到 LINE 用戶'],
+      })
+      continue
+    }
+
+    const templateId = chooseRecoveryTemplate(customer, requestedTemplateId)
+    const segment = requestedSegment || getRecoverySegment(customer)
+    const targetUrl = buildRecoveryTarget(env, request, customer, 'preview', templateId)
+    const blockers = getRecoveryBlockers(customer, env, templateId)
+    const preview = buildRecoveryPreview({ customer, templateId, targetUrl, env, request })
+
+    if (!previewsByTemplate.has(templateId)) {
+      previewsByTemplate.set(templateId, preview)
+    }
+
+    recipients.push({
+      lineUserId: customer.line_user_id,
+      displayName: customer.display_name || null,
+      pictureUrl: customer.picture_url || null,
+      templateId,
+      segment,
+      targetUrl,
+      canSend: blockers.length === 0,
+      blockers,
+    })
+  }
+
+  const sendableCount = recipients.filter((recipient) => recipient.canSend).length
+  const blockedCount = recipients.length - sendableCount
+
+  return {
+    ok: true,
+    templateId: getAllowedRecoveryTemplateId(requestedTemplateId) || 'auto',
+    selectedCount: recipients.length,
+    sendableCount,
+    blockedCount,
+    previews: Array.from(previewsByTemplate.values()),
+    recipients,
+  }
+}
+
+async function insertManualLineMessageLog(
+  env,
+  { recoveryId, customer, templateId, targetUrl, message, batchId, segment, staffNote },
+) {
   await ensureLineMessageSendsTable(env)
+  await ensureLineMessageSendMetadataColumns(env)
   await env.DB.prepare(
     `INSERT INTO line_message_sends (
        message_id, line_user_id, reference_id, source, message_type,
-       template_id, target_url, status, message_json, attempted_at
-     ) VALUES (?, ?, ?, 'admin_manual', 'manual_recovery', ?, ?, 'sending', ?, datetime('now'))`,
+       template_id, target_url, status, message_json, batch_id, segment,
+       staff_note, template_version, attempted_at
+     ) VALUES (?, ?, ?, 'admin_manual', 'manual_recovery', ?, ?, 'sending', ?, ?, ?, ?, ?, datetime('now'))`,
   )
     .bind(
       recoveryId,
@@ -2123,6 +2722,10 @@ async function insertManualLineMessageLog(env, { recoveryId, customer, templateI
       templateId,
       targetUrl,
       JSON.stringify(message).slice(0, 8000),
+      batchId || null,
+      segment || null,
+      staffNote || null,
+      LINE_RECOVERY_TEMPLATE_VERSION,
     )
     .run()
 }
@@ -2162,7 +2765,11 @@ async function getRecoveryCustomer(env, lineUserId) {
       `SELECT lc.line_user_id, lc.display_name, lc.picture_url, lc.email,
               lc.email_verified, lc.is_friend, lc.access_count, lc.last_seen_at,
               0 AS total_orders, 0 AS paid_orders, 0 AS pending_orders,
-              0 AS paid_revenue
+              0 AS free_reserved_orders, 0 AS paid_revenue,
+              NULL AS latest_recovery_template_id,
+              NULL AS latest_recovery_status,
+              NULL AS latest_recovery_sent_at,
+              NULL AS latest_recovery_attempted_at
        FROM line_customers lc
        WHERE lc.line_user_id = ?`,
       [lineUserId],
@@ -2190,15 +2797,25 @@ async function getRecoveryCustomer(env, lineUserId) {
               COUNT(*) AS total_orders,
               COALESCE(SUM(CASE WHEN status = 'paid' THEN 1 ELSE 0 END), 0) AS paid_orders,
               COALESCE(SUM(CASE WHEN status IN ('pending', 'payment_processing', 'session_failed') THEN 1 ELSE 0 END), 0) AS pending_orders,
+              COALESCE(SUM(CASE WHEN status = 'free_reserved' THEN 1 ELSE 0 END), 0) AS free_reserved_orders,
               COALESCE(SUM(CASE WHEN status = 'paid' THEN amount_value ELSE 0 END), 0) AS paid_revenue
        FROM order_ranked
        GROUP BY line_user_id
+     ),
+     latest_recovery AS (
+       SELECT line_user_id, template_id, status, sent_at, attempted_at,
+              ROW_NUMBER() OVER (
+                PARTITION BY line_user_id
+                ORDER BY datetime(COALESCE(sent_at, attempted_at, created_at)) DESC, id DESC
+              ) AS rn
+       FROM line_recovery_messages
      )
      SELECT lc.line_user_id, lc.display_name, lc.picture_url, lc.email,
             lc.email_verified, lc.is_friend, lc.access_count, lc.last_seen_at,
             COALESCE(os.total_orders, 0) AS total_orders,
             COALESCE(os.paid_orders, 0) AS paid_orders,
             COALESCE(os.pending_orders, 0) AS pending_orders,
+            COALESCE(os.free_reserved_orders, 0) AS free_reserved_orders,
             COALESCE(os.paid_revenue, 0) AS paid_revenue,
             latest.reference_id AS latest_order_reference_id,
             latest.status AS latest_order_status,
@@ -2206,11 +2823,16 @@ async function getRecoveryCustomer(env, lineUserId) {
             latest.amount_value AS latest_order_amount_value,
             latest.currency AS latest_order_currency,
             latest.shopline_session_url AS latest_order_shopline_session_url,
-            latest.source_path AS latest_order_source_path
+            latest.source_path AS latest_order_source_path,
+            lr.template_id AS latest_recovery_template_id,
+            lr.status AS latest_recovery_status,
+            lr.sent_at AS latest_recovery_sent_at,
+            lr.attempted_at AS latest_recovery_attempted_at
      FROM line_customers lc
      LEFT JOIN order_stats os ON os.line_user_id = lc.line_user_id
      LEFT JOIN order_ranked latest
        ON latest.line_user_id = lc.line_user_id AND latest.rn = 1
+     LEFT JOIN latest_recovery lr ON lr.line_user_id = lc.line_user_id AND lr.rn = 1
      WHERE lc.line_user_id = ?`,
     [lineUserId, lineUserId],
   )
@@ -2234,21 +2856,33 @@ async function sendLineRecoveryMessage(env, request, lineUserId, body = {}) {
     customer,
     trimText(body?.templateId, 80),
   )
+  const blockers = getRecoveryBlockers(customer, env, templateId)
+  if (blockers.length > 0) {
+    return { error: blockers.join('；'), status: 409, templateId, blockers }
+  }
+
+  const batchId = trimText(body?.batchId, 100) || null
+  const segment = trimText(body?.segment || getRecoverySegment(customer), 100) || null
+  const staffNote = trimText(body?.staffNote, 500) || null
   const targetUrl = buildRecoveryTarget(env, request, customer, recoveryId, templateId)
-  const message = buildRecoveryMessage({ customer, templateId, targetUrl })
+  const message = buildRecoveryMessage({ customer, templateId, targetUrl, env, request })
 
   await env.DB.prepare(
     `INSERT INTO line_recovery_messages (
-       recovery_id, line_user_id, template_id, target_url, status,
-       message_json, attempted_at
-     ) VALUES (?, ?, ?, ?, 'sending', ?, datetime('now'))`,
+       recovery_id, line_user_id, batch_id, template_id, segment, target_url, status,
+       message_json, staff_note, template_version, attempted_at
+     ) VALUES (?, ?, ?, ?, ?, ?, 'sending', ?, ?, ?, datetime('now'))`,
   )
     .bind(
       recoveryId,
       customer.line_user_id,
+      batchId,
       templateId,
+      segment,
       targetUrl,
       JSON.stringify(message),
+      staffNote,
+      LINE_RECOVERY_TEMPLATE_VERSION,
     )
     .run()
   await insertManualLineMessageLog(env, {
@@ -2257,6 +2891,9 @@ async function sendLineRecoveryMessage(env, request, lineUserId, body = {}) {
     templateId,
     targetUrl,
     message,
+    batchId,
+    segment,
+    staffNote,
   })
 
   try {
@@ -2342,6 +2979,106 @@ async function sendLineRecoveryMessage(env, request, lineUserId, body = {}) {
     })
 
     return { error: messageText, status: 502, recoveryId, templateId }
+  }
+}
+
+async function sendLineRecoveryBatch(env, request, body = {}) {
+  if (body?.confirmed !== true) {
+    return { error: '批次發送前必須先確認預覽結果', status: 400 }
+  }
+
+  const lineUserIds = normalizeLineUserIds(body?.lineUserIds, LINE_RECOVERY_BATCH_LIMIT)
+  if (lineUserIds.length === 0) {
+    return { error: '請先勾選 LINE 用戶', status: 400 }
+  }
+
+  const requestedTemplateId = trimText(body?.templateId, 80)
+  const segment = trimText(body?.segment, 100) || null
+  const staffNote = trimText(body?.staffNote, 500) || null
+  const batchPreview = await previewLineRecoveryBatch(env, request, {
+    lineUserIds,
+    templateId: requestedTemplateId,
+    segment,
+  })
+
+  if (!batchPreview.ok) return batchPreview
+
+  const batchId = createRecoveryBatchId()
+  const sendableRecipients = batchPreview.recipients.filter((recipient) => recipient.canSend)
+  const blockedRecipients = batchPreview.recipients.filter((recipient) => !recipient.canSend)
+
+  await env.DB.prepare(
+    `INSERT INTO line_recovery_batches (
+       batch_id, template_id, segment, selected_count, sendable_count,
+       blocked_count, status, staff_note, created_by, confirmed_at
+     ) VALUES (?, ?, ?, ?, ?, ?, 'sending', ?, 'admin', datetime('now'))`,
+  )
+    .bind(
+      batchId,
+      batchPreview.templateId,
+      segment,
+      batchPreview.selectedCount,
+      batchPreview.sendableCount,
+      batchPreview.blockedCount,
+      staffNote,
+    )
+    .run()
+
+  const results = []
+  let sentCount = 0
+  let failedCount = 0
+
+  for (const recipient of sendableRecipients) {
+    const result = await sendLineRecoveryMessage(env, request, recipient.lineUserId, {
+      templateId: recipient.templateId,
+      batchId,
+      segment: recipient.segment,
+      staffNote,
+    })
+
+    if (result.ok) {
+      sentCount += 1
+    } else {
+      failedCount += 1
+    }
+
+    results.push({
+      lineUserId: recipient.lineUserId,
+      displayName: recipient.displayName || null,
+      templateId: recipient.templateId,
+      segment: recipient.segment,
+      ok: Boolean(result.ok),
+      status: result.status || null,
+      recoveryId: result.recoveryId || null,
+      error: result.error || null,
+    })
+  }
+
+  const finalStatus =
+    failedCount > 0 ? 'completed_with_errors' : 'completed'
+
+  await env.DB.prepare(
+    `UPDATE line_recovery_batches
+     SET sent_count = ?,
+         failed_count = ?,
+         status = ?,
+         completed_at = datetime('now')
+     WHERE batch_id = ?`,
+  )
+    .bind(sentCount, failedCount, finalStatus, batchId)
+    .run()
+
+  return {
+    ok: true,
+    batchId,
+    status: finalStatus,
+    selectedCount: batchPreview.selectedCount,
+    sendableCount: batchPreview.sendableCount,
+    blockedCount: batchPreview.blockedCount,
+    sentCount,
+    failedCount,
+    blockedRecipients,
+    results,
   }
 }
 
@@ -2453,6 +3190,20 @@ export async function onRequestPost({ request, env }) {
     return order
       ? json({ ok: true, order })
       : json({ error: 'Order or LINE customer not found' }, { status: 404 })
+  }
+
+  if (resource === 'line-recovery' && id === 'preview-batch') {
+    const body = await request.json().catch(() => ({}))
+    const result = await previewLineRecoveryBatch(env, request, body)
+    if (result.ok) return json(result)
+    return json({ error: result.error, ...result }, { status: result.status || 500 })
+  }
+
+  if (resource === 'line-recovery' && id === 'send-batch') {
+    const body = await request.json().catch(() => ({}))
+    const result = await sendLineRecoveryBatch(env, request, body)
+    if (result.ok) return json(result)
+    return json({ error: result.error, ...result }, { status: result.status || 500 })
   }
 
   if (resource === 'line-customers' && id && action === 'send-recovery') {

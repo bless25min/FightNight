@@ -108,6 +108,7 @@ type LineCustomer = {
   totalOrders?: number
   paidOrders?: number
   pendingOrders?: number
+  freeReservedOrders?: number
   paidRevenue?: number
   latestOrderReferenceId?: string | null
   latestOrderStatus?: string | null
@@ -125,13 +126,31 @@ type LineCustomer = {
   latestRecoverySentAt?: string | null
   latestRecoveryAttemptedAt?: string | null
   latestRecoveryError?: string | null
+  suggestedRecoveryTemplateId?: Exclude<RecoveryTemplateId, 'auto'> | null
+  recoverySegment?: string | null
 }
 
 type RecoveryTemplateId =
   | 'auto'
   | 'pending_checkout'
+  | 'weekly_trial_invite'
+  | 'reserved_to_first_purchase'
+  | 'offer_viewed_unpaid'
   | 'course_reminder'
   | 'newcomer_entry'
+
+type LineRecoveryPreviewCard = {
+  imageUrl?: string | null
+  imageOnly?: boolean
+  imageAspectRatio?: string | null
+  imageAspectMode?: string | null
+  eyebrow: string
+  title: string
+  body: string
+  paragraphs?: string[]
+  meta: string
+  button: string
+}
 
 type LineRecoveryPreview = {
   templateId: Exclude<RecoveryTemplateId, 'auto'>
@@ -142,14 +161,8 @@ type LineRecoveryPreview = {
   body: string
   meta: string
   button: string
+  cards?: LineRecoveryPreviewCard[]
   targetKind: 'shopline_checkout' | 'site_recovery'
-}
-
-type LineRecoveryPreviewResponse = {
-  ok: boolean
-  canSend: boolean
-  blockers: string[]
-  preview: LineRecoveryPreview
 }
 
 type LineMessageRecord = {
@@ -167,12 +180,48 @@ type LineMessageRecord = {
   templateId?: string | null
   targetUrl?: string | null
   status: string
+  batchId?: string | null
+  segment?: string | null
+  staffNote?: string | null
+  templateVersion?: string | null
   title?: string | null
   altText?: string | null
   error?: string | null
   attemptedAt?: string | null
   sentAt?: string | null
   createdAt?: string | null
+}
+
+type LineRecoveryBatchPreviewRecipient = {
+  lineUserId: string
+  displayName?: string | null
+  pictureUrl?: string | null
+  templateId?: Exclude<RecoveryTemplateId, 'auto'> | null
+  segment?: string | null
+  targetUrl?: string | null
+  canSend: boolean
+  blockers: string[]
+}
+
+type LineRecoveryBatchPreviewResponse = {
+  ok: boolean
+  templateId: RecoveryTemplateId
+  selectedCount: number
+  sendableCount: number
+  blockedCount: number
+  previews: LineRecoveryPreview[]
+  recipients: LineRecoveryBatchPreviewRecipient[]
+}
+
+type LineRecoveryBatchSendResponse = {
+  ok: boolean
+  batchId: string
+  status: string
+  selectedCount: number
+  sendableCount: number
+  blockedCount: number
+  sentCount: number
+  failedCount: number
 }
 
 type AdminSummary = {
@@ -214,14 +263,6 @@ type ReconcileResponse = {
       tradeOrderId?: string | null
     } | null
   }>
-}
-
-type LineRecoveryResponse = {
-  ok: boolean
-  status: string
-  recoveryId: string
-  templateId: string
-  targetUrl?: string
 }
 
 type TrafficSource = {
@@ -503,7 +544,7 @@ const recoveryTemplates: Array<{
   {
     id: 'auto',
     label: '依狀態自動選',
-    detail: '後端依待付款、進站次數、新客狀態選卡片',
+    detail: '後端依待付款、已預約未購買、進站次數與新客狀態選卡片',
   },
   {
     id: 'pending_checkout',
@@ -511,9 +552,24 @@ const recoveryTemplates: Array<{
     detail: '提醒回到剛建立的付款連結或課程頁',
   },
   {
+    id: 'weekly_trial_invite',
+    label: '本週免費體驗',
+    detail: '給 LINE 好友但尚未預約的人，先保留一場體驗',
+  },
+  {
+    id: 'reserved_to_first_purchase',
+    label: '已預約轉首購',
+    detail: '給已保留免費體驗但尚未付款的人，看 618 首購',
+  },
+  {
+    id: 'offer_viewed_unpaid',
+    label: '看過優惠未付款',
+    detail: '給看過 618 / Boot Camp 優惠但尚未付款的人',
+  },
+  {
     id: 'course_reminder',
     label: '課程提醒',
-    detail: '給已看過幾次課程但沒有訂單的人',
+    detail: '給多次進站但還沒預約或付款的人',
   },
   {
     id: 'newcomer_entry',
@@ -653,12 +709,94 @@ function lineMessageTypeLabel(type?: string | null) {
 }
 
 function recoveryTemplateLabel(templateId?: string | null) {
+  if (templateId === 'auto') return '依狀態自動選'
   if (templateId === 'pending_checkout') return '待付款提醒'
+  if (templateId === 'weekly_trial_invite') return '本週免費體驗'
+  if (templateId === 'reserved_to_first_purchase') return '已預約轉首購'
+  if (templateId === 'offer_viewed_unpaid') return '看過優惠未付款'
   if (templateId === 'course_reminder') return '課程提醒'
   if (templateId === 'newcomer_entry') return '新手體驗入口'
   if (templateId === 'free_trial_confirmation') return '免費體驗確認卡'
   if (templateId === 'paid_confirmation') return '已付款確認卡'
   return templateId || '-'
+}
+
+function recoverySegmentLabel(segment?: string | null) {
+  if (segment === 'line_friend_unreserved') return 'LINE 好友未預約'
+  if (segment === 'free_reserved_unpaid') return '已預約未購買'
+  if (segment === 'checkout_started_unpaid') return '待付款'
+  if (segment === 'multi_visit_unreserved') return '多次進站未預約'
+  if (segment === 'offer_viewed_unpaid') return '看過優惠未付款'
+  if (segment === 'paid') return '已付款'
+  if (segment === 'unpaid_unknown') return '未付款'
+  return segment || '-'
+}
+
+function lineCustomerSearchText(customer: LineCustomer) {
+  return [
+    customer.displayName,
+    customer.lineUserId,
+    customer.email,
+    customer.buyerName,
+    customer.buyerPhone,
+    customer.buyerEmail,
+    customer.latestOrderReferenceId,
+    customer.latestOrderCourseName,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+}
+
+function getLineCustomerSegment(customer: LineCustomer) {
+  if (customer.recoverySegment) return customer.recoverySegment
+  if ((customer.paidOrders || 0) > 0) return 'paid'
+  if ((customer.pendingOrders || 0) > 0) return 'checkout_started_unpaid'
+  if ((customer.freeReservedOrders || 0) > 0) return 'free_reserved_unpaid'
+  if ((customer.totalOrders || 0) <= 0 && (customer.accessCount || 0) > 1) {
+    return 'multi_visit_unreserved'
+  }
+  if ((customer.totalOrders || 0) <= 0) return 'line_friend_unreserved'
+  return 'unpaid_unknown'
+}
+
+function suggestedRecoveryTemplate(customer: LineCustomer): RecoveryTemplateId {
+  if (customer.suggestedRecoveryTemplateId) {
+    return customer.suggestedRecoveryTemplateId
+  }
+  if ((customer.pendingOrders || 0) > 0) return 'pending_checkout'
+  if ((customer.freeReservedOrders || 0) > 0) return 'reserved_to_first_purchase'
+  if ((customer.accessCount || 0) > 1) return 'course_reminder'
+  return 'newcomer_entry'
+}
+
+function isRecentWithinHours(value: string | null | undefined, hours: number) {
+  if (!value) return false
+  const normalized = value.includes('T') ? value : `${value.replace(' ', 'T')}Z`
+  const time = new Date(normalized).getTime()
+  if (!Number.isFinite(time)) return false
+  return Date.now() - time < hours * 60 * 60 * 1000
+}
+
+function getLineCustomerBlockers(
+  customer: LineCustomer,
+  templateId: RecoveryTemplateId,
+) {
+  const selectedTemplate =
+    templateId === 'auto' ? suggestedRecoveryTemplate(customer) : templateId
+  const blockers: string[] = []
+  if (!customer.isFriend) blockers.push('非好友')
+  if ((customer.paidOrders || 0) > 0) blockers.push('已付款')
+  if (
+    customer.latestRecoveryTemplateId === selectedTemplate &&
+    isRecentWithinHours(
+      customer.latestRecoverySentAt || customer.latestRecoveryAttemptedAt,
+      24,
+    )
+  ) {
+    blockers.push('24 小時內已發同模板')
+  }
+  return blockers
 }
 
 function statusClass(status: string) {
@@ -1150,322 +1288,604 @@ export function LineCustomersTable({ customers }: { customers: LineCustomer[] })
   )
 }
 
-function LineCustomersTableV2({
-  customers,
-  onPreviewRecovery,
-  onSendRecovery,
+function LineRecoveryCarouselPreview({
+  previews,
 }: {
-  customers: LineCustomer[]
-  onPreviewRecovery: (
-    lineUserId: string,
-    templateId: RecoveryTemplateId,
-  ) => Promise<LineRecoveryPreviewResponse>
-  onSendRecovery: (
-    lineUserId: string,
-    templateId: RecoveryTemplateId,
-  ) => Promise<void>
+  previews: LineRecoveryPreview[]
 }) {
-  const [sendingLineUserId, setSendingLineUserId] = useState<string | null>(null)
-  const [previewingLineUserId, setPreviewingLineUserId] = useState<string | null>(
-    null,
-  )
-  const [selectedTemplates, setSelectedTemplates] = useState<
-    Record<string, RecoveryTemplateId>
-  >({})
-  const [previews, setPreviews] = useState<
-    Record<string, LineRecoveryPreviewResponse>
-  >({})
-
-  if (customers.length === 0) return <EmptyState>尚無 LINE 用戶紀錄</EmptyState>
+  if (previews.length === 0) return null
 
   return (
-    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-      {customers.map((customer) => {
-        const latestOrderTime =
-          customer.latestOrderPaidAt || customer.latestOrderCreatedAt
-        const latestRecoveryTime =
-          customer.latestRecoverySentAt || customer.latestRecoveryAttemptedAt
-        const canSendRecovery =
-          customer.isFriend && (customer.paidOrders || 0) === 0
-        const isSending = sendingLineUserId === customer.lineUserId
-        const isPreviewing = previewingLineUserId === customer.lineUserId
-        const selectedTemplate =
-          selectedTemplates[customer.lineUserId] || 'auto'
-        const preview = previews[customer.lineUserId]
-
-        const handleTemplateChange = (templateId: RecoveryTemplateId) => {
-          setSelectedTemplates((current) => ({
-            ...current,
-            [customer.lineUserId]: templateId,
-          }))
-          setPreviews((current) => {
-            const next = { ...current }
-            delete next[customer.lineUserId]
-            return next
-          })
-        }
-
-        const handlePreviewRecovery = async () => {
-          setPreviewingLineUserId(customer.lineUserId)
-          try {
-            const nextPreview = await onPreviewRecovery(
-              customer.lineUserId,
-              selectedTemplate,
-            )
-            setPreviews((current) => ({
-              ...current,
-              [customer.lineUserId]: nextPreview,
-            }))
-          } finally {
-            setPreviewingLineUserId(null)
-          }
-        }
-
-        const handleSendRecovery = async () => {
-          if (!canSendRecovery || isSending) return
-          setSendingLineUserId(customer.lineUserId)
-          try {
-            await onSendRecovery(customer.lineUserId, selectedTemplate)
-            setPreviews((current) => {
-              const next = { ...current }
-              delete next[customer.lineUserId]
-              return next
-            })
-          } finally {
-            setSendingLineUserId(null)
-          }
-        }
-
-        return (
-          <div
-            key={customer.lineUserId}
-            className="rounded-lg border border-pearl/10 bg-black/28 p-4"
-          >
-            <div className="flex gap-3">
-              {customer.pictureUrl ? (
-                <img
-                  src={customer.pictureUrl}
-                  alt=""
-                  className="h-12 w-12 shrink-0 rounded-full object-cover"
-                />
-              ) : (
-                <div className="h-12 w-12 shrink-0 rounded-full bg-pearl/8" />
-              )}
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="truncate font-heading text-pearl">
-                    {customer.displayName}
-                  </p>
-                  <span
-                    className={`rounded-full border px-2 py-0.5 text-[11px] font-heading ${
-                      customer.isFriend
-                        ? 'border-neon/25 bg-neon/10 text-neon'
-                        : 'border-gold/30 bg-gold/10 text-gold'
-                    }`}
-                  >
-                    {customer.isFriend ? '好友' : '未加好友'}
-                  </span>
-                  <span
-                    className={`rounded-full border px-2 py-0.5 text-[11px] font-heading ${linePaymentClass(customer)}`}
-                  >
-                    {linePaymentLabel(customer)}
-                  </span>
-                </div>
-                <p className="mt-1 truncate font-mono text-[11px] text-mist/45">
-                  {customer.lineUserId}
-                </p>
-                {customer.email && (
-                  <p className="mt-1 break-all text-[11px] text-gold/75">
-                    {customer.email}
-                    {customer.emailVerified ? ' verified' : ' unverified'}
-                  </p>
-                )}
-                <p className="mt-2 text-sm text-mist/65">
-                  進站 {customer.accessCount} 次，最近{' '}
-                  {formatDateTime(customer.lastSeenAt)}
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-4 rounded-lg border border-pearl/8 bg-black/20 p-3">
-              {customer.latestOrderReferenceId ? (
-                <>
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-pearl">
-                        {customer.latestOrderCourseName || '未命名課程'}
-                      </p>
-                      <p className="mt-1 font-mono text-[11px] text-mist/45">
-                        {customer.latestOrderReferenceId}
-                      </p>
-                    </div>
-                    <span
-                      className={`shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-heading ${statusClass(
-                        customer.latestOrderStatus || '',
-                      )}`}
-                    >
-                      {statusLabel(customer.latestOrderStatus || '')}
-                    </span>
-                  </div>
-                  <div className="mt-3 grid gap-1 text-sm text-mist/65">
-                    <p>
-                      累計已付款 {customer.paidOrders || 0} 筆 /{' '}
-                      {formatMoney(customer.paidRevenue || 0)}
-                    </p>
-                    <p>
-                      最近訂單 {formatMoney(customer.latestOrderAmountValue || 0)}，
-                      {formatDateTime(latestOrderTime)}
-                    </p>
-                    {(customer.buyerName ||
-                      customer.buyerPhone ||
-                      customer.buyerEmail) && (
-                      <p className="break-all text-mist/50">
-                        {customer.buyerName || '-'} / {customer.buyerPhone || '-'}
-                        {customer.buyerEmail ? ` / ${customer.buyerEmail}` : ''}
-                      </p>
-                    )}
-                    {customer.latestOrderLineEmail &&
-                      !sameEmail(customer.latestOrderLineEmail, customer.buyerEmail) && (
-                        <p className="break-all text-[11px] text-gold/70">
-                          LINE email: {customer.latestOrderLineEmail}
-                          {customer.latestOrderLineEmailVerified
-                            ? ' verified'
-                            : ' unverified'}
-                        </p>
-                      )}
-                  </div>
-                </>
-              ) : (
-                <p className="text-sm text-mist/55">尚未建立購課訂單</p>
-              )}
-            </div>
-
-            <div className="mt-3 rounded-lg border border-pearl/8 bg-black/18 p-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <span
-                  className={`rounded-full border px-2 py-0.5 text-[11px] font-heading ${lineRecoveryClass(
-                    customer.latestRecoveryStatus,
-                  )}`}
-                >
-                  {lineRecoveryLabel(customer.latestRecoveryStatus)}
-                </span>
-                {latestRecoveryTime && (
-                  <span className="text-[11px] text-mist/45">
-                    {formatDateTime(latestRecoveryTime)}
-                  </span>
-                )}
-              </div>
-              {customer.latestRecoveryTemplateId && (
-                <p className="mt-2 text-[11px] text-mist/45">
-                  模板 {customer.latestRecoveryTemplateId}
-                </p>
-              )}
-              {customer.latestRecoveryError && (
-                <p className="mt-2 line-clamp-2 text-xs text-blaze/75">
-                  {customer.latestRecoveryError}
-                </p>
-              )}
-              <div className="mt-3 grid gap-2">
-                <label className="grid gap-1">
-                  <span className="font-heading text-[11px] text-mist/50">
-                    喚回卡
-                  </span>
-                  <select
-                    value={selectedTemplate}
-                    onChange={(event) =>
-                      handleTemplateChange(
-                        event.target.value as RecoveryTemplateId,
-                      )
-                    }
-                    className="w-full rounded-lg border border-pearl/10 bg-black/35 px-3 py-2 text-sm text-pearl outline-none focus:border-neon/35"
-                  >
-                    {recoveryTemplates.map((template) => (
-                      <option key={template.id} value={template.id}>
-                        {template.label}
-                      </option>
-                    ))}
-                  </select>
-                  <span className="text-[11px] text-mist/45">
-                    {
-                      recoveryTemplates.find(
-                        (template) => template.id === selectedTemplate,
-                      )?.detail
-                    }
-                  </span>
-                </label>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => void handlePreviewRecovery()}
-                    disabled={isPreviewing}
-                    className="rounded-lg border border-pearl/15 bg-pearl/5 px-3 py-2 font-heading text-sm text-pearl transition-colors hover:border-neon/35 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {isPreviewing ? '預覽中...' : '預覽'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void handleSendRecovery()}
-                    disabled={!canSendRecovery || isSending}
-                    className="rounded-lg border border-neon/25 bg-neon/10 px-3 py-2 font-heading text-sm text-neon transition-colors hover:border-neon/45 hover:bg-neon/15 disabled:cursor-not-allowed disabled:border-pearl/10 disabled:bg-pearl/5 disabled:text-mist/45"
-                  >
-                    {isSending
-                      ? '發送中...'
-                      : canSendRecovery
-                        ? '人工發送'
-                        : customer.isFriend
-                          ? '已付款不喚回'
-                          : '非好友無法推播'}
-                  </button>
-                </div>
-              </div>
-
-              {preview && (
-                <div className="mt-3 rounded-lg border border-pearl/10 bg-pearl/[0.03] p-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="rounded-full border border-neon/25 bg-neon/10 px-2 py-0.5 text-[11px] font-heading text-neon">
-                      {recoveryTemplateLabel(preview.preview.templateId)}
-                    </span>
-                    <span className="text-[11px] text-mist/45">
-                      {preview.preview.targetKind === 'shopline_checkout'
-                        ? 'Shopline checkout'
-                        : 'Fight Night 頁面'}
-                    </span>
-                  </div>
-                  <p className="mt-2 text-[11px] font-heading text-blaze">
-                    {preview.preview.eyebrow}
-                  </p>
-                  <p className="mt-1 font-heading text-base text-pearl">
-                    {preview.preview.title}
-                  </p>
-                  <p className="mt-1 text-sm leading-relaxed text-mist/75">
-                    {preview.preview.body}
-                  </p>
-                  <p className="mt-2 text-xs text-mist/55">
-                    {preview.preview.meta}
-                  </p>
-                  <p className="mt-2 text-xs text-neon">
-                    按鈕：{preview.preview.button}
-                  </p>
-                  {preview.blockers.length > 0 && (
-                    <div className="mt-2 grid gap-1">
-                      {preview.blockers.map((blocker) => (
-                        <p key={blocker} className="text-xs text-blaze/75">
-                          {blocker}
-                        </p>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+    <div className="grid gap-4">
+      {previews.map((preview) => (
+        <div
+          key={preview.templateId}
+          className="rounded-lg border border-pearl/10 bg-black/35 p-4"
+        >
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2 px-1">
+            <p className="font-heading text-sm text-pearl">
+              {recoveryTemplateLabel(preview.templateId)}
+            </p>
+            <span className="rounded-full border border-pearl/12 bg-pearl/5 px-2.5 py-1 text-xs text-mist/75">
+              {preview.targetKind === 'shopline_checkout'
+                ? 'Shopline checkout'
+                : 'Fight Night / 618 頁面'}
+            </span>
           </div>
-        )
-      })}
+          <div className="flex gap-4 overflow-x-auto rounded-lg bg-[#151515] px-2 py-4 pb-5">
+            {(preview.cards?.length
+              ? preview.cards
+              : [
+                  {
+                    imageUrl: null,
+                    imageOnly: false,
+                    eyebrow: preview.eyebrow,
+                    title: preview.title,
+                    body: preview.body,
+                    paragraphs: [preview.body],
+                    meta: preview.meta,
+                    button: preview.button,
+                  },
+                ]
+            ).map((card, index) => (
+              <article
+                key={`${preview.templateId}-${index}`}
+                className="flex min-h-[520px] w-[310px] shrink-0 flex-col overflow-hidden rounded-[24px] bg-[#F7FBFF] text-[#253349] shadow-2xl"
+              >
+                {card.imageOnly && card.imageUrl ? (
+                  <img
+                    src={card.imageUrl}
+                    alt=""
+                    className="h-full min-h-[520px] w-full object-cover"
+                  />
+                ) : (
+                  <>
+                    {card.imageUrl && (
+                      <img
+                        src={card.imageUrl}
+                        alt=""
+                        className="h-[185px] w-full object-cover"
+                      />
+                    )}
+                    <div className="flex flex-1 flex-col p-6">
+                      <p className="font-heading text-[11px] font-bold tracking-[0.18em] text-[#073DAE]">
+                        {card.eyebrow}
+                      </p>
+                      <h3 className="mt-3 font-heading text-[24px] font-black leading-tight text-[#073DAE]">
+                        {card.title}
+                      </h3>
+                      <div className="mt-5 grid gap-4">
+                        {(card.paragraphs?.length
+                          ? card.paragraphs
+                          : [card.body]
+                        ).map((paragraph, paragraphIndex) => (
+                          <p
+                            key={`${preview.templateId}-${index}-${paragraphIndex}`}
+                            className="text-[15px] leading-[1.85] text-[#253349]"
+                          >
+                            {paragraph}
+                          </p>
+                        ))}
+                      </div>
+                      <p className="mt-auto border-t border-[#DDE7F5] pt-4 text-[13px] leading-relaxed text-[#65718A]">
+                        {card.meta}
+                      </p>
+                      <p className="mt-4 rounded-md bg-[#073DAE] px-4 py-3 text-center font-heading text-[15px] font-bold text-white">
+                        {card.button}
+                      </p>
+                    </div>
+                  </>
+                )}
+              </article>
+            ))}
+          </div>
+          {preview.targetUrl && (
+            <p className="mt-2 break-all font-mono text-[11px] text-mist/45">
+              {preview.targetUrl}
+            </p>
+          )}
+        </div>
+      ))}
     </div>
   )
 }
 
+const lineCustomerFilters: Array<{ id: string; label: string }> = [
+  { id: 'all', label: '全部' },
+  { id: 'sendable', label: '可發送' },
+  { id: 'line_friend_unreserved', label: '未預約' },
+  { id: 'free_reserved_unpaid', label: '已預約未購買' },
+  { id: 'checkout_started_unpaid', label: '待付款' },
+  { id: 'multi_visit_unreserved', label: '多次進站' },
+  { id: 'recent_sent', label: '近期已發' },
+  { id: 'paid', label: '已付款' },
+  { id: 'blocked', label: '不可發' },
+]
+
+function LineCustomersTableV2({
+  customers,
+  onPreviewBatch,
+  onSendBatch,
+}: {
+  customers: LineCustomer[]
+  onPreviewBatch: (
+    lineUserIds: string[],
+    templateId: RecoveryTemplateId,
+    segment?: string | null,
+  ) => Promise<LineRecoveryBatchPreviewResponse>
+  onSendBatch: (
+    lineUserIds: string[],
+    templateId: RecoveryTemplateId,
+    segment: string | null,
+    staffNote: string,
+  ) => Promise<LineRecoveryBatchSendResponse>
+}) {
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [selectedTemplate, setSelectedTemplate] = useState<RecoveryTemplateId>('auto')
+  const [segmentFilter, setSegmentFilter] = useState('sendable')
+  const [query, setQuery] = useState('')
+  const [staffNote, setStaffNote] = useState('')
+  const [batchPreview, setBatchPreview] = useState<LineRecoveryBatchPreviewResponse | null>(null)
+  const [isPreviewing, setIsPreviewing] = useState(false)
+  const [isSending, setIsSending] = useState(false)
+  const [isConfirming, setIsConfirming] = useState(false)
+
+  useEffect(() => {
+    setBatchPreview(null)
+    setIsConfirming(false)
+  }, [selectedTemplate, segmentFilter, query])
+
+  const customerById = useMemo(() => {
+    return new Map(customers.map((customer) => [customer.lineUserId, customer]))
+  }, [customers])
+
+  const filteredCustomers = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase()
+
+    return customers.filter((customer) => {
+      const blockers = getLineCustomerBlockers(customer, selectedTemplate)
+      const segment = getLineCustomerSegment(customer)
+      const latestRecoveryTime =
+        customer.latestRecoverySentAt || customer.latestRecoveryAttemptedAt
+
+      if (normalizedQuery && !lineCustomerSearchText(customer).includes(normalizedQuery)) {
+        return false
+      }
+      if (segmentFilter === 'all') return true
+      if (segmentFilter === 'sendable') return blockers.length === 0
+      if (segmentFilter === 'blocked') return blockers.length > 0
+      if (segmentFilter === 'recent_sent') return Boolean(latestRecoveryTime)
+      return segment === segmentFilter
+    })
+  }, [customers, query, segmentFilter, selectedTemplate])
+
+  const selectedLineUserIds = useMemo(
+    () =>
+      Array.from(selectedIds).filter((lineUserId) => {
+        const customer = customerById.get(lineUserId)
+        return customer && getLineCustomerBlockers(customer, selectedTemplate).length === 0
+      }),
+    [customerById, selectedIds, selectedTemplate],
+  )
+
+  const visibleSelectableIds = useMemo(
+    () =>
+      filteredCustomers
+        .filter((customer) => getLineCustomerBlockers(customer, selectedTemplate).length === 0)
+        .map((customer) => customer.lineUserId),
+    [filteredCustomers, selectedTemplate],
+  )
+
+  const allVisibleSelected =
+    visibleSelectableIds.length > 0 &&
+    visibleSelectableIds.every((lineUserId) => selectedIds.has(lineUserId))
+
+  const visibleBlockedCount = filteredCustomers.filter(
+    (customer) => getLineCustomerBlockers(customer, selectedTemplate).length > 0,
+  ).length
+
+  const toggleSelected = (lineUserId: string, checked: boolean) => {
+    setBatchPreview(null)
+    setIsConfirming(false)
+    setSelectedIds((current) => {
+      const next = new Set(current)
+      if (checked) next.add(lineUserId)
+      else next.delete(lineUserId)
+      return next
+    })
+  }
+
+  const toggleVisible = (checked: boolean) => {
+    setBatchPreview(null)
+    setIsConfirming(false)
+    setSelectedIds((current) => {
+      const next = new Set(current)
+      visibleSelectableIds.forEach((lineUserId) => {
+        if (checked) next.add(lineUserId)
+        else next.delete(lineUserId)
+      })
+      return next
+    })
+  }
+
+  const clearSelection = () => {
+    setSelectedIds(new Set())
+    setBatchPreview(null)
+    setIsConfirming(false)
+  }
+
+  const handlePreviewBatch = async () => {
+    if (selectedLineUserIds.length === 0 || isPreviewing) return
+    setIsPreviewing(true)
+    setIsConfirming(false)
+    try {
+      const response = await onPreviewBatch(
+        selectedLineUserIds,
+        selectedTemplate,
+        segmentFilter === 'all' || segmentFilter === 'sendable' || segmentFilter === 'blocked'
+          ? null
+          : segmentFilter,
+      )
+      setBatchPreview(response)
+    } finally {
+      setIsPreviewing(false)
+    }
+  }
+
+  const handleSendBatch = async () => {
+    if (!batchPreview || batchPreview.sendableCount <= 0 || isSending) return
+    setIsSending(true)
+    try {
+      await onSendBatch(
+        selectedLineUserIds,
+        selectedTemplate,
+        segmentFilter === 'all' || segmentFilter === 'sendable' || segmentFilter === 'blocked'
+          ? null
+          : segmentFilter,
+        staffNote,
+      )
+      clearSelection()
+      setStaffNote('')
+    } finally {
+      setIsSending(false)
+    }
+  }
+
+  if (customers.length === 0) return <EmptyState>尚無 LINE 用戶紀錄</EmptyState>
+
+  return (
+    <div className="grid gap-4">
+      <section className="rounded-lg border border-pearl/10 bg-black/24 p-4">
+        <div className="grid gap-3 lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="grid gap-1">
+              <span className="font-heading text-[11px] tracking-[0.16em] text-mist/50">
+                Search
+              </span>
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="LINE 名稱 / 電話 / Email / 訂單編號"
+                className="w-full rounded-lg border border-pearl/10 bg-black/35 px-3 py-2 text-sm text-pearl outline-none placeholder:text-mist/35 focus:border-neon/35"
+              />
+            </label>
+            <label className="grid gap-1">
+              <span className="font-heading text-[11px] tracking-[0.16em] text-mist/50">
+                Template
+              </span>
+              <select
+                value={selectedTemplate}
+                onChange={(event) => setSelectedTemplate(event.target.value as RecoveryTemplateId)}
+                className="w-full rounded-lg border border-pearl/10 bg-black/35 px-3 py-2 text-sm text-pearl outline-none focus:border-neon/35"
+              >
+                {recoveryTemplates.map((template) => (
+                  <option key={template.id} value={template.id}>
+                    {template.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <label className="grid gap-1">
+            <span className="font-heading text-[11px] tracking-[0.16em] text-mist/50">
+              Staff note
+            </span>
+            <input
+              value={staffNote}
+              onChange={(event) => setStaffNote(event.target.value)}
+              placeholder="例如：6/3 晚上再行銷，未付款名單"
+              className="w-full rounded-lg border border-pearl/10 bg-black/35 px-3 py-2 text-sm text-pearl outline-none placeholder:text-mist/35 focus:border-neon/35"
+            />
+          </label>
+        </div>
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          {lineCustomerFilters.map((filter) => (
+            <button
+              key={filter.id}
+              type="button"
+              onClick={() => setSegmentFilter(filter.id)}
+              className={`rounded-lg border px-3 py-1.5 font-heading text-xs transition-colors ${
+                segmentFilter === filter.id
+                  ? 'border-neon/40 bg-neon/15 text-neon'
+                  : 'border-pearl/10 bg-pearl/5 text-mist/70 hover:text-pearl'
+              }`}
+            >
+              {filter.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_auto] lg:items-center">
+          <div className="flex flex-wrap gap-2 text-sm text-mist/65">
+            <span>顯示 {filteredCustomers.length} 人</span>
+            <span>可勾選 {visibleSelectableIds.length} 人</span>
+            <span>不可發 {visibleBlockedCount} 人</span>
+            <span>已選 {selectedLineUserIds.length} 人</span>
+            {batchPreview && (
+              <span className="text-neon">
+                預覽可發 {batchPreview.sendableCount} / 擋下 {batchPreview.blockedCount}
+              </span>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={clearSelection}
+              disabled={selectedLineUserIds.length === 0}
+              className="rounded-lg border border-pearl/15 bg-pearl/5 px-3 py-2 font-heading text-sm text-pearl transition-colors hover:border-neon/35 disabled:cursor-not-allowed disabled:opacity-45"
+            >
+              清除選取
+            </button>
+            <button
+              type="button"
+              onClick={() => void handlePreviewBatch()}
+              disabled={selectedLineUserIds.length === 0 || isPreviewing}
+              className="rounded-lg border border-pearl/15 bg-pearl/5 px-3 py-2 font-heading text-sm text-pearl transition-colors hover:border-neon/35 disabled:cursor-not-allowed disabled:opacity-45"
+            >
+              {isPreviewing ? '預覽中...' : '批次預覽'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsConfirming(true)}
+              disabled={!batchPreview || batchPreview.sendableCount === 0}
+              className="rounded-lg border border-neon/30 bg-neon/12 px-3 py-2 font-heading text-sm text-neon transition-colors hover:border-neon/50 disabled:cursor-not-allowed disabled:border-pearl/10 disabled:bg-pearl/5 disabled:text-mist/45"
+            >
+              人工發送
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {batchPreview && <LineRecoveryCarouselPreview previews={batchPreview.previews} />}
+
+      <div className="overflow-x-auto border-y border-pearl/10">
+        <table className="min-w-[1280px] w-full text-left text-sm">
+          <thead className="bg-pearl/[0.03] font-heading text-xs tracking-[0.16em] text-mist/60">
+            <tr>
+              <th className="w-12 px-4 py-3">
+                <input
+                  type="checkbox"
+                  checked={allVisibleSelected}
+                  onChange={(event) => toggleVisible(event.target.checked)}
+                  disabled={visibleSelectableIds.length === 0}
+                />
+              </th>
+              <th className="px-4 py-3">客戶</th>
+              <th className="px-4 py-3">分群</th>
+              <th className="px-4 py-3">行為</th>
+              <th className="px-4 py-3">訂單 / 預約</th>
+              <th className="px-4 py-3">最近 LINE</th>
+              <th className="px-4 py-3">模板</th>
+              <th className="px-4 py-3">狀態</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-pearl/8">
+            {filteredCustomers.map((customer) => {
+              const blockers = getLineCustomerBlockers(customer, selectedTemplate)
+              const selectable = blockers.length === 0
+              const selected = selectedIds.has(customer.lineUserId) && selectable
+              const segment = getLineCustomerSegment(customer)
+              const suggestedTemplate = suggestedRecoveryTemplate(customer)
+              const latestOrderTime =
+                customer.latestOrderPaidAt || customer.latestOrderCreatedAt
+              const latestRecoveryTime =
+                customer.latestRecoverySentAt || customer.latestRecoveryAttemptedAt
+
+              return (
+                <tr key={customer.lineUserId} className="align-top">
+                  <td className="px-4 py-4">
+                    <input
+                      type="checkbox"
+                      checked={selected}
+                      disabled={!selectable}
+                      onChange={(event) =>
+                        toggleSelected(customer.lineUserId, event.target.checked)
+                      }
+                    />
+                  </td>
+                  <td className="px-4 py-4">
+                    <div className="flex items-start gap-3">
+                      {customer.pictureUrl ? (
+                        <img
+                          src={customer.pictureUrl}
+                          alt=""
+                          className="h-10 w-10 shrink-0 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="h-10 w-10 shrink-0 rounded-full bg-pearl/8" />
+                      )}
+                      <div className="min-w-0">
+                        <p className="truncate font-heading text-pearl">
+                          {customer.displayName || '未知 LINE 用戶'}
+                        </p>
+                        <p className="mt-1 break-all font-mono text-[11px] text-mist/45">
+                          {customer.lineUserId}
+                        </p>
+                        {customer.email && (
+                          <p className="mt-1 break-all text-[11px] text-gold/70">
+                            LINE email: {customer.email}
+                            {customer.emailVerified ? ' verified' : ' unverified'}
+                          </p>
+                        )}
+                        {(customer.buyerName || customer.buyerPhone || customer.buyerEmail) && (
+                          <p className="mt-1 break-all text-[11px] text-mist/45">
+                            {[customer.buyerName, customer.buyerPhone, customer.buyerEmail]
+                              .filter(Boolean)
+                              .join(' / ')}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-4">
+                    <div className="grid gap-1">
+                      <span
+                        className={`w-fit rounded-full border px-2.5 py-1 text-xs font-heading ${
+                          customer.isFriend
+                            ? 'border-neon/25 bg-neon/10 text-neon'
+                            : 'border-gold/30 bg-gold/10 text-gold'
+                        }`}
+                      >
+                        {customer.isFriend ? '好友' : '未加好友'}
+                      </span>
+                      <span className="w-fit rounded-full border border-pearl/12 bg-pearl/5 px-2.5 py-1 text-xs text-mist/75">
+                        {recoverySegmentLabel(segment)}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-4 text-mist/65">
+                    <p>進站 {customer.accessCount || 0} 次</p>
+                    <p className="mt-1 text-xs text-mist/45">
+                      最近 {formatDateTime(customer.lastSeenAt)}
+                    </p>
+                    <p className="mt-1 text-xs text-mist/45">
+                      首次 {formatDateTime(customer.firstSeenAt)}
+                    </p>
+                  </td>
+                  <td className="px-4 py-4">
+                    <div className="grid gap-1 text-sm">
+                      <span className={`w-fit rounded-full border px-2.5 py-1 text-xs font-heading ${linePaymentClass(customer)}`}>
+                        {linePaymentLabel(customer)}
+                      </span>
+                      <p className="text-mist/65">
+                        付款 {customer.paidOrders || 0} · 免費 {customer.freeReservedOrders || 0} · 待付款 {customer.pendingOrders || 0}
+                      </p>
+                      {customer.latestOrderReferenceId ? (
+                        <>
+                          <p className="line-clamp-1 text-pearl">
+                            {customer.latestOrderCourseName || '未命名課程'}
+                          </p>
+                          <p className="font-mono text-[11px] text-mist/45">
+                            {customer.latestOrderReferenceId}
+                          </p>
+                          <p className="text-xs text-mist/45">
+                            {statusLabel(customer.latestOrderStatus || '')} · {formatDateTime(latestOrderTime)}
+                          </p>
+                        </>
+                      ) : (
+                        <p className="text-xs text-mist/45">尚未建立訂單</p>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-4 py-4">
+                    <span className={`w-fit rounded-full border px-2.5 py-1 text-xs font-heading ${lineRecoveryClass(customer.latestRecoveryStatus)}`}>
+                      {lineRecoveryLabel(customer.latestRecoveryStatus)}
+                    </span>
+                    {latestRecoveryTime && (
+                      <p className="mt-2 text-xs text-mist/45">
+                        {formatDateTime(latestRecoveryTime)}
+                      </p>
+                    )}
+                    {customer.latestRecoveryTemplateId && (
+                      <p className="mt-1 text-[11px] text-mist/45">
+                        {recoveryTemplateLabel(customer.latestRecoveryTemplateId)}
+                      </p>
+                    )}
+                    {customer.latestRecoveryError && (
+                      <p className="mt-1 line-clamp-2 text-xs text-blaze/75">
+                        {customer.latestRecoveryError}
+                      </p>
+                    )}
+                  </td>
+                  <td className="px-4 py-4 text-mist/65">
+                    <p className="font-heading text-pearl">
+                      {selectedTemplate === 'auto'
+                        ? recoveryTemplateLabel(suggestedTemplate)
+                        : recoveryTemplateLabel(selectedTemplate)}
+                    </p>
+                    <p className="mt-1 text-xs text-mist/45">
+                      建議 {recoveryTemplateLabel(suggestedTemplate)}
+                    </p>
+                  </td>
+                  <td className="px-4 py-4">
+                    {selectable ? (
+                      <span className="rounded-full border border-neon/25 bg-neon/10 px-2.5 py-1 text-xs font-heading text-neon">
+                        可發送
+                      </span>
+                    ) : (
+                      <div className="grid gap-1">
+                        {blockers.map((blocker) => (
+                          <span
+                            key={blocker}
+                            className="w-fit rounded-full border border-blaze/30 bg-blaze/10 px-2.5 py-1 text-xs text-blaze"
+                          >
+                            {blocker}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {filteredCustomers.length === 0 && (
+        <EmptyState>目前沒有符合條件的 LINE 用戶。</EmptyState>
+      )}
+
+      {isConfirming && batchPreview && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 px-4">
+          <div className="w-full max-w-lg rounded-lg border border-pearl/12 bg-abyss p-5 shadow-2xl">
+            <p className="font-heading text-xs tracking-[0.18em] text-blaze">
+              Manual LINE Recovery
+            </p>
+            <h3 className="mt-2 font-heading text-2xl font-black text-pearl">
+              確認人工發送
+            </h3>
+            <div className="mt-4 grid gap-2 text-sm text-mist/70">
+              <p>模板：{recoveryTemplateLabel(selectedTemplate)}</p>
+              <p>已選：{batchPreview.selectedCount} 人</p>
+              <p>會發送：{batchPreview.sendableCount} 人</p>
+              <p>被擋下：{batchPreview.blockedCount} 人</p>
+              {staffNote && <p>備註：{staffNote}</p>}
+            </div>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setIsConfirming(false)}
+                className="rounded-lg border border-pearl/15 bg-pearl/5 px-4 py-2 font-heading text-sm text-pearl"
+              >
+                取消
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleSendBatch()}
+                disabled={isSending}
+                className="rounded-lg border border-neon/30 bg-neon px-4 py-2 font-heading text-sm text-abyss disabled:cursor-not-allowed disabled:opacity-55"
+              >
+                {isSending ? '發送中...' : `送出 ${batchPreview.sendableCount} 則`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
 function LineMessagesTable({ messages }: { messages: LineMessageRecord[] }) {
   if (messages.length === 0) {
     return <EmptyState>目前還沒有 LINE 發送紀錄。</EmptyState>
@@ -1538,6 +1958,16 @@ function LineMessagesTable({ messages }: { messages: LineMessageRecord[] }) {
                 <span className="rounded-full border border-pearl/12 bg-pearl/5 px-2.5 py-1 text-xs font-heading text-mist/75">
                   {message.source === 'auto' ? '自動確認' : '後台手動'}
                 </span>
+                {message.segment && (
+                  <p className="mt-2 text-xs text-mist/55">
+                    分群 {recoverySegmentLabel(message.segment)}
+                  </p>
+                )}
+                {message.batchId && (
+                  <p className="mt-1 break-all font-mono text-[11px] text-mist/45">
+                    {message.batchId}
+                  </p>
+                )}
                 {message.referenceId && (
                   <p className="mt-2 break-all font-mono text-[11px] text-mist/45">
                     {message.referenceId}
@@ -1552,6 +1982,11 @@ function LineMessagesTable({ messages }: { messages: LineMessageRecord[] }) {
                   >
                     目標連結
                   </a>
+                )}
+                {message.staffNote && (
+                  <p className="mt-2 line-clamp-2 text-xs text-mist/45">
+                    備註：{message.staffNote}
+                  </p>
                 )}
               </td>
               <td className="px-4 py-4">
@@ -2213,11 +2648,11 @@ export function AdminPage() {
 
         const [lineResponse, messagesResponse] = await Promise.all([
           fetchAdmin<{ customers: LineCustomer[] }>(
-            '/api/admin/line-customers?limit=120',
+            '/api/admin/line-customers?limit=200',
             token,
           ),
           fetchAdmin<{ messages: LineMessageRecord[] }>(
-            '/api/admin/line-messages?limit=120',
+            '/api/admin/line-messages?limit=200',
             token,
           ),
         ])
@@ -2325,23 +2760,26 @@ export function AdminPage() {
     [activeTab, loadAdminData, token],
   )
 
-  const handlePreviewLineRecovery = useCallback(
-    async (lineUserId: string, templateId: RecoveryTemplateId) => {
+  const handlePreviewLineRecoveryBatch = useCallback(
+    async (
+      lineUserIds: string[],
+      templateId: RecoveryTemplateId,
+      segment?: string | null,
+    ) => {
       if (!token) throw new Error('Missing admin token')
 
       setError('')
       try {
-        return await fetchAdmin<LineRecoveryPreviewResponse>(
-          `/api/admin/line-customers/${encodeURIComponent(
-            lineUserId,
-          )}/recovery-preview?templateId=${encodeURIComponent(templateId)}`,
+        return await postAdmin<LineRecoveryBatchPreviewResponse>(
+          '/api/admin/line-recovery/preview-batch',
           token,
+          { lineUserIds, templateId, segment: segment || null },
         )
       } catch (previewError) {
         setError(
           previewError instanceof Error
             ? previewError.message
-            : 'LINE 喚回預覽失敗',
+            : 'LINE 批次喚回預覽失敗',
         )
         throw previewError
       }
@@ -2349,27 +2787,37 @@ export function AdminPage() {
     [token],
   )
 
-  const handleSendLineRecovery = useCallback(
-    async (lineUserId: string, templateId: RecoveryTemplateId) => {
-      if (!token) return
+  const handleSendLineRecoveryBatch = useCallback(
+    async (
+      lineUserIds: string[],
+      templateId: RecoveryTemplateId,
+      segment: string | null,
+      staffNote: string,
+    ) => {
+      if (!token) throw new Error('Missing admin token')
 
       setError('')
       setLineRecoveryResult('')
       try {
-        const response = await postAdmin<LineRecoveryResponse>(
-          `/api/admin/line-customers/${encodeURIComponent(
-            lineUserId,
-          )}/send-recovery`,
+        const response = await postAdmin<LineRecoveryBatchSendResponse>(
+          '/api/admin/line-recovery/send-batch',
           token,
-          { templateId },
+          {
+            lineUserIds,
+            templateId,
+            segment,
+            staffNote,
+            confirmed: true,
+          },
         )
         setLineRecoveryResult(
-          `已發送 LINE 喚回訊息：${response.templateId} / ${response.recoveryId}`,
+          `已完成 LINE 批次喚回：發送 ${response.sentCount} 則，失敗 ${response.failedCount} 則，擋下 ${response.blockedCount} 人。Batch ${response.batchId}`,
         )
         await loadAdminData(activeTab, { refreshSummary: true })
+        return response
       } catch (sendError) {
         setError(
-          sendError instanceof Error ? sendError.message : 'LINE 喚回發送失敗',
+          sendError instanceof Error ? sendError.message : 'LINE 批次喚回發送失敗',
         )
         throw sendError
       }
@@ -2578,8 +3026,8 @@ export function AdminPage() {
                 </div>
                 <LineCustomersTableV2
                   customers={data.customers}
-                  onPreviewRecovery={handlePreviewLineRecovery}
-                  onSendRecovery={handleSendLineRecovery}
+                  onPreviewBatch={handlePreviewLineRecoveryBatch}
+                  onSendBatch={handleSendLineRecoveryBatch}
                 />
               </section>
               <section className="grid gap-3">
