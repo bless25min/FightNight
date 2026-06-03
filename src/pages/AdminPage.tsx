@@ -265,6 +265,16 @@ type ReconcileResponse = {
   }>
 }
 
+type LineConfirmationResendResponse = {
+  ok: boolean
+  referenceId: string
+  lineNotify?: {
+    status?: string
+    error?: string
+  } | null
+  order?: AdminOrder | null
+}
+
 type TrafficSource = {
   sourceChannel: string
   sessions: number
@@ -664,9 +674,12 @@ function lineNotifyLabel(status?: string | null) {
   if (status === 'sent') return '確認卡已送'
   if (status === 'sending') return '確認卡發送中'
   if (status === 'failed') return '確認卡失敗'
+  if (status === 'skipped_already_sent') return '確認卡已送過'
+  if (status === 'skipped_in_progress_or_sent') return '確認卡已送或發送中'
   if (status === 'skipped_missing_token') return '確認卡缺少 Token'
   if (status === 'skipped_no_line_user') return '確認卡未綁 LINE'
   if (status === 'skipped_not_free_reserved') return '非免費預約'
+  if (status === 'skipped_not_paid') return '非已付款訂單'
   return `LINE ${status}`
 }
 
@@ -955,12 +968,26 @@ function OrdersTable({
   orders,
   customers,
   onLinkLine,
+  onResendLineConfirmation,
 }: {
   orders: AdminOrder[]
   customers: LineCustomer[]
   onLinkLine: (referenceId: string, lineUserId: string) => Promise<void>
+  onResendLineConfirmation: (referenceId: string) => Promise<void>
 }) {
+  const [resendingReferenceId, setResendingReferenceId] = useState<string | null>(
+    null,
+  )
   if (orders.length === 0) return <EmptyState>目前還沒有訂單資料。</EmptyState>
+
+  const handleResendLineConfirmation = async (referenceId: string) => {
+    setResendingReferenceId(referenceId)
+    try {
+      await onResendLineConfirmation(referenceId)
+    } finally {
+      setResendingReferenceId(null)
+    }
+  }
 
   return (
     <div className="overflow-x-auto border-y border-pearl/10">
@@ -1010,6 +1037,20 @@ function OrdersTable({
                   <p className="mt-1 max-w-[180px] truncate text-[11px] text-coral/70">
                     {order.metaCapiError}
                   </p>
+                )}
+                {(order.status === 'free_reserved' || order.status === 'paid') && (
+                  <button
+                    type="button"
+                    disabled={!order.lineUserId || resendingReferenceId === order.referenceId}
+                    onClick={() =>
+                      void handleResendLineConfirmation(order.referenceId)
+                    }
+                    className="mt-2 rounded-lg border border-neon/25 bg-neon/10 px-2.5 py-1 text-[11px] font-heading text-neon disabled:cursor-not-allowed disabled:border-pearl/10 disabled:bg-pearl/5 disabled:text-mist/45"
+                  >
+                    {resendingReferenceId === order.referenceId
+                      ? '重送中'
+                      : '重送確認卡'}
+                  </button>
                 )}
               </td>
               <td className="px-4 py-4">
@@ -2760,6 +2801,35 @@ export function AdminPage() {
     [activeTab, loadAdminData, token],
   )
 
+  const handleResendLineConfirmation = useCallback(
+    async (referenceId: string) => {
+      if (!token) return
+
+      setError('')
+      setLineRecoveryResult('')
+      try {
+        const response = await postAdmin<LineConfirmationResendResponse>(
+          `/api/admin/orders/${encodeURIComponent(referenceId)}/resend-line-confirmation`,
+          token,
+        )
+        const status = lineNotifyLabel(response.lineNotify?.status)
+        const error = response.lineNotify?.error
+          ? `，錯誤：${response.lineNotify.error}`
+          : ''
+        setLineRecoveryResult(`LINE 確認卡重送結果：${status}${error}`)
+        await loadAdminData(activeTab, { refreshSummary: true })
+      } catch (resendError) {
+        setError(
+          resendError instanceof Error
+            ? resendError.message
+            : 'LINE 確認卡重送失敗',
+        )
+        throw resendError
+      }
+    },
+    [activeTab, loadAdminData, token],
+  )
+
   const handlePreviewLineRecoveryBatch = useCallback(
     async (
       lineUserIds: string[],
@@ -3005,6 +3075,7 @@ export function AdminPage() {
               orders={data.orders}
               customers={data.customers}
               onLinkLine={handleLinkOrderLine}
+              onResendLineConfirmation={handleResendLineConfirmation}
             />
           )}
           {activeTab === 'inventory' && (

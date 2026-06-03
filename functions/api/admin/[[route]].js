@@ -1,5 +1,6 @@
 import {
   ensureLineMessageSendsTable,
+  notifyLineFreeTrialReservation,
   notifyLinePaymentSuccess,
 } from '../shopline/line-notify.js'
 
@@ -2010,11 +2011,54 @@ async function linkOrderLineCustomer(env, referenceId, lineUserId) {
     .run()
 
   const order = await getOrder(env, referenceId)
-  if (order?.status === 'paid') {
+  if (order?.status === 'free_reserved') {
+    await notifyLineFreeTrialReservation(env, referenceId)
+  } else if (order?.status === 'paid') {
     await notifyLinePaymentSuccess(env, referenceId)
   }
 
   return order
+}
+
+async function resendOrderLineConfirmation(env, referenceId) {
+  const order = await safeFirst(
+    env,
+    `SELECT reference_id, status, line_user_id
+     FROM course_orders
+     WHERE reference_id = ?`,
+    [referenceId],
+  )
+
+  if (!order) {
+    return { ok: false, status: 404, error: 'Order not found' }
+  }
+  if (!order.line_user_id) {
+    return {
+      ok: false,
+      status: 400,
+      error: '訂單沒有綁定 LINE user，無法重送確認卡',
+    }
+  }
+
+  let lineNotify
+  if (order.status === 'free_reserved') {
+    lineNotify = await notifyLineFreeTrialReservation(env, referenceId)
+  } else if (order.status === 'paid') {
+    lineNotify = await notifyLinePaymentSuccess(env, referenceId)
+  } else {
+    return {
+      ok: false,
+      status: 400,
+      error: '只有免費體驗預約與已付款訂單可以重送 LINE 確認卡',
+    }
+  }
+
+  return {
+    ok: true,
+    referenceId,
+    lineNotify,
+    order: await getOrder(env, referenceId),
+  }
 }
 
 function createRecoveryId() {
@@ -3190,6 +3234,12 @@ export async function onRequestPost({ request, env }) {
     return order
       ? json({ ok: true, order })
       : json({ error: 'Order or LINE customer not found' }, { status: 404 })
+  }
+
+  if (resource === 'orders' && id && action === 'resend-line-confirmation') {
+    const result = await resendOrderLineConfirmation(env, id)
+    if (result.ok) return json(result)
+    return json({ error: result.error, ...result }, { status: result.status || 500 })
   }
 
   if (resource === 'line-recovery' && id === 'preview-batch') {

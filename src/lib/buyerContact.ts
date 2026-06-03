@@ -36,8 +36,8 @@ function isStoredContactForCurrentLineUser(
   const stored = cleanLineUserId(storedLineUserId)
   const current = cleanLineUserId(currentLineUserId)
 
-  if (current) return stored === current
-  return !stored
+  if (!current) return false
+  return stored === current
 }
 
 export function getSavedBuyerContact(lineUserId?: string | null): SavedBuyerContact | null {
@@ -73,8 +73,10 @@ export function saveBuyerContact(
   if (typeof window === 'undefined') return
 
   const storedLineUserId = cleanLineUserId(lineUserId || contact.lineUserId)
+  if (!storedLineUserId) return
+
   const next: StoredBuyerContact = {
-    lineUserId: storedLineUserId || undefined,
+    lineUserId: storedLineUserId,
     name: cleanText(contact.name, 120),
     phone: cleanPhone(contact.phone),
     email: cleanText(contact.email, 320),

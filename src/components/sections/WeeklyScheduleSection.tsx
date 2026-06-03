@@ -1877,6 +1877,7 @@ type FreeTrialReservationResult = {
   originalAmountValue?: number
   currency?: string
   lineNotifyStatus?: string
+  lineNotifyError?: string
 }
 
 function normalizeTaiwanMobilePhone(value: string) {
@@ -2144,6 +2145,13 @@ function FreeTrialSuccessModal({
   onViewAddOns: () => void
   onKeepOnly: () => void
 }) {
+  const lineConfirmationText =
+    reservation.lineNotifyStatus === 'sent'
+      ? 'LINE 預約確認卡已送出，請到 LINE 聊天室點擊卡片確認預約。'
+      : reservation.lineNotifyStatus
+        ? '預約已成立，但 LINE 自動確認卡目前沒有成功送出。請保留這個預約編號，或傳訊息給官方 LINE 協助確認。'
+        : '預約已成立；LINE 確認卡如果稍晚才出現，請稍候到 LINE 聊天室確認。'
+
   return createPortal(
     <motion.div
       className="fixed inset-0 z-[135] flex items-end justify-center bg-black/78 p-0 backdrop-blur-sm md:items-center md:p-6"
@@ -2191,10 +2199,17 @@ function FreeTrialSuccessModal({
             {reservation.weekday ?? ''} {reservation.startTime}
           </p>
           <p className="mt-2 text-sm leading-relaxed text-mist/72">
-            {reservation.lineNotifyStatus === 'sent'
-              ? 'LINE 預約確認卡已送出，請到 LINE 聊天室點擊卡片確認預約。'
-              : '預約已成立；若 LINE 確認卡稍晚才出現，請稍候到 LINE 聊天室確認。'}
+            {lineConfirmationText}
           </p>
+          <p className="mt-3 font-mono text-xs text-mist/55">
+            預約編號：{reservation.referenceId}
+          </p>
+          {reservation.lineNotifyStatus && reservation.lineNotifyStatus !== 'sent' && (
+            <p className="mt-2 text-xs leading-relaxed text-coral/75">
+              LINE 狀態：{reservation.lineNotifyStatus}
+              {reservation.lineNotifyError ? ` · ${reservation.lineNotifyError}` : ''}
+            </p>
+          )}
         </div>
 
         <p className="mt-5 text-sm leading-relaxed text-mist/76">
@@ -2767,7 +2782,7 @@ export function WeeklyScheduleSection({
             | {
                 referenceId?: string
                 reservation?: Partial<FreeTrialReservationResult>
-                lineNotify?: { status?: string }
+                lineNotify?: { status?: string; error?: string }
                 reason?: string
                 error?: string
               }
@@ -2801,6 +2816,7 @@ export function WeeklyScheduleSection({
               pendingCheckout.originalValue,
             currency: data.reservation?.currency ?? 'TWD',
             lineNotifyStatus: data.lineNotify?.status,
+            lineNotifyError: data.lineNotify?.error,
           }
 
           track({
