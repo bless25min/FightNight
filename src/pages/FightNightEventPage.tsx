@@ -9,7 +9,6 @@ import { Seo } from '../components/Seo'
 import { ExperienceFlowSection } from '../components/sections/ExperienceFlowSection'
 import { FAQSection } from '../components/sections/FAQSection'
 import { FormulaSection } from '../components/sections/FormulaSection'
-import { HeroSection } from '../components/sections/HeroSection'
 import { IdentitySection } from '../components/sections/IdentitySection'
 import { NewModelSection } from '../components/sections/NewModelSection'
 import { OldFrameworkBreakSection } from '../components/sections/OldFrameworkBreakSection'
@@ -72,10 +71,10 @@ type EventTicketPrice = {
 
 type OfferState = 'idle' | 'checking' | 'eligible' | 'ineligible' | 'error'
 
-const landingVariant = 'fightnight_event_no_membership_paid_v1'
+const landingVariant = 'fightnight_event_night_ticket_paid_v3'
 const eventName = 'After Work Fight Night'
 const eventDescription =
-  '不用入會、不被推銷，完成一次簡單付款，就能進場享受一場完整編排的 Fight Night 情緒體驗。'
+  'After Work Fight Night 是一場下班後的集體釋放夜。買一張入場票，不用入會、不用諮詢，付款後照著 LINE 入場確認到場。'
 
 const venueLabelMap: Record<string, string> = {
   'venue-dunnan': '敦南旗艦館',
@@ -85,16 +84,22 @@ const venueLabelMap: Record<string, string> = {
 
 const eventFaqItems: FAQItem[] = [
   {
-    id: 'event-no-membership',
-    question: '我需要加入會員或先聽方案介紹嗎？',
+    id: 'event-ticket-includes',
+    question: '這張入場票包含什麼？',
     answer:
-      '不用。這個活動頁賣的是一場完整 Fight Night 體驗，不是入會諮詢。你完成線上付款後，只需要依照 LINE 入場確認到現場。',
+      '包含指定場次 Fight Night 入場資格、50 分鐘教練帶領、拳擊／泰拳節奏體驗與場館使用。你不是買一段諮詢時間，而是買這一晚的完整體驗。',
+  },
+  {
+    id: 'event-no-membership',
+    question: '買這張入場票，需要加入會員或先聽方案嗎？',
+    answer:
+      '不用。這張票買的是一場完整 Fight Night 體驗，不是健身房入會前導。你完成線上付款後，只需要依照 LINE 入場確認到現場。',
   },
   {
     id: 'event-no-sales',
-    question: '到現場會不會被推銷課程或會員？',
+    question: '到現場會不會被推銷其他方案或會員？',
     answer:
-      '這一頁的承諾是完整體驗不被打擾。你買的是這一場，現場流程以教練帶領與體驗為主，不會在課程中安排銷售諮詢。',
+      '這張入場票的承諾是完整體驗不被打斷。現場流程以教練帶領、音樂節奏與動作體驗為主，不會在體驗中安排銷售諮詢。',
   },
   {
     id: 'event-first-time',
@@ -103,10 +108,16 @@ const eventFaqItems: FAQItem[] = [
       '可以。Fight Night 不是格鬥比賽，也不是動作考核。教練會從暖身、站位、出拳節奏開始帶，第一次來也可以跟上。',
   },
   {
+    id: 'event-no-fight',
+    question: '會不會對打？會不會被打？',
+    answer:
+      '不會。這不是實戰對打活動，主要是跟著教練口令、拳套、沙包與全場節奏完成體驗。',
+  },
+  {
     id: 'event-payment',
     question: '付款後會收到什麼？',
     answer:
-      '付款完成後，系統會依付款 webhook 確認訂單，並透過 LINE 發送已付款入場確認卡。你可以在 LINE 裡確認場次、時間與地點。',
+      '付款完成後，系統會依付款通知確認訂單，並透過 LINE 發送已付款入場確認卡。你可以在 LINE 裡確認場次、時間與地點。',
   },
 ]
 
@@ -181,7 +192,7 @@ function getCoachPricingTier(course: WeeklyCourse) {
   return findCoachProfile(course.coach)?.pricingTier ?? 'domestic-teacher'
 }
 
-function getEventTickets(limit = 4): EventTicket[] {
+function getEventTickets(limit = 3): EventTicket[] {
   const bookableFromIso = addDays(
     getTaipeiTodayIso(),
     ONLINE_BOOKING_START_OFFSET_DAYS,
@@ -200,7 +211,7 @@ function getEventTickets(limit = 4): EventTicket[] {
       id: course.id,
       course,
       sessionId: course.id,
-      title: `${eventName} 完整體驗`,
+      title: `${eventName} 入場票`,
       dateLabel: formatDateLabel(course.date),
       timeLabel: `${course.startTime}-${course.endTime}`,
       venueLabel: getVenueLabel(course),
@@ -267,104 +278,88 @@ function getSourcePath() {
   return `${window.location.pathname}${window.location.search}${window.location.hash}`
 }
 
-function EventPromiseSection({
+function EventHeroSection({
   featuredTicket,
   availability,
   hasLiveData,
-  price,
   onPrimaryAction,
 }: {
   featuredTicket?: EventTicket
   availability?: SessionAvailability
   hasLiveData: boolean
-  price?: EventTicketPrice
   onPrimaryAction: () => void
 }) {
   const remainingLabel =
     featuredTicket && availability
       ? getRemainingLabel(availability, hasLiveData)
       : `線上開放 ${ONLINE_SALES_SEAT_LIMIT} 位`
+  const dateTimeLabel = featuredTicket
+    ? `${featuredTicket.dateLabel} ${featuredTicket.timeLabel}`
+    : '本週開放場次'
 
   return (
-    <SectionWrapper id="event-promise" padding="pt-0 pb-10 md:pb-20">
-      <motion.div
-        initial={{ opacity: 0, y: 24 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.7 }}
-        className="-mx-3 overflow-hidden rounded-none border-y border-pearl/10 bg-black/45 shadow-[0_30px_80px_rgba(0,0,0,0.38)] sm:mx-auto sm:rounded-2xl sm:border md:rounded-[2rem]"
-      >
-        <div className="grid gap-0 md:grid-cols-[1.05fr_0.95fr]">
-          <div className="px-5 py-7 sm:px-8 md:px-10 md:py-12">
-            <p className="font-heading text-xs tracking-[0.32em] text-neon/80">
-              NO MEMBERSHIP. NO SALES TALK.
-            </p>
-            <h1 className="mt-4 max-w-2xl text-3xl font-heading font-bold leading-tight text-pearl sm:text-4xl md:text-6xl">
-              不想入會，也可以買一場讓身體醒過來的夜晚。
-            </h1>
-            <p className="mt-5 max-w-xl text-base leading-relaxed text-mist/78 md:text-lg">
-              Fight Night 把拳擊、泰拳、音樂節奏與教練帶領，編排成一場完整的情緒釋放體驗。你不用入會、不用被推銷、不用先談方案；完成一次付款，就能進場享受整場氛圍。
-            </p>
+    <section
+      id="event-hero"
+      className="relative min-h-[92vh] overflow-hidden bg-abyss pt-20 text-pearl md:min-h-screen"
+    >
+      <img
+        src={heroPoster}
+        alt="After Work Fight Night 現場入場視覺"
+        className="absolute inset-0 h-full w-full object-cover opacity-[0.58]"
+        loading="eager"
+      />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-abyss/42 to-abyss" />
+      <div className="absolute inset-0 bg-gradient-to-r from-abyss via-abyss/70 to-transparent" />
 
-            <div className="mt-7 grid gap-3 text-sm text-mist/78 sm:grid-cols-4">
-              {['不用入會', '不安排銷售諮詢', '一次付款', '完整體驗'].map(
-                (item) => (
-                  <div key={item} className="border-t border-pearl/10 pt-3">
-                    <p className="font-heading text-pearl">{item}</p>
-                  </div>
-                ),
-              )}
+      <div className="relative z-10 mx-auto flex min-h-[calc(92vh-5rem)] max-w-6xl items-end px-3 pb-10 sm:px-8 md:min-h-[calc(100vh-5rem)] md:pb-16">
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.75 }}
+          className="max-w-4xl"
+        >
+          <p className="font-heading text-sm font-bold text-neon md:text-base">
+            AFTER WORK FIGHT NIGHT
+          </p>
+          <h1 className="mt-4 max-w-3xl font-heading text-4xl font-black leading-tight text-pearl md:text-7xl">
+            買一張票，進入一場下班後的集體釋放。
+          </h1>
+          <p className="mt-5 max-w-2xl text-base leading-relaxed text-mist/82 md:text-xl">
+            這不是健身房入會前導，也不是一堂被推銷打斷的運動課。你選一個夜晚，完成付款，進場跟著音樂、倒數、教練口令和全場節奏，把 50 分鐘完整走完。
+          </p>
+
+          <div className="mt-8 grid gap-3 border-y border-pearl/14 py-5 text-sm text-mist/76 sm:grid-cols-4">
+            <div>
+              <p className="text-mist/52">下一場</p>
+              <p className="mt-1 font-heading text-pearl">{dateTimeLabel}</p>
             </div>
-
-            <Button
-              size="lg"
-              className="mt-8 w-full sm:w-auto"
-              onClick={onPrimaryAction}
-              data-cta="event-promise-primary"
-            >
-              購買這場完整體驗
-            </Button>
-          </div>
-
-          <div className="border-t border-pearl/10 bg-obsidian/70 px-5 py-7 sm:px-8 md:border-l md:border-t-0 md:px-10 md:py-12">
-            <p className="font-heading text-xs tracking-[0.28em] text-blaze/80">
-              NEXT SESSION
-            </p>
-            <h2 className="mt-4 text-2xl font-heading font-bold text-pearl md:text-4xl">
-              {featuredTicket?.title ?? `${eventName} 完整體驗`}
-            </h2>
-            <div className="mt-6 space-y-4 text-sm text-mist/78">
-              <div className="flex items-start justify-between gap-4 border-b border-pearl/10 pb-4">
-                <span>場次</span>
-                <strong className="text-right font-heading text-pearl">
-                  {featuredTicket
-                    ? `${featuredTicket.dateLabel} ${featuredTicket.timeLabel}`
-                    : '本週開放場次'}
-                </strong>
-              </div>
-              <div className="flex items-start justify-between gap-4 border-b border-pearl/10 pb-4">
-                <span>地點</span>
-                <strong className="text-right font-heading text-pearl">
-                  {featuredTicket?.venueLabel ?? 'UFC GYM Taiwan'}
-                </strong>
-              </div>
-              <div className="flex items-start justify-between gap-4 border-b border-pearl/10 pb-4">
-                <span>入場</span>
-                <strong className="text-right font-heading text-neon">
-                  付款確認，不需入會
-                </strong>
-              </div>
-              <div className="flex items-start justify-between gap-4">
-                <span>{remainingLabel}</span>
-                <strong className="text-right font-heading text-blaze">
-                  {price?.label ?? '即時報價'}
-                </strong>
-              </div>
+            <div>
+              <p className="text-mist/52">地點</p>
+              <p className="mt-1 font-heading text-pearl">
+                {featuredTicket?.venueLabel ?? 'UFC GYM Taiwan'}
+              </p>
+            </div>
+            <div>
+              <p className="text-mist/52">入場方式</p>
+              <p className="mt-1 font-heading text-pearl">付款後 LINE 確認</p>
+            </div>
+            <div>
+              <p className="text-mist/52">線上名額</p>
+              <p className="mt-1 font-heading text-pearl">{remainingLabel}</p>
             </div>
           </div>
-        </div>
-      </motion.div>
-    </SectionWrapper>
+
+          <Button
+            size="lg"
+            className="mt-8 w-full sm:w-auto"
+            onClick={onPrimaryAction}
+            data-cta="event-hero-primary"
+          >
+            選 Fight Night 入場票
+          </Button>
+        </motion.div>
+      </div>
+    </section>
   )
 }
 
@@ -372,31 +367,31 @@ function EventReframeSection() {
   return (
     <SectionWrapper id="event-reframe">
       <SectionHeading
-        title="大家都知道運動很好，但很多人不想走進健身房。"
-        subtitle="不是你不知道該運動，而是你不想面對入會、推銷、合約，或一堂又一堂無聊的課。"
+        title="你不是缺一堂課，你缺一個會把你帶進去的夜晚。"
+        subtitle="Fight Night 把運動從一件需要自律的任務，改成一段已經被音樂、口令和群體節奏編排好的現場體驗。"
       />
 
       <div className="mx-auto grid max-w-5xl gap-4 md:grid-cols-[0.95fr_1.05fr] md:gap-6">
         <div className="rounded-2xl border border-pearl/10 bg-pearl/[0.035] p-5 md:p-7">
-          <p className="font-heading text-xs tracking-[0.28em] text-blaze/80">
-            OLD GYM SCRIPT
+          <p className="font-heading text-xs text-blaze/80">
+            BEFORE
           </p>
           <h3 className="mt-4 text-2xl font-heading font-bold text-pearl">
-            你以為自己要面對的是健身房流程。
+            一想到運動，就先想到麻煩。
           </h3>
           <p className="mt-4 text-sm leading-relaxed text-mist/74 md:text-base">
-            填表、諮詢、參觀、方案介紹、會員價格、教練課推薦。很多人不是不想動，而是不想一開始就被拉進這套流程。
+            要不要入會、會不會被推銷、是不是要先很會打、是不是又是一堂很無聊的課。很多人不是不知道運動很好，而是這些念頭先把人擋住。
           </p>
         </div>
         <div className="rounded-2xl border border-neon/20 bg-neon/[0.055] p-5 md:p-7">
-          <p className="font-heading text-xs tracking-[0.28em] text-neon/80">
+          <p className="font-heading text-xs text-neon/80">
             FIGHT NIGHT
           </p>
           <h3 className="mt-4 text-2xl font-heading font-bold text-pearl">
-            我們把課程重新編排成一場情緒價值體驗。
+            Fight Night 讓你不用自己找動力。
           </h3>
           <p className="mt-4 text-sm leading-relaxed text-mist/74 md:text-base">
-            你不用自己找動力。音樂、倒數、教練口令、拳套聲和旁邊的人，會一起把你帶進那個節奏。你買的是一段完整體驗，不是被銷售打擾的試用。
+            你只要進場。音樂、倒數、教練口令、拳套聲和旁邊的人會把節奏推起來。你不是來證明自己很會運動，你是來被這個夜晚帶著完成。
           </p>
         </div>
       </div>
@@ -406,17 +401,17 @@ function EventReframeSection() {
 
 function EventNoSalesSection() {
   const items = [
-    ['不會要求入會', '你買的是這一場完整體驗，不需要先承諾長期方案。'],
-    ['不會中途推銷', '現場重點是教練帶領、節奏、動作和氛圍，不會把體驗切斷拿來談銷售。'],
-    ['不需要先會拳擊', '第一次來也可以跟，動作與強度會被拆開帶。'],
-    ['付款後 LINE 確認', '付款完成後會收到已付款入場確認卡，場次資訊清楚留在 LINE。'],
+    ['不會被帶去談方案', '你買的是這一場，不需要先承諾長期方案或會員。'],
+    ['不會中途切斷體驗', '現場重點是教練帶領、節奏、動作和氛圍，不會把流程拿來做銷售諮詢。'],
+    ['不會要求你先有基礎', '第一次來也可以跟，動作與強度會被拆開帶，不需要先練好才來。'],
+    ['會收到 LINE 入場確認', '付款完成後，場次、時間與地點會留在 LINE 裡，照著確認到場。'],
   ]
 
   return (
     <SectionWrapper id="event-no-sales">
       <SectionHeading
-        title="你只需要完成付款，然後進場享受。"
-        subtitle="這一頁的重點不是把你帶進銷售流程，而是讓你安心買一次完整體驗。"
+        title="準備買票前，先把最容易擔心的事說清楚。"
+        subtitle="你買的是這一場完整體驗，不是把自己交給健身房銷售流程。"
       />
 
       <div className="mx-auto max-w-4xl border-y border-pearl/10">
@@ -425,7 +420,7 @@ function EventNoSalesSection() {
             key={title}
             className="grid gap-3 border-b border-pearl/10 py-5 last:border-b-0 md:grid-cols-[120px_1fr] md:items-start md:py-6"
           >
-            <p className="font-heading text-sm tracking-[0.24em] text-blaze/75">
+            <p className="font-heading text-sm text-blaze/75">
               0{index + 1}
             </p>
             <div>
@@ -475,47 +470,47 @@ function EventTicketCard({
       }`}
     >
       {featured && (
-        <p className="mb-4 inline-flex rounded-full border border-neon/25 bg-neon/10 px-3 py-1 text-xs font-heading tracking-[0.24em] text-neon">
-          建議先進這場
+        <p className="mb-4 inline-flex rounded-full border border-neon/25 bg-neon/10 px-3 py-1 text-xs font-heading text-neon">
+          下一場開放入場
         </p>
       )}
-      <p className="font-heading text-xs tracking-[0.28em] text-blaze/80">
-        COMPLETE EXPERIENCE
+      <p className="font-heading text-xs text-blaze/80">
+        FIGHT NIGHT TICKET
       </p>
       <h3 className="mt-3 text-2xl font-heading font-bold text-pearl">
         {ticket.title}
       </h3>
       <p className="mt-2 text-sm text-mist/70">
-        {ticket.styleLabel} · 不用入會 · 不被推銷
+        {ticket.dateLabel} · {ticket.venueLabel} · {ticket.styleLabel}
       </p>
 
       <div className="mt-6 space-y-3 text-sm">
         <div className="flex justify-between gap-4 border-b border-pearl/10 pb-3">
-          <span className="text-mist/62">時間</span>
+          <span className="text-mist/62">進場時間</span>
           <strong className="text-right font-heading text-pearl">
-            {ticket.dateLabel} {ticket.timeLabel}
+            {ticket.timeLabel}
           </strong>
         </div>
         <div className="flex justify-between gap-4 border-b border-pearl/10 pb-3">
-          <span className="text-mist/62">地點</span>
+          <span className="text-mist/62">現場會發生</span>
           <strong className="text-right font-heading text-pearl">
-            {ticket.venueLabel}
+            音樂、口令、拳套、沙包
           </strong>
         </div>
         <div className="flex justify-between gap-4 border-b border-pearl/10 pb-3">
-          <span className="text-mist/62">教練</span>
+          <span className="text-mist/62">帶領</span>
           <strong className="text-right font-heading text-pearl">
             {ticket.coachLabel}
           </strong>
         </div>
         <div className="flex justify-between gap-4 border-b border-pearl/10 pb-3">
-          <span className="text-mist/62">名額</span>
+          <span className="text-mist/62">線上入場名額</span>
           <strong className="text-right font-heading text-neon">
             {remainingLabel}
           </strong>
         </div>
         <div className="flex justify-between gap-4">
-          <span className="text-mist/62">一次付款</span>
+          <span className="text-mist/62">入場票</span>
           <strong className="text-right font-heading text-blaze">
             {price.label}
           </strong>
@@ -524,7 +519,7 @@ function EventTicketCard({
 
       {price.offerApplied && (
         <p className="mt-3 text-xs leading-relaxed text-mist/55">
-          系統已套用目前可用的線上活動價；現場不需要再談方案。
+          系統已套用目前可用的線上活動價；現場不會再要求你談方案。
         </p>
       )}
 
@@ -536,7 +531,7 @@ function EventTicketCard({
         data-cta="event-ticket-purchase"
         data-ticket={ticket.id}
       >
-        {disabled ? '本場候補中' : '購買這場完整體驗'}
+        {disabled ? '本場候補中' : '購買 Fight Night 入場票'}
       </Button>
     </motion.article>
   )
@@ -558,8 +553,8 @@ function EventTicketDropSection({
   return (
     <SectionWrapper id="event-entry" className="pb-28 md:pb-32">
       <SectionHeading
-        title="選一場，像買活動一樣完成付款。"
-        subtitle="付款後保留名額，LINE 收入場確認。你買的是一場完整體驗，不是入會前導。"
+        title="選你要進場的那一晚。"
+        subtitle="付款後保留入場名額，LINE 收確認。你買的是一張 Fight Night 入場票，不是健身房諮詢。"
       />
 
       <div className="grid gap-4 md:grid-cols-2 md:gap-6">
@@ -578,10 +573,10 @@ function EventTicketDropSection({
 
       <div className="mx-auto mt-8 max-w-3xl rounded-2xl border border-pearl/10 bg-black/35 p-5 text-center md:p-7">
         <p className="text-base font-heading font-bold text-pearl md:text-xl">
-          付款完成後，這場體驗就是你的。
+          付款完成後，這張入場票就是你的。
         </p>
         <p className="mx-auto mt-2 max-w-2xl text-sm leading-relaxed text-mist/70 md:text-base">
-          你不需要現場談會員，也不需要先聽方案。照著 LINE 入場確認到場，完整跟著教練與節奏走完這一場。
+          你不需要現場談會員，也不需要先聽方案。照著 LINE 入場確認到場，完整跟著教練、音樂和全場節奏走完這一場。
         </p>
       </div>
     </SectionWrapper>
@@ -737,7 +732,7 @@ function CheckoutModal({
           original_value: checkoutPrice.originalAmount,
           currency: 'TWD',
           remaining: availability.remaining,
-          event_product: 'complete_experience_no_membership',
+          event_product: 'fight_night_entry_ticket_no_membership',
           discount_code: checkoutPrice.offerApplied
             ? '618_MIDYEAR_FIRST_PURCHASE_HALF'
             : undefined,
@@ -783,11 +778,11 @@ function CheckoutModal({
         </button>
 
         <form onSubmit={handleSubmit}>
-          <p className="font-heading text-xs tracking-[0.32em] text-neon/80">
-            COMPLETE EXPERIENCE
+          <p className="font-heading text-xs text-neon/80">
+            ENTRY TICKET
           </p>
           <h2 className="mt-3 text-3xl font-heading font-bold text-pearl">
-            確認資料，前往付款
+            確認資料，購買入場票
           </h2>
 
           <div className="mt-5 rounded-2xl border border-neon/20 bg-neon/[0.04] p-4">
@@ -802,7 +797,7 @@ function CheckoutModal({
               {displayPrice.label}
             </p>
             <p className="mt-2 text-sm leading-relaxed text-mist/62">
-              一次付款，不需入會，不安排銷售諮詢。付款完成後會透過 LINE 收到入場確認。
+              一次付款，不需入會，不安排銷售諮詢。付款完成後會透過 LINE 收到這場的入場確認。
             </p>
           </div>
 
@@ -856,10 +851,10 @@ function CheckoutModal({
             className="mt-6 w-full"
             data-cta="event-checkout-submit"
           >
-            {isSubmitting ? '正在建立付款連結...' : '前往付款，確認這場體驗'}
+            {isSubmitting ? '正在建立付款連結...' : '前往付款，購買入場票'}
           </Button>
           <p className="mt-3 text-center text-xs leading-relaxed text-mist/55">
-            送出後會儲存這次填寫的資料，下次預約或購買課程會自動帶入。
+            送出後會儲存這次填寫的資料，下次購買或預約會自動帶入。
           </p>
         </form>
       </motion.div>
@@ -932,7 +927,7 @@ export function FightNightEventPage() {
       params: {
         source: landingVariant,
         event_name: eventName,
-        paid_experience_flow: true,
+        entry_ticket_flow: true,
       },
       metaStandardEvent: 'ViewContent',
       lineEventName: 'EventPageView',
@@ -959,14 +954,14 @@ export function FightNightEventPage() {
         ticket_id: targetTicket.id,
         course_id: targetTicket.course.id,
         gate_status: gateState.status,
-        event_product: 'complete_experience_no_membership',
+        event_product: 'fight_night_entry_ticket_no_membership',
       },
       metaStandardEvent: 'AddToCart',
       lineEventName: 'EventTicketClick',
     })
 
     if (gateState.status !== 'unlocked') {
-      trackGateAccess('event_paid_experience', gateState.status)
+        trackGateAccess('event_entry_ticket', gateState.status)
       if (loginUrl && ['loading', 'logged-out'].includes(gateState.status)) {
         window.location.href = loginUrl
         return
@@ -986,7 +981,7 @@ export function FightNightEventPage() {
   const structuredData = featuredTicket
     ? {
         '@type': 'Event',
-        name: `${eventName} 完整體驗`,
+        name: `${eventName} 入場票`,
         description: eventDescription,
         startDate: `${featuredTicket.course.date}T${featuredTicket.course.startTime}:00+08:00`,
         endDate: `${featuredTicket.course.date}T${featuredTicket.course.endTime}:00+08:00`,
@@ -1009,7 +1004,7 @@ export function FightNightEventPage() {
   return (
     <div className="relative w-full overflow-x-hidden bg-abyss">
       <Seo
-        title="After Work Fight Night｜不用入會的一次完整體驗"
+        title="After Work Fight Night｜不用入會的入場票"
         description={eventDescription}
         canonicalPath="/fight-night-event"
         keywords={[
@@ -1025,13 +1020,11 @@ export function FightNightEventPage() {
       />
       <Header />
       <main>
-        <HeroSection />
-        <EventPromiseSection
+        <EventHeroSection
           featuredTicket={featuredTicket}
           availability={featuredAvailability}
           hasLiveData={hasLiveData}
-          price={featuredPrice}
-          onPrimaryAction={() => openCheckout()}
+          onPrimaryAction={() => scrollToId('event-entry')}
         />
         <PainSection />
         <EventReframeSection />
@@ -1041,11 +1034,10 @@ export function FightNightEventPage() {
         <ExperienceFlowSection />
         <EventNoSalesSection />
         <IdentitySection />
-        <FAQSection />
         <FAQSection
           id="event-faq"
-          title="第一次買這場體驗前，先把疑慮說清楚。"
-          subtitle="你買的是一次完整 Fight Night，不是入會諮詢，也不是免費體驗後的推銷流程。"
+          title="第一次買入場票前，先把疑慮說清楚。"
+          subtitle="你買的是這一場 After Work Fight Night，不是先付錢後再被帶進銷售流程。"
           items={eventFaqItems}
         />
         <EventTicketDropSection
@@ -1058,10 +1050,10 @@ export function FightNightEventPage() {
       </main>
       <Footer />
       <StickyActionBar
-        eyebrow="NO MEMBERSHIP"
+        eyebrow="ENTRY TICKET"
         title="After Work Fight Night"
-        detail="一次付款，完整體驗"
-        actionLabel="購買體驗"
+        detail="不用入會，付款入場"
+        actionLabel="買入場票"
         onAction={() => scrollToId('event-entry')}
       />
       <CheckoutModal
