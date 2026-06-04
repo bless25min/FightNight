@@ -42,7 +42,7 @@ export function Header() {
   const ctaLabel = isBootCampPage
     ? '選路徑與梯次'
     : isEventPage
-      ? '保留入場名額'
+      ? '把這一晚留下來'
     : isOffersPage
       ? '選 Boot Camp 場次'
       : isUtilityPage
@@ -56,17 +56,26 @@ export function Header() {
       ? 'offers-plans'
       : 'fight-night-pass'
   const ctaHref = isUtilityPage ? '/boot-camp' : `#${ctaTargetId}`
+  const contentClass = isEventPage
+    ? 'max-w-[430px] mx-auto px-4 sm:px-4'
+    : 'max-w-6xl mx-auto px-3 sm:px-8'
+  const headerClass = isEventPage
+    ? scrolled
+      ? 'glass py-2'
+      : 'bg-transparent py-3'
+    : scrolled
+      ? 'glass py-2 md:py-3'
+      : 'bg-transparent py-3 md:py-5'
+  const logoClass = isEventPage ? 'h-7' : 'h-7 md:h-9'
 
   return (
     <motion.header
       initial={{ y: -100 }}
       animate={{ y: 0 }}
       transition={{ duration: 0.5, delay: 0.5 }}
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        scrolled ? 'glass py-2 md:py-3' : 'bg-transparent py-3 md:py-5'
-      }`}
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${headerClass}`}
     >
-      <div className="max-w-6xl mx-auto px-3 sm:px-8 flex items-center justify-between">
+      <div className={`${contentClass} flex items-center justify-between`}>
         <a
           href={
             isOffersPage || isBootCampPage || isUtilityPage
@@ -86,7 +95,7 @@ export function Header() {
           <img
             src={logo}
             alt={siteConfig.brandName}
-            className="h-7 md:h-9"
+            className={logoClass}
           />
         </a>
 

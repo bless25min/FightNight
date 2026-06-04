@@ -1,19 +1,15 @@
 import { motion } from 'framer-motion'
 import type { ChangeEvent, FormEvent } from 'react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
-import collectiveEuphoriaCard from '../assets/landing/collective-euphoria-card.jpg'
-import flowStep1Poster from '../assets/landing/flow-step-1.jpg'
-import flowStep3Poster from '../assets/landing/flow-step-3.jpg'
-import flowStep5Poster from '../assets/landing/flow-step-5.jpg'
-import grindTrainingCard from '../assets/landing/grind-training-card.jpg'
-import trainDifferentPoster from '../assets/landing/train-different-poster.jpg'
-import { Footer } from '../components/layout/Footer'
+import eventAfterglow from '../assets/event/event-afterglow.jpg'
+import eventBagImpact from '../assets/event/event-bag-impact.jpg'
+import eventGroupEnergy from '../assets/event/event-group-energy.jpg'
+import eventHeroEmotion from '../assets/event/event-hero-emotion.jpg'
 import { Header } from '../components/layout/Header'
 import { Seo } from '../components/Seo'
 import { FAQSection } from '../components/sections/FAQSection'
 import { Button } from '../components/ui/Button'
-import { SectionHeading } from '../components/ui/SectionHeading'
 import { SectionWrapper } from '../components/ui/SectionWrapper'
 import { StickyActionBar } from '../components/ui/StickyActionBar'
 import { findCoachProfile } from '../data/coachProfiles'
@@ -37,8 +33,6 @@ import {
 } from '../lib/checkoutTracking'
 import {
   formatCoursePrice,
-  getCoursePriceModel,
-  getFirstPurchaseOfferAmount,
   getTaipeiTodayIso,
 } from '../lib/coursePricing'
 import { getLineRequestContext } from '../lib/lineContext'
@@ -58,8 +52,6 @@ type EventTicket = {
   dateLabel: string
   timeLabel: string
   venueLabel: string
-  styleLabel: string
-  coachLabel: string
 }
 
 type EventTicketPrice = {
@@ -71,12 +63,31 @@ type EventTicketPrice = {
   pricingTier: 'foreign-fighter' | 'domestic-teacher'
 }
 
-type OfferState = 'idle' | 'checking' | 'eligible' | 'ineligible' | 'error'
+type Coordinates = {
+  latitude: number
+  longitude: number
+}
+
+type VenueRecommendation = {
+  venueId: string
+  distanceKm?: number
+  source: 'cloudflare' | 'browser'
+}
+
+type LocationRecommendationResponse = {
+  recommendation?: {
+    venueId?: string
+    distanceKm?: number
+    source?: string
+  } | null
+}
 
 const landingVariant = 'fightnight_event_night_ticket_paid_v3'
 const eventName = 'After Work Fight Night'
+const eventPassPriceAmount = 980
+const eventPassPricingMode = 'fight-night-event-pass-v1'
 const eventDescription =
-  'After Work Fight Night 是一場下班後的集體釋放夜。不用入會、不用諮詢，買一張指定場次入場票，付款後照著 LINE 確認到場。'
+  'After Work Fight Night 是一張 Fight Night Pass。走進 UFC GYM，戴上拳套，把 50 分鐘交給倒數、沙包聲和全場。'
 
 const venueLabelMap: Record<string, string> = {
   'venue-dunnan': '敦南旗艦館',
@@ -84,42 +95,51 @@ const venueLabelMap: Record<string, string> = {
   'venue-taichung': '台中旗艦館',
 }
 
+const venueCoordinates: Record<string, Coordinates> = {
+  'venue-dunnan': {
+    latitude: 25.03931467772036,
+    longitude: 121.54767441193627,
+  },
+  'venue-neihu': {
+    latitude: 25.079304677694402,
+    longitude: 121.57099151193722,
+  },
+  'venue-taichung': {
+    latitude: 24.151235378309035,
+    longitude: 120.66126771191507,
+  },
+}
+
 const eventFaqItems: FAQItem[] = [
   {
-    id: 'event-ticket-includes',
-    question: '這張入場票包含什麼？',
-    answer:
-      '包含指定場次 Fight Night 入場資格、50 分鐘教練帶領、拳擊／泰拳節奏體驗與場館使用。你不是買一段諮詢時間，而是買這一晚的完整體驗。',
-  },
-  {
-    id: 'event-no-membership',
-    question: '買這張入場票，需要加入會員或先聽方案嗎？',
-    answer:
-      '不用。這張票買的是一場完整 Fight Night 體驗，不是健身房入會前導。你完成線上付款後，只需要依照 LINE 入場確認到現場。',
-  },
-  {
-    id: 'event-no-sales',
-    question: '到現場會不會被推銷其他方案或會員？',
-    answer:
-      '這張入場票的承諾是完整體驗不被打斷。現場流程以教練帶領、音樂節奏與動作體驗為主，不會在體驗中安排銷售諮詢。',
-  },
-  {
     id: 'event-first-time',
-    question: '完全沒有拳擊或泰拳經驗，可以參加嗎？',
+    question: '我完全沒打過可以嗎？',
     answer:
-      '可以。Fight Night 不是格鬥比賽，也不是動作考核。教練會從暖身、站位、出拳節奏開始帶，第一次來也可以跟上。',
+      '可以。前面會從能跟上的節奏開始，不需要先練好。',
   },
   {
     id: 'event-no-fight',
-    question: '會不會對打？會不會被打？',
+    question: '會對打嗎？',
     answer:
-      '不會。這不是實戰對打活動，主要是跟著教練口令、拳套、沙包與全場節奏完成體驗。',
+      '不會。主要是拳套、沙包、口令和回合。',
+  },
+  {
+    id: 'event-no-membership',
+    question: '會被推銷或要入會嗎？',
+    answer:
+      '不會。這張 Pass 只買這一晚。',
+  },
+  {
+    id: 'event-what-to-wear',
+    question: '要穿什麼？需要帶什麼？',
+    answer:
+      '穿一般好活動的運動服就可以。到場會帶你進流程，需要準備的細節會在 LINE 入場確認裡提醒。',
   },
   {
     id: 'event-payment',
-    question: '付款後會收到什麼？',
+    question: '付款後怎麼入場？',
     answer:
-      '付款完成後，系統會依付款通知確認訂單，並透過 LINE 發送已付款入場確認卡。你可以在 LINE 裡確認場次、時間與地點。',
+      'LINE 會留下時間、地點和入場確認。',
   },
 ]
 
@@ -172,29 +192,59 @@ function getNextBookableOccurrence(baseCourse: WeeklyCourse, minDateIso: string)
   }
 }
 
-function getStyleLabel(course: WeeklyCourse) {
-  const nameEn = course.nameEn.toLowerCase()
-  if (nameEn.includes('muay')) return '泰拳／踢拳'
-  if (nameEn.includes('kickbox')) return '踢拳'
-  if (nameEn.includes('boxing')) return '拳擊'
-  if (nameEn.includes('fight fit')) return 'Fight Fit'
-  if (nameEn.includes('conditioning')) return '體能節奏'
-  return 'Fight Night'
-}
-
 function getVenueLabel(course: WeeklyCourse) {
   return venueLabelMap[course.venueId] ?? course.venueName
 }
 
-function getCoachLabel(course: WeeklyCourse) {
-  return findCoachProfile(course.coach)?.shortName ?? 'UFC GYM Coach'
+function toRadians(value: number) {
+  return (value * Math.PI) / 180
+}
+
+function getDistanceKm(from: Coordinates, to: Coordinates) {
+  const earthRadiusKm = 6371
+  const deltaLatitude = toRadians(to.latitude - from.latitude)
+  const deltaLongitude = toRadians(to.longitude - from.longitude)
+  const startLatitude = toRadians(from.latitude)
+  const endLatitude = toRadians(to.latitude)
+
+  const angle =
+    Math.sin(deltaLatitude / 2) * Math.sin(deltaLatitude / 2) +
+    Math.cos(startLatitude) *
+      Math.cos(endLatitude) *
+      Math.sin(deltaLongitude / 2) *
+      Math.sin(deltaLongitude / 2)
+
+  return earthRadiusKm * 2 * Math.atan2(Math.sqrt(angle), Math.sqrt(1 - angle))
+}
+
+function getNearestVenueRecommendation(
+  location: Coordinates,
+  source: VenueRecommendation['source'],
+): VenueRecommendation {
+  const nearest = Object.entries(venueCoordinates)
+    .map(([venueId, coordinates]) => ({
+      venueId,
+      distanceKm: getDistanceKm(location, coordinates),
+      source,
+    }))
+    .sort((a, b) => a.distanceKm - b.distanceKm)[0]
+
+  return nearest ?? { venueId: 'venue-dunnan', source }
+}
+
+function getRecommendedTicket(
+  tickets: EventTicket[],
+  recommendation: VenueRecommendation | null,
+) {
+  if (!recommendation) return undefined
+  return tickets.find((ticket) => ticket.course.venueId === recommendation.venueId)
 }
 
 function getCoachPricingTier(course: WeeklyCourse) {
   return findCoachProfile(course.coach)?.pricingTier ?? 'domestic-teacher'
 }
 
-function getEventTickets(limit = 3): EventTicket[] {
+function getEventTickets(limit = 48): EventTicket[] {
   const bookableFromIso = addDays(
     getTaipeiTodayIso(),
     ONLINE_BOOKING_START_OFFSET_DAYS,
@@ -213,12 +263,10 @@ function getEventTickets(limit = 3): EventTicket[] {
       id: course.id,
       course,
       sessionId: course.id,
-      title: `${eventName}｜${getVenueLabel(course)}`,
+      title: eventName,
       dateLabel: formatDateLabel(course.date),
       timeLabel: `${course.startTime}-${course.endTime}`,
       venueLabel: getVenueLabel(course),
-      styleLabel: getStyleLabel(course),
-      coachLabel: getCoachLabel(course),
     }))
 }
 
@@ -227,36 +275,22 @@ function getRemainingLabel(
   hasLiveData: boolean,
 ) {
   if (!hasLiveData) {
-    return `線上開放 ${availability.capacity || ONLINE_SALES_SEAT_LIMIT} 位`
+    return `線上剩餘名額 ${availability.capacity || ONLINE_SALES_SEAT_LIMIT} 位`
   }
   if (availability.remaining <= 0) return '候補中'
   if (availability.remaining <= 2) return `最後 ${availability.remaining} 位`
   return `剩餘 ${availability.remaining} 位`
 }
 
-function getEventTicketPrice(
-  ticket: EventTicket,
-  availability: SessionAvailability,
-  offerEligible: boolean,
-): EventTicketPrice {
+function getEventTicketPrice(ticket: EventTicket): EventTicketPrice {
   const pricingTier = getCoachPricingTier(ticket.course)
-  const basePrice = getCoursePriceModel({
-    course: ticket.course,
-    pricingTier,
-    packageSize: 1,
-    remaining: availability.remaining,
-  })
-  const offerAmount = offerEligible
-    ? getFirstPurchaseOfferAmount(basePrice.amount)
-    : basePrice.amount
-  const amount = Math.min(basePrice.amount, offerAmount)
 
   return {
-    amount,
-    label: formatCoursePrice(amount),
-    originalAmount: basePrice.amount,
-    originalLabel: basePrice.label,
-    offerApplied: amount < basePrice.amount,
+    amount: eventPassPriceAmount,
+    label: formatCoursePrice(eventPassPriceAmount),
+    originalAmount: eventPassPriceAmount,
+    originalLabel: formatCoursePrice(eventPassPriceAmount),
+    offerApplied: false,
     pricingTier,
   }
 }
@@ -280,85 +314,120 @@ function getSourcePath() {
   return `${window.location.pathname}${window.location.search}${window.location.hash}`
 }
 
+function EventSectionHeading({
+  eyebrow,
+  title,
+  children,
+}: {
+  eyebrow?: string
+  title: string
+  children?: string
+}) {
+  return (
+    <div className="mb-6">
+      {eyebrow && (
+        <p className="font-heading text-sm font-bold text-blaze/82">
+          {eyebrow}
+        </p>
+      )}
+      <h2 className="mt-3 font-heading text-[2rem] font-black leading-tight text-pearl">
+        {title}
+      </h2>
+      {children && (
+        <p className="mt-4 text-base leading-relaxed text-mist/76">
+          {children}
+        </p>
+      )}
+    </div>
+  )
+}
+
+function EventImageFrame({
+  src,
+  alt,
+  position = '72% center',
+}: {
+  src: string
+  alt: string
+  position?: string
+}) {
+  return (
+    <motion.figure
+      initial={{ opacity: 0, y: 22 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.6 }}
+      className="overflow-hidden rounded-xl border border-pearl/10 bg-black/30"
+    >
+      <img
+        src={src}
+        alt={alt}
+        className="aspect-[4/5] w-full object-cover"
+        style={{ objectPosition: position }}
+        loading="lazy"
+      />
+    </motion.figure>
+  )
+}
+
 function EventHeroSection({
   featuredTicket,
-  availability,
-  hasLiveData,
+  featuredPrice,
   onPrimaryAction,
 }: {
   featuredTicket?: EventTicket
-  availability?: SessionAvailability
-  hasLiveData: boolean
+  featuredPrice?: EventTicketPrice
   onPrimaryAction: () => void
 }) {
-  const remainingLabel =
-    featuredTicket && availability
-      ? getRemainingLabel(availability, hasLiveData)
-      : `線上開放 ${ONLINE_SALES_SEAT_LIMIT} 位`
   const dateTimeLabel = featuredTicket
     ? `${featuredTicket.dateLabel} ${featuredTicket.timeLabel}`
     : '本週開放場次'
+  const priceLabel = featuredPrice?.label ?? formatCoursePrice(eventPassPriceAmount)
 
   return (
     <section
       id="event-hero"
-      className="relative min-h-[92vh] overflow-hidden bg-abyss text-pearl md:min-h-screen"
+      className="relative min-h-[92vh] overflow-hidden bg-abyss text-pearl"
     >
       <img
-        src={collectiveEuphoriaCard}
-        alt="Fight Night 現場集體節奏與入場氛圍"
-        className="absolute inset-0 h-full w-full object-cover object-[68%_center] opacity-80"
+        src={eventHeroEmotion}
+        alt="Fight Night 現場笑出來的情緒特寫"
+        className="absolute inset-0 h-full w-full object-cover opacity-[0.9]"
         loading="eager"
       />
-      <div className="absolute inset-0 bg-gradient-to-b from-abyss/20 via-abyss/45 to-abyss" />
-      <div className="absolute inset-0 bg-gradient-to-r from-abyss via-abyss/86 to-abyss/18" />
+      <div className="absolute inset-0 bg-gradient-to-b from-abyss/5 via-abyss/34 to-abyss" />
+      <div className="absolute inset-0 bg-gradient-to-r from-abyss/92 via-abyss/68 to-abyss/10" />
 
-      <div className="relative z-10 mx-auto flex min-h-[92vh] max-w-6xl items-end px-3 pb-10 pt-28 sm:px-8 md:min-h-screen md:pb-16 md:pt-36">
+      <div className="relative z-10 mx-auto flex min-h-[92vh] max-w-[430px] items-end px-4 pb-9 pt-28">
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.75 }}
-          className="max-w-3xl"
+          className="max-w-full"
         >
-          <p className="font-heading text-sm font-bold text-neon md:text-base">
+          <p className="font-heading text-sm font-bold text-neon">
             AFTER WORK FIGHT NIGHT
           </p>
-          <h1 className="mt-4 max-w-3xl font-heading text-4xl font-black leading-tight text-pearl md:text-7xl">
-            下班後，進入一場會把你帶起來的夜晚。
+          <h1 className="mt-4 font-heading text-[2.65rem] font-black leading-[0.98] text-pearl">
+            下班後，進入另一種夜晚。
           </h1>
-          <p className="mt-5 max-w-2xl text-base leading-relaxed text-mist/82 md:text-xl">
-            不用入會，不用先被諮詢。你買一張指定場次入場票，到場後跟著音樂、倒數、教練口令和全場節奏，完成 50 分鐘 Fight Night。
+          <p className="mt-5 text-base leading-relaxed text-mist/84">
+            平常下班，你可能只是吃飯、回家、滑手機。這一晚不一樣，你會走進一個聲音很近、節奏很熱、大家真的會玩開的現場。
           </p>
-
-          <div className="mt-8 grid gap-3 border-y border-pearl/14 py-5 text-sm text-mist/76 sm:grid-cols-4">
-            <div>
-              <p className="text-mist/52">下一場</p>
-              <p className="mt-1 font-heading text-pearl">{dateTimeLabel}</p>
-            </div>
-            <div>
-              <p className="text-mist/52">地點</p>
-              <p className="mt-1 font-heading text-pearl">
-                {featuredTicket?.venueLabel ?? 'UFC GYM Taiwan'}
-              </p>
-            </div>
-            <div>
-              <p className="text-mist/52">入場方式</p>
-              <p className="mt-1 font-heading text-pearl">付款後 LINE 確認</p>
-            </div>
-            <div>
-              <p className="text-mist/52">線上名額</p>
-              <p className="mt-1 font-heading text-pearl">{remainingLabel}</p>
-            </div>
-          </div>
 
           <Button
             size="lg"
-            className="mt-8 w-full sm:w-auto"
+            className="mt-8 w-full"
             onClick={onPrimaryAction}
             data-cta="event-hero-primary"
           >
-            選這一晚的入場票
+            看這一晚有多好玩
           </Button>
+          <p className="mt-3 text-center text-xs font-heading leading-relaxed text-mist/62">
+            {priceLabel}｜一週一場｜每場 {ONLINE_SALES_SEAT_LIMIT} 位
+            <br />
+            {dateTimeLabel}
+          </p>
         </motion.div>
       </div>
     </section>
@@ -367,42 +436,32 @@ function EventHeroSection({
 
 function EventReframeSection() {
   return (
-    <SectionWrapper id="event-reframe">
-      <div className="mx-auto grid max-w-6xl gap-8 md:grid-cols-[0.95fr_1.05fr] md:items-center">
+    <SectionWrapper
+      id="event-reframe"
+      className="max-w-[430px] px-4 sm:px-4"
+      padding="py-8"
+    >
+      <div className="grid gap-5">
         <motion.div
           initial={{ opacity: 0, y: 18 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.55 }}
         >
-          <p className="font-heading text-sm font-bold text-blaze/85">
-            WHY THIS EXISTS
-          </p>
-          <h2 className="mt-4 max-w-2xl font-heading text-3xl font-black leading-tight text-pearl md:text-5xl">
-            你不是不想運動，你是不想再走進那套健身房流程。
-          </h2>
-          <p className="mt-5 max-w-xl text-base leading-relaxed text-mist/78 md:text-lg">
-            大家都知道運動很好，但一想到入會、諮詢、合約、推銷，或是又要上一堂無聊的課，很多人還沒開始就冷掉了。
-          </p>
-          <p className="mt-4 max-w-xl text-base leading-relaxed text-mist/78 md:text-lg">
-            Fight Night 解決的不是「你不知道該運動」，而是把運動改成一場你願意進去享受的夜晚。
+          <EventSectionHeading
+            title="一進去，節奏會先靠過來。"
+          >
+            場地不大，距離很近。教練喊第一個倒數，大家一起動起來，空氣會突然變熱。
+          </EventSectionHeading>
+          <p className="text-base leading-relaxed text-mist/76">
+            你不用先搞懂所有動作。只要跟著第一下、第二下，這一晚就會慢慢變得好玩。
           </p>
         </motion.div>
 
-        <motion.figure
-          initial={{ opacity: 0, y: 22 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="overflow-hidden rounded-2xl border border-pearl/10 bg-black/30"
-        >
-          <img
-            src={grindTrainingCard}
-            alt="Fight Night 用拳擊與節奏把運動變成現場體驗"
-            className="aspect-[4/5] w-full object-cover md:aspect-[5/4]"
-            loading="lazy"
-          />
-        </motion.figure>
+        <EventImageFrame
+          src={eventGroupEnergy}
+          alt="Fight Night 小團體被現場節奏帶起來"
+        />
       </div>
     </SectionWrapper>
   )
@@ -410,143 +469,120 @@ function EventReframeSection() {
 
 function EventProofSection() {
   return (
-    <SectionWrapper id="event-proof">
-      <div className="mx-auto grid max-w-6xl gap-8 md:grid-cols-[1.05fr_0.95fr] md:items-center">
-        <motion.figure
-          initial={{ opacity: 0, y: 22 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="order-2 overflow-hidden rounded-2xl border border-pearl/10 bg-black/30 md:order-1"
-        >
-          <img
-            src={trainDifferentPoster}
-            alt="Fight Night 現場有音樂、教練口令與集體節奏"
-            className="aspect-[4/5] w-full object-cover md:aspect-[5/4]"
-            loading="lazy"
-          />
-        </motion.figure>
+    <SectionWrapper
+      id="event-proof"
+      className="max-w-[430px] px-4 sm:px-4"
+      padding="py-8"
+    >
+      <div className="grid gap-5">
+        <EventImageFrame
+          src={eventBagImpact}
+          alt="教練口令、黑色沙包與拳套落點"
+          position="center center"
+        />
 
-        <motion.div
-          initial={{ opacity: 0, y: 18 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.55 }}
-          className="order-1 md:order-2"
-        >
-          <p className="font-heading text-sm font-bold text-neon/85">
-            NOT A COURSE PAGE
-          </p>
-          <h2 className="mt-4 max-w-2xl font-heading text-3xl font-black leading-tight text-pearl md:text-5xl">
-            它不是拳擊課，也不是一般團體健身。
-          </h2>
-          <p className="mt-5 max-w-xl text-base leading-relaxed text-mist/78 md:text-lg">
-            你買的不是一個冷冰冰的時段，而是一段已經被編排好的情緒體驗：音樂先把氣氛打開，教練口令把人帶進節奏，沙包和拳套聲讓你把壓力真的打出去。
-          </p>
-          <p className="mt-4 max-w-xl text-base leading-relaxed text-mist/78 md:text-lg">
-            你不用自己找動力，也不用證明自己很會。你只要進場，跟著現場走。
-          </p>
-        </motion.div>
+        <div>
+          <EventSectionHeading title="第一聲悶響，會把白天切開。" />
+
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+            className="space-y-4 border-y border-pearl/10 py-5 text-base leading-relaxed text-mist/78"
+          >
+            <p>
+              拳套戴上去，手會有點熱。第一下落在黑色沙包上，聲音很低、很近，白天的雜訊會先退一點。
+            </p>
+            <p>
+              倒數一靠近，教練的口令、旁邊的呼吸和沙包聲疊在一起。你不用想太多，只要跟著下一下。
+            </p>
+          </motion.div>
+        </div>
+      </div>
+    </SectionWrapper>
+  )
+}
+
+function EventSafetySection() {
+  const items = [
+    {
+      title: '不用入會',
+      body: '這張 Pass 只買這一晚。',
+    },
+    {
+      title: '不用被推銷',
+      body: '線上付款，LINE 留票，到場進場。',
+    },
+    {
+      title: '新手也能玩得進去',
+      body: '從跟得上的節奏開始，不用先練好。',
+    },
+  ]
+
+  return (
+    <SectionWrapper
+      id="event-easy-entry"
+      className="max-w-[430px] px-4 sm:px-4"
+      padding="py-8"
+    >
+      <EventSectionHeading title="第一次來，也可以很單純。" />
+
+      <div className="grid gap-3">
+        {items.map((item, index) => (
+          <motion.div
+            key={item.title}
+            initial={{ opacity: 0, y: 12 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.4, delay: index * 0.04 }}
+            className="rounded-xl border border-pearl/10 bg-pearl/[0.035] px-4 py-4"
+          >
+            <h3 className="font-heading text-lg font-bold text-pearl">
+              {item.title}
+            </h3>
+            <p className="mt-1 text-sm leading-relaxed text-mist/72">
+              {item.body}
+            </p>
+          </motion.div>
+        ))}
       </div>
     </SectionWrapper>
   )
 }
 
 function EventFlowPreviewSection() {
-  const steps = [
-    {
-      image: flowStep1Poster,
-      label: '01',
-      title: '先進入狀態',
-      body: '音樂、燈光和暖身會把注意力從工作裡抽出來，身體先跟上節奏。',
-    },
-    {
-      image: flowStep3Poster,
-      label: '02',
-      title: '跟著教練打出去',
-      body: '不用自己想動作，教練會用口令把拳擊、泰拳和強度拆開帶。',
-    },
-    {
-      image: flowStep5Poster,
-      label: '03',
-      title: '完整收尾離場',
-      body: '50 分鐘結束後，你帶走的是一種真的有完成、真的有釋放的感覺。',
-    },
-  ]
-
   return (
-    <SectionWrapper id="event-flow-preview">
-      <SectionHeading
-        title="進場後，只要跟著這三段走。"
-        subtitle="不用先會拳擊，不用準備社交，也不用擔心跟不上。這一晚會被一步一步帶完。"
-      />
-
-      <div className="grid gap-4 md:grid-cols-3 md:gap-5">
-        {steps.map((step) => (
-          <motion.article
-            key={step.label}
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
-            className="overflow-hidden rounded-2xl border border-pearl/10 bg-pearl/[0.035]"
+    <SectionWrapper
+      id="event-flow-preview"
+      className="max-w-[430px] px-4 sm:px-4"
+      padding="py-8"
+    >
+      <div className="grid gap-5">
+        <EventImageFrame
+          src={eventAfterglow}
+          alt="Fight Night 結束後笑出來的放鬆感"
+        />
+        <div>
+          <EventSectionHeading title="最後一輪結束，大家會坐下來笑。" />
+          <p className="text-base leading-relaxed text-mist/76">
+            手還熱，沙包還在晃。你坐下來，旁邊的人也在喘，也在笑。
+          </p>
+          <p className="mt-4 text-base leading-relaxed text-mist/76">
+            那種鬆掉的開心，會讓這一晚留下來。
+          </p>
+          <p className="mt-4 text-base leading-relaxed text-mist/76">
+            覺得有點想試，就把這一晚留下來。
+          </p>
+          <Button
+            size="lg"
+            className="mt-6 w-full"
+            onClick={() => scrollToId('event-entry')}
+            data-cta="event-afterglow-cta"
           >
-            <img
-              src={step.image}
-              alt={`${step.title}：${step.body}`}
-              className="aspect-[4/5] w-full object-cover"
-              loading="lazy"
-            />
-            <div className="p-5">
-              <p className="font-heading text-sm text-blaze/78">{step.label}</p>
-              <h3 className="mt-2 font-heading text-2xl font-bold text-pearl">
-                {step.title}
-              </h3>
-              <p className="mt-3 text-sm leading-relaxed text-mist/72">
-                {step.body}
-              </p>
-            </div>
-          </motion.article>
-        ))}
-      </div>
-    </SectionWrapper>
-  )
-}
-
-function EventNoSalesSection() {
-  const items = [
-    ['不會被帶去談方案', '你買的是這一場，不需要先承諾長期方案或會員。'],
-    ['不會中途切斷體驗', '現場重點是教練帶領、節奏、動作和氛圍，不會把流程拿來做銷售諮詢。'],
-    ['不會要求你先有基礎', '第一次來也可以跟，動作與強度會被拆開帶，不需要先練好才來。'],
-    ['會收到 LINE 入場確認', '付款完成後，場次、時間與地點會留在 LINE 裡，照著確認到場。'],
-  ]
-
-  return (
-    <SectionWrapper id="event-no-sales">
-      <SectionHeading
-        title="買票前，只要確認這四件事。"
-        subtitle="不用入會、不對打、不被中途推銷。付款後 LINE 留下入場資訊，照著到場。"
-      />
-
-      <div className="mx-auto max-w-4xl border-y border-pearl/10">
-        {items.map(([title, body], index) => (
-          <div
-            key={title}
-            className="grid gap-3 border-b border-pearl/10 py-5 last:border-b-0 md:grid-cols-[120px_1fr] md:items-start md:py-6"
-          >
-            <p className="font-heading text-sm text-blaze/75">
-              0{index + 1}
-            </p>
-            <div>
-              <h3 className="text-xl font-heading font-bold text-pearl">
-                {title}
-              </h3>
-              <p className="mt-2 text-sm leading-relaxed text-mist/74 md:text-base">
-                {body}
-              </p>
-            </div>
-          </div>
-        ))}
+            把這一晚留下來
+          </Button>
+        </div>
       </div>
     </SectionWrapper>
   )
@@ -556,19 +592,17 @@ function EventTicketCard({
   ticket,
   availability,
   hasLiveData,
-  offerEligible,
+  displayMode = 'next',
   onPurchase,
-  featured,
 }: {
   ticket: EventTicket
   availability: SessionAvailability
   hasLiveData: boolean
-  offerEligible: boolean
+  displayMode?: 'next' | 'nearest'
   onPurchase: (ticket: EventTicket) => void
-  featured?: boolean
 }) {
   const remainingLabel = getRemainingLabel(availability, hasLiveData)
-  const price = getEventTicketPrice(ticket, availability, offerEligible)
+  const price = getEventTicketPrice(ticket)
   const disabled = hasLiveData && availability.remaining <= 0
 
   return (
@@ -577,71 +611,39 @@ function EventTicketCard({
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.55 }}
-      className={`relative overflow-hidden rounded-2xl border p-5 shadow-[0_22px_70px_rgba(0,0,0,0.32)] md:p-6 ${
-        featured
-          ? 'border-neon/35 bg-neon/[0.08]'
-          : 'border-pearl/10 bg-pearl/[0.035]'
-      }`}
+      className="relative overflow-hidden rounded-xl border border-pearl/10 bg-black/30 p-4"
     >
-      {featured && (
-        <p className="mb-4 inline-flex rounded-full border border-neon/25 bg-neon/10 px-3 py-1 text-xs font-heading text-neon">
-          下一場開放入場
-        </p>
-      )}
-      <p className="font-heading text-xs text-blaze/80">
-        ENTRY TICKET
-      </p>
-      <h3 className="mt-3 text-2xl font-heading font-bold text-pearl">
-        {ticket.title}
-      </h3>
-      <p className="mt-2 text-sm text-mist/70">
-        {ticket.dateLabel} · {ticket.timeLabel} · {ticket.styleLabel}
-      </p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="font-heading text-xs text-blaze/80">
+            {displayMode === 'nearest' ? '離你最近' : '下一場'}
+          </p>
+          <h3 className="mt-1 font-heading text-[1.75rem] font-black leading-tight text-pearl">
+            {ticket.dateLabel}
+          </h3>
+          <p className="mt-1 text-sm font-heading text-mist/72">
+            {ticket.timeLabel}
+          </p>
+        </div>
+        <span className="shrink-0 rounded-full border border-neon/25 bg-neon/10 px-3 py-1 text-xs font-heading text-neon">
+          {remainingLabel}
+        </span>
+      </div>
 
-      <div className="mt-6 space-y-3 text-sm">
+      <div className="mt-4 space-y-3 text-sm">
         <div className="flex justify-between gap-4 border-b border-pearl/10 pb-3">
-          <span className="text-mist/62">進場地點</span>
+          <span className="text-mist/62">地點</span>
           <strong className="text-right font-heading text-pearl">
             {ticket.venueLabel}
           </strong>
         </div>
-        <div className="flex justify-between gap-4 border-b border-pearl/10 pb-3">
-          <span className="text-mist/62">這一晚包含</span>
-          <strong className="text-right font-heading text-pearl">
-            50 分鐘教練帶領
-          </strong>
-        </div>
-        <div className="flex justify-between gap-4 border-b border-pearl/10 pb-3">
-          <span className="text-mist/62">現場節奏</span>
-          <strong className="text-right font-heading text-pearl">
-            音樂、口令、拳套、沙包
-          </strong>
-        </div>
-        <div className="flex justify-between gap-4 border-b border-pearl/10 pb-3">
-          <span className="text-mist/62">帶領教練</span>
-          <strong className="text-right font-heading text-pearl">
-            {ticket.coachLabel}
-          </strong>
-        </div>
-        <div className="flex justify-between gap-4 border-b border-pearl/10 pb-3">
-          <span className="text-mist/62">剩餘名額</span>
-          <strong className="text-right font-heading text-neon">
-            {remainingLabel}
-          </strong>
-        </div>
         <div className="flex justify-between gap-4">
-          <span className="text-mist/62">入場票</span>
+          <span className="text-mist/62">費用</span>
           <strong className="text-right font-heading text-blaze">
             {price.label}
           </strong>
         </div>
       </div>
-
-      {price.offerApplied && (
-        <p className="mt-3 text-xs leading-relaxed text-mist/55">
-          系統已套用目前可用的線上活動價；現場不會再要求你談方案。
-        </p>
-      )}
 
       <Button
         size="lg"
@@ -651,7 +653,7 @@ function EventTicketCard({
         data-cta="event-ticket-purchase"
         data-ticket={ticket.id}
       >
-        {disabled ? '本場候補中' : '買這一晚的入場票'}
+        {disabled ? '本場候補中' : '把這一晚留下來'}
       </Button>
     </motion.article>
   )
@@ -659,61 +661,109 @@ function EventTicketCard({
 
 function EventTicketDropSection({
   tickets,
+  recommendedTicket,
+  recommendation,
+  isLocating,
+  locationMessage,
   getAvailability,
   hasLiveData,
-  offerEligible,
+  onUseCurrentLocation,
   onPurchase,
 }: {
   tickets: EventTicket[]
+  recommendedTicket?: EventTicket
+  recommendation: VenueRecommendation | null
+  isLocating: boolean
+  locationMessage: string
   getAvailability: (sessionId: string) => SessionAvailability
   hasLiveData: boolean
-  offerEligible: boolean
+  onUseCurrentLocation: () => void
   onPurchase: (ticket: EventTicket) => void
 }) {
-  return (
-    <SectionWrapper id="event-entry" className="pb-28 md:pb-32">
-      <SectionHeading
-        title="選一個晚上，把入場名額買下來。"
-        subtitle="付款後 LINE 收入場確認。你買的是這一場完整體驗，不是免費體驗課，也不是健身房諮詢。"
-      />
+  const nextTicket = recommendedTicket ?? tickets[0]
+  const isRecommended = Boolean(recommendation && recommendedTicket)
+  const locationHelperText = isRecommended
+    ? `已換成附近的 ${nextTicket?.venueLabel}。`
+    : recommendation
+      ? '附近場館暫時沒有可購買場次，先顯示下一場。'
+      : '想就近去，可以先找附近場館。'
 
-      <div className="grid gap-4 md:grid-cols-2 md:gap-6">
-        {tickets.map((ticket, index) => (
+  return (
+    <SectionWrapper
+      id="event-entry"
+      className="max-w-[430px] px-4 sm:px-4"
+      padding="py-8"
+    >
+      <EventSectionHeading
+        eyebrow="Fight Night Pass"
+        title="有一點想去，就把這一晚留下來。"
+      >
+        {`一週一場，每場 ${ONLINE_SALES_SEAT_LIMIT} 位。線上付款後，LINE 收到入場確認。不用入會，不用被推銷。`}
+      </EventSectionHeading>
+
+      {nextTicket ? (
+        <div className="grid gap-4">
           <EventTicketCard
-            key={ticket.id}
-            ticket={ticket}
-            availability={getAvailability(ticket.sessionId)}
+            ticket={nextTicket}
+            availability={getAvailability(nextTicket.sessionId)}
             hasLiveData={hasLiveData}
-            offerEligible={offerEligible}
-            featured={index === 0}
+            displayMode={isRecommended ? 'nearest' : 'next'}
             onPurchase={onPurchase}
           />
-        ))}
-      </div>
+          <div className="rounded-xl border border-pearl/10 bg-black/25 px-4 py-3 text-sm leading-relaxed text-mist/72">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <p>
+                {locationHelperText}
+              </p>
+              <button
+                type="button"
+                className="interaction-hint shrink-0 rounded-full border border-neon/25 px-3 py-2 font-heading text-xs text-neon transition-colors hover:border-neon/45 hover:bg-neon/10 disabled:cursor-not-allowed disabled:opacity-55"
+                disabled={isLocating}
+                onClick={onUseCurrentLocation}
+              >
+                {isLocating ? '定位中' : '找附近場館'}
+              </button>
+            </div>
+            {locationMessage ? (
+              <p className="mt-2 text-xs text-mist/52">{locationMessage}</p>
+            ) : null}
+          </div>
+        </div>
+      ) : (
+        <p className="rounded-xl border border-pearl/10 bg-black/30 px-4 py-5 text-sm leading-relaxed text-mist/72">
+          下一場整理中，開放後會更新在這裡。
+        </p>
+      )}
 
-      <div className="mx-auto mt-8 max-w-3xl rounded-2xl border border-pearl/10 bg-black/35 p-5 text-center md:p-7">
-        <p className="text-base font-heading font-bold text-pearl md:text-xl">
-          付款完成後，這張入場票就是你的。
-        </p>
-        <p className="mx-auto mt-2 max-w-2xl text-sm leading-relaxed text-mist/70 md:text-base">
-          照著 LINE 入場確認到場，完整跟著教練、音樂和全場節奏走完這一場。你不需要現場談會員，也不需要先聽方案。
-        </p>
-      </div>
     </SectionWrapper>
+  )
+}
+
+function EventMinimalFooter() {
+  return (
+    <footer className="mx-auto max-w-[430px] px-4 pb-28 pt-8 text-xs text-mist/50">
+      <div className="border-t border-pearl/10 pt-5">
+        <p className="font-heading text-pearl/70">After Work Fight Night</p>
+        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2">
+          <a href="/privacy-policy" className="transition-colors hover:text-neon">
+            隱私政策
+          </a>
+          <a href="/refund-policy" className="transition-colors hover:text-neon">
+            退款與取消政策
+          </a>
+        </div>
+      </div>
+    </footer>
   )
 }
 
 function CheckoutModal({
   selectedTicket,
   availability,
-  offerEligible,
-  refreshOfferEligibility,
   onClose,
 }: {
   selectedTicket: EventTicket | null
   availability: SessionAvailability | null
-  offerEligible: boolean
-  refreshOfferEligibility: () => Promise<boolean>
   onClose: () => void
 }) {
   const { track } = useTracking()
@@ -743,11 +793,7 @@ function CheckoutModal({
     return null
   }
 
-  const displayPrice = getEventTicketPrice(
-    selectedTicket,
-    availability,
-    offerEligible,
-  )
+  const displayPrice = getEventTicketPrice(selectedTicket)
 
   const handleChange =
     (field: keyof BuyerContactForm) =>
@@ -781,12 +827,7 @@ function CheckoutModal({
     )
 
     try {
-      const latestOfferEligible = await refreshOfferEligibility()
-      const checkoutPrice = getEventTicketPrice(
-        selectedTicket,
-        availability,
-        latestOfferEligible,
-      )
+      const checkoutPrice = getEventTicketPrice(selectedTicket)
       const initiateCheckoutEventId = createMetaEventId('initiate_checkout')
 
       const response = await fetch('/api/shopline/checkout-session', {
@@ -800,11 +841,9 @@ function CheckoutModal({
           lineContext,
           course: selectedTicket.course,
           packageSize: 1,
+          pricingMode: eventPassPricingMode,
           quotedAmountValue: checkoutPrice.amount,
           quotedOriginalAmountValue: checkoutPrice.originalAmount,
-          requestedOfferCode: checkoutPrice.offerApplied
-            ? '618_MIDYEAR_FIRST_PURCHASE_HALF'
-            : undefined,
           sessionIds: [selectedTicket.sessionId],
           seriesDates: [selectedTicket.course.date],
           sourcePath: getSourcePath(),
@@ -856,9 +895,7 @@ function CheckoutModal({
           remaining: availability.remaining,
           event_product: 'fight_night_entry_ticket_no_membership',
           event_id: initiateCheckoutEventId,
-          discount_code: checkoutPrice.offerApplied
-            ? '618_MIDYEAR_FIRST_PURCHASE_HALF'
-            : undefined,
+          pricing_mode: eventPassPricingMode,
         },
         metaStandardEvent: 'InitiateCheckout',
         metaEventId: initiateCheckoutEventId,
@@ -890,7 +927,7 @@ function CheckoutModal({
       <motion.div
         initial={{ opacity: 0, y: 20, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
-        className="relative max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-pearl/10 bg-obsidian p-5 shadow-[0_40px_120px_rgba(0,0,0,0.55)] md:p-8"
+        className="relative max-h-[92vh] w-full max-w-[430px] overflow-y-auto rounded-3xl border border-pearl/10 bg-obsidian p-5 shadow-[0_40px_120px_rgba(0,0,0,0.55)]"
       >
         <button
           type="button"
@@ -903,10 +940,10 @@ function CheckoutModal({
 
         <form onSubmit={handleSubmit}>
           <p className="font-heading text-xs text-neon/80">
-            ENTRY TICKET
+            Fight Night Pass
           </p>
           <h2 className="mt-3 text-3xl font-heading font-bold text-pearl">
-            確認資料，購買入場票
+            保留這一晚
           </h2>
 
           <div className="mt-5 rounded-2xl border border-neon/20 bg-neon/[0.04] p-4">
@@ -921,7 +958,7 @@ function CheckoutModal({
               {displayPrice.label}
             </p>
             <p className="mt-2 text-sm leading-relaxed text-mist/62">
-              一次付款，不需入會，不安排銷售諮詢。付款完成後會透過 LINE 收到這場的入場確認。
+              付款後，LINE 會留下這一晚的時間、地點和入場確認。到了那天，直接走進 UFC GYM。
             </p>
           </div>
 
@@ -975,7 +1012,7 @@ function CheckoutModal({
             className="mt-6 w-full"
             data-cta="event-checkout-submit"
           >
-            {isSubmitting ? '正在建立付款連結...' : '前往付款，購買入場票'}
+            {isSubmitting ? '正在建立付款連結...' : '前往付款，保留這一晚'}
           </Button>
           <p className="mt-3 text-center text-xs leading-relaxed text-mist/55">
             送出後會儲存這次填寫的資料，下次購買或預約會自動帶入。
@@ -997,53 +1034,54 @@ export function FightNightEventPage() {
   const { gateState, requestGateAccess, loginUrl } = useLiffGate()
   const { track, trackGateAccess } = useTracking()
   const [selectedTicket, setSelectedTicket] = useState<EventTicket | null>(null)
-  const [offerState, setOfferState] = useState<OfferState>('idle')
-  const offerEligible = offerState === 'eligible'
+  const [recommendation, setRecommendation] =
+    useState<VenueRecommendation | null>(null)
+  const [isLocating, setIsLocating] = useState(false)
+  const [locationMessage, setLocationMessage] = useState('')
   const featuredTicket = tickets[0]
-  const featuredAvailability = featuredTicket
-    ? getAvailability(featuredTicket.sessionId)
+  const recommendedTicket = useMemo(
+    () => getRecommendedTicket(tickets, recommendation),
+    [tickets, recommendation],
+  )
+  const featuredPrice = featuredTicket
+    ? getEventTicketPrice(featuredTicket)
     : undefined
-  const featuredPrice =
-    featuredTicket && featuredAvailability
-      ? getEventTicketPrice(featuredTicket, featuredAvailability, offerEligible)
-      : undefined
 
-  const refreshOfferEligibility = useCallback(async () => {
-    const lineContext = getLineRequestContext()
-    if (!lineContext?.lineUserId) {
-      setOfferState('ineligible')
-      return false
+  useEffect(() => {
+    let cancelled = false
+    const controller = new AbortController()
+
+    const loadLocationRecommendation = async () => {
+      try {
+        const response = await fetch('/api/location', {
+          cache: 'no-store',
+          signal: controller.signal,
+        })
+
+        if (!response.ok) return
+
+        const data =
+          (await response.json()) as LocationRecommendationResponse
+        const venueId = data.recommendation?.venueId
+        if (!venueId || !(venueId in venueCoordinates) || cancelled) return
+
+        setRecommendation({
+          venueId,
+          distanceKm: data.recommendation?.distanceKm,
+          source: 'cloudflare',
+        })
+      } catch {
+        // Keep the default next-event card if location cannot be inferred.
+      }
     }
 
-    setOfferState('checking')
-    try {
-      const response = await fetch('/api/shopline/first-purchase-offer', {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          accept: 'application/json',
-        },
-        body: JSON.stringify({
-          lineContext,
-        }),
-      })
-      const data = await response.json().catch(() => null)
-      const eligible = response.ok && data?.eligible === true
-      setOfferState(eligible ? 'eligible' : 'ineligible')
-      track({
-        event: 'first_purchase_offer_check',
-        params: {
-          source: landingVariant,
-          eligible,
-          reason: typeof data?.reason === 'string' ? data.reason : '',
-        },
-      })
-      return eligible
-    } catch {
-      setOfferState('error')
-      return false
+    void loadLocationRecommendation()
+
+    return () => {
+      cancelled = true
+      controller.abort()
     }
-  }, [track])
+  }, [])
 
   useEffect(() => {
     track({
@@ -1058,14 +1096,37 @@ export function FightNightEventPage() {
     })
   }, [track])
 
-  useEffect(() => {
-    if (gateState.status === 'unlocked' && offerState === 'idle') {
-      const timer = window.setTimeout(() => {
-        void refreshOfferEligibility()
-      }, 0)
-      return () => window.clearTimeout(timer)
+  const useCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      setLocationMessage('目前無法讀取位置，先顯示下一場。')
+      return
     }
-  }, [gateState.status, offerState, refreshOfferEligibility])
+
+    setIsLocating(true)
+    setLocationMessage('')
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const nextRecommendation = getNearestVenueRecommendation(
+          {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          },
+          'browser',
+        )
+        setRecommendation(nextRecommendation)
+        setIsLocating(false)
+      },
+      () => {
+        setLocationMessage('目前無法取得位置，先顯示下一場。')
+        setIsLocating(false)
+      },
+      {
+        enableHighAccuracy: false,
+        maximumAge: 300_000,
+        timeout: 6000,
+      },
+    )
+  }
 
   const openCheckout = async (ticket?: EventTicket) => {
     const targetTicket = ticket ?? featuredTicket
@@ -1095,10 +1156,6 @@ export function FightNightEventPage() {
       if (!unlocked) return
     }
 
-    if (offerState === 'idle' || offerState === 'error') {
-      void refreshOfferEligibility()
-    }
-
     setSelectedTicket(targetTicket)
   }
 
@@ -1111,7 +1168,7 @@ export function FightNightEventPage() {
         endDate: `${featuredTicket.course.date}T${featuredTicket.course.endTime}:00+08:00`,
         eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
         eventStatus: 'https://schema.org/EventScheduled',
-        image: [collectiveEuphoriaCard],
+        image: [eventHeroEmotion],
         location: {
           '@type': 'Place',
           name: featuredTicket.venueLabel,
@@ -1126,54 +1183,59 @@ export function FightNightEventPage() {
     : undefined
 
   return (
-    <div className="relative w-full overflow-x-hidden bg-abyss">
+    <div className="relative mx-auto min-h-screen w-full max-w-[430px] overflow-x-hidden bg-abyss text-pearl shadow-[0_0_90px_rgba(0,0,0,0.45)]">
       <Seo
-        title="After Work Fight Night｜不用入會的入場票"
+        title="After Work Fight Night｜Fight Night Pass"
         description={eventDescription}
         canonicalPath="/fight-night-event"
         keywords={[
           'Fight Night',
+          'Fight Night Pass',
+          'After Work Fight Night',
           'UFC GYM',
-          '拳擊體驗',
-          '泰拳體驗',
-          '下班活動',
-          '不用入會',
+          '運動娛樂',
+          '夜間運動',
+          '沙包聲',
         ]}
-        image={collectiveEuphoriaCard}
+        image={eventHeroEmotion}
         structuredData={structuredData}
       />
       <Header />
       <main>
         <EventHeroSection
           featuredTicket={featuredTicket}
-          availability={featuredAvailability}
-          hasLiveData={hasLiveData}
-          onPrimaryAction={() => scrollToId('event-entry')}
+          featuredPrice={featuredPrice}
+          onPrimaryAction={() => scrollToId('event-reframe')}
         />
         <EventReframeSection />
         <EventProofSection />
-        <EventFlowPreviewSection />
-        <EventNoSalesSection />
+        <EventSafetySection />
         <EventTicketDropSection
           tickets={tickets}
+          recommendedTicket={recommendedTicket}
+          recommendation={recommendation}
+          isLocating={isLocating}
+          locationMessage={locationMessage}
           getAvailability={getAvailability}
           hasLiveData={hasLiveData}
-          offerEligible={offerEligible}
+          onUseCurrentLocation={useCurrentLocation}
           onPurchase={openCheckout}
         />
+        <EventFlowPreviewSection />
         <FAQSection
           id="event-faq"
-          title="第一次買入場票前，先把疑慮說清楚。"
-          subtitle="你買的是這一場 After Work Fight Night，不是先付錢後再被帶進銷售流程。"
+          title="第一次來，先看這幾個。"
+          subtitle=""
           items={eventFaqItems}
+          compact
         />
       </main>
-      <Footer />
+      <EventMinimalFooter />
       <StickyActionBar
-        eyebrow="ENTRY TICKET"
+        eyebrow="Fight Night Pass"
         title="After Work Fight Night"
-        detail="不用入會，付款入場"
-        actionLabel="買入場票"
+        detail={`NT$980｜一週一場｜每場 ${ONLINE_SALES_SEAT_LIMIT} 位`}
+        actionLabel="把這一晚留下來"
         onAction={() => scrollToId('event-entry')}
       />
       <CheckoutModal
@@ -1181,8 +1243,6 @@ export function FightNightEventPage() {
         availability={
           selectedTicket ? getAvailability(selectedTicket.sessionId) : null
         }
-        offerEligible={offerEligible}
-        refreshOfferEligibility={refreshOfferEligibility}
         onClose={() => setSelectedTicket(null)}
       />
     </div>

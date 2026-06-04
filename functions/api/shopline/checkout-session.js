@@ -18,6 +18,8 @@ import {
 
 const DEFAULT_CAPACITY = 6
 const CURRENCY = 'TWD'
+const EVENT_PASS_PRICING_MODE = 'fight-night-event-pass-v1'
+const EVENT_PASS_AMOUNT_VALUE = 980
 const WEEKDAY_LABELS = ['日', '一', '二', '三', '四', '五', '六']
 const PURCHASED_ORDER_STATUSES = ['paid', 'refund_processing', 'refunded']
 
@@ -142,8 +144,23 @@ async function getCheckoutPriceQuote({
   packageSize,
   remaining,
   lineContext,
+  pricingMode,
 }) {
   const base = getBasePriceAmount(course, packageSize, remaining)
+  if (
+    pricingMode === EVENT_PASS_PRICING_MODE &&
+    course.category === 'FIGHT_NIGHT' &&
+    packageSize === 1
+  ) {
+    return {
+      value: EVENT_PASS_AMOUNT_VALUE,
+      originalValue: EVENT_PASS_AMOUNT_VALUE,
+      discountValue: 0,
+      pricingTier: base.pricingTier,
+      offer: { eligible: false, reason: 'event_pass_fixed_price' },
+    }
+  }
+
   const offer = await getFirstPurchaseOfferEligibility(
     env,
     lineContext,
@@ -924,6 +941,7 @@ export async function onRequestPost({ request, env, waitUntil }) {
       packageSize,
       remaining,
       lineContext,
+      pricingMode: body?.pricingMode,
     })
     const quotedAmountValue = getQuotedAmountValue(body)
     if (quotedAmountValue !== amountValue) {
@@ -968,6 +986,7 @@ export async function onRequestPost({ request, env, waitUntil }) {
       tracking:
         body?.tracking && typeof body.tracking === 'object' ? body.tracking : {},
       client: shoplinePayload.client,
+      pricingMode: body?.pricingMode || null,
     }
 
     await env.DB.prepare(
