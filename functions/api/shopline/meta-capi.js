@@ -116,6 +116,18 @@ function resolveClientUserAgent(request, snapshot) {
   return firstPresent(snapshot.client?.userAgent, request.headers.get('user-agent'))
 }
 
+function resolveTrackingClientIp(request, client) {
+  return firstPresent(
+    client?.ip,
+    request.headers.get('CF-Connecting-IP'),
+    request.headers.get('x-forwarded-for'),
+  )
+}
+
+function resolveTrackingUserAgent(request, client) {
+  return firstPresent(client?.userAgent, request.headers.get('user-agent'))
+}
+
 function resolveLeadEventSourceUrl(lead, request) {
   const trackingUrl = lead?.tracking?.sourceUrl
   if (trackingUrl) return trackingUrl
@@ -128,6 +140,84 @@ function resolveLeadEventSourceUrl(lead, request) {
     return new URL(sourcePath || '/', origin).toString()
   } catch {
     return ''
+  }
+}
+
+export async function sendMetaFunnelEvent({
+  env,
+  request,
+  eventName,
+  eventId,
+  buyer,
+  lineContext,
+  tracking,
+  client,
+  customData,
+}) {
+  const pixelId = getMetaPixelId(env)
+  const accessToken = getMetaAccessToken(env)
+  const normalizedEventId = firstPresent(eventId, `${eventName}.${Date.now()}`)
+
+  if (!pixelId || !accessToken) {
+    return {
+      ok: false,
+      skipped: true,
+      eventId: normalizedEventId,
+      status: 'skipped',
+      error: !pixelId ? 'Missing Meta Pixel ID' : 'Missing Meta CAPI access token',
+    }
+  }
+
+  const externalIdSource = firstPresent(
+    lineContext?.lineUserId,
+    buyer?.phone,
+    buyer?.email,
+    customData?.order_id,
+  )
+  const payload = cleanObject({
+    data: [
+      {
+        event_name: eventName,
+        event_time: Math.floor(Date.now() / 1000),
+        event_id: normalizedEventId,
+        action_source: 'website',
+        event_source_url: firstPresent(tracking?.sourceUrl, customData?.event_source_url),
+        user_data: {
+          em: await sha256Hex(normalizeEmail(buyer?.email || lineContext?.email)),
+          ph: await sha256Hex(normalizePhone(buyer?.phone)),
+          external_id: await sha256Hex(externalIdSource),
+          client_ip_address: resolveTrackingClientIp(request, client),
+          client_user_agent: resolveTrackingUserAgent(request, client),
+          fbp: tracking?.fbp,
+          fbc: tracking?.fbc,
+        },
+        custom_data: customData,
+      },
+    ],
+    test_event_code: firstPresent(env.META_TEST_EVENT_CODE),
+  })
+
+  const graphVersion = getGraphApiVersion(env)
+  const response = await fetch(
+    `https://graph.facebook.com/${graphVersion}/${encodeURIComponent(pixelId)}/events?access_token=${encodeURIComponent(accessToken)}`,
+    {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    },
+  )
+  const data = await response.json().catch(() => null)
+
+  return {
+    ok: response.ok && !data?.error,
+    skipped: false,
+    eventId: normalizedEventId,
+    status: response.ok && !data?.error ? 'sent' : 'failed',
+    httpStatus: response.status,
+    response: data,
+    error: data?.error?.message || null,
   }
 }
 

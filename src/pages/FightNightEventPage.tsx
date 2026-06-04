@@ -31,7 +31,10 @@ import {
 } from '../hooks/useSessionAvailability'
 import { useTracking } from '../hooks/useTracking'
 import { getSavedBuyerContact, saveBuyerContact } from '../lib/buyerContact'
-import { getCheckoutTrackingContext } from '../lib/checkoutTracking'
+import {
+  createMetaEventId,
+  getCheckoutTrackingContext,
+} from '../lib/checkoutTracking'
 import {
   formatCoursePrice,
   getCoursePriceModel,
@@ -784,6 +787,7 @@ function CheckoutModal({
         availability,
         latestOfferEligible,
       )
+      const initiateCheckoutEventId = createMetaEventId('initiate_checkout')
 
       const response = await fetch('/api/shopline/checkout-session', {
         method: 'POST',
@@ -806,6 +810,7 @@ function CheckoutModal({
           sourcePath: getSourcePath(),
           tracking: {
             ...getCheckoutTrackingContext(),
+            initiateCheckoutEventId,
             landingVariant,
             eventName,
             ticketId: selectedTicket.id,
@@ -850,11 +855,13 @@ function CheckoutModal({
           currency: 'TWD',
           remaining: availability.remaining,
           event_product: 'fight_night_entry_ticket_no_membership',
+          event_id: initiateCheckoutEventId,
           discount_code: checkoutPrice.offerApplied
             ? '618_MIDYEAR_FIRST_PURCHASE_HALF'
             : undefined,
         },
         metaStandardEvent: 'InitiateCheckout',
+        metaEventId: initiateCheckoutEventId,
         lineEventName: 'CheckoutSubmit',
       })
 

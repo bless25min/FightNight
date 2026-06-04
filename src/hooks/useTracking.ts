@@ -9,6 +9,7 @@ type TrackingEvent = {
   event: string
   params?: TrackingParams
   metaStandardEvent?: MetaStandardEvent
+  metaEventId?: string
   lineEventName?: string
 }
 
@@ -33,6 +34,7 @@ export function useTracking() {
       event,
       params,
       metaStandardEvent,
+      metaEventId,
       lineEventName,
     }: TrackingEvent) => {
       if (import.meta.env.DEV) {
@@ -41,6 +43,7 @@ export function useTracking() {
 
       trackAnalyticsEvent(event, params, {
         metaStandardEvent,
+        metaEventId,
         lineEventName,
       })
     },

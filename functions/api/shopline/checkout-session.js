@@ -1,4 +1,5 @@
 import { getShoplineConfigForVenue } from './config.js'
+import { sendMetaFunnelEvent } from './meta-capi.js'
 import {
   ONLINE_BOOKING_START_OFFSET_DAYS,
   getWeeklyCourseForCategory,
@@ -853,7 +854,7 @@ async function createShoplineSession(env, payload, shoplineConfig) {
   return data
 }
 
-export async function onRequestPost({ request, env }) {
+export async function onRequestPost({ request, env, waitUntil }) {
   if (!env.DB) {
     return json({ error: 'Missing D1 binding DB' }, { status: 503 })
   }
@@ -1048,6 +1049,52 @@ export async function onRequestPost({ request, env }) {
         referenceId,
       )
       .run()
+
+    const metaCheckoutEvent = sendMetaFunnelEvent({
+      env,
+      request,
+      eventName: 'InitiateCheckout',
+      eventId:
+        trimText(localOrderRequest.tracking?.initiateCheckoutEventId, 160) ||
+        `initiate_checkout.${referenceId}`,
+      buyer,
+      lineContext,
+      tracking: localOrderRequest.tracking,
+      client: localOrderRequest.client,
+      customData: {
+        currency: CURRENCY,
+        value: amountValue,
+        order_id: referenceId,
+        content_name: course.name,
+        content_category: course.category,
+        content_ids: [course.id],
+        contents: [
+          {
+            id: course.id,
+            quantity: Number(quantity || 1),
+            item_price: amountValue,
+          },
+        ],
+        num_items: Number(quantity || 1),
+        venue_name: course.venueName,
+        package_size: packageSize,
+        discount_code: offer.eligible ? offer.code : null,
+        source_path: body?.sourcePath || null,
+      },
+    }).catch((error) => ({
+      ok: false,
+      status: 'failed',
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Meta CAPI initiate checkout send failed',
+    }))
+
+    if (typeof waitUntil === 'function') {
+      waitUntil(metaCheckoutEvent)
+    } else {
+      await metaCheckoutEvent
+    }
 
     return json({
       ok: true,

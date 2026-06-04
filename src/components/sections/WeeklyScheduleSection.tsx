@@ -35,7 +35,10 @@ import {
   getSavedBuyerContact,
   saveBuyerContact,
 } from '../../lib/buyerContact'
-import { getCheckoutTrackingContext } from '../../lib/checkoutTracking'
+import {
+  createMetaEventId,
+  getCheckoutTrackingContext,
+} from '../../lib/checkoutTracking'
 import { getLineRequestContext } from '../../lib/lineContext'
 import type { BootCampRoute, CourseCategory, WeeklyCourse } from '../../types'
 import { Button } from '../ui/Button'
@@ -2775,6 +2778,7 @@ export function WeeklyScheduleSection({
             return
           }
 
+          const scheduleEventId = createMetaEventId('schedule')
           const response = await fetch('/api/free-trial-reservation', {
             method: 'POST',
             headers: {
@@ -2795,7 +2799,10 @@ export function WeeklyScheduleSection({
                 language: window.navigator.language,
                 colorDepth: String(window.screen.colorDepth),
               },
-              tracking: getCheckoutTrackingContext(),
+              tracking: {
+                ...getCheckoutTrackingContext(),
+                scheduleEventId,
+              },
               sourcePath: `${window.location.pathname}${window.location.search}${window.location.hash}`,
             }),
           })
@@ -2863,8 +2870,10 @@ export function WeeklyScheduleSection({
               reference_id: data.referenceId,
               already_reserved: data.alreadyReserved === true,
               original_value: pendingCheckout.originalValue,
+              event_id: scheduleEventId,
             },
             metaStandardEvent: 'Schedule',
+            metaEventId: scheduleEventId,
             lineEventName:
               data.alreadyReserved === true
                 ? 'FreeTrialAlreadyReserved'
@@ -2882,6 +2891,7 @@ export function WeeklyScheduleSection({
           await beforeCheckoutSubmit()
         }
 
+        const initiateCheckoutEventId = createMetaEventId('initiate_checkout')
         const response = await fetch('/api/shopline/checkout-session', {
           method: 'POST',
           headers: {
@@ -2909,7 +2919,10 @@ export function WeeklyScheduleSection({
               language: window.navigator.language,
               colorDepth: String(window.screen.colorDepth),
             },
-            tracking: getCheckoutTrackingContext(),
+            tracking: {
+              ...getCheckoutTrackingContext(),
+              initiateCheckoutEventId,
+            },
             sourcePath: `${window.location.pathname}${window.location.search}${window.location.hash}`,
           }),
         })
@@ -2949,8 +2962,10 @@ export function WeeklyScheduleSection({
               ? '618 首購半價'
               : undefined,
             reference_id: data.referenceId,
+            event_id: initiateCheckoutEventId,
           },
           metaStandardEvent: 'InitiateCheckout',
+          metaEventId: initiateCheckoutEventId,
           lineEventName: 'CheckoutSubmit',
         })
 

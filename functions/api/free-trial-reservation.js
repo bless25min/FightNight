@@ -15,6 +15,7 @@ import {
   notifyLineFreeTrialAlreadyReservedOffer,
   notifyLineFreeTrialReservation,
 } from './shopline/line-notify.js'
+import { sendMetaFunnelEvent } from './shopline/meta-capi.js'
 
 const CURRENCY = 'TWD'
 const FREE_TRIAL_STATUS = 'free_reserved'
@@ -159,7 +160,7 @@ async function releaseReservedSeats(env, sessionIds, quantity) {
   }
 }
 
-export async function onRequestPost({ request, env }) {
+export async function onRequestPost({ request, env, waitUntil }) {
   if (!env.DB) {
     return json({ error: 'Missing D1 binding DB' }, { status: 503 })
   }
@@ -363,6 +364,49 @@ export async function onRequestPost({ request, env }) {
     }
 
     const lineNotify = await notifyLineFreeTrialReservation(env, referenceId)
+    const metaScheduleEvent = sendMetaFunnelEvent({
+      env,
+      request,
+      eventName: 'Schedule',
+      eventId:
+        trimText(body?.tracking?.scheduleEventId, 160) ||
+        `schedule.${referenceId}`,
+      buyer,
+      lineContext,
+      tracking: localOrderRequest.tracking,
+      client: localOrderRequest.client,
+      customData: {
+        currency: CURRENCY,
+        value: 0,
+        order_id: referenceId,
+        content_name: course.name,
+        content_category: course.category,
+        content_ids: [course.id],
+        contents: [
+          {
+            id: course.id,
+            quantity,
+            item_price: 0,
+          },
+        ],
+        num_items: quantity,
+        venue_name: course.venueName,
+        source_path: body?.sourcePath || null,
+      },
+    }).catch((error) => ({
+      ok: false,
+      status: 'failed',
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Meta CAPI schedule send failed',
+    }))
+
+    if (typeof waitUntil === 'function') {
+      waitUntil(metaScheduleEvent)
+    } else {
+      await metaScheduleEvent
+    }
 
     return json({
       ok: true,

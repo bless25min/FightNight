@@ -1,3 +1,5 @@
+import { getCheckoutTrackingContext } from './checkoutTracking'
+
 export type TrackingParams = Record<
   string,
   string | number | boolean | undefined | null
@@ -463,6 +465,7 @@ function getTrackingContextParams(): TrackingParams {
   const visitor = getVisitorProfile()
 
   return normalizeParams({
+    ...getCheckoutTrackingContext(),
     page_path: getRoutePath(),
     landing_path: first?.landingPath || getPathOnly(),
     source_channel: current?.sourceChannel || 'direct',
