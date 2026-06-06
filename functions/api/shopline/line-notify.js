@@ -64,10 +64,76 @@ function getVenueShortName(venueName) {
     .trim()
 }
 
+function getOrderRequestSnapshot(order) {
+  const raw = safeJsonParse(order.raw_request_json, {})
+  return raw && typeof raw === 'object' ? raw : {}
+}
+
+function getEventPassVariant(order) {
+  const snapshot = getOrderRequestSnapshot(order)
+  return snapshot.eventPassVariant && typeof snapshot.eventPassVariant === 'object'
+    ? snapshot.eventPassVariant
+    : null
+}
+
+function getEquipmentPackage(order) {
+  const variant = getEventPassVariant(order)
+  return variant?.equipmentPackage || null
+}
+
 function getPackageLabel(order) {
-  return Number(order.package_size || 1) > 1
-    ? `Boot Camp ${order.package_size} 堂`
-    : 'Fight Night Pass'
+  if (Number(order.package_size || 1) > 1) {
+    return `Boot Camp ${order.package_size} 堂`
+  }
+
+  const variant = getEventPassVariant(order)
+  if (variant?.label) return trimText(variant.label, 80)
+
+  if (order.category === 'BOOT_CAMP') return '一般單堂體驗'
+  return 'Fight Night Pass'
+}
+
+function getEquipmentPackageLabel(order) {
+  const equipmentPackage = getEquipmentPackage(order)
+  if (equipmentPackage === 'gloves-and-wraps') {
+    return '全新 UFC GYM 手綁帶＋拳擊手套'
+  }
+  if (equipmentPackage === 'wraps') {
+    return '新手包＋全新 UFC GYM 手綁帶'
+  }
+  if (equipmentPackage === 'self-or-rental') {
+    return '自備或現場租用裝備'
+  }
+  return ''
+}
+
+function getServicePreferenceLabel(order) {
+  const preferences = getOrderRequestSnapshot(order).servicePreferences
+  if (!preferences || typeof preferences !== 'object') return ''
+
+  const labels = []
+  if (preferences.handWrapAssist) labels.push('課前準備')
+  if (preferences.quietMode) labels.push('安靜模式')
+  return labels.join('、')
+}
+
+function buildInfoRow(label, value) {
+  return {
+    type: 'box',
+    layout: 'baseline',
+    spacing: 'sm',
+    contents: [
+      { type: 'text', text: label, color: '#999999', size: 'sm', flex: 2 },
+      {
+        type: 'text',
+        text: value || '-',
+        color: '#111111',
+        size: 'sm',
+        flex: 5,
+        wrap: true,
+      },
+    ],
+  }
 }
 
 function getDateTimeLabel(order) {
@@ -84,16 +150,22 @@ function buildConfirmationText(order) {
   const dateTime = getDateTimeLabel(order)
   const packageLabel = getPackageLabel(order)
   const amountLabel = formatMoney(order.amount_value, order.currency)
+  const equipmentLabel = getEquipmentPackageLabel(order)
+  const preferenceLabel = getServicePreferenceLabel(order)
   const lines = [
     `確認報名｜${venue}`,
     `課程：${order.course_name}`,
     `時間：${dateTime || '-'}`,
     `方案：${packageLabel}`,
+  ]
+  if (equipmentLabel) lines.push(`裝備：${equipmentLabel}`)
+  if (preferenceLabel) lines.push(`入場偏好：${preferenceLabel}`)
+  lines.push(
     `金額：${amountLabel}`,
     `訂單：${order.reference_id}`,
     `聯絡人：${order.buyer_name || '-'}`,
     `電話：${order.buyer_phone || '-'}`,
-  ]
+  )
 
   if (order.buyer_email) {
     lines.push(`Email：${order.buyer_email}`)
@@ -106,7 +178,18 @@ function buildReservationConfirmationCard(order) {
   const venue = getVenueShortName(order.venue_name)
   const dateTime = getDateTimeLabel(order)
   const packageLabel = getPackageLabel(order)
+  const equipmentLabel = getEquipmentPackageLabel(order)
+  const preferenceLabel = getServicePreferenceLabel(order)
   const confirmationText = buildConfirmationText(order)
+  const rows = [
+    buildInfoRow('場館', venue),
+    buildInfoRow('課程', order.course_name),
+    buildInfoRow('時間', dateTime || '-'),
+    buildInfoRow('方案', packageLabel),
+    equipmentLabel ? buildInfoRow('裝備', equipmentLabel) : null,
+    preferenceLabel ? buildInfoRow('偏好', preferenceLabel) : null,
+    buildInfoRow('金額', formatMoney(order.amount_value, order.currency)),
+  ].filter(Boolean)
 
   return {
     type: 'flex',
@@ -142,60 +225,7 @@ function buildReservationConfirmationCard(order) {
             layout: 'vertical',
             spacing: 'sm',
             margin: 'md',
-            contents: [
-              {
-                type: 'box',
-                layout: 'baseline',
-                spacing: 'sm',
-                contents: [
-                  { type: 'text', text: '場館', color: '#999999', size: 'sm', flex: 2 },
-                  { type: 'text', text: venue, color: '#111111', size: 'sm', flex: 5, wrap: true },
-                ],
-              },
-              {
-                type: 'box',
-                layout: 'baseline',
-                spacing: 'sm',
-                contents: [
-                  { type: 'text', text: '課程', color: '#999999', size: 'sm', flex: 2 },
-                  { type: 'text', text: order.course_name, color: '#111111', size: 'sm', flex: 5, wrap: true },
-                ],
-              },
-              {
-                type: 'box',
-                layout: 'baseline',
-                spacing: 'sm',
-                contents: [
-                  { type: 'text', text: '時間', color: '#999999', size: 'sm', flex: 2 },
-                  { type: 'text', text: dateTime || '-', color: '#111111', size: 'sm', flex: 5, wrap: true },
-                ],
-              },
-              {
-                type: 'box',
-                layout: 'baseline',
-                spacing: 'sm',
-                contents: [
-                  { type: 'text', text: '方案', color: '#999999', size: 'sm', flex: 2 },
-                  { type: 'text', text: packageLabel, color: '#111111', size: 'sm', flex: 5, wrap: true },
-                ],
-              },
-              {
-                type: 'box',
-                layout: 'baseline',
-                spacing: 'sm',
-                contents: [
-                  { type: 'text', text: '金額', color: '#999999', size: 'sm', flex: 2 },
-                  {
-                    type: 'text',
-                    text: formatMoney(order.amount_value, order.currency),
-                    color: '#111111',
-                    size: 'sm',
-                    flex: 5,
-                    wrap: true,
-                  },
-                ],
-              },
-            ],
+            contents: rows,
           },
         ],
       },
@@ -364,8 +394,8 @@ function getPublicOrigin(env) {
   return DEFAULT_PUBLIC_ORIGIN
 }
 
-function buildFirstPurchaseOfferUrl(env, referenceId) {
-  const url = new URL('/boot-camp', getPublicOrigin(env))
+function buildFightNightEventSessionsUrl(env, referenceId) {
+  const url = new URL('/fight-night-event', getPublicOrigin(env))
   url.searchParams.set('from', 'line-auto')
   url.searchParams.set('utm_source', 'line')
   url.searchParams.set('utm_medium', 'auto')
@@ -373,6 +403,7 @@ function buildFirstPurchaseOfferUrl(env, referenceId) {
   if (referenceId) {
     url.searchParams.set('reference_id', referenceId)
   }
+  url.hash = 'event-more-sessions'
   return url.toString()
 }
 
@@ -382,7 +413,7 @@ function buildFreeTrialAlreadyReservedOfferCard(order, targetUrl) {
 
   return {
     type: 'flex',
-    altText: '你已經保留免費體驗，可以查看 618 首購方案',
+    altText: '你已經保留免費體驗，可以查看其他 Fight Night 場次',
     contents: {
       type: 'bubble',
       size: 'mega',
@@ -447,7 +478,7 @@ function buildFreeTrialAlreadyReservedOfferCard(order, targetUrl) {
           },
           {
             type: 'text',
-            text: '如果你想把這次體驗接成固定開始，可以先在線上看 618 首購方案；這不是現場推銷，也不需要入會。',
+            text: '如果你想再選其他場次，可以回到活動頁查看目前開放的 Fight Night 場次與方案。',
             size: 'sm',
             color: '#666666',
             wrap: true,
@@ -465,7 +496,7 @@ function buildFreeTrialAlreadyReservedOfferCard(order, targetUrl) {
             color: '#E3242B',
             action: {
               type: 'uri',
-              label: '查看 618 首購',
+              label: '查看其他場次',
               uri: targetUrl,
             },
           },
@@ -620,11 +651,12 @@ export async function notifyLinePaymentSuccess(env, referenceId, options = {}) {
   await ensureLineNotificationColumns(env)
 
   const order = await env.DB.prepare(
-    `SELECT reference_id, status, course_id, course_name, venue_name,
+    `SELECT reference_id, status, course_id, course_name, category, venue_name,
             package_size, amount_value, currency, series_dates_json,
             buyer_name, buyer_phone, buyer_email, line_user_id,
             line_display_name, line_payment_notify_status,
-            line_payment_notify_attempted_at, line_payment_notified_at
+            line_payment_notify_attempted_at, line_payment_notified_at,
+            raw_request_json
      FROM course_orders
      WHERE reference_id = ?`,
   )
@@ -790,12 +822,12 @@ export async function notifyLineFreeTrialAlreadyReservedOffer(env, referenceId) 
     }
   }
 
-  const targetUrl = buildFirstPurchaseOfferUrl(env, referenceId)
+  const targetUrl = buildFightNightEventSessionsUrl(env, referenceId)
   const message = buildFreeTrialAlreadyReservedOfferCard(order, targetUrl)
   const messageId = createLineMessageId('lms_reserved_offer')
   const resultMeta = {
     messageType: 'free_trial_already_reserved_offer',
-    templateId: 'reserved_to_first_purchase',
+    templateId: 'reserved_to_event_sessions',
     targetUrl,
   }
 

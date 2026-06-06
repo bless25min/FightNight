@@ -28,6 +28,13 @@ type AdminOrder = {
   linePaymentNotifyAttemptedAt?: string | null
   linePaymentNotifiedAt?: string | null
   linePaymentNotifyError?: string | null
+  eventPassVariantId?: string | null
+  eventPassVariantLabel?: string | null
+  equipmentPackage?: string | null
+  servicePreferences?: {
+    handWrapAssist?: boolean
+    quietMode?: boolean
+  } | null
   sourcePath?: string | null
   metaPurchaseEventId?: string | null
   metaPurchaseSentAt?: string | null
@@ -745,6 +752,24 @@ function recoverySegmentLabel(segment?: string | null) {
   return segment || '-'
 }
 
+function equipmentPackageLabel(packageId?: string | null) {
+  if (packageId === 'gloves-and-wraps') return '全新手綁帶＋拳擊手套'
+  if (packageId === 'wraps') return '新手包＋全新手綁帶'
+  if (packageId === 'self-or-rental') return '自備或現場租用裝備'
+  return ''
+}
+
+function servicePreferenceLabels(
+  preferences?: AdminOrder['servicePreferences'],
+) {
+  if (!preferences) return []
+
+  return [
+    preferences.handWrapAssist ? '課前準備' : '',
+    preferences.quietMode ? '安靜模式' : '',
+  ].filter(Boolean)
+}
+
 function lineCustomerSearchText(customer: LineCustomer) {
   return [
     customer.displayName,
@@ -1104,6 +1129,21 @@ function OrdersTable({
                     : '單堂 Fight Night'}
                   {order.route ? ` · ${order.route}` : ''}
                 </p>
+                {order.eventPassVariantLabel && (
+                  <p className="mt-1 text-mist/55">
+                    方案：{order.eventPassVariantLabel}
+                  </p>
+                )}
+                {equipmentPackageLabel(order.equipmentPackage) && (
+                  <p className="mt-1 text-mist/55">
+                    裝備：{equipmentPackageLabel(order.equipmentPackage)}
+                  </p>
+                )}
+                {servicePreferenceLabels(order.servicePreferences).length > 0 && (
+                  <p className="mt-1 text-mist/55">
+                    偏好：{servicePreferenceLabels(order.servicePreferences).join('、')}
+                  </p>
+                )}
                 {order.seriesDates.length > 0 && (
                   <p className="mt-1 text-mist/45">
                     {order.seriesDates.join(' / ')}

@@ -267,7 +267,7 @@ export async function onRequestPost({ request, env, waitUntil }) {
     if (freeTrialCounts.some((record) => record.count >= FREE_TRIAL_SESSION_LIMIT)) {
       return json(
         {
-          error: '這堂免費體驗名額已滿，仍可用首購限定價付款保留。',
+          error: '這堂免費體驗名額已滿，仍可用一般單堂價付款保留。',
           reason: 'free_trial_full',
           freeTrialLimit: FREE_TRIAL_SESSION_LIMIT,
           freeTrialCounts,

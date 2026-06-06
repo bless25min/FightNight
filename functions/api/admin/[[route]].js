@@ -621,6 +621,16 @@ async function ensureLineMessageSendMetadataColumns(env) {
 }
 
 function normalizeOrder(row) {
+  const rawRequest = parseJson(row.raw_request_json, {})
+  const eventPassVariant =
+    rawRequest?.eventPassVariant && typeof rawRequest.eventPassVariant === 'object'
+      ? rawRequest.eventPassVariant
+      : null
+  const servicePreferences =
+    rawRequest?.servicePreferences && typeof rawRequest.servicePreferences === 'object'
+      ? rawRequest.servicePreferences
+      : null
+
   return {
     referenceId: row.reference_id,
     status: row.status,
@@ -652,6 +662,10 @@ function normalizeOrder(row) {
     linePaymentNotifyAttemptedAt: row.line_payment_notify_attempted_at,
     linePaymentNotifiedAt: row.line_payment_notified_at,
     linePaymentNotifyError: row.line_payment_notify_error,
+    eventPassVariantId: eventPassVariant?.id || null,
+    eventPassVariantLabel: eventPassVariant?.label || null,
+    equipmentPackage: eventPassVariant?.equipmentPackage || null,
+    servicePreferences,
     sourcePath: row.source_path,
     metaPurchaseEventId: row.meta_purchase_event_id,
     metaPurchaseSentAt: row.meta_purchase_sent_at,
@@ -707,7 +721,7 @@ async function listOrders(env, url) {
             paid_at, meta_purchase_event_id, meta_purchase_sent_at,
             meta_capi_status, meta_capi_error, line_payment_notify_status,
             line_payment_notify_attempted_at, line_payment_notified_at,
-            line_payment_notify_error
+            line_payment_notify_error, raw_request_json
      FROM course_orders
      ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
      ORDER BY datetime(COALESCE(paid_at, updated_at, created_at)) DESC
@@ -731,7 +745,7 @@ async function getOrder(env, referenceId) {
             paid_at, meta_purchase_event_id, meta_purchase_sent_at,
             meta_capi_status, meta_capi_error, line_payment_notify_status,
             line_payment_notify_attempted_at, line_payment_notified_at,
-            line_payment_notify_error
+            line_payment_notify_error, raw_request_json
      FROM course_orders
      WHERE reference_id = ?`,
     [referenceId],

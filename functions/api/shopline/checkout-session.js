@@ -19,7 +19,34 @@ import {
 const DEFAULT_CAPACITY = 6
 const CURRENCY = 'TWD'
 const EVENT_PASS_PRICING_MODE = 'fight-night-event-pass-v1'
+const WEEKLY_COURSE_NO_FIRST_PURCHASE_MODE =
+  'weekly-course-no-first-purchase'
 const EVENT_PASS_AMOUNT_VALUE = 980
+const DEFAULT_EVENT_PASS_VARIANT = 'fight-night-pass'
+const EVENT_PASS_VARIANTS = {
+  'fight-night-pass': {
+    label: 'Fight Night Pass',
+    priceDelta: 0,
+    equipmentPackage: 'wraps',
+    includesGloves: false,
+    includesWraps: true,
+  },
+  'fight-night-gear-pass': {
+    label: 'Fight Night Gear Pass',
+    priceDelta: 1800,
+    equipmentPackage: 'gloves-and-wraps',
+    includesGloves: true,
+    includesWraps: true,
+  },
+  'single-class-paid': {
+    label: '一般單堂體驗',
+    priceDelta: 0,
+    fixedAmount: 680,
+    equipmentPackage: 'self-or-rental',
+    includesGloves: false,
+    includesWraps: false,
+  },
+}
 const WEEKDAY_LABELS = ['日', '一', '二', '三', '四', '五', '六']
 const PURCHASED_ORDER_STATUSES = ['paid', 'refund_processing', 'refunded']
 
@@ -72,7 +99,7 @@ export function getBasePriceAmount(course, packageSize, remaining) {
   if (course.category === 'FIGHT_NIGHT' && packageSize !== 1) {
     throw new Error('Invalid course package')
   }
-  if (course.category === 'BOOT_CAMP' && ![2, 4].includes(packageSize)) {
+  if (course.category === 'BOOT_CAMP' && ![1, 2, 4].includes(packageSize)) {
     throw new Error('Invalid course package')
   }
 
@@ -138,6 +165,24 @@ export async function getFirstPurchaseOfferEligibility(
   }
 }
 
+function getEventPassVariant(eventPassVariant) {
+  const key = String(eventPassVariant || DEFAULT_EVENT_PASS_VARIANT)
+  const id = EVENT_PASS_VARIANTS[key] ? key : DEFAULT_EVENT_PASS_VARIANT
+  return {
+    id,
+    ...EVENT_PASS_VARIANTS[id],
+  }
+}
+
+function getEventServicePreferences(servicePreferences) {
+  if (!servicePreferences || typeof servicePreferences !== 'object') return null
+
+  return {
+    handWrapAssist: servicePreferences.handWrapAssist === true,
+    quietMode: servicePreferences.quietMode === true,
+  }
+}
+
 async function getCheckoutPriceQuote({
   env,
   course,
@@ -145,8 +190,10 @@ async function getCheckoutPriceQuote({
   remaining,
   lineContext,
   pricingMode,
+  eventPassVariant,
 }) {
   const base = getBasePriceAmount(course, packageSize, remaining)
+  const fallbackPassVariant = getEventPassVariant(DEFAULT_EVENT_PASS_VARIANT)
   if (
     pricingMode === EVENT_PASS_PRICING_MODE &&
     course.category === 'FIGHT_NIGHT' &&
@@ -158,25 +205,49 @@ async function getCheckoutPriceQuote({
       discountValue: 0,
       pricingTier: base.pricingTier,
       offer: { eligible: false, reason: 'event_pass_fixed_price' },
+      eventPassVariant: fallbackPassVariant,
     }
   }
 
-  const offer = await getFirstPurchaseOfferEligibility(
-    env,
-    lineContext,
-    course,
-    packageSize,
-  )
-  const amountValue = offer.eligible
+  const skipFirstPurchaseOffer =
+    pricingMode === WEEKLY_COURSE_NO_FIRST_PURCHASE_MODE
+  const offer = skipFirstPurchaseOffer
+    ? {
+        eligible: false,
+        reason: 'first_purchase_disabled_for_pricing_mode',
+      }
+    : await getFirstPurchaseOfferEligibility(
+        env,
+        lineContext,
+        course,
+        packageSize,
+      )
+  const baseAmountValue = offer.eligible
     ? getFirstPurchaseOfferAmount(base.value)
     : base.value
+  const isSingleSessionEventPagePricing =
+    pricingMode === WEEKLY_COURSE_NO_FIRST_PURCHASE_MODE &&
+    ['FIGHT_NIGHT', 'BOOT_CAMP'].includes(course.category) &&
+    packageSize === 1
+  const passVariant = isSingleSessionEventPagePricing
+    ? getEventPassVariant(eventPassVariant)
+    : fallbackPassVariant
+  const amountValue =
+    typeof passVariant.fixedAmount === 'number'
+      ? passVariant.fixedAmount
+      : baseAmountValue + passVariant.priceDelta
+  const originalValue =
+    typeof passVariant.fixedAmount === 'number'
+      ? passVariant.fixedAmount
+      : base.value + passVariant.priceDelta
 
   return {
     value: amountValue,
-    originalValue: base.value,
-    discountValue: Math.max(0, base.value - amountValue),
+    originalValue,
+    discountValue: Math.max(0, originalValue - amountValue),
     pricingTier: base.pricingTier,
     offer,
+    eventPassVariant: passVariant,
   }
 }
 
@@ -754,6 +825,7 @@ function buildShoplinePayload({
   route,
   seriesDates,
   amountValue,
+  eventPassVariant,
   returnUrl,
   productUrl,
   env,
@@ -773,9 +845,9 @@ function buildShoplinePayload({
     street: `${course.venueName} 現場課程`,
   }
   const productName =
-    course.category === 'BOOT_CAMP'
+    course.category === 'BOOT_CAMP' && packageSize !== 1
       ? `Boot Camp ${packageSize}堂｜${course.name}`
-      : `Fight Night Pass｜${course.name}`
+      : `${eventPassVariant.label}｜${course.name}`
 
   return cleanObject({
     referenceId,
@@ -896,7 +968,15 @@ export async function onRequestPost({ request, env, waitUntil }) {
     if (course.category === 'FIGHT_NIGHT' && packageSize !== 1) {
       throw new Error('Fight Night can only be purchased as one session')
     }
-    if (course.category === 'BOOT_CAMP' && ![2, 4].includes(packageSize)) {
+    const allowEventPageSingleBootCamp =
+      course.category === 'BOOT_CAMP' &&
+      packageSize === 1 &&
+      body?.pricingMode === WEEKLY_COURSE_NO_FIRST_PURCHASE_MODE
+    if (
+      course.category === 'BOOT_CAMP' &&
+      ![2, 4].includes(packageSize) &&
+      !allowEventPageSingleBootCamp
+    ) {
       throw new Error('Boot Camp must be purchased as 2 or 4 sessions')
     }
 
@@ -935,6 +1015,7 @@ export async function onRequestPost({ request, env, waitUntil }) {
       discountValue,
       pricingTier,
       offer,
+      eventPassVariant,
     } = await getCheckoutPriceQuote({
       env,
       course,
@@ -942,6 +1023,7 @@ export async function onRequestPost({ request, env, waitUntil }) {
       remaining,
       lineContext,
       pricingMode: body?.pricingMode,
+      eventPassVariant: body?.eventPassVariant,
     })
     const quotedAmountValue = getQuotedAmountValue(body)
     if (quotedAmountValue !== amountValue) {
@@ -969,6 +1051,7 @@ export async function onRequestPost({ request, env, waitUntil }) {
       route,
       seriesDates,
       amountValue,
+      eventPassVariant,
       returnUrl,
       productUrl,
       env,
@@ -977,6 +1060,8 @@ export async function onRequestPost({ request, env, waitUntil }) {
     const localOrderRequest = {
       shoplinePayload,
       lineContext,
+      servicePreferences: getEventServicePreferences(body?.servicePreferences),
+      eventPassVariant,
       offer: {
         ...offer,
         originalAmountValue: originalValue,
@@ -1087,6 +1172,8 @@ export async function onRequestPost({ request, env, waitUntil }) {
         content_name: course.name,
         content_category: course.category,
         content_ids: [course.id],
+        event_pass_variant: eventPassVariant.id,
+        equipment_package: eventPassVariant.equipmentPackage,
         contents: [
           {
             id: course.id,

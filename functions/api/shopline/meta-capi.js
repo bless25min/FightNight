@@ -86,6 +86,14 @@ function getRequestSnapshot(order) {
     shoplinePayload,
     client: raw.client || shoplinePayload.client || {},
     tracking: raw.tracking || {},
+    eventPassVariant:
+      raw.eventPassVariant && typeof raw.eventPassVariant === 'object'
+        ? raw.eventPassVariant
+        : null,
+    servicePreferences:
+      raw.servicePreferences && typeof raw.servicePreferences === 'object'
+        ? raw.servicePreferences
+        : null,
   }
 }
 
@@ -351,6 +359,7 @@ export async function sendMetaPurchaseEvent({ env, request, order }) {
   const externalIdHash = await sha256Hex(order.reference_id)
   const value = Number(order.amount_value || 0)
   const currency = String(order.currency || 'TWD')
+  const eventPassVariant = snapshot.eventPassVariant
 
   const payload = cleanObject({
     data: [
@@ -376,6 +385,10 @@ export async function sendMetaPurchaseEvent({ env, request, order }) {
           content_name: order.course_name,
           content_category: order.category,
           content_ids: [order.course_id],
+          event_pass_variant: eventPassVariant?.id,
+          equipment_package: eventPassVariant?.equipmentPackage,
+          hand_wrap_assist: snapshot.servicePreferences?.handWrapAssist,
+          quiet_mode: snapshot.servicePreferences?.quietMode,
           contents: [
             {
               id: order.course_id,
