@@ -3,9 +3,9 @@ import type { ChangeEvent, FormEvent } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import eventGroupEnergy from '../assets/landing/collective-euphoria-card.jpg'
-import eventBagImpact from '../assets/landing/flow-step-3.jpg'
+import eventBagImpact from '../assets/landing/flow-step-4.jpg'
 import eventAfterglow from '../assets/landing/flow-step-5.jpg'
-import eventHeroEmotion from '../assets/landing/train-different-poster.jpg'
+import eventHeroEmotion from '../assets/landing/hero-poster.jpg'
 import ufcBoxingGloves from '../assets/products/ufc-boxing-gloves.webp'
 import ufcHandWraps from '../assets/products/ufc-hand-wraps.webp'
 import { Header } from '../components/layout/Header'
@@ -797,7 +797,7 @@ function EventHeroSection({
       >
         <img
           src={eventHeroEmotion}
-          alt="TRAIN DIFFERENT Fight Night 情緒體驗主視覺"
+          alt="Fight Night 拳套入場主視覺"
           className="block h-auto w-full"
           loading="eager"
           decoding="async"
@@ -2929,7 +2929,7 @@ export function FightNightEventPage() {
         <EventStandalonePhotoSection
           id="event-impact-photo"
           src={eventBagImpact}
-          alt="教練口令、黑色沙包與拳套落點"
+          alt="全力專注並釋放情緒的沙包段落"
         />
         <EventProofSection />
         <EventSafetySection />

@@ -252,13 +252,15 @@ Tracked first-party traffic attributes include source URL, referrer host, UTM pa
 
 ## LINE LIFF Gate
 
-The offer cards use LIFF login to unlock member-only content. The frontend first uses `VITE_LINE_LIFF_ID` from the Vite build, then falls back to `GET /api/config`, which reads the Cloudflare Pages runtime variable:
+The offer cards use LIFF login to unlock member-only content. The frontend first uses page-specific Vite build variables when present, then falls back to `GET /api/config`, which reads the Cloudflare Pages runtime variables. Fight Night event and Boot Camp pages must use their own LIFF IDs so login returns to the correct page instead of the homepage.
 
 ```
 LINE_LIFF_ID=your_liff_id
+EVENT_LINE_LIFF_ID=your_event_page_liff_id
+BOOTCAMP_LINE_LIFF_ID=your_bootcamp_page_liff_id
 LINE_LOGIN_CHANNEL_ID=your_line_login_channel_id
 ```
 
-This fallback prevents a local `wrangler pages deploy dist` from accidentally shipping a bundle with no LIFF ID.
+If the event or Boot Camp runtime value is missing, the frontend uses the page-specific fallback IDs configured in `useLiffGate.ts`. It does not fall back to the homepage LIFF ID for those pages.
 
 When a logged-in LIFF user starts checkout, the browser sends the LINE user context with the SHOPLINE session request. New `course_orders` rows store `line_user_id`, LINE display name, picture URL, LINE email when LIFF provides it, friend flag, and raw line context so the admin dashboard can connect the paid order back to the LINE user. LINE email is stored separately from the SHOPLINE checkout buyer email because the two addresses can be different. If `LINE_LOGIN_CHANNEL_ID` is configured, the server verifies the LIFF ID token before marking the LINE email as verified. Orders created before this field existed may remain unlinked unless they are manually associated later.

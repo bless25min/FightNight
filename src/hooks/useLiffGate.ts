@@ -18,9 +18,21 @@ export type LiffGateState = {
   profileName?: string
 }
 
-const buildTimeLiffId = import.meta.env.VITE_LINE_LIFF_ID
+const defaultBuildTimeLiffId = import.meta.env.VITE_LINE_LIFF_ID
+const eventBuildTimeLiffId = import.meta.env.VITE_EVENT_LINE_LIFF_ID
+const bootCampBuildTimeLiffId = import.meta.env.VITE_BOOTCAMP_LINE_LIFF_ID
+const eventFallbackLiffId = '2009987027-X2HAgwQw'
+const bootCampFallbackLiffId = '2009987027-MtHp8nrN'
 const missingConfigMessage = '找不到 LINE LIFF ID，請先補上正式環境變數。'
 const liffErrorMessage = 'LIFF 驗證失敗，請稍後再試。'
+
+type LiffSurface = 'default' | 'event' | 'bootCamp'
+
+type RuntimeLiffIds = {
+  default?: string
+  event?: string
+  bootCamp?: string
+}
 
 function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : liffErrorMessage
@@ -40,18 +52,60 @@ function getSourcePath() {
   return `${window.location.pathname}${window.location.search}${window.location.hash}`
 }
 
+function getLiffSurface(sourcePath = getSourcePath()): LiffSurface {
+  if (sourcePath.includes('boot-camp')) return 'bootCamp'
+  if (sourcePath.includes('fight-night-event')) return 'event'
+  return 'default'
+}
+
 function getLiffPlacement() {
   const sourcePath = getSourcePath()
-  if (sourcePath.includes('boot-camp')) return 'boot_camp_gate'
-  if (sourcePath.includes('fight-night-event')) return 'event_gate'
+  if (getLiffSurface(sourcePath) === 'bootCamp') return 'boot_camp_gate'
+  if (getLiffSurface(sourcePath) === 'event') return 'event_gate'
   if (sourcePath.includes('offers')) return 'offers_gate'
   return 'ticket_gate'
 }
 
-function getRuntimeLiffId(data: unknown) {
+function getBuildTimeLiffId(sourcePath = getSourcePath()) {
+  const surface = getLiffSurface(sourcePath)
+  if (surface === 'bootCamp') return bootCampBuildTimeLiffId
+  if (surface === 'event') return eventBuildTimeLiffId
+  return defaultBuildTimeLiffId
+}
+
+function getFallbackLiffId(sourcePath = getSourcePath()) {
+  const surface = getLiffSurface(sourcePath)
+  if (surface === 'bootCamp') return bootCampFallbackLiffId
+  if (surface === 'event') return eventFallbackLiffId
+  return undefined
+}
+
+function getRuntimeString(data: unknown, key: string) {
   if (!data || typeof data !== 'object') return undefined
-  const value = (data as { lineLiffId?: unknown }).lineLiffId
+  const value = (data as Record<string, unknown>)[key]
   return typeof value === 'string' && value.trim() ? value.trim() : undefined
+}
+
+function getRuntimeLiffIds(data: unknown): RuntimeLiffIds {
+  return {
+    default: getRuntimeString(data, 'lineLiffId'),
+    event: getRuntimeString(data, 'eventLineLiffId'),
+    bootCamp: getRuntimeString(data, 'bootCampLineLiffId'),
+  }
+}
+
+function getRuntimeLiffIdForSource(
+  runtimeLiffIds: RuntimeLiffIds,
+  sourcePath = getSourcePath(),
+) {
+  const surface = getLiffSurface(sourcePath)
+  if (surface === 'bootCamp') {
+    return runtimeLiffIds.bootCamp
+  }
+  if (surface === 'event') {
+    return runtimeLiffIds.event
+  }
+  return runtimeLiffIds.default
 }
 
 function getLiffEmail() {
@@ -132,12 +186,17 @@ async function recordLiffAccess(
 }
 
 export function useLiffGate() {
+  const sourcePath = getSourcePath()
+  const buildTimeLiffId = getBuildTimeLiffId(sourcePath)
   const [gateState, setGateState] = useState<LiffGateState>({
     status: 'loading',
   })
-  const [runtimeLiffId, setRuntimeLiffId] = useState<string | undefined>()
+  const [runtimeLiffIds, setRuntimeLiffIds] = useState<RuntimeLiffIds>({})
   const [isConfigLoaded, setIsConfigLoaded] = useState(Boolean(buildTimeLiffId))
-  const liffId = buildTimeLiffId || runtimeLiffId
+  const liffId =
+    buildTimeLiffId ||
+    getRuntimeLiffIdForSource(runtimeLiffIds, sourcePath) ||
+    (isConfigLoaded ? getFallbackLiffId(sourcePath) : undefined)
   const liffUrl = liffId
     ? `https://line.me/R/app/${liffId}`
     : undefined
@@ -154,11 +213,11 @@ export function useLiffGate() {
       .then((response) => (response.ok ? response.json() : null))
       .then((data) => {
         if (!active) return
-        setRuntimeLiffId(getRuntimeLiffId(data))
+        setRuntimeLiffIds(getRuntimeLiffIds(data))
       })
       .catch(() => {
         if (!active) return
-        setRuntimeLiffId(undefined)
+        setRuntimeLiffIds({})
       })
       .finally(() => {
         if (!active) return
@@ -168,7 +227,7 @@ export function useLiffGate() {
     return () => {
       active = false
     }
-  }, [])
+  }, [buildTimeLiffId])
 
   const runGateCheck = useCallback(async () => {
     await Promise.resolve()
@@ -227,7 +286,7 @@ export function useLiffGate() {
     } catch (error) {
       setGateState({ status: 'error', message: getErrorMessage(error) })
     }
-  }, [isConfigLoaded, liffId])
+  }, [isConfigLoaded, liffId, setGateState])
 
   useEffect(() => {
     if (!isConfigLoaded) return
@@ -278,7 +337,7 @@ export function useLiffGate() {
       setGateState({ status: 'error', message: getErrorMessage(error) })
       return false
     }
-  }, [isConfigLoaded, liffId, runGateCheck])
+  }, [isConfigLoaded, liffId, runGateCheck, setGateState])
 
   const openWhenUnlocked = useCallback(
     async (redirectUrl: string) => {

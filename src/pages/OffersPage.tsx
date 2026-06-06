@@ -584,7 +584,9 @@ export function OffersPage() {
 
   const handleGateAction = useCallback(() => {
     trackGateAccess('offers_page', gateState.status)
-    if (!loginUrl) void requestGateAccess()
+    const shouldUseLiffLink =
+      loginUrl && ['loading', 'logged-out'].includes(gateState.status)
+    if (!shouldUseLiffLink) void requestGateAccess()
   }, [gateState.status, loginUrl, requestGateAccess, trackGateAccess])
 
   const handlePlanCta = useCallback(

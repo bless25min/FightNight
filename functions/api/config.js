@@ -28,6 +28,16 @@ export async function onRequestGet({ env }) {
       env.LINE_LIFF_ID,
       env.LINE_LOGIN_LIFF_ID,
     ),
+    eventLineLiffId: firstPresent(
+      env.VITE_EVENT_LINE_LIFF_ID,
+      env.EVENT_LINE_LIFF_ID,
+      env.FIGHT_NIGHT_EVENT_LINE_LIFF_ID,
+    ),
+    bootCampLineLiffId: firstPresent(
+      env.VITE_BOOTCAMP_LINE_LIFF_ID,
+      env.BOOTCAMP_LINE_LIFF_ID,
+      env.BOOT_CAMP_LINE_LIFF_ID,
+    ),
     lineTagCustomerType: firstPresent(
       env.VITE_LINE_TAG_CUSTOMER_TYPE,
       env.LINE_TAG_CUSTOMER_TYPE,

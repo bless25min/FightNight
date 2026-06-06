@@ -7,6 +7,7 @@ import { FAQSection } from '../components/sections/FAQSection'
 import { Seo } from '../components/Seo'
 import { WeeklyScheduleSection } from '../components/sections/WeeklyScheduleSection'
 import { Button } from '../components/ui/Button'
+import { LockedContent } from '../components/ui/LockedContent'
 import { SectionHeading } from '../components/ui/SectionHeading'
 import { SectionWrapper } from '../components/ui/SectionWrapper'
 import { StickyActionBar } from '../components/ui/StickyActionBar'
@@ -18,6 +19,8 @@ import {
   siteConfig,
   venues,
 } from '../data/landingContent'
+import type { LiffGateState } from '../hooks/useLiffGate'
+import { useLiffGate } from '../hooks/useLiffGate'
 import { useTracking } from '../hooks/useTracking'
 import {
   createMetaEventId,
@@ -437,6 +440,9 @@ function BookingSection({
   excludedCourseIds,
   beforeCheckoutSubmit,
   isFreeTrialBridge,
+  gateState,
+  onGateAction,
+  loginUrl,
 }: {
   selectedRoute: BootCampRoute | null
   onRouteChange: (route: BootCampRoute | null) => void
@@ -448,6 +454,9 @@ function BookingSection({
   excludedCourseIds?: string[]
   beforeCheckoutSubmit?: () => Promise<void> | void
   isFreeTrialBridge?: boolean
+  gateState: LiffGateState
+  onGateAction: () => void
+  loginUrl?: string
 }) {
   const isOfferResolving =
     isFreeTrialBridge &&
@@ -459,6 +468,12 @@ function BookingSection({
   const scheduleSubtitle = isFreeTrialBridge
     ? undefined
     : '選場館、開始日期、每週習慣的起點'
+  const gateActionLabel =
+    gateState.status === 'not-friend'
+      ? '加入 LINE 好友解鎖'
+      : gateState.status === 'error'
+        ? '重新驗證'
+        : 'LINE 登入查看梯次'
 
   return (
     <SectionWrapper id="boot-camp-booking" padding="py-10 md:py-24">
@@ -466,51 +481,63 @@ function BookingSection({
         <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_top_left,rgba(255,59,92,0.12),transparent_42%),radial-gradient(circle_at_bottom_right,rgba(40,236,210,0.1),transparent_44%)]" />
 
         <div className="relative">
-          {isOfferResolving ? (
-            <div className="rounded-2xl border border-neon/18 bg-neon/8 px-4 py-5 text-center">
-              <p className="font-heading text-xl font-black text-pearl">
-                正在確認 618 首購資格
-              </p>
-              <p className="mx-auto mt-2 max-w-xl text-sm leading-relaxed text-mist/70">
-                確認後會顯示可購買課程與價格。
-              </p>
-            </div>
-          ) : (
-            <WeeklyScheduleSection
-              id="boot-camp-schedule"
-              activeCategory={addOnCategory}
-              onCategoryChange={onAddOnCategoryChange}
-              activeBootCampRoute={selectedRoute}
-              onBootCampRouteChange={onRouteChange}
-              categories={isFreeTrialBridge ? ['BOOT_CAMP', 'FIGHT_NIGHT'] : ['BOOT_CAMP']}
-              showCategoryTabs={isFreeTrialBridge}
-              showVenueFilter
-              showBootCampRouteFilter={false}
-              showCategoryLead={!isFreeTrialBridge}
-              categoryTabsPlacement={isFreeTrialBridge ? 'bottom' : 'top'}
-              footnoteText={
-                isFreeTrialBridge
-                  ? '覺得 BOOT CAMP 太多？可以先加購一堂 FIGHT NIGHT'
-                  : undefined
-              }
-              categorySwitchHeading={
-                isFreeTrialBridge
-                  ? {
-                      BOOT_CAMP: '覺得 BOOT CAMP 太多？可以先加購一堂 FIGHT NIGHT',
-                      FIGHT_NIGHT: '想透過技術學習蛻變成長？切回 BOOT CAMP 基礎／技巧課程',
-                    }
-                  : undefined
-              }
-              bookingMode={addOnCategory === 'BOOT_CAMP' ? 'bootcamp' : 'standard'}
-              title={scheduleTitle}
-              subtitle={scheduleSubtitle}
-              embedded
-              excludedCourseIds={excludedCourseIds}
-              firstPurchaseOfferEligible={firstPurchaseOfferEligible}
-              checkoutBuyer={checkoutBuyer}
-              beforeCheckoutSubmit={beforeCheckoutSubmit}
-            />
-          )}
+          <LockedContent
+            title="LINE 登入後查看 Boot Camp 梯次"
+            description="登入後可查看可購買日期、即時剩餘名額與價格。"
+            gateState={gateState}
+            loginUrl={loginUrl}
+            onGateAction={onGateAction}
+            lockedEyebrow="BOOT CAMP"
+            actionLabel={gateActionLabel}
+            actionNote="登入後會回到 Boot Camp 梯次區。"
+            className="bg-black/55"
+          >
+            {isOfferResolving ? (
+              <div className="rounded-2xl border border-neon/18 bg-neon/8 px-4 py-5 text-center">
+                <p className="font-heading text-xl font-black text-pearl">
+                  正在確認 618 首購資格
+                </p>
+                <p className="mx-auto mt-2 max-w-xl text-sm leading-relaxed text-mist/70">
+                  確認後會顯示可購買課程與價格。
+                </p>
+              </div>
+            ) : (
+              <WeeklyScheduleSection
+                id="boot-camp-schedule"
+                activeCategory={addOnCategory}
+                onCategoryChange={onAddOnCategoryChange}
+                activeBootCampRoute={selectedRoute}
+                onBootCampRouteChange={onRouteChange}
+                categories={isFreeTrialBridge ? ['BOOT_CAMP', 'FIGHT_NIGHT'] : ['BOOT_CAMP']}
+                showCategoryTabs={isFreeTrialBridge}
+                showVenueFilter
+                showBootCampRouteFilter={false}
+                showCategoryLead={!isFreeTrialBridge}
+                categoryTabsPlacement={isFreeTrialBridge ? 'bottom' : 'top'}
+                footnoteText={
+                  isFreeTrialBridge
+                    ? '覺得 BOOT CAMP 太多？可以先加購一堂 FIGHT NIGHT'
+                    : undefined
+                }
+                categorySwitchHeading={
+                  isFreeTrialBridge
+                    ? {
+                        BOOT_CAMP: '覺得 BOOT CAMP 太多？可以先加購一堂 FIGHT NIGHT',
+                        FIGHT_NIGHT: '想透過技術學習蛻變成長？切回 BOOT CAMP 基礎／技巧課程',
+                      }
+                    : undefined
+                }
+                bookingMode={addOnCategory === 'BOOT_CAMP' ? 'bootcamp' : 'standard'}
+                title={scheduleTitle}
+                subtitle={scheduleSubtitle}
+                embedded
+                excludedCourseIds={excludedCourseIds}
+                firstPurchaseOfferEligible={firstPurchaseOfferEligible}
+                checkoutBuyer={checkoutBuyer}
+                beforeCheckoutSubmit={beforeCheckoutSubmit}
+              />
+            )}
+          </LockedContent>
         </div>
       </div>
     </SectionWrapper>
@@ -580,7 +607,8 @@ export function BootCampPage() {
     useState<FirstPurchaseOfferState>('idle')
   const [freeTrialReservationReferenceId, setFreeTrialReservationReferenceId] =
     useState<string | null>(freeTrialBridge?.referenceId ?? null)
-  const { track } = useTracking()
+  const { gateState, requestGateAccess, loginUrl } = useLiffGate()
+  const { track, trackGateAccess } = useTracking()
   const firstPurchaseOfferEligible = firstPurchaseOfferState === 'eligible'
 
   const scrollTo = useCallback((id: string) => {
@@ -591,7 +619,7 @@ export function BootCampPage() {
   }, [])
 
   useEffect(() => {
-    if (!freeTrialBridge) {
+    if (!freeTrialBridge || gateState.status !== 'unlocked') {
       return
     }
 
@@ -632,7 +660,7 @@ export function BootCampPage() {
     return () => {
       active = false
     }
-  }, [freeTrialBridge, track])
+  }, [freeTrialBridge, gateState.status, track])
 
   const finalizeBridgeFreeTrial = useCallback(async () => {
     if (!freeTrialBridge || freeTrialReservationReferenceId) return
@@ -751,6 +779,13 @@ export function BootCampPage() {
     [scrollTo, track],
   )
 
+  const handleGateAction = useCallback(() => {
+    trackGateAccess('bootcamp_booking', gateState.status)
+    const shouldUseLiffLink =
+      loginUrl && ['loading', 'logged-out'].includes(gateState.status)
+    if (!shouldUseLiffLink) void requestGateAccess()
+  }, [gateState.status, loginUrl, requestGateAccess, trackGateAccess])
+
   return (
     <div className="relative w-full overflow-x-hidden bg-abyss pb-24 md:pb-0">
       <Seo
@@ -820,6 +855,9 @@ export function BootCampPage() {
           excludedCourseIds={freeTrialBridge ? [freeTrialBridge.courseId] : undefined}
           beforeCheckoutSubmit={freeTrialBridge ? finalizeBridgeFreeTrial : undefined}
           isFreeTrialBridge={Boolean(freeTrialBridge)}
+          gateState={gateState}
+          onGateAction={handleGateAction}
+          loginUrl={loginUrl}
         />
         <FAQSection
           id="boot-camp-faq"
