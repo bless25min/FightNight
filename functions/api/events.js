@@ -34,10 +34,18 @@ async function ensureTables(env) {
         referrer TEXT,
         referrer_host TEXT,
         route_path TEXT,
+        canonical_route_path TEXT,
         landing_path TEXT,
         first_landing_path TEXT,
         source_channel TEXT,
         first_source_channel TEXT,
+        experiment_id TEXT,
+        experiment_variant TEXT,
+        first_experiment_variant TEXT,
+        split_visit_id TEXT,
+        split_assignment_mode TEXT,
+        split_original_path TEXT,
+        split_assigned_path TEXT,
         utm_source TEXT,
         utm_medium TEXT,
         utm_campaign TEXT,
@@ -111,6 +119,14 @@ async function ensureTables(env) {
       `CREATE INDEX IF NOT EXISTS idx_tracking_events_route_created
        ON tracking_events (route_path, created_at)`,
     ),
+    env.DB.prepare(
+      `CREATE INDEX IF NOT EXISTS idx_tracking_events_canonical_route_created
+       ON tracking_events (canonical_route_path, created_at)`,
+    ),
+    env.DB.prepare(
+      `CREATE INDEX IF NOT EXISTS idx_tracking_events_experiment_created
+       ON tracking_events (experiment_id, experiment_variant, created_at)`,
+    ),
   ])
 }
 
@@ -119,8 +135,16 @@ async function ensureColumns(env) {
     ['landing_path', 'TEXT'],
     ['first_landing_path', 'TEXT'],
     ['referrer_host', 'TEXT'],
+    ['canonical_route_path', 'TEXT'],
     ['source_channel', 'TEXT'],
     ['first_source_channel', 'TEXT'],
+    ['experiment_id', 'TEXT'],
+    ['experiment_variant', 'TEXT'],
+    ['first_experiment_variant', 'TEXT'],
+    ['split_visit_id', 'TEXT'],
+    ['split_assignment_mode', 'TEXT'],
+    ['split_original_path', 'TEXT'],
+    ['split_assigned_path', 'TEXT'],
     ['utm_source', 'TEXT'],
     ['utm_medium', 'TEXT'],
     ['utm_campaign', 'TEXT'],
@@ -196,6 +220,48 @@ function readParamText(params, key, maxLength = 240) {
   return trimText(params?.[key], maxLength) || null
 }
 
+function canonicalizeRoutePath(value) {
+  const raw = trimText(value, 800)
+  if (!raw) return '/'
+
+  let pathname = raw
+  try {
+    pathname = new URL(raw, 'https://fightnight.local').pathname
+  } catch {
+    pathname = raw.split('#')[0].split('?')[0]
+  }
+
+  const normalized = trimText(pathname, 400).replace(/\/+$/, '') || '/'
+  const lower = normalized.toLowerCase()
+
+  if (lower === '/index.html') return '/'
+  if (lower === '/boot-camp' || lower === '/boot-camp.html') return '/boot-camp'
+  if (lower.startsWith('/boot-camp/')) return '/boot-camp'
+  if (lower === '/fight-night-event' || lower === '/fight-night-event.html') {
+    return '/fight-night-event'
+  }
+  if (lower.startsWith('/fight-night-event/')) return '/fight-night-event'
+  if (lower === '/offers' || lower === '/offers.html') return '/offers'
+  if (lower.startsWith('/offers/')) return '/offers'
+  if (lower === '/payment/success' || lower.startsWith('/payment/success/')) {
+    return '/payment/success'
+  }
+  if (lower.startsWith('/guides/')) return '/guides'
+  if (lower === '/privacy-policy' || lower === '/privacy-policy.html') {
+    return '/privacy-policy'
+  }
+  if (lower === '/refund-policy' || lower === '/refund-policy.html') {
+    return '/refund-policy'
+  }
+  if (lower.startsWith('/admin')) return '/admin'
+
+  return normalized
+}
+
+function readCanonicalRoutePath(params, routePath) {
+  return readParamText(params, 'canonical_route_path', 240) || canonicalizeRoutePath(routePath)
+}
+
 function readCfText(request, key, maxLength = 120) {
   return trimText(request.cf?.[key], maxLength) || null
 }
@@ -240,12 +306,15 @@ export async function onRequestPost({ request, env }) {
   const eventId = trimText(body?.eventId ?? params.event_id, 160) || null
 
   await ensureTables(env)
+  const routePath = trimText(body?.routePath, 400) || null
 
   await env.DB.prepare(
     `INSERT OR IGNORE INTO tracking_events (
       anonymous_id, session_id, event_name, event_id, event_value, currency,
-      source_url, referrer, referrer_host, route_path, landing_path,
-      first_landing_path, source_channel, first_source_channel, utm_source,
+      source_url, referrer, referrer_host, route_path, canonical_route_path,
+      landing_path, first_landing_path, source_channel, first_source_channel, experiment_id,
+      experiment_variant, first_experiment_variant, split_visit_id,
+      split_assignment_mode, split_original_path, split_assigned_path, utm_source,
       utm_medium, utm_campaign, utm_content, utm_term, click_id_type,
       click_id_value, fbp, fbc, device_type, browser_name, os_name, in_app_browser,
       browser_language, timezone, visitor_type, session_index, viewport_width,
@@ -254,7 +323,7 @@ export async function onRequestPost({ request, env }) {
       target_text, cf_country, cf_region, cf_city, cf_continent, cf_timezone,
       cf_colo, cf_asn, cf_as_organization, cf_ray, cf_http_protocol,
       cf_tls_version, payload_json, user_agent
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   )
     .bind(
       anonymousId,
@@ -266,11 +335,19 @@ export async function onRequestPost({ request, env }) {
       trimText(body?.sourceUrl, 1200) || null,
       trimText(body?.referrer, 1200) || null,
       readParamText(params, 'referrer_host', 240),
-      trimText(body?.routePath, 400) || null,
+      routePath,
+      readCanonicalRoutePath(params, routePath),
       readParamText(params, 'landing_path', 400),
       readParamText(params, 'first_landing_path', 400),
       readParamText(params, 'source_channel', 80),
       readParamText(params, 'first_source_channel', 80),
+      readParamText(params, 'experiment_id', 80),
+      readParamText(params, 'experiment_variant', 40),
+      readParamText(params, 'first_experiment_variant', 40),
+      readParamText(params, 'split_visit_id', 120),
+      readParamText(params, 'split_assignment_mode', 80),
+      readParamText(params, 'split_original_path', 600),
+      readParamText(params, 'split_assigned_path', 240),
       readParamText(params, 'utm_source', 160),
       readParamText(params, 'utm_medium', 160),
       readParamText(params, 'utm_campaign', 240),

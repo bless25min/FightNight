@@ -65,6 +65,11 @@ const TRAFFIC_ACTION_EVENTS = [
   'bootcamp_route_select',
   'bootcamp_sticky_action_click',
   'bootcamp_sticky_secondary_click',
+  'event_more_sessions_click',
+  'event_ticket_cta_click',
+  'event_free_trial_cta_click',
+  'first_purchase_offer_check',
+  'bootcamp_bridge_first_purchase_offer_check',
 ]
 
 const CHECKOUT_INTENT_EVENTS = [
@@ -80,6 +85,29 @@ const LEAD_INTENT_EVENTS = [
 const TRAFFIC_ACTION_EVENT_SQL = TRAFFIC_ACTION_EVENTS.map(sqlString).join(', ')
 const CHECKOUT_INTENT_EVENT_SQL = CHECKOUT_INTENT_EVENTS.map(sqlString).join(', ')
 const LEAD_INTENT_EVENT_SQL = LEAD_INTENT_EVENTS.map(sqlString).join(', ')
+const SPLIT_TEST_ROUTE_SQL = ['/', '/boot-camp', '/fight-night-event']
+  .map(sqlString)
+  .join(', ')
+
+const CANONICAL_ROUTE_SQL = `
+  COALESCE(
+    NULLIF(canonical_route_path, ''),
+    CASE
+      WHEN route_path LIKE '/boot-camp%' THEN '/boot-camp'
+      WHEN route_path LIKE '/fight-night-event%' THEN '/fight-night-event'
+      WHEN route_path LIKE '/offers%' THEN '/offers'
+      WHEN route_path LIKE '/payment/success%' THEN '/payment/success'
+      WHEN route_path LIKE '/guides/%' THEN '/guides'
+      WHEN route_path LIKE '/admin%' THEN '/admin'
+      WHEN route_path LIKE '/privacy-policy%' THEN '/privacy-policy'
+      WHEN route_path LIKE '/refund-policy%' THEN '/refund-policy'
+      WHEN route_path IS NULL OR route_path = '' THEN '(unknown)'
+      WHEN instr(route_path, '?') > 0 THEN substr(route_path, 1, instr(route_path, '?') - 1)
+      WHEN instr(route_path, '#') > 0 THEN substr(route_path, 1, instr(route_path, '#') - 1)
+      ELSE route_path
+    END
+  )
+`
 
 function sqlString(value) {
   return `'${String(value).replace(/'/g, "''")}'`
@@ -236,10 +264,18 @@ async function ensureCustomerTrackingTables(env) {
         referrer TEXT,
         referrer_host TEXT,
         route_path TEXT,
+        canonical_route_path TEXT,
         landing_path TEXT,
         first_landing_path TEXT,
         source_channel TEXT,
         first_source_channel TEXT,
+        experiment_id TEXT,
+        experiment_variant TEXT,
+        first_experiment_variant TEXT,
+        split_visit_id TEXT,
+        split_assignment_mode TEXT,
+        split_original_path TEXT,
+        split_assigned_path TEXT,
         utm_source TEXT,
         utm_medium TEXT,
         utm_campaign TEXT,
@@ -353,12 +389,20 @@ async function ensureCustomerTrackingTables(env) {
        ON tracking_events (route_path, created_at)`,
     ),
     env.DB.prepare(
+      `CREATE INDEX IF NOT EXISTS idx_tracking_events_canonical_route_created
+       ON tracking_events (canonical_route_path, created_at)`,
+    ),
+    env.DB.prepare(
       `CREATE INDEX IF NOT EXISTS idx_tracking_events_session_created
        ON tracking_events (session_id, created_at)`,
     ),
     env.DB.prepare(
       `CREATE INDEX IF NOT EXISTS idx_tracking_events_created_session
        ON tracking_events (created_at, session_id)`,
+    ),
+    env.DB.prepare(
+      `CREATE INDEX IF NOT EXISTS idx_tracking_events_experiment_created
+       ON tracking_events (experiment_id, experiment_variant, created_at)`,
     ),
   ])
   await ensureOrderTrackingColumns(env)
@@ -369,8 +413,16 @@ async function ensureTrackingColumns(env) {
     ['landing_path', 'TEXT'],
     ['first_landing_path', 'TEXT'],
     ['referrer_host', 'TEXT'],
+    ['canonical_route_path', 'TEXT'],
     ['source_channel', 'TEXT'],
     ['first_source_channel', 'TEXT'],
+    ['experiment_id', 'TEXT'],
+    ['experiment_variant', 'TEXT'],
+    ['first_experiment_variant', 'TEXT'],
+    ['split_visit_id', 'TEXT'],
+    ['split_assignment_mode', 'TEXT'],
+    ['split_original_path', 'TEXT'],
+    ['split_assigned_path', 'TEXT'],
     ['utm_source', 'TEXT'],
     ['utm_medium', 'TEXT'],
     ['utm_campaign', 'TEXT'],
@@ -791,9 +843,12 @@ async function listEvents(env, url) {
   const rows = await safeAll(
     env,
     `SELECT id, anonymous_id, session_id, event_name, event_id, event_value,
-            currency, source_url, referrer, referrer_host, route_path, landing_path,
+            currency, source_url, referrer, referrer_host, route_path,
+            ${CANONICAL_ROUTE_SQL} AS canonical_route_path, landing_path,
             first_landing_path,
-            source_channel, first_source_channel, utm_source, utm_medium,
+            source_channel, first_source_channel, experiment_id, experiment_variant,
+            first_experiment_variant, split_visit_id, split_assignment_mode,
+            split_original_path, split_assigned_path, utm_source, utm_medium,
             utm_campaign, utm_content, utm_term, click_id_type, click_id_value,
             device_type, browser_name, os_name, in_app_browser,
             browser_language, timezone, visitor_type, session_index,
@@ -822,10 +877,18 @@ async function listEvents(env, url) {
     referrer: row.referrer,
     referrerHost: row.referrer_host,
     routePath: row.route_path,
+    canonicalRoutePath: row.canonical_route_path,
     landingPath: row.landing_path,
     firstLandingPath: row.first_landing_path,
     sourceChannel: row.source_channel,
     firstSourceChannel: row.first_source_channel,
+    experimentId: row.experiment_id,
+    experimentVariant: row.experiment_variant,
+    firstExperimentVariant: row.first_experiment_variant,
+    splitVisitId: row.split_visit_id,
+    splitAssignmentMode: row.split_assignment_mode,
+    splitOriginalPath: row.split_original_path,
+    splitAssignedPath: row.split_assigned_path,
     utmSource: row.utm_source,
     utmMedium: row.utm_medium,
     utmCampaign: row.utm_campaign,
@@ -1339,6 +1402,8 @@ async function getTraffic(env, url) {
     campaignRows,
     pageRows,
     sectionRows,
+    splitVariantRows,
+    splitSectionRows,
     dropoffRows,
     exitRows,
     deviceRows,
@@ -1460,7 +1525,7 @@ async function getTraffic(env, url) {
     ),
     safeAll(
       env,
-      `SELECT COALESCE(route_path, '(unknown)') AS route_path,
+      `SELECT ${CANONICAL_ROUTE_SQL} AS route_path,
               COUNT(DISTINCT CASE WHEN event_name = 'page_view' THEN session_id ELSE NULL END) AS sessions,
               COALESCE(SUM(CASE WHEN event_name = 'page_view' THEN 1 ELSE 0 END), 0) AS page_views,
               COUNT(DISTINCT CASE WHEN event_name = 'ticket_view' THEN session_id ELSE NULL END) AS ticket_sessions,
@@ -1474,14 +1539,15 @@ async function getTraffic(env, url) {
               ROUND(AVG(CASE WHEN event_name = 'page_exit' THEN max_scroll_depth END)) AS avg_scroll_depth
        FROM tracking_events
        WHERE created_at >= datetime('now', '${lookbackSql}')
-       GROUP BY COALESCE(route_path, '(unknown)')
+       GROUP BY ${CANONICAL_ROUTE_SQL}
        HAVING sessions > 0 OR actions > 0
        ORDER BY sessions DESC
        LIMIT 30`,
     ),
     safeAll(
       env,
-      `SELECT section_id,
+      `SELECT ${CANONICAL_ROUTE_SQL} AS route_path,
+              section_id,
               COALESCE(SUM(CASE WHEN event_name = 'section_view' THEN 1 ELSE 0 END), 0) AS views,
               COUNT(DISTINCT CASE WHEN event_name = 'section_view' THEN session_id ELSE NULL END) AS sessions,
               COALESCE(SUM(CASE WHEN event_name = 'ui_click' THEN 1 ELSE 0 END), 0) AS clicks,
@@ -1490,14 +1556,74 @@ async function getTraffic(env, url) {
        FROM tracking_events
        WHERE created_at >= datetime('now', '${lookbackSql}')
          AND section_id IS NOT NULL
-       GROUP BY section_id
-       ORDER BY views DESC, clicks DESC
-       LIMIT 40`,
+       GROUP BY ${CANONICAL_ROUTE_SQL}, section_id
+       ORDER BY route_path ASC, views DESC, clicks DESC
+       LIMIT 80`,
+    ),
+    safeAll(
+      env,
+      `SELECT COALESCE(experiment_id, '') AS experiment_id,
+              COALESCE(experiment_variant, first_experiment_variant, 'unassigned') AS experiment_variant,
+              COALESCE(first_experiment_variant, experiment_variant, '') AS first_experiment_variant,
+              ${CANONICAL_ROUTE_SQL} AS route_path,
+              COUNT(DISTINCT CASE WHEN event_name = 'page_view' THEN session_id ELSE NULL END) AS sessions,
+              COALESCE(SUM(CASE WHEN event_name = 'page_view' THEN 1 ELSE 0 END), 0) AS page_views,
+              COUNT(DISTINCT CASE WHEN event_name IN (${LEAD_INTENT_EVENT_SQL}) THEN session_id ELSE NULL END) AS lead_sessions,
+              COUNT(DISTINCT CASE WHEN event_name = 'free_trial_reservation_submit' THEN session_id ELSE NULL END) AS free_trial_sessions,
+              COUNT(DISTINCT CASE WHEN event_name = 'course_purchase_click' THEN session_id ELSE NULL END) AS purchase_click_sessions,
+              COALESCE(SUM(CASE WHEN event_name IN (${CHECKOUT_INTENT_EVENT_SQL}) THEN 1 ELSE 0 END), 0) AS checkout_intents,
+              COALESCE(SUM(CASE WHEN event_name IN (${TRAFFIC_ACTION_EVENT_SQL}) THEN 1 ELSE 0 END), 0) AS actions,
+              COALESCE(SUM(CASE WHEN event_name = 'page_exit' THEN 1 ELSE 0 END), 0) AS exits,
+              COALESCE(SUM(CASE WHEN event_name = 'page_exit' AND is_bounce = 1 THEN 1 ELSE 0 END), 0) AS bounces,
+              ROUND(AVG(CASE WHEN event_name = 'page_exit' THEN duration_ms END)) AS avg_duration_ms,
+              ROUND(AVG(CASE WHEN event_name = 'page_exit' THEN max_scroll_depth END)) AS avg_scroll_depth
+       FROM tracking_events
+       WHERE created_at >= datetime('now', '${lookbackSql}')
+         AND ${CANONICAL_ROUTE_SQL} IN (${SPLIT_TEST_ROUTE_SQL})
+         AND (
+           experiment_variant IS NOT NULL
+           OR first_experiment_variant IS NOT NULL
+           OR split_visit_id IS NOT NULL
+         )
+       GROUP BY COALESCE(experiment_id, ''),
+                COALESCE(experiment_variant, first_experiment_variant, 'unassigned'),
+                COALESCE(first_experiment_variant, experiment_variant, ''),
+                ${CANONICAL_ROUTE_SQL}
+       HAVING sessions > 0 OR actions > 0
+       ORDER BY sessions DESC, actions DESC
+       LIMIT 60`,
+    ),
+    safeAll(
+      env,
+      `SELECT COALESCE(experiment_variant, first_experiment_variant, 'unassigned') AS experiment_variant,
+              COALESCE(first_experiment_variant, experiment_variant, '') AS first_experiment_variant,
+              ${CANONICAL_ROUTE_SQL} AS route_path,
+              section_id,
+              COALESCE(SUM(CASE WHEN event_name = 'section_view' THEN 1 ELSE 0 END), 0) AS views,
+              COUNT(DISTINCT CASE WHEN event_name = 'section_view' THEN session_id ELSE NULL END) AS sessions,
+              COALESCE(SUM(CASE WHEN event_name = 'ui_click' THEN 1 ELSE 0 END), 0) AS clicks,
+              ROUND(AVG(CASE WHEN event_name = 'section_engagement' THEN duration_ms END)) AS avg_duration_ms,
+              MAX(created_at) AS last_at
+       FROM tracking_events
+       WHERE created_at >= datetime('now', '${lookbackSql}')
+         AND ${CANONICAL_ROUTE_SQL} IN (${SPLIT_TEST_ROUTE_SQL})
+         AND section_id IS NOT NULL
+         AND (
+           experiment_variant IS NOT NULL
+           OR first_experiment_variant IS NOT NULL
+           OR split_visit_id IS NOT NULL
+         )
+       GROUP BY COALESCE(experiment_variant, first_experiment_variant, 'unassigned'),
+                COALESCE(first_experiment_variant, experiment_variant, ''),
+                ${CANONICAL_ROUTE_SQL}, section_id
+       ORDER BY route_path ASC, views DESC, clicks DESC
+       LIMIT 120`,
     ),
     safeAll(
       env,
       `WITH exits AS (
-         SELECT session_id, route_path, duration_ms, max_scroll_depth, is_bounce, created_at
+         SELECT session_id, ${CANONICAL_ROUTE_SQL} AS route_path,
+                duration_ms, max_scroll_depth, is_bounce, created_at
          FROM tracking_events
          WHERE event_name = 'page_exit'
            AND created_at >= datetime('now', '${lookbackSql}')
@@ -1525,7 +1651,7 @@ async function getTraffic(env, url) {
     ),
     safeAll(
       env,
-      `SELECT COALESCE(route_path, '(unknown)') AS route_path,
+      `SELECT ${CANONICAL_ROUTE_SQL} AS route_path,
               COUNT(*) AS exits,
               COALESCE(SUM(CASE WHEN is_bounce = 1 THEN 1 ELSE 0 END), 0) AS bounces,
               ROUND(AVG(duration_ms)) AS avg_duration_ms,
@@ -1534,7 +1660,7 @@ async function getTraffic(env, url) {
        FROM tracking_events
        WHERE event_name = 'page_exit'
          AND created_at >= datetime('now', '${lookbackSql}')
-       GROUP BY COALESCE(route_path, '(unknown)')
+       GROUP BY ${CANONICAL_ROUTE_SQL}
        ORDER BY exits DESC
        LIMIT 20`,
     ),
@@ -1597,7 +1723,10 @@ async function getTraffic(env, url) {
     safeAll(
       env,
       `SELECT datetime(created_at, '+8 hours') AS created_tw,
-              event_name, route_path, section_id, cta_id, target_text,
+              event_name, route_path, ${CANONICAL_ROUTE_SQL} AS canonical_route_path,
+              experiment_id, experiment_variant, first_experiment_variant,
+              split_visit_id, split_assignment_mode,
+              section_id, cta_id, target_text,
               duration_ms, scroll_depth, max_scroll_depth,
               source_channel, utm_campaign, utm_content,
               browser_name, in_app_browser, cf_city, cf_country
@@ -1705,6 +1834,35 @@ async function getTraffic(env, url) {
       avgScrollDepth: toNumber(row.avg_scroll_depth),
     })),
     sections: sectionRows.map((row) => ({
+      routePath: row.route_path,
+      sectionId: row.section_id,
+      views: toNumber(row.views),
+      sessions: toNumber(row.sessions),
+      clicks: toNumber(row.clicks),
+      avgDurationMs: toNumber(row.avg_duration_ms),
+      lastAt: row.last_at,
+    })),
+    splitVariants: splitVariantRows.map((row) => ({
+      experimentId: row.experiment_id,
+      experimentVariant: row.experiment_variant,
+      firstExperimentVariant: row.first_experiment_variant,
+      routePath: row.route_path,
+      sessions: toNumber(row.sessions),
+      pageViews: toNumber(row.page_views),
+      leadSessions: toNumber(row.lead_sessions),
+      freeTrialSessions: toNumber(row.free_trial_sessions),
+      purchaseClickSessions: toNumber(row.purchase_click_sessions),
+      actions: toNumber(row.actions),
+      checkoutIntents: toNumber(row.checkout_intents),
+      exits: toNumber(row.exits),
+      bounces: toNumber(row.bounces),
+      avgDurationMs: toNumber(row.avg_duration_ms),
+      avgScrollDepth: toNumber(row.avg_scroll_depth),
+    })),
+    splitSections: splitSectionRows.map((row) => ({
+      experimentVariant: row.experiment_variant,
+      firstExperimentVariant: row.first_experiment_variant,
+      routePath: row.route_path,
       sectionId: row.section_id,
       views: toNumber(row.views),
       sessions: toNumber(row.sessions),
@@ -1765,6 +1923,12 @@ async function getTraffic(env, url) {
       createdAt: row.created_tw,
       eventName: row.event_name,
       routePath: row.route_path,
+      canonicalRoutePath: row.canonical_route_path,
+      experimentId: row.experiment_id,
+      experimentVariant: row.experiment_variant,
+      firstExperimentVariant: row.first_experiment_variant,
+      splitVisitId: row.split_visit_id,
+      splitAssignmentMode: row.split_assignment_mode,
       sectionId: row.section_id,
       ctaId: row.cta_id,
       targetText: row.target_text,
@@ -1795,6 +1959,10 @@ async function listJourneys(env, url) {
             COALESCE(MAX(source_channel), 'direct') AS source_channel,
             COALESCE(MAX(landing_path), '') AS landing_path,
             COALESCE(MAX(first_landing_path), '') AS first_landing_path,
+            COALESCE(MAX(experiment_id), '') AS experiment_id,
+            COALESCE(MAX(experiment_variant), '') AS experiment_variant,
+            COALESCE(MAX(first_experiment_variant), '') AS first_experiment_variant,
+            COALESCE(MAX(split_visit_id), '') AS split_visit_id,
             COALESCE(MAX(device_type), 'unknown') AS device_type,
             COALESCE(MAX(browser_name), 'unknown') AS browser_name,
             COALESCE(MAX(os_name), 'unknown') AS os_name,
@@ -1824,7 +1992,9 @@ async function listJourneys(env, url) {
   const placeholders = ids.map(() => '?').join(',')
   const events = await safeAll(
     env,
-    `SELECT session_id, event_name, route_path, section_id, cta_id, target_text,
+    `SELECT session_id, event_name, route_path, ${CANONICAL_ROUTE_SQL} AS canonical_route_path,
+            experiment_id, experiment_variant, first_experiment_variant, split_visit_id,
+            section_id, cta_id, target_text,
             scroll_depth, max_scroll_depth, duration_ms, is_bounce,
             source_channel, utm_source, utm_medium, utm_campaign, click_id_type,
             created_at
@@ -1840,6 +2010,11 @@ async function listJourneys(env, url) {
     list.push({
       eventName: event.event_name,
       routePath: event.route_path,
+      canonicalRoutePath: event.canonical_route_path,
+      experimentId: event.experiment_id,
+      experimentVariant: event.experiment_variant,
+      firstExperimentVariant: event.first_experiment_variant,
+      splitVisitId: event.split_visit_id,
       sectionId: event.section_id,
       ctaId: event.cta_id,
       targetText: event.target_text,
@@ -1865,6 +2040,10 @@ async function listJourneys(env, url) {
     sourceChannel: session.source_channel,
     landingPath: session.landing_path,
     firstLandingPath: session.first_landing_path,
+    experimentId: session.experiment_id,
+    experimentVariant: session.experiment_variant,
+    firstExperimentVariant: session.first_experiment_variant,
+    splitVisitId: session.split_visit_id,
     deviceType: session.device_type,
     browserName: session.browser_name,
     osName: session.os_name,

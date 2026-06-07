@@ -136,6 +136,31 @@ Meta Pixel events include `eventID`. Purchases use the local order `event_id` (`
 
 The same browser events are also posted to `POST /api/events` and stored in D1 as first-party anonymous funnel data. This lets `/admin` show page views, route/package selections, checkout starts, and other behavior without relying only on ad-platform dashboards.
 
+### Homepage Destination Split Test
+
+Meta ads can keep pointing to the current homepage URL while Cloudflare Pages decides the first page before HTML is rendered:
+
+| Variant | Destination |
+| --- | --- |
+| `home` | `/` |
+| `bootcamp` | `/boot-camp` |
+| `event` | `/fight-night-event` |
+
+Runtime variables:
+
+```
+LANDING_SPLIT_ENABLED=false
+LANDING_SPLIT_ONLY_PAID=true
+LANDING_SPLIT_EXPERIMENT_ID=home_destination_split_v1
+LANDING_SPLIT_WEIGHTS=home:34,bootcamp:33,event:33
+```
+
+Use `?split=home`, `?split=bootcamp`, or `?split=event` to force a preview route without enabling the experiment. Use `?split=off` to bypass it. When enabled, the middleware only handles root document requests and keeps API, payment, admin, and static assets unchanged.
+
+Each split visit sends `landing_split_arrival` and adds these fields to first-party events, LIFF access tracking, free-trial reservation tracking, and checkout tracking context: `experiment_id`, `experiment_variant`, `first_experiment_variant`, `split_visit_id`, `split_assignment_mode`, `split_original_path`, and `split_assigned_path`.
+
+Traffic events also include `canonical_route_path`, so `/`, `/boot-camp`, and `/fight-night-event` can be compared in `/admin` without query-string fragmentation. `/admin` traffic now includes a Landing Split Test report for variant-level and section-level behavior.
+
 ## SHOPLINE Payments
 
 Course purchase buttons now create a SHOPLINE Payments redirect checkout session through Cloudflare Pages Functions:

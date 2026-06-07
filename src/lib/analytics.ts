@@ -1,4 +1,5 @@
 import { getCheckoutTrackingContext } from './checkoutTracking'
+import { getLandingSplitContext } from './landingSplit'
 
 export type TrackingParams = Record<
   string,
@@ -55,6 +56,7 @@ const visitorProfileKey = 'fightnight_visitor_profile'
 let runtimeConfig: RuntimeAnalyticsConfig = {}
 let runtimeConfigPromise: Promise<RuntimeAnalyticsConfig> | undefined
 let behaviorTrackingStarted = false
+let landingSplitArrivalSent = false
 
 type StoredAttribution = {
   landingPath: string
@@ -247,6 +249,45 @@ function getRoutePath() {
 function getPathOnly() {
   if (typeof window === 'undefined') return ''
   return `${window.location.pathname}${window.location.hash}`
+}
+
+function canonicalizeRoutePath(path: string) {
+  const raw = String(path || '/').trim()
+  const pathWithoutHash = raw.split('#')[0] || raw
+  const pathWithoutQuery = pathWithoutHash.split('?')[0] || '/'
+  const normalized = pathWithoutQuery.replace(/\/+$/, '') || '/'
+  const lower = normalized.toLowerCase()
+
+  if (lower === '/index.html') return '/'
+  if (lower === '/boot-camp' || lower === '/boot-camp.html') return '/boot-camp'
+  if (lower.startsWith('/boot-camp/')) return '/boot-camp'
+  if (lower === '/fight-night-event' || lower === '/fight-night-event.html') {
+    return '/fight-night-event'
+  }
+  if (lower.startsWith('/fight-night-event/')) return '/fight-night-event'
+  if (lower === '/offers' || lower === '/offers.html') return '/offers'
+  if (lower.startsWith('/offers/')) return '/offers'
+  if (lower === '/payment/success' || lower.startsWith('/payment/success/')) {
+    return '/payment/success'
+  }
+  if (lower.startsWith('/guides/')) return '/guides'
+  if (lower === '/privacy-policy' || lower === '/privacy-policy.html') {
+    return '/privacy-policy'
+  }
+  if (lower === '/refund-policy' || lower === '/refund-policy.html') {
+    return '/refund-policy'
+  }
+  if (lower.startsWith('/admin')) return '/admin'
+
+  return normalized
+}
+
+function getCanonicalRoutePath() {
+  if (typeof window === 'undefined') return ''
+  const hashPath = window.location.hash.startsWith('#/')
+    ? window.location.hash.slice(1)
+    : ''
+  return canonicalizeRoutePath(hashPath || window.location.pathname)
 }
 
 function isPrivateAnalyticsPath(path: string) {
@@ -467,6 +508,7 @@ function getTrackingContextParams(): TrackingParams {
   return normalizeParams({
     ...getCheckoutTrackingContext(),
     page_path: getRoutePath(),
+    canonical_route_path: getCanonicalRoutePath(),
     landing_path: first?.landingPath || getPathOnly(),
     source_channel: current?.sourceChannel || 'direct',
     first_source_channel: first?.sourceChannel || 'direct',
@@ -567,6 +609,23 @@ function postServerEvent(
   }).catch(() => undefined)
 }
 
+function trackLandingSplitArrival() {
+  if (landingSplitArrivalSent || isPrivateAnalyticsRoute()) return
+
+  const splitContext = getLandingSplitContext()
+  if (!splitContext.experiment_id && !splitContext.experiment_variant) return
+
+  landingSplitArrivalSent = true
+  postServerEvent(
+    'landing_split_arrival',
+    {
+      ...splitContext,
+      page_path: getRoutePath(),
+    },
+    createEventId('landing_split_arrival'),
+  )
+}
+
 function flushPageEngagement(eventName = 'page_exit') {
   if (typeof window === 'undefined' || isPrivateAnalyticsRoute() || !pageState) return
 
@@ -588,6 +647,7 @@ function flushPageEngagement(eventName = 'page_exit') {
     eventName,
     {
       page_path: state.path,
+      canonical_route_path: canonicalizeRoutePath(state.path),
       duration_ms: durationMs,
       max_scroll_depth: state.maxScrollDepth,
       interaction_count: state.interactions,
@@ -613,6 +673,7 @@ function flushActiveSectionEngagement(
     'section_engagement',
     {
       page_path: state.path,
+      canonical_route_path: canonicalizeRoutePath(state.path),
       section_id: state.activeSectionId,
       duration_ms: durationMs,
       next_section_id: nextSectionId,
@@ -847,6 +908,7 @@ export function initAnalytics() {
     { page_path: getRoutePath() },
     createEventId('page_view'),
   )
+  trackLandingSplitArrival()
 }
 
 export function trackPageView(path: string) {
@@ -856,7 +918,10 @@ export function trackPageView(path: string) {
   resetPageState(path)
   setupSectionObserverSoon()
 
-  const params = normalizeParams({ page_path: path })
+  const params = normalizeParams({
+    page_path: path,
+    canonical_route_path: canonicalizeRoutePath(path),
+  })
   const eventId = createEventId('page_view')
   const gaId = getGaMeasurementId()
   const lineTagId = getLineTagId()

@@ -62,8 +62,16 @@ type TrackingEventRow = {
   eventValue?: number | null
   currency: string
   routePath?: string | null
+  canonicalRoutePath?: string | null
   landingPath?: string | null
   sourceChannel?: string | null
+  experimentId?: string | null
+  experimentVariant?: string | null
+  firstExperimentVariant?: string | null
+  splitVisitId?: string | null
+  splitAssignmentMode?: string | null
+  splitOriginalPath?: string | null
+  splitAssignedPath?: string | null
   utmSource?: string | null
   utmMedium?: string | null
   utmCampaign?: string | null
@@ -355,6 +363,37 @@ type TrafficDropoff = {
 }
 
 type TrafficSection = {
+  routePath?: string | null
+  sectionId: string
+  views: number
+  sessions: number
+  clicks: number
+  avgDurationMs: number
+  lastAt?: string | null
+}
+
+type TrafficSplitVariant = {
+  experimentId?: string | null
+  experimentVariant: string
+  firstExperimentVariant?: string | null
+  routePath: string
+  sessions: number
+  pageViews: number
+  leadSessions: number
+  freeTrialSessions: number
+  purchaseClickSessions: number
+  actions: number
+  checkoutIntents: number
+  exits: number
+  bounces: number
+  avgDurationMs: number
+  avgScrollDepth: number
+}
+
+type TrafficSplitSection = {
+  experimentVariant: string
+  firstExperimentVariant?: string | null
+  routePath: string
   sectionId: string
   views: number
   sessions: number
@@ -439,6 +478,12 @@ type TrafficRecentEvent = {
   createdAt: string
   eventName: string
   routePath?: string | null
+  canonicalRoutePath?: string | null
+  experimentId?: string | null
+  experimentVariant?: string | null
+  firstExperimentVariant?: string | null
+  splitVisitId?: string | null
+  splitAssignmentMode?: string | null
   sectionId?: string | null
   ctaId?: string | null
   targetText?: string | null
@@ -461,6 +506,8 @@ type TrafficData = {
   campaigns: TrafficCampaign[]
   pages: TrafficPage[]
   sections: TrafficSection[]
+  splitVariants?: TrafficSplitVariant[]
+  splitSections?: TrafficSplitSection[]
   dropoffs?: TrafficDropoff[]
   exits: TrafficExit[]
   devices: TrafficDevice[]
@@ -473,6 +520,11 @@ type TrafficData = {
 type JourneyEvent = {
   eventName: string
   routePath?: string | null
+  canonicalRoutePath?: string | null
+  experimentId?: string | null
+  experimentVariant?: string | null
+  firstExperimentVariant?: string | null
+  splitVisitId?: string | null
   sectionId?: string | null
   ctaId?: string | null
   targetText?: string | null
@@ -496,6 +548,10 @@ type Journey = {
   sourceChannel: string
   landingPath?: string | null
   firstLandingPath?: string | null
+  experimentId?: string | null
+  experimentVariant?: string | null
+  firstExperimentVariant?: string | null
+  splitVisitId?: string | null
   deviceType?: string | null
   browserName?: string | null
   osName?: string | null
@@ -661,6 +717,23 @@ function formatRate(numerator?: number | null, denominator?: number | null) {
 function bounceRate(bounces: number, exits: number) {
   if (!exits) return '0%'
   return `${Math.round((bounces / exits) * 100)}%`
+}
+
+function splitVariantLabel(value?: string | null) {
+  if (value === 'home') return '首頁'
+  if (value === 'bootcamp') return 'BOOTCAMP'
+  if (value === 'event') return '活動頁'
+  if (value === 'unassigned') return '未分組'
+  return value || '-'
+}
+
+function routeLabel(value?: string | null) {
+  if (value === '/') return '首頁'
+  if (value === '/boot-camp') return 'BOOTCAMP'
+  if (value === '/fight-night-event') return '活動頁'
+  if (value === '/offers') return 'Offers'
+  if (value === '/payment/success') return '付款成功'
+  return value || '-'
 }
 
 function statusLabel(status: string) {
@@ -1249,9 +1322,14 @@ function EventsTable({ events }: { events: TrackingEventRow[] }) {
                 )}
               </td>
               <td className="max-w-[240px] px-4 py-4 text-mist/65">
-                <span className="line-clamp-3 break-all">
-                  {event.routePath || '-'}
-                </span>
+                <p className="font-heading text-pearl/85">
+                  {routeLabel(event.canonicalRoutePath || event.routePath)}
+                </p>
+                {event.routePath && event.routePath !== event.canonicalRoutePath && (
+                  <p className="mt-1 line-clamp-2 break-all font-mono text-[11px] text-mist/45">
+                    {event.routePath}
+                  </p>
+                )}
               </td>
               <td className="px-4 py-4 font-mono text-xs text-mist/55">
                 {event.anonymousId}
@@ -1261,6 +1339,11 @@ function EventsTable({ events }: { events: TrackingEventRow[] }) {
                   {event.sourceChannel || 'direct'}
                   {event.deviceType ? ` · ${event.deviceType}` : ''}
                 </p>
+                {event.experimentVariant && (
+                  <p className="mt-1 text-xs text-neon/75">
+                    {splitVariantLabel(event.experimentVariant)}
+                  </p>
+                )}
                 {(event.browserName || event.osName || event.inAppBrowser) && (
                   <p className="mt-1 text-xs text-mist/55">
                     {[event.browserName, event.osName, event.inAppBrowser]
@@ -2105,6 +2188,8 @@ function TrafficDashboard({ traffic }: { traffic?: TrafficData }) {
   const daily = traffic.daily || []
   const dropoffs = traffic.dropoffs || []
   const recentEvents = traffic.recentEvents || []
+  const splitVariants = traffic.splitVariants || []
+  const splitSections = traffic.splitSections || []
 
   return (
     <div className="space-y-6">
@@ -2196,6 +2281,126 @@ function TrafficDashboard({ traffic }: { traffic?: TrafficData }) {
           </div>
         </section>
       )}
+
+      <section className="rounded-lg border border-pearl/10 bg-black/24 p-4">
+        <div className="flex flex-col gap-1 md:flex-row md:items-end md:justify-between">
+          <div>
+            <p className="font-heading text-sm tracking-[0.18em] text-mist/60">
+              Landing Split Test
+            </p>
+            <p className="mt-1 text-sm text-mist/55">
+              比較首頁、BOOTCAMP、活動頁第一次進站後的 LINE、免費預約、付款意圖與停留表現。
+            </p>
+          </div>
+          <span className="text-xs text-mist/45">
+            同一頁會合併 query / split_visit_id 後統計
+          </span>
+        </div>
+
+        <div className="mt-4 overflow-x-auto">
+          <table className="min-w-[1180px] w-full text-left text-sm">
+            <thead className="font-heading text-xs tracking-[0.16em] text-mist/55">
+              <tr>
+                <th className="py-2 pr-4">版本</th>
+                <th className="py-2 pr-4">首次分組</th>
+                <th className="py-2 pr-4">頁面</th>
+                <th className="py-2 pr-4">Sessions</th>
+                <th className="py-2 pr-4">PV</th>
+                <th className="py-2 pr-4">LINE</th>
+                <th className="py-2 pr-4">免費預約</th>
+                <th className="py-2 pr-4">購買點擊</th>
+                <th className="py-2 pr-4">Checkout</th>
+                <th className="py-2 pr-4">CTA</th>
+                <th className="py-2 pr-4">停留</th>
+                <th className="py-2 pr-4">瀏覽</th>
+                <th className="py-2 pr-4">跳出</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-pearl/8">
+              {splitVariants.map((row, index) => (
+                <tr
+                  key={`${row.experimentVariant}-${row.firstExperimentVariant}-${row.routePath}-${index}`}
+                >
+                  <td className="py-3 pr-4 font-heading text-pearl">
+                    {splitVariantLabel(row.experimentVariant)}
+                  </td>
+                  <td className="py-3 pr-4 text-mist/70">
+                    {splitVariantLabel(row.firstExperimentVariant)}
+                  </td>
+                  <td className="py-3 pr-4 text-mist/75">{routeLabel(row.routePath)}</td>
+                  <td className="py-3 pr-4 text-mist/75">{row.sessions}</td>
+                  <td className="py-3 pr-4 text-mist/75">{row.pageViews}</td>
+                  <td className="py-3 pr-4 text-neon">{row.leadSessions}</td>
+                  <td className="py-3 pr-4 text-mist/75">{row.freeTrialSessions}</td>
+                  <td className="py-3 pr-4 text-mist/75">{row.purchaseClickSessions}</td>
+                  <td className="py-3 pr-4 text-gold">{row.checkoutIntents}</td>
+                  <td className="py-3 pr-4 text-mist/75">{row.actions}</td>
+                  <td className="py-3 pr-4 text-mist/75">
+                    {formatDuration(row.avgDurationMs)}
+                  </td>
+                  <td className="py-3 pr-4 text-mist/75">
+                    {formatPercent(row.avgScrollDepth)}
+                  </td>
+                  <td className="py-3 pr-4 text-mist/75">
+                    {bounceRate(row.bounces, row.exits)}
+                  </td>
+                </tr>
+              ))}
+              {splitVariants.length === 0 && (
+                <tr>
+                  <td className="py-4 text-sm text-mist/55" colSpan={13}>
+                    尚未收到分流版本事件。上線後有使用者進站，這裡會開始出現三個頁面的比較。
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="mt-5 overflow-x-auto border-t border-pearl/10 pt-4">
+          <table className="min-w-[900px] w-full text-left text-sm">
+            <thead className="font-heading text-xs tracking-[0.16em] text-mist/55">
+              <tr>
+                <th className="py-2 pr-4">版本</th>
+                <th className="py-2 pr-4">頁面</th>
+                <th className="py-2 pr-4">區塊</th>
+                <th className="py-2 pr-4">Views</th>
+                <th className="py-2 pr-4">Sessions</th>
+                <th className="py-2 pr-4">Clicks</th>
+                <th className="py-2 pr-4">停留</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-pearl/8">
+              {splitSections.slice(0, 60).map((row, index) => (
+                <tr key={`${row.experimentVariant}-${row.routePath}-${row.sectionId}-${index}`}>
+                  <td className="py-3 pr-4 font-heading text-pearl">
+                    {splitVariantLabel(row.experimentVariant)}
+                  </td>
+                  <td className="py-3 pr-4 text-mist/70">{routeLabel(row.routePath)}</td>
+                  <td className="max-w-[260px] py-3 pr-4">
+                    <span className="line-clamp-2 break-all text-mist/75">
+                      #{row.sectionId}
+                    </span>
+                  </td>
+                  <td className="py-3 pr-4 text-mist/75">{row.views}</td>
+                  <td className="py-3 pr-4 text-mist/75">{row.sessions}</td>
+                  <td className="py-3 pr-4 text-neon">{row.clicks}</td>
+                  <td className="py-3 pr-4 text-mist/75">
+                    {formatDuration(row.avgDurationMs)}
+                  </td>
+                </tr>
+              ))}
+              {splitSections.length === 0 && (
+                <tr>
+                  <td className="py-4 text-sm text-mist/55" colSpan={7}>
+                    尚未收到分流區塊瀏覽或停留資料。
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
 
       {traffic.campaigns.length > 0 && (
         <section className="rounded-lg border border-pearl/10 bg-black/24 p-4">
@@ -2373,7 +2578,7 @@ function TrafficDashboard({ traffic }: { traffic?: TrafficData }) {
                 className="flex items-center justify-between gap-3 rounded-lg border border-pearl/8 bg-black/24 px-3 py-2"
               >
                 <span className="min-w-0 truncate font-heading text-pearl">
-                  #{section.sectionId}
+                  {routeLabel(section.routePath)} / #{section.sectionId}
                 </span>
                 <span className="shrink-0 text-sm text-mist/70">
                   看見 {section.views} · 點擊 {section.clicks} · {formatDuration(section.avgDurationMs)}
@@ -2533,12 +2738,19 @@ function TrafficDashboard({ traffic }: { traffic?: TrafficData }) {
                     <td className="whitespace-nowrap py-3 pr-4 text-xs text-mist/55">
                       {event.createdAt}
                     </td>
-                    <td className="py-3 pr-4 font-heading text-neon">
-                      {event.eventName}
+                    <td className="py-3 pr-4">
+                      <p className="font-heading text-neon">{event.eventName}</p>
+                      {event.experimentVariant && (
+                        <p className="mt-1 text-xs text-mist/45">
+                          {splitVariantLabel(event.experimentVariant)}
+                        </p>
+                      )}
                     </td>
                     <td className="max-w-[260px] py-3 pr-4 text-mist/75">
                       <span className="line-clamp-2 break-all">
-                        {event.sectionId ? `#${event.sectionId}` : event.routePath || '-'}
+                        {event.sectionId
+                          ? `${routeLabel(event.canonicalRoutePath || event.routePath)} / #${event.sectionId}`
+                          : routeLabel(event.canonicalRoutePath || event.routePath)}
                         {event.maxScrollDepth ? ` · ${event.maxScrollDepth}%` : ''}
                         {event.durationMs ? ` · ${formatDuration(event.durationMs)}` : ''}
                       </span>
@@ -2629,7 +2841,9 @@ function JourneysPanel({ journeys }: { journeys: Journey[] }) {
                   {event.eventName}
                 </span>
                 <span className="min-w-0 text-mist/72">
-                  {event.sectionId ? `#${event.sectionId}` : event.routePath || '-'}
+                  {event.sectionId
+                    ? `${routeLabel(event.canonicalRoutePath || event.routePath)} / #${event.sectionId}`
+                    : routeLabel(event.canonicalRoutePath || event.routePath)}
                   {event.ctaId ? ` · CTA ${event.ctaId}` : ''}
                   {event.targetText ? ` · ${event.targetText}` : ''}
                   {event.scrollDepth ? ` · ${event.scrollDepth}%` : ''}

@@ -1,3 +1,5 @@
+import { getLandingSplitContext } from './landingSplit'
+
 function readCookie(name: string) {
   if (typeof document === 'undefined') return ''
   const match = document.cookie
@@ -79,6 +81,7 @@ export function getCheckoutTrackingContext() {
   if (typeof window === 'undefined') return {}
 
   return {
+    ...getLandingSplitContext(),
     fbp: getFacebookBrowserCookie(),
     fbc: getFacebookClickCookie(),
     sourceUrl: window.location.href,
