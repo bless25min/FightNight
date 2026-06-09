@@ -326,7 +326,7 @@ function getCoachHook(
   const displayName = coachProfile?.shortName ?? getCoachDisplayName(coachName)
 
   if (coachProfile?.id === 'andre') {
-    return 'Andre 的世界冠軍與泰拳實戰背景，會把踢拳回合帶得更有壓迫感。'
+    return 'Andre 的瑞士與歐洲泰拳冠軍經歷，會把踢拳回合帶得更有壓迫感。'
   }
   if (coachProfile?.id === 'bruno') {
     return 'Bruno 有職業泰拳與 MMA 賽事經驗，適合想感受實戰節奏的人。'
@@ -677,7 +677,7 @@ function getCoachProofTag(
   coachName: string,
   coachProfile: CoachProfile | null,
 ) {
-  if (coachProfile?.id === 'andre') return '世界冠軍教練'
+  if (coachProfile?.id === 'andre') return '瑞士與歐洲泰拳冠軍'
   if (coachProfile?.id === 'bruno') return '職業泰拳 14 勝'
   if (coachProfile?.id === 'got') return '泰拳教師'
   if (coachProfile?.id === 'mario') return '職業 MMA 28 勝'
@@ -697,7 +697,7 @@ function getCoachPreviewTags(
   if (!coachProfile) return []
 
   const tagsByCoach: Record<string, string[]> = {
-    andre: ['泰拳 / MMA', '泰拳世界冠軍'],
+    andre: ['泰拳 / MMA', '瑞士 / 歐洲泰拳冠軍'],
     bruno: ['泰拳 / MMA', '職業泰拳選手'],
     got: ['泰拳 / 踢拳', '職業選手靶師'],
     mario: ['巴西柔術 / MMA', '職業MMA選手'],

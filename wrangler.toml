@@ -9,8 +9,8 @@ VITE_META_PIXEL_ID = "1979180472685310"
 VITE_LINE_TAG_CUSTOMER_TYPE = "lap"
 LANDING_SPLIT_ENABLED = "true"
 LANDING_SPLIT_ONLY_PAID = "true"
-LANDING_SPLIT_EXPERIMENT_ID = "home_destination_split_v1"
-LANDING_SPLIT_WEIGHTS = "home:34,bootcamp:33,event:33"
+LANDING_SPLIT_EXPERIMENT_ID = "event_landing_focus_v1"
+LANDING_SPLIT_WEIGHTS = "event:100"
 
 [[d1_databases]]
 binding = "DB"

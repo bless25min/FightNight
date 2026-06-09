@@ -151,11 +151,11 @@ Runtime variables:
 ```
 LANDING_SPLIT_ENABLED=false
 LANDING_SPLIT_ONLY_PAID=true
-LANDING_SPLIT_EXPERIMENT_ID=home_destination_split_v1
-LANDING_SPLIT_WEIGHTS=home:34,bootcamp:33,event:33
+LANDING_SPLIT_EXPERIMENT_ID=event_landing_focus_v1
+LANDING_SPLIT_WEIGHTS=event:100
 ```
 
-Use `?split=home`, `?split=bootcamp`, or `?split=event` to force a preview route without enabling the experiment. Use `?split=off` to bypass it. When enabled, the middleware only handles root document requests and keeps API, payment, admin, and static assets unchanged.
+Use `?split=home`, `?split=bootcamp`, or `?split=event` to force a preview route without enabling the experiment. Use `?split=off` to bypass it. When enabled, the middleware only handles root document requests and keeps API, payment, admin, and static assets unchanged. Current production routing is focused on the independent event page with `event:100`.
 
 Each split visit sends `landing_split_arrival` and adds these fields to first-party events, LIFF access tracking, free-trial reservation tracking, and checkout tracking context: `experiment_id`, `experiment_variant`, `first_experiment_variant`, `split_visit_id`, `split_assignment_mode`, `split_original_path`, and `split_assigned_path`.
 

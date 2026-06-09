@@ -1,4 +1,5 @@
 import { getLandingSplitContext } from './landingSplit'
+import { getLocaleTrackingParams } from './locale'
 
 function readCookie(name: string) {
   if (typeof document === 'undefined') return ''
@@ -82,6 +83,7 @@ export function getCheckoutTrackingContext() {
 
   return {
     ...getLandingSplitContext(),
+    ...getLocaleTrackingParams(),
     fbp: getFacebookBrowserCookie(),
     fbc: getFacebookClickCookie(),
     sourceUrl: window.location.href,

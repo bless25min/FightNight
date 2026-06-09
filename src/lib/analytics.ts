@@ -1,5 +1,6 @@
 import { getCheckoutTrackingContext } from './checkoutTracking'
 import { getLandingSplitContext } from './landingSplit'
+import { getLocaleTrackingParams } from './locale'
 
 export type TrackingParams = Record<
   string,
@@ -507,6 +508,7 @@ function getTrackingContextParams(): TrackingParams {
 
   return normalizeParams({
     ...getCheckoutTrackingContext(),
+    ...getLocaleTrackingParams(),
     page_path: getRoutePath(),
     canonical_route_path: getCanonicalRoutePath(),
     landing_path: first?.landingPath || getPathOnly(),

@@ -26,6 +26,7 @@ import {
   weeklyCourses,
 } from '../data/weeklySchedule'
 import { useLiffGate } from '../hooks/useLiffGate'
+import { useLocale } from '../hooks/useLocale'
 import {
   type SessionAvailability,
   useSessionAvailability,
@@ -42,6 +43,7 @@ import {
   getTaipeiTodayIso,
 } from '../lib/coursePricing'
 import { getLineRequestContext } from '../lib/lineContext'
+import type { SupportedLocale } from '../lib/locale'
 import type { FAQItem, WeeklyCourse } from '../types'
 
 type BuyerContactForm = {
@@ -137,11 +139,509 @@ type EventCoachProfileDetailTone = 'pearl' | 'neon' | 'blaze'
 
 const landingVariant = 'fightnight_event_night_ticket_paid_v3'
 const eventName = 'Fight Night'
-const eventDescription =
-  'Fight Night 是一張 Fight Night Pass。走進 UFC GYM，戴上拳套，把 50 分鐘交給倒數、沙包聲和全場。'
 const eventMoreSessionsHash = '#event-more-sessions'
 const eventMoreSessionsIntentKey = 'fightnight_event_more_sessions_intent'
 const eventCoursePricingMode = 'weekly-course-no-first-purchase'
+
+const eventPageCopy = {
+  'zh-TW': {
+    eventDescription:
+      'Fight Night 是一張 Fight Night Pass。走進 UFC GYM，戴上拳套，把 50 分鐘交給倒數、沙包聲和全場。',
+    venueLabels: {
+      'venue-dunnan': '敦南旗艦館',
+      'venue-neihu': '內湖旗艦館',
+      'venue-taichung': '台中旗艦館',
+    },
+    nearbyAreaLabels: {
+      'venue-dunnan': '捷運忠孝敦化站',
+      'venue-neihu': '捷運港墘站',
+      'venue-taichung': '勤美誠品',
+    },
+    products: {
+      'hand-wraps': {
+        title: '全新 UFC GYM 手綁帶',
+        body: '結束後可以帶回家。',
+        alt: '全新 UFC GYM 手綁帶',
+      },
+      'boxing-gloves': {
+        title: '全新 UFC GYM 拳擊手套',
+        body: '結束後可以帶回家。',
+        alt: '全新 UFC GYM 拳擊手套',
+      },
+    },
+    passHighlights: {
+      entry: {
+        title: '入場通行',
+        body: '全設施使用。',
+      },
+      locker: {
+        title: '感應式私人置物櫃',
+        body: '飯店級盥洗用品。',
+      },
+      starterKit: {
+        title: '新手包',
+        body: '上課使用的拳套、手綁帶會先為你準備好。',
+      },
+      standardFlow: {
+        title: '一般體驗流程',
+        body: '裝備可自備，或現場租用。',
+      },
+    },
+    passVariants: {
+      'fight-night-pass': {
+        title: 'Fight Night Pass',
+        ctaName: 'Fight Night Pass',
+      },
+      'fight-night-gear-pass': {
+        title: 'Fight Night Gear Pass',
+        ctaName: 'Fight Night Gear Pass',
+      },
+      'single-class-paid': {
+        title: '一般單堂體驗',
+        ctaName: '這堂體驗',
+      },
+    },
+    preferences: {
+      heading: '入場偏好',
+      selected: '已選',
+      optional: '可選',
+      handWrapAssist: {
+        title: '課前準備',
+        body: '專人協助教學及纏手綁帶',
+      },
+      quietMode: {
+        title: '安靜模式',
+        body: '現場接待人員不主動介紹入會方案。',
+      },
+    },
+    faq: {
+      title: '第一次來，先看這幾個。',
+      items: [
+        {
+          id: 'event-first-time',
+          question: '我完全沒打過可以嗎？',
+          answer: '可以。前面會從能跟上的節奏開始，不需要先練好。',
+        },
+        {
+          id: 'event-no-fight',
+          question: '會對打嗎？',
+          answer: '不會。主要是拳套、沙包、口令和回合。',
+        },
+        {
+          id: 'event-what-to-wear',
+          question: '要穿什麼？需要帶什麼？',
+          answer:
+            '穿一般好活動的運動服就可以。到場會帶你進流程，需要準備的細節會在 LINE 入場確認裡提醒。',
+        },
+        {
+          id: 'event-cancel-change',
+          question: '取消、變更預訂',
+          answer:
+            '若付款後尚未使用，可依退款與取消政策提出申請；課程開始前 24 小時以上可協助改期，未滿 24 小時取消會依現場名額與實際安排處理。',
+          linkHref: '/refund-policy',
+          linkLabel: '查看退款與取消政策',
+        },
+      ],
+    },
+    weekdays: ['週日', '週一', '週二', '週三', '週四', '週五', '週六'],
+    remaining: {
+      featured: '精選課程',
+      waitlist: '候補中',
+      lastSeats: (remaining: number) => `最後名額剩下${remaining}位`,
+    },
+    hero: {
+      imageAlt: 'Fight Night 拳套入場主視覺',
+      eyebrow: 'FIGHT NIGHT',
+      title: '下班後，進入另一種夜晚。',
+      body:
+        '你推門進 UFC GYM 的時候，白天還黏在身上。場地是紅的、黑的，音樂很近，有人已經戴好拳套在笑。第一聲倒數落下來，你會知道：這不是來上一堂課，是今晚真的要開始了。',
+      cta: '看這一晚有多好玩',
+    },
+    reframe: {
+      title: '自然而然，跟上現場氛圍。',
+      body:
+        '不用先懂拳擊，教練會把節奏拆到你跟得上，旁邊的人開始出聲，沙包一下一下響起來。',
+      after:
+        '你原本還有點保留，幾分鐘後，手會自己抬起來，嘴角也會自己上揚。',
+    },
+    proof: {
+      title: '低沉悶響，將日常與當下切開。',
+      body1: '拳套碰到沙包的那一下很近，低低的一聲，會把注意力拉回身體。',
+      body2:
+        '倒數越來越短，教練的口令、旁邊的呼吸、自己的心跳疊在一起；時間會變慢，感官會變清晰，壓力會留在黑底紅字的沙包上，彷彿自己正在蛻變得不一樣。',
+    },
+    safety: {
+      title: '第一次來，也可以很單純。',
+      items: [
+        {
+          title: '不用入會',
+          body: '這張 Pass 只買這一晚。',
+        },
+        {
+          title: '不用被推銷',
+          body: '線上付款，LINE 留票，到場進場。',
+        },
+        {
+          title: '新手也能玩得進去',
+          body: '從跟得上的節奏開始，不用先練好。',
+        },
+      ],
+    },
+    flowPreview: {
+      title: '愉快的餘韻會留在場上。',
+      paragraphs: [
+        '手還熱，沙包還在晃，旁邊的人也在喘，也在笑。',
+        '聽著教練預告下回內容，用眼神約好下次一起上課。',
+        '不自覺的，漸漸融入這個能量飽滿的社群。',
+        '覺得有點想試，就把這一晚留下來吧。',
+      ],
+      cta: '把這一晚留下來',
+    },
+    passPreview: {
+      eyebrow: 'FIGHT NIGHT PASS',
+      title: '選一個晚上，\n走進那個會讓人亮起來的現場。',
+      body:
+        '到了那天，你不用先想自己會不會。裝備、置物櫃和入場確認都會先準備好；你只要出現，戴上拳套，跟著第一聲倒數開始。',
+      items: ['入場通行', '裝備備妥', '可選安靜模式', 'LINE 確認'],
+    },
+    tickets: {
+      sectionEyebrow: 'Fight Night Pass',
+      sectionTitle: '可選場次',
+      sectionSummary: (venue: string, count: number) =>
+        `${venue} 目前 ${count} 場可選。`,
+      venueTabsLabel: '選擇場館',
+      cardsLabel: (venue: string) => `${venue} Fight Night Pass 可選場次`,
+      noVenueSessions: '這個場館目前沒有可報名場次。',
+      noSessions: '下一場整理中，開放後會更新在這裡。',
+      currentVenue: '目前場館',
+      showAll: '查看所有場次',
+      lineLoginShowAll: 'LINE 登入查看所有場次',
+      coachSuffix: '教練',
+      view: '查看',
+      soldOut: '本場候補中',
+      freeTrialFirstTimeBadge: '首次限定',
+      freeTrialUsedBadge: '一般體驗',
+      freeTrialTitle: '本週限量免費體驗課',
+      paidFallbackTitle: '一般單堂體驗',
+      usedFirstTime: '已使用首次限定',
+      freeTrialLimit: '每個 LINE 帳號限保留一次。',
+      usedFallback: '這堂可用一般單堂價保留。',
+      paidFallbackCta: 'NT$680｜保留這堂',
+      checking: '確認資格中',
+      unavailable: '暫時無法確認資格',
+      freeTrialCta: '首次限定｜免費保留這堂',
+      photo: '查看照片',
+    },
+    modal: {
+      close: '關閉',
+      coachInfo: '教練與課程資訊',
+      coachInfoClose: '關閉教練與課程資訊',
+      coachFallbackRole: 'Fight Night 教練',
+      whyThisCoach: '為什麼值得跟他上這堂',
+      certifications: '資格證明',
+      experience: '教學 / 經歷',
+      achievements: '比賽成就',
+      courseInfo: '課程資訊',
+      courseInfoBody: '這堂會由教練帶你跟上現場節奏，從能進入的動作開始。',
+      time: '時間',
+      venue: '場館',
+      status: '狀態',
+      backToSessions: '回到場次選擇',
+      checkoutEyebrow: 'Fight Night Pass',
+      checkoutTitle: '保留這一晚',
+      comparePrefix: '一般',
+      checkoutNote:
+        '付款後，LINE 會留下這一晚的時間、地點和入場確認。到了那天，直接走進 UFC GYM。',
+      normalEntryAssist: '現場依一般入場協助',
+      name: '姓名',
+      phone: '手機',
+      namePlaceholder: '王小明',
+      checkoutSubmit: '前往付款，保留這一晚',
+      checkoutSubmitting: '正在建立付款連結...',
+      checkoutSaved:
+        '送出後會儲存這次填寫的資料，下次購買或預約會自動帶入。',
+      checkoutLoginRequired: '請先完成 LINE 登入，付款後才能收到入場確認卡。',
+      checkoutError: '目前無法建立付款連結，請稍後再試。',
+      freeTrialEyebrow: '首次限定｜本週限量免費體驗課',
+      freeTrialTitle: '免費保留這堂',
+      freeTrialNote: '每個 LINE 帳號限保留一次。裝備可自備，或現場租用。',
+      freeTrialLoginRequired: '請先完成 LINE 登入後，再保留免費體驗。',
+      freeTrialError: '免費預約建立失敗，請稍後再試。',
+      freeTrialSubmitting: '正在保留...',
+    },
+    footer: {
+      privacy: '隱私政策',
+      refund: '退款與取消政策',
+    },
+    sticky: {
+      detailOpen: '選擇方案｜線上付款｜LINE 確認',
+      detailClosed: 'Fight Night Pass',
+    },
+    seo: {
+      title: 'Fight Night｜Fight Night Pass',
+      keywords: ['Fight Night', 'Fight Night Pass', 'UFC GYM', '運動娛樂', '夜間運動', '沙包聲'],
+    },
+    photoAlts: {
+      group: 'Fight Night 小團體被現場節奏帶起來',
+      impact: '全力專注並釋放情緒的沙包段落',
+      afterglow: 'Fight Night 結束後笑出來的放鬆感',
+    },
+  },
+  en: {
+    eventDescription:
+      'Fight Night is a pass into a different kind of night at UFC GYM: gloves on, countdowns close, bag sounds loud, and the whole room moving with you.',
+    venueLabels: {
+      'venue-dunnan': 'Dunnan Flagship',
+      'venue-neihu': 'Neihu Flagship',
+      'venue-taichung': 'Taichung Flagship',
+    },
+    nearbyAreaLabels: {
+      'venue-dunnan': 'Zhongxiao Dunhua MRT',
+      'venue-neihu': 'Gangqian MRT',
+      'venue-taichung': 'CMP Park Lane',
+    },
+    products: {
+      'hand-wraps': {
+        title: 'New UFC GYM hand wraps',
+        body: 'Yours to take home after the session.',
+        alt: 'New UFC GYM hand wraps',
+      },
+      'boxing-gloves': {
+        title: 'New UFC GYM boxing gloves',
+        body: 'Yours to take home after the session.',
+        alt: 'New UFC GYM boxing gloves',
+      },
+    },
+    passHighlights: {
+      entry: {
+        title: 'Entry pass',
+        body: 'Full facility access.',
+      },
+      locker: {
+        title: 'Private smart locker',
+        body: 'Hotel-grade amenities included.',
+      },
+      starterKit: {
+        title: 'Starter kit',
+        body: 'Session gloves and wraps are prepared for you in advance.',
+      },
+      standardFlow: {
+        title: 'Standard trial flow',
+        body: 'Bring your own gear or rent gear on site.',
+      },
+    },
+    passVariants: {
+      'fight-night-pass': {
+        title: 'Fight Night Pass',
+        ctaName: 'Fight Night Pass',
+      },
+      'fight-night-gear-pass': {
+        title: 'Fight Night Gear Pass',
+        ctaName: 'Fight Night Gear Pass',
+      },
+      'single-class-paid': {
+        title: 'Single Session',
+        ctaName: 'this session',
+      },
+    },
+    preferences: {
+      heading: 'Entry preferences',
+      selected: 'Selected',
+      optional: 'Optional',
+      handWrapAssist: {
+        title: 'Pre-session setup',
+        body: 'Staff help with basics and hand wrapping.',
+      },
+      quietMode: {
+        title: 'Quiet mode',
+        body: 'Reception will not introduce membership plans first.',
+      },
+    },
+    faq: {
+      title: 'First time here? Start with these.',
+      items: [
+        {
+          id: 'event-first-time',
+          question: 'Can I join if I have never boxed before?',
+          answer:
+            'Yes. The session starts from a rhythm you can follow. You do not need to train first.',
+        },
+        {
+          id: 'event-no-fight',
+          question: 'Will there be sparring?',
+          answer:
+            'No. This is built around gloves, bags, coaching cues, and rounds.',
+        },
+        {
+          id: 'event-what-to-wear',
+          question: 'What should I wear or bring?',
+          answer:
+            'Wear regular sportswear that is easy to move in. The arrival details will be sent through LINE after confirmation.',
+        },
+        {
+          id: 'event-cancel-change',
+          question: 'Cancellation or changes',
+          answer:
+            'Unused paid bookings can be handled under the refund and cancellation policy. We can help reschedule more than 24 hours before the session; cancellations within 24 hours depend on capacity and on-site arrangements.',
+          linkHref: '/refund-policy',
+          linkLabel: 'View refund and cancellation policy',
+        },
+      ],
+    },
+    weekdays: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+    remaining: {
+      featured: 'Featured',
+      waitlist: 'Waitlist',
+      lastSeats: (remaining: number) => `Last ${remaining} spots`,
+    },
+    hero: {
+      imageAlt: 'Fight Night entry visual with boxing gloves',
+      eyebrow: 'FIGHT NIGHT',
+      title: 'After work, enter a different night.',
+      body:
+        'When you walk into UFC GYM, the day is still on you. The room is red and black, the music is close, and someone is already laughing with gloves on. When the first countdown drops, it does not feel like you came for a class. It feels like the night has started.',
+      cta: 'See what this night feels like',
+    },
+    reframe: {
+      title: 'Naturally, you start to follow the room.',
+      body:
+        'You do not need to understand boxing first. The coach breaks the rhythm down, people around you start making sound, and the bags begin to answer back.',
+      after:
+        'You may come in a little guarded. A few minutes later, your shoulders loosen and your smile comes out before you plan it.',
+    },
+    proof: {
+      title: 'The first heavy sound cuts the day away.',
+      body1:
+        'The glove hitting the bag is close. Low, heavy, and direct enough to pull your attention back into your body.',
+      body2:
+        'As the countdown gets shorter, the coach, the room, your breath, and your heartbeat start to stack together. Time slows down. The day stays on the black-and-red bag, and you start feeling slightly different.',
+    },
+    safety: {
+      title: 'First time can still be simple.',
+      items: [
+        {
+          title: 'No membership required',
+          body: 'This Pass is only for this night.',
+        },
+        {
+          title: 'No sales pressure',
+          body: 'Pay online, keep the pass in LINE, and walk in on the day.',
+        },
+        {
+          title: 'Beginner-friendly',
+          body: 'The session starts from a rhythm you can follow.',
+        },
+      ],
+    },
+    flowPreview: {
+      title: 'The afterglow stays in the room.',
+      paragraphs: [
+        'Your hands are still warm. The bags are still moving. People around you are breathing hard and laughing.',
+        'The coach previews what comes next, and people start looking at each other like they might come back together.',
+        'Slowly, you begin to feel part of a room with a lot of energy.',
+        'If it starts to sound like something you want to try, keep this night for yourself.',
+      ],
+      cta: 'Keep this night',
+    },
+    passPreview: {
+      eyebrow: 'FIGHT NIGHT PASS',
+      title: 'Choose a night.\nStep into the room that brings people alive.',
+      body:
+        'On the day, you do not need to wonder if you are ready. Gear, locker, and entry confirmation are prepared first. You show up, put the gloves on, and follow the first countdown.',
+      items: ['Entry pass', 'Gear prepared', 'Quiet mode optional', 'LINE confirmation'],
+    },
+    tickets: {
+      sectionEyebrow: 'Fight Night Pass',
+      sectionTitle: 'Available sessions',
+      sectionSummary: (venue: string, count: number) =>
+        `${venue} has ${count} available session${count === 1 ? '' : 's'}.`,
+      venueTabsLabel: 'Choose venue',
+      cardsLabel: (venue: string) => `${venue} Fight Night Pass sessions`,
+      noVenueSessions: 'This venue has no available sessions right now.',
+      noSessions: 'The next session is being arranged and will appear here once open.',
+      currentVenue: 'Current venue',
+      showAll: 'View all sessions',
+      lineLoginShowAll: 'Log in with LINE to view all sessions',
+      coachSuffix: 'Coach',
+      view: 'View',
+      soldOut: 'Waitlist',
+      freeTrialFirstTimeBadge: 'First-time only',
+      freeTrialUsedBadge: 'Standard trial',
+      freeTrialTitle: 'Limited free trial this week',
+      paidFallbackTitle: 'Single Session',
+      usedFirstTime: 'First-time offer used',
+      freeTrialLimit: 'One free trial per LINE account.',
+      usedFallback: 'You can reserve this session at the standard single-session price.',
+      paidFallbackCta: 'NT$680 | Reserve this session',
+      checking: 'Checking eligibility',
+      unavailable: 'Eligibility unavailable',
+      freeTrialCta: 'First-time only | Reserve free',
+      photo: 'View photo',
+    },
+    modal: {
+      close: 'Close',
+      coachInfo: 'Coach and session info',
+      coachInfoClose: 'Close coach and session info',
+      coachFallbackRole: 'Fight Night Coach',
+      whyThisCoach: 'Why train with this coach',
+      certifications: 'Certifications',
+      experience: 'Teaching / Experience',
+      achievements: 'Competition achievements',
+      courseInfo: 'Session info',
+      courseInfoBody:
+        'The coach leads you into the room rhythm and starts from movement you can enter.',
+      time: 'Time',
+      venue: 'Venue',
+      status: 'Status',
+      backToSessions: 'Back to session selection',
+      checkoutEyebrow: 'Fight Night Pass',
+      checkoutTitle: 'Reserve this night',
+      comparePrefix: 'Regular',
+      checkoutNote:
+        'After payment, your time, location, and entry confirmation stay in LINE. On the day, walk straight into UFC GYM.',
+      normalEntryAssist: 'Standard arrival support on site',
+      name: 'Name',
+      phone: 'Mobile',
+      namePlaceholder: 'Your name',
+      checkoutSubmit: 'Pay and keep this night',
+      checkoutSubmitting: 'Creating payment link...',
+      checkoutSaved:
+        'Your details will be saved for your next purchase or reservation.',
+      checkoutLoginRequired:
+        'Please complete LINE login first so the entry confirmation can be sent after payment.',
+      checkoutError: 'Unable to create the payment link. Please try again later.',
+      freeTrialEyebrow: 'First-time only | Limited free trial this week',
+      freeTrialTitle: 'Reserve free',
+      freeTrialNote:
+        'One free trial per LINE account. Bring your own gear or rent gear on site.',
+      freeTrialLoginRequired:
+        'Please complete LINE login first before reserving the free trial.',
+      freeTrialError: 'Unable to create the free reservation. Please try again later.',
+      freeTrialSubmitting: 'Reserving...',
+    },
+    footer: {
+      privacy: 'Privacy Policy',
+      refund: 'Refund and Cancellation Policy',
+    },
+    sticky: {
+      detailOpen: 'Choose pass | Pay online | Confirm in LINE',
+      detailClosed: 'Fight Night Pass',
+    },
+    seo: {
+      title: 'Fight Night | Fight Night Pass',
+      keywords: ['Fight Night', 'Fight Night Pass', 'UFC GYM', 'sports entertainment', 'night workout', 'heavy bag'],
+    },
+    photoAlts: {
+      group: 'A Fight Night group getting pulled into the room energy',
+      impact: 'A focused heavy bag moment with emotional release',
+      afterglow: 'The relaxed smile after Fight Night ends',
+    },
+  },
+} satisfies Record<SupportedLocale, Record<string, unknown>>
+
+function getCopy(locale: SupportedLocale) {
+  return eventPageCopy[locale] as typeof eventPageCopy['zh-TW']
+}
 
 const venueLabelMap: Record<string, string> = {
   'venue-dunnan': '敦南旗艦館',
@@ -155,11 +655,18 @@ const venueNearbyAreaLabelMap: Record<string, string> = {
   'venue-taichung': '勤美誠品',
 }
 
-const eventVenueTabs = Object.entries(venueLabelMap).map(([venueId, label]) => ({
-  venueId,
-  label,
-  nearbyAreaLabel: venueNearbyAreaLabelMap[venueId],
-}))
+function getEventVenueTabs(locale: SupportedLocale = 'zh-TW') {
+  const copy = getCopy(locale)
+  const venueLabels = copy.venueLabels as Record<string, string>
+  const nearbyLabels = copy.nearbyAreaLabels as Record<string, string>
+
+  return Object.keys(venueLabelMap).map((venueId) => ({
+    venueId,
+    label: venueLabels[venueId] ?? venueLabelMap[venueId],
+    nearbyAreaLabel:
+      nearbyLabels[venueId] ?? venueNearbyAreaLabelMap[venueId],
+  }))
+}
 
 const venueCoordinates: Record<string, Coordinates> = {
   'venue-dunnan': {
@@ -278,52 +785,6 @@ const singleClassPaidVariant: EventPassVariant = {
   ],
 }
 
-const eventServicePreferenceOptions: Array<{
-  id: keyof EventServicePreferences
-  title: string
-  body: string
-}> = [
-  {
-    id: 'handWrapAssist',
-    title: '課前準備',
-    body: '專人協助教學及纏手綁帶',
-  },
-  {
-    id: 'quietMode',
-    title: '安靜模式',
-    body: '現場接待人員不主動介紹入會方案。',
-  },
-]
-
-const eventFaqItems: FAQItem[] = [
-  {
-    id: 'event-first-time',
-    question: '我完全沒打過可以嗎？',
-    answer:
-      '可以。前面會從能跟上的節奏開始，不需要先練好。',
-  },
-  {
-    id: 'event-no-fight',
-    question: '會對打嗎？',
-    answer:
-      '不會。主要是拳套、沙包、口令和回合。',
-  },
-  {
-    id: 'event-what-to-wear',
-    question: '要穿什麼？需要帶什麼？',
-    answer:
-      '穿一般好活動的運動服就可以。到場會帶你進流程，需要準備的細節會在 LINE 入場確認裡提醒。',
-  },
-  {
-    id: 'event-cancel-change',
-    question: '取消、變更預訂',
-    answer:
-      '若付款後尚未使用，可依退款與取消政策提出申請；課程開始前 24 小時以上可協助改期，未滿 24 小時取消會依現場名額與實際安排處理。',
-    linkHref: '/refund-policy',
-    linkLabel: '查看退款與取消政策',
-  },
-]
-
 function scrollToId(id: string) {
   document.getElementById(id)?.scrollIntoView({
     behavior: 'smooth',
@@ -340,16 +801,14 @@ function addDays(iso: string, days: number) {
   return `${year}-${month}-${day}`
 }
 
-function getWeekdayLabel(iso: string) {
+function getWeekdayLabel(iso: string, locale: SupportedLocale = 'zh-TW') {
   const date = new Date(`${iso}T00:00:00`)
-  return ['週日', '週一', '週二', '週三', '週四', '週五', '週六'][
-    date.getDay()
-  ]
+  return getCopy(locale).weekdays[date.getDay()]
 }
 
-function formatDateLabel(iso: string) {
+function formatDateLabel(iso: string, locale: SupportedLocale = 'zh-TW') {
   const [, month, day] = iso.split('-')
-  return `${Number(month)}/${Number(day)} ${getWeekdayLabel(iso)}`
+  return `${Number(month)}/${Number(day)} ${getWeekdayLabel(iso, locale)}`
 }
 
 function getDynamicCourseId(baseCourse: WeeklyCourse, date: string) {
@@ -373,12 +832,31 @@ function getNextBookableOccurrence(
     ...course,
     id: getDynamicCourseId(course, date),
     date,
-    weekday: getWeekdayLabel(date),
+    weekday: getWeekdayLabel(date, 'zh-TW'),
   }
 }
 
-function getVenueLabel(course: WeeklyCourse) {
-  return venueLabelMap[course.venueId] ?? course.venueName
+function getVenueLabel(
+  course: WeeklyCourse,
+  locale: SupportedLocale = 'zh-TW',
+) {
+  const venueLabels = getCopy(locale).venueLabels as Record<string, string>
+  return venueLabels[course.venueId] ?? course.venueName
+}
+
+function getNearbyAreaLabel(
+  venueId: string,
+  locale: SupportedLocale = 'zh-TW',
+) {
+  const nearbyLabels = getCopy(locale).nearbyAreaLabels as Record<string, string>
+  return nearbyLabels[venueId]
+}
+
+function getCourseDisplayName(
+  course: WeeklyCourse,
+  locale: SupportedLocale = 'zh-TW',
+) {
+  return locale === 'en' ? course.nameEn || course.name : course.name
 }
 
 function sortEventTicketsByVenuePriority(
@@ -438,19 +916,22 @@ function isBasicPaidCourse(course: WeeklyCourse) {
   return course.name.includes('基礎拳擊') || course.name.includes('基礎泰拳')
 }
 
-function getEventTicketFromCourse(course: WeeklyCourse): EventTicket {
+function getEventTicketFromCourse(
+  course: WeeklyCourse,
+  locale: SupportedLocale = 'zh-TW',
+): EventTicket {
   return {
     id: course.id,
     course,
     sessionId: course.id,
     title: eventName,
-    dateLabel: formatDateLabel(course.date),
+    dateLabel: formatDateLabel(course.date, locale),
     timeLabel: `${course.startTime}-${course.endTime}`,
-    venueLabel: getVenueLabel(course),
+    venueLabel: getVenueLabel(course, locale),
   }
 }
 
-function getPaidEventTickets(limit = 72): EventTicket[] {
+function getPaidEventTickets(locale: SupportedLocale = 'zh-TW', limit = 72): EventTicket[] {
   const bookableFromIso = addDays(
     getTaipeiTodayIso(),
     ONLINE_BOOKING_START_OFFSET_DAYS,
@@ -476,10 +957,13 @@ function getPaidEventTickets(limit = 72): EventTicket[] {
       return a.venueId < b.venueId ? -1 : 1
     })
     .slice(0, limit)
-    .map(getEventTicketFromCourse)
+    .map((course) => getEventTicketFromCourse(course, locale))
 }
 
-function getWeeklyFreeTrialTickets(limit = 4): EventTicket[] {
+function getWeeklyFreeTrialTickets(
+  locale: SupportedLocale = 'zh-TW',
+  limit = 4,
+): EventTicket[] {
   const bookableFromIso = addDays(
     getTaipeiTodayIso(),
     ONLINE_BOOKING_START_OFFSET_DAYS,
@@ -499,42 +983,410 @@ function getWeeklyFreeTrialTickets(limit = 4): EventTicket[] {
       return a.venueId < b.venueId ? -1 : 1
     })
     .slice(0, limit)
-    .map(getEventTicketFromCourse)
+    .map((course) => getEventTicketFromCourse(course, locale))
 }
 
 function getRemainingLabel(
   availability: SessionAvailability,
   hasLiveData: boolean,
+  locale: SupportedLocale = 'zh-TW',
 ) {
+  const copy = getCopy(locale).remaining
   if (!hasLiveData) {
-    return '精選課程'
+    return copy.featured
   }
-  if (availability.remaining <= 0) return '候補中'
+  if (availability.remaining <= 0) return copy.waitlist
   if (availability.remaining <= 3) {
-    return `最後名額剩下${availability.remaining}位`
+    return copy.lastSeats(availability.remaining)
   }
-  return '精選課程'
+  return copy.featured
 }
 
-function getEventCoachProofTag(coachProfile: CoachProfile | null) {
-  if (coachProfile?.id === 'andre') return '世界冠軍教練'
-  if (coachProfile?.id === 'bruno') return '職業泰拳 14 勝'
-  if (coachProfile?.id === 'got') return '泰拳教師'
-  if (coachProfile?.id === 'mario') return '職業 MMA 28 勝'
-  if (coachProfile?.id === 'rafael') return '柔術黑帶 4 段'
-  if (coachProfile?.id === 'sim') return '技擊教練資格'
-  if (coachProfile?.id === 'mengyan') return '拳擊四連霸'
+type EventCoachEnglishProfile = {
+  name: string
+  role: string
+  tags: string[]
+  paragraphs: string[]
+  trustPoints: string[]
+  certifications?: string[]
+  experience?: string[]
+  achievements?: string[]
+}
+
+const eventCoachEnglishProfiles: Record<string, EventCoachEnglishProfile> = {
+  andre: {
+    name: 'Andre',
+    role: 'Muay Thai / MMA Coach',
+    tags: ['Muay Thai / MMA', 'Swiss / European Muay Thai Champion', 'Brazilian Coach', 'Fight Background'],
+    paragraphs: [
+      'Andre brings a Brazilian fight background into the room, with Muay Thai, MMA, and striking experience built through years of competition and coaching.',
+      'In Fight Night, his cues help you enter the rhythm fast: simple enough to follow, strong enough to make the room feel alive.',
+    ],
+    trustPoints: [
+      'Swiss and European Muay Thai champion background',
+      'Brazilian striking and MMA coaching experience',
+      'High-energy cueing for first-time and experienced students',
+    ],
+    achievements: [
+      'European Champion of Muay Thai',
+      'Champion - Cearense of Muay Thai',
+      'Champion - Shooto Brazil 7',
+    ],
+  },
+  bruno: {
+    name: 'Bruno',
+    role: 'Muay Thai / MMA Coach',
+    tags: ['Muay Thai / MMA', 'Pro Muay Thai Fighter', 'BJJ Black Belt', 'Fight Background'],
+    paragraphs: [
+      'Bruno is a Brazilian coach with professional Muay Thai and MMA experience, plus a Brazilian Jiu-Jitsu black belt background.',
+      'His Fight Night sessions feel direct and physical, but still easy to enter because the rhythm is broken down before the room gets intense.',
+    ],
+    trustPoints: [
+      'Professional Muay Thai record: 14 wins',
+      'Professional MMA record: 4 wins',
+      'Brazilian Jiu-Jitsu black belt',
+    ],
+    achievements: [
+      'Copa de Bangkok Muay Thai Champion',
+      'WOTD MMA competitor',
+      'TJJF Brazilian Jiu-Jitsu medalist',
+    ],
+  },
+  got: {
+    name: 'Got',
+    role: 'Muay Thai / Kickboxing Coach',
+    tags: ['Muay Thai / Kickboxing', 'Kru Muay Thai', 'Pad Holder', 'Thailand Training'],
+    paragraphs: [
+      'Got comes from a Muay Thai teaching background, with experience training and coaching inside Thai fight-gym environments.',
+      'His class energy is sharp and rhythmic. You follow the cue, hear the bag answer back, and the room starts pulling you in.',
+    ],
+    trustPoints: [
+      'Kru Muay Thai Association certified teacher',
+      'LKT Muay Thai Gym coaching background',
+      'Yutthasart Muay Thai Gym training background',
+    ],
+    certifications: ['Kru Muay Thai Association - Certificate of Teacher'],
+    experience: [
+      'LKT Muay Thai Gym coach',
+      'Yutthasart Muay Thai Gym training background',
+    ],
+  },
+  mario: {
+    name: 'Mario',
+    role: 'Brazilian Jiu-Jitsu / MMA Coach',
+    tags: ['BJJ / MMA', 'Pro MMA Fighter', 'BJJ Black Belt', 'Fight Background'],
+    paragraphs: [
+      'Mario brings Brazilian Jiu-Jitsu, Muay Thai, and professional MMA experience into the training floor.',
+      'His Fight Night style is controlled but intense: you feel guided, while the room still has the energy of a real fight team.',
+    ],
+    trustPoints: [
+      'Professional MMA record: 28 wins',
+      'Team Nova Uniao background',
+      'Brazilian Jiu-Jitsu black belt',
+    ],
+    achievements: [
+      'MMA Brazilian King Fighter Champion',
+      'MMA Mr. Cage Champion',
+      'Jiu-Jitsu Black Belt State Champion',
+    ],
+  },
+  rafael: {
+    name: 'Rafael',
+    role: 'Brazilian Jiu-Jitsu / MMA Coach',
+    tags: ['BJJ Black Belt 4th Degree', 'Pro MMA Fighter', 'Brazilian Coach', 'Fight Background'],
+    paragraphs: [
+      'Rafael is a Brazilian Jiu-Jitsu black belt fourth degree with MMA and striking experience.',
+      'In Fight Night, that background turns into clear pacing: he keeps the room moving while making the rhythm understandable for people walking in for the first time.',
+    ],
+    trustPoints: [
+      'Brazilian Jiu-Jitsu black belt, fourth degree',
+      'Professional MMA record: 11 wins',
+      'IBJJF Asian Championship 2025 gold medalist',
+    ],
+    achievements: [
+      'IBJJF Asian Championship 2025 - gold',
+      "Mariana's Pro 2025 - first place",
+      'Brazilian Jiu-Jitsu national champion',
+    ],
+  },
+  sim: {
+    name: 'Sim',
+    role: 'Judo / MMA Coach',
+    tags: ['Judo / MMA', 'Malaysia Judo Team', 'Combat Coach', 'Competition Background'],
+    paragraphs: [
+      'Sim comes from a judo and combat-sports background, with national-team competition experience and coaching credentials.',
+      'His coaching makes the room feel secure before it becomes intense, so beginners can follow the first rhythm without feeling lost.',
+    ],
+    trustPoints: [
+      'Malaysia Judo Team background',
+      'Combat-sports coaching credentials',
+      'Multiple judo and grappling competition results',
+    ],
+    achievements: [
+      'Southeast Asia Games - Malaysia Judo Team',
+      'Malaysia National Judo Championship gold medalist',
+      'ASJJF Taiwan Open gold medalist',
+    ],
+  },
+  mengyan: {
+    name: 'Mengyan',
+    role: 'Boxing / Combat Conditioning Coach',
+    tags: ['Boxing', 'Combat Conditioning', 'College Boxing Champion', 'Team Background'],
+    paragraphs: [
+      'Mengyan brings a boxing team background and years of ring-based competition into class.',
+      'His Fight Night coaching keeps the movement direct: follow the count, hit the bag, and let the room build your confidence one round at a time.',
+    ],
+    trustPoints: [
+      'Four-time college boxing champion',
+      'Boxing team and coaching background',
+      'Combat conditioning teaching experience',
+    ],
+  },
+  ruru: {
+    name: 'RuRu',
+    role: 'Boxing / Kickboxing Coach',
+    tags: ['Boxing', 'Kickboxing', 'Fitness Coaching', 'Competition Background'],
+    paragraphs: [
+      'RuRu combines boxing, kickboxing, and fitness coaching into a class rhythm that feels bright and easy to enter.',
+      'Her sessions help first-timers stop watching from the outside and start moving with the people around them.',
+    ],
+    trustPoints: [
+      'Boxing and kickboxing coaching credentials',
+      'Fitness and conditioning teaching background',
+      'Boxing competition background',
+    ],
+  },
+  joyce: {
+    name: 'Joyce',
+    role: 'Boxing / Functional Training Coach',
+    tags: ['Boxing', 'Functional Training', 'WBC Coach', 'Competition Background'],
+    paragraphs: [
+      'Joyce brings boxing, functional training, and women-focused coaching experience into the room.',
+      'Her classes feel clear and encouraging: you do not need to perform first, you just need to follow the rhythm until the room opens up.',
+    ],
+    trustPoints: [
+      'WBC boxing coach background',
+      'Boxing and functional training certifications',
+      'Boxing competition podium experience',
+    ],
+  },
+  fly: {
+    name: 'Fly',
+    role: 'Functional Training Coach',
+    tags: ['Functional Training', 'Boxing Conditioning', 'RTS', 'Mobility'],
+    paragraphs: [
+      'Fly brings functional training, movement coaching, and boxing-conditioning experience into class.',
+      'His Fight Night sessions help the body wake up quickly, so the rhythm feels physical without becoming confusing.',
+    ],
+    trustPoints: [
+      'RTS training background',
+      'Myofascial stretch instructor',
+      'Boxing and conditioning competition background',
+    ],
+  },
+  gilo: {
+    name: 'Gilo',
+    role: 'Boxing / Conditioning Coach',
+    tags: ['Boxing', 'Conditioning', 'CPR / AED', 'Competition Background'],
+    paragraphs: [
+      'Gilo combines boxing, conditioning, and practical coaching experience into a steady class flow.',
+      'His rhythm makes the room feel approachable first, then gradually brings the intensity up.',
+    ],
+    trustPoints: [
+      'CPR and AED certified',
+      'Boxing coaching credentials',
+      'Boxing competition background',
+    ],
+  },
+  ren: {
+    name: 'Ren',
+    role: 'Kickboxing / Fitness Coach',
+    tags: ['Kickboxing', 'Fitness Coaching', 'Conditioning', 'Competition Background'],
+    paragraphs: [
+      'Ren brings kickboxing and fitness coaching experience into a class style that is direct, upbeat, and easy to follow.',
+      'In Fight Night, his cues help the room move together so you can get pulled into the energy without overthinking.',
+    ],
+    trustPoints: [
+      'Kickboxing coaching certifications',
+      'Fitness and conditioning coaching background',
+      'Kickboxing competition background',
+    ],
+  },
+  willis: {
+    name: 'Willis',
+    role: 'Boxing / Conditioning Coach',
+    tags: ['Boxing', 'WBC Coach', 'ACE-CPT', 'Conditioning'],
+    paragraphs: [
+      'Willis brings boxing, conditioning, and personal-training credentials into a clean and energetic class rhythm.',
+      'His Fight Night coaching makes the first round feel simple enough to start, while the room builds the energy around you.',
+    ],
+    trustPoints: [
+      'WBC boxing coach credential',
+      'ACE-CPT certified trainer',
+      'Kickboxing competition background',
+    ],
+  },
+  simon: {
+    name: 'Simon',
+    role: 'Muay Thai / Conditioning Coach',
+    tags: ['Muay Thai', 'Kickboxing', 'Kettlebell', 'Conditioning'],
+    paragraphs: [
+      'Simon blends Muay Thai, kickboxing, and conditioning work into a class that feels athletic without becoming hard to enter.',
+      'His coaching keeps the cues clear, so the sound, count, and movement can stack into the Fight Night atmosphere.',
+    ],
+    trustPoints: [
+      'WBC Muay Thai coaching background',
+      'Kickboxing coaching credential',
+      'Kettlebell training credential',
+    ],
+  },
+  edward: {
+    name: 'Edward',
+    role: 'Kickboxing / Functional Training Coach',
+    tags: ['Kickboxing', 'Functional Training', 'Mobility', 'Competition Background'],
+    paragraphs: [
+      'Edward brings kickboxing, mobility, and functional-training coaching into a controlled class flow.',
+      'His Fight Night sessions help you move from cautious to engaged without feeling thrown into something you cannot follow.',
+    ],
+    trustPoints: [
+      'Kickboxing coaching certifications',
+      'Functional training background',
+      'Kickboxing competition background',
+    ],
+  },
+  tony: {
+    name: 'Tony',
+    role: 'Boxing / Kickboxing Coach',
+    tags: ['Boxing', 'Kickboxing', 'TRX', 'Conditioning'],
+    paragraphs: [
+      'Tony brings boxing, kickboxing, and conditioning coaching into a class rhythm that feels strong but grounded.',
+      'In Fight Night, he helps the group enter the count together, then lets the room energy do the rest.',
+    ],
+    trustPoints: [
+      'Boxing and kickboxing coaching background',
+      'TRX and conditioning training credentials',
+      'Boxing competition background',
+    ],
+  },
+  howard: {
+    name: 'Howard',
+    role: 'Boxing / Combat Conditioning Coach',
+    tags: ['Boxing', 'Fight Fit', 'Combat Conditioning', 'Dunnan Coach'],
+    paragraphs: [
+      'Howard brings boxing and Fight Fit-style conditioning into a class flow built for people who want a more physical night out.',
+      'His coaching keeps the room moving together, so the energy feels shared instead of solitary.',
+    ],
+    trustPoints: [
+      'Dunnan coaching background',
+      'Fight Fit combat-conditioning coach',
+      'Boxing and conditioning teaching experience',
+    ],
+  },
+}
+
+function getEventCoachEnglishProfile(coachProfile: CoachProfile | null) {
+  return coachProfile ? eventCoachEnglishProfiles[coachProfile.id] : undefined
+}
+
+function getEventCoachDisplayLabel(
+  coachProfile: CoachProfile | null,
+  fallback: string,
+  locale: SupportedLocale,
+) {
+  if (locale === 'en') {
+    return getEventCoachEnglishProfile(coachProfile)?.name ?? fallback
+  }
+  return coachProfile?.shortName ?? fallback
+}
+
+function getEventCoachRole(
+  coachProfile: CoachProfile | null,
+  locale: SupportedLocale,
+  fallback: string,
+) {
+  if (locale === 'en') {
+    return getEventCoachEnglishProfile(coachProfile)?.role ?? fallback
+  }
+  return coachProfile?.role ?? fallback
+}
+
+function getEventCoachParagraphs(
+  coachProfile: CoachProfile | null,
+  coachLabel: string,
+  locale: SupportedLocale,
+) {
+  if (locale === 'en') {
+    return (
+      getEventCoachEnglishProfile(coachProfile)?.paragraphs ?? [
+        `${coachLabel} will lead you into this Fight Night session.`,
+        'The session starts from movement you can enter, then builds through coaching cues, bag work, and the room energy around you.',
+      ]
+    )
+  }
+
+  if (!coachProfile) return [`${coachLabel} 教練會帶你進入這一場 Fight Night。`]
+  return coachProfile.bio?.length ? coachProfile.bio.slice(0, 2) : [coachProfile.intro]
+}
+
+function getEventCoachTrustPoints(
+  coachProfile: CoachProfile | null,
+  locale: SupportedLocale,
+) {
+  if (locale === 'en') {
+    return getEventCoachEnglishProfile(coachProfile)?.trustPoints ?? []
+  }
+  return coachProfile?.trustPoints ?? []
+}
+
+function getEventCoachDetailItems(
+  coachProfile: CoachProfile | null,
+  field: 'certifications' | 'experience' | 'achievements',
+  locale: SupportedLocale,
+) {
+  if (locale === 'en') {
+    return getEventCoachEnglishProfile(coachProfile)?.[field]?.slice(0, 4) ?? []
+  }
+  return coachProfile?.[field]?.slice(0, 4) ?? []
+}
+
+function getEventCoachProofTag(
+  coachProfile: CoachProfile | null,
+  locale: SupportedLocale = 'zh-TW',
+) {
+  const isEnglish = locale === 'en'
+  if (coachProfile?.id === 'andre') return isEnglish ? 'Swiss / European Muay Thai Champion' : '瑞士與歐洲泰拳冠軍'
+  if (coachProfile?.id === 'bruno') return isEnglish ? 'Pro Muay Thai 14 Wins' : '職業泰拳 14 勝'
+  if (coachProfile?.id === 'got') return isEnglish ? 'Kru Muay Thai' : '泰拳教師'
+  if (coachProfile?.id === 'mario') return isEnglish ? 'Pro MMA 28 Wins' : '職業 MMA 28 勝'
+  if (coachProfile?.id === 'rafael') return isEnglish ? 'BJJ Black Belt 4th Degree' : '柔術黑帶 4 段'
+  if (coachProfile?.id === 'sim') return isEnglish ? 'Combat Coach Credentials' : '技擊教練資格'
+  if (coachProfile?.id === 'mengyan') return isEnglish ? 'College Boxing Champion' : '拳擊四連霸'
 
   return coachProfile?.pricingTier === 'foreign-fighter'
-    ? '國際實戰背景'
+    ? isEnglish
+      ? 'International Fight Background'
+      : '國際實戰背景'
     : null
 }
 
-function getEventCoachPreviewTags(coachProfile: CoachProfile | null) {
+function getEventCoachPreviewTags(
+  coachProfile: CoachProfile | null,
+  locale: SupportedLocale = 'zh-TW',
+) {
   if (!coachProfile) return []
+  if (locale === 'en') {
+    return (
+      getEventCoachEnglishProfile(coachProfile)?.tags ?? [
+        getEventCoachRole(coachProfile, locale, 'Fight Night Coach'),
+        getEventCoachProofTag(coachProfile, locale),
+      ]
+    )
+      .filter((tag): tag is string => Boolean(tag))
+      .slice(0, 4)
+  }
 
   const tagsByCoach: Record<string, string[]> = {
-    andre: ['泰拳 / MMA', '泰拳世界冠軍', '巴西教練', '國際實戰背景'],
+    andre: ['泰拳 / MMA', '瑞士與歐洲泰拳冠軍', '巴西教練', '國際實戰背景'],
     bruno: ['泰拳 / MMA', '職業泰拳選手', '巴柔黑帶', '國際實戰背景'],
     got: ['泰拳 / 踢拳', '職業選手靶師', '泰拳教師', '泰國訓練背景'],
     mario: ['巴西柔術 / MMA', '職業 MMA 選手', '巴柔黑帶', '國際實戰背景'],
@@ -544,7 +1396,7 @@ function getEventCoachPreviewTags(coachProfile: CoachProfile | null) {
   }
   const fallbackTags = [
     ...coachProfile.specialties.slice(0, 3),
-    getEventCoachProofTag(coachProfile),
+    getEventCoachProofTag(coachProfile, locale),
   ]
 
   return Array.from(new Set(tagsByCoach[coachProfile.id] ?? fallbackTags))
@@ -592,11 +1444,82 @@ function getEventTicketPrice(
   }
 }
 
+function getEventProductDetail(
+  productId: EventProductId,
+  locale: SupportedLocale = 'zh-TW',
+) {
+  const copy = getCopy(locale).products[productId]
+  const source = eventProductDetails[productId]
+
+  return {
+    ...copy,
+    image: source.image,
+  }
+}
+
+function getEventPassVariantTitle(
+  variant: EventPassVariant,
+  locale: SupportedLocale = 'zh-TW',
+) {
+  return getCopy(locale).passVariants[variant.id].title
+}
+
+function getEventPassVariantCtaName(
+  variant: EventPassVariant,
+  locale: SupportedLocale = 'zh-TW',
+) {
+  return getCopy(locale).passVariants[variant.id].ctaName
+}
+
+function getLocalizedPassHighlight(
+  highlight: EventPassHighlight,
+  locale: SupportedLocale = 'zh-TW',
+) {
+  const copy = getCopy(locale)
+
+  if (highlight.productId) {
+    return {
+      ...highlight,
+      ...copy.products[highlight.productId],
+    }
+  }
+
+  if (highlight.title === eventPassBaseHighlights[0].title) {
+    return { ...highlight, ...copy.passHighlights.entry }
+  }
+  if (highlight.title === eventPassBaseHighlights[1].title) {
+    return { ...highlight, ...copy.passHighlights.locker }
+  }
+  if (highlight.title === '新手包') {
+    return { ...highlight, ...copy.passHighlights.starterKit }
+  }
+  if (highlight.title === '一般體驗流程') {
+    return { ...highlight, ...copy.passHighlights.standardFlow }
+  }
+
+  return highlight
+}
+
+function getEventPassHighlights(
+  variant: EventPassVariant,
+  locale: SupportedLocale = 'zh-TW',
+) {
+  return variant.highlights.map((highlight) =>
+    getLocalizedPassHighlight(highlight, locale),
+  )
+}
+
 function getEventPurchaseLabel(
   price: EventTicketPrice,
   variant: EventPassVariant = defaultEventPassVariant,
+  locale: SupportedLocale = 'zh-TW',
 ) {
-  return `${price.label}｜保留 ${variant.ctaName}`
+  const separator = locale === 'en' ? ' | ' : '｜'
+  const verb = locale === 'en' ? 'Reserve ' : '保留 '
+  return `${price.label}${separator}${verb}${getEventPassVariantCtaName(
+    variant,
+    locale,
+  )}`
 }
 
 function AutoFitButtonLabel({
@@ -779,11 +1702,57 @@ function EventStandalonePhotoSection({
   )
 }
 
+function EventLanguageSwitch({
+  locale,
+  onChange,
+}: {
+  locale: SupportedLocale
+  onChange: (locale: SupportedLocale) => void
+}) {
+  const options: Array<{ locale: SupportedLocale; label: string }> = [
+    { locale: 'zh-TW', label: '中文' },
+    { locale: 'en', label: 'EN' },
+  ]
+
+  return (
+    <div
+      className="inline-flex rounded-full border border-pearl/12 bg-black/28 p-1"
+      aria-label="Language"
+    >
+      {options.map((option) => {
+        const selected = option.locale === locale
+
+        return (
+          <button
+            key={option.locale}
+            type="button"
+            onClick={() => onChange(option.locale)}
+            className={`rounded-full px-3 py-1.5 font-heading text-xs transition-colors ${
+              selected
+                ? 'bg-pearl text-black'
+                : 'text-mist/68 hover:text-pearl'
+            }`}
+            aria-pressed={selected}
+          >
+            {option.label}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
 function EventHeroSection({
   onPrimaryAction,
+  locale,
+  onLocaleChange,
 }: {
   onPrimaryAction: () => void
+  locale: SupportedLocale
+  onLocaleChange: (locale: SupportedLocale) => void
 }) {
+  const copy = getCopy(locale).hero
+
   return (
     <section
       id="event-hero"
@@ -797,7 +1766,7 @@ function EventHeroSection({
       >
         <img
           src={eventHeroEmotion}
-          alt="Fight Night 拳套入場主視覺"
+          alt={copy.imageAlt}
           className="block h-auto w-full"
           loading="eager"
           decoding="async"
@@ -811,14 +1780,17 @@ function EventHeroSection({
           transition={{ duration: 0.75 }}
           className="max-w-full"
         >
+          <div className="mb-5 flex justify-end">
+            <EventLanguageSwitch locale={locale} onChange={onLocaleChange} />
+          </div>
           <p className="font-heading text-sm font-bold text-neon">
-            FIGHT NIGHT
+            {copy.eyebrow}
           </p>
           <h1 className="mt-4 font-heading text-[2.65rem] font-black leading-[0.98] text-pearl">
-            下班後，進入另一種夜晚。
+            {copy.title}
           </h1>
           <p className="mt-5 text-base leading-relaxed text-mist/84">
-            你推門進 UFC GYM 的時候，白天還黏在身上。場地是紅的、黑的，音樂很近，有人已經戴好拳套在笑。第一聲倒數落下來，你會知道：這不是來上一堂課，是今晚真的要開始了。
+            {copy.body}
           </p>
 
           <Button
@@ -827,7 +1799,7 @@ function EventHeroSection({
             onClick={onPrimaryAction}
             data-cta="event-hero-primary"
           >
-            看這一晚有多好玩
+            {copy.cta}
           </Button>
         </motion.div>
       </div>
@@ -835,7 +1807,9 @@ function EventHeroSection({
   )
 }
 
-function EventReframeSection() {
+function EventReframeSection({ locale }: { locale: SupportedLocale }) {
+  const copy = getCopy(locale).reframe
+
   return (
     <SectionWrapper
       id="event-reframe"
@@ -849,26 +1823,28 @@ function EventReframeSection() {
         transition={{ duration: 0.55 }}
       >
         <EventSectionHeading
-          title="自然而然，跟上現場氛圍。"
+          title={copy.title}
         >
-          不用先懂拳擊，教練會把節奏拆到你跟得上，旁邊的人開始出聲，沙包一下一下響起來。
+          {copy.body}
         </EventSectionHeading>
         <p className="text-base leading-relaxed text-mist/76">
-          你原本還有點保留，幾分鐘後，手會自己抬起來，嘴角也會自己上揚。
+          {copy.after}
         </p>
       </motion.div>
     </SectionWrapper>
   )
 }
 
-function EventProofSection() {
+function EventProofSection({ locale }: { locale: SupportedLocale }) {
+  const copy = getCopy(locale).proof
+
   return (
     <SectionWrapper
       id="event-proof"
       className="max-w-[430px] px-4 sm:px-4"
       padding="py-8"
     >
-      <EventSectionHeading title="低沉悶響，將日常與當下切開。" />
+      <EventSectionHeading title={copy.title} />
 
       <motion.div
         initial={{ opacity: 0, y: 16 }}
@@ -878,31 +1854,18 @@ function EventProofSection() {
         className="space-y-4 border-y border-pearl/10 py-5 text-base leading-relaxed text-mist/78"
       >
         <p>
-          拳套碰到沙包的那一下很近，低低的一聲，會把注意力拉回身體。
+          {copy.body1}
         </p>
         <p>
-          倒數越來越短，教練的口令、旁邊的呼吸、自己的心跳疊在一起；時間會變慢，感官會變清晰，壓力會留在黑底紅字的沙包上，彷彿自己正在蛻變得不一樣。
+          {copy.body2}
         </p>
       </motion.div>
     </SectionWrapper>
   )
 }
 
-function EventSafetySection() {
-  const items = [
-    {
-      title: '不用入會',
-      body: '這張 Pass 只買這一晚。',
-    },
-    {
-      title: '不用被推銷',
-      body: '線上付款，LINE 留票，到場進場。',
-    },
-    {
-      title: '新手也能玩得進去',
-      body: '從跟得上的節奏開始，不用先練好。',
-    },
-  ]
+function EventSafetySection({ locale }: { locale: SupportedLocale }) {
+  const copy = getCopy(locale).safety
 
   return (
     <SectionWrapper
@@ -910,10 +1873,10 @@ function EventSafetySection() {
       className="max-w-[430px] px-4 sm:px-4"
       padding="py-8"
     >
-      <EventSectionHeading title="第一次來，也可以很單純。" />
+      <EventSectionHeading title={copy.title} />
 
       <div className="grid gap-3">
-        {items.map((item, index) => (
+        {copy.items.map((item, index) => (
           <motion.div
             key={item.title}
             initial={{ opacity: 0, y: 12 }}
@@ -935,33 +1898,31 @@ function EventSafetySection() {
   )
 }
 
-function EventFlowPreviewSection() {
+function EventFlowPreviewSection({ locale }: { locale: SupportedLocale }) {
+  const copy = getCopy(locale).flowPreview
+
   return (
     <SectionWrapper
       id="event-flow-preview"
       className="max-w-[430px] px-4 sm:px-4"
       padding="py-8"
     >
-      <EventSectionHeading title="愉快的餘韻會留在場上。" />
-      <p className="text-base leading-relaxed text-mist/76">
-        手還熱，沙包還在晃，旁邊的人也在喘，也在笑。
-      </p>
-      <p className="mt-4 text-base leading-relaxed text-mist/76">
-        聽著教練預告下回內容，用眼神約好下次一起上課。
-      </p>
-      <p className="mt-4 text-base leading-relaxed text-mist/76">
-        不自覺的，漸漸融入這個能量飽滿的社群。
-      </p>
-      <p className="mt-4 text-base leading-relaxed text-mist/76">
-        覺得有點想試，就把這一晚留下來吧。
-      </p>
+      <EventSectionHeading title={copy.title} />
+      {copy.paragraphs.map((paragraph, index) => (
+        <p
+          key={paragraph}
+          className={`${index === 0 ? '' : 'mt-4 '}text-base leading-relaxed text-mist/76`}
+        >
+          {paragraph}
+        </p>
+      ))}
       <Button
         size="lg"
         className="mt-6 w-full"
         onClick={() => scrollToId('event-entry')}
         data-cta="event-afterglow-cta"
       >
-        把這一晚留下來
+        {copy.cta}
       </Button>
     </SectionWrapper>
   )
@@ -1028,48 +1989,73 @@ function EventTicketInfoModal({
   selectedTicket,
   availability,
   hasLiveData,
+  locale,
   onClose,
 }: {
   selectedTicket: EventTicket | null
   availability: SessionAvailability | null
   hasLiveData: boolean
+  locale: SupportedLocale
   onClose: () => void
 }) {
   if (!selectedTicket || !availability || typeof document === 'undefined') {
     return null
   }
 
+  const copy = getCopy(locale)
   const coachProfile = findCoachProfile(selectedTicket.course.coach)
-  const coachLabel =
-    coachProfile?.shortName ?? getCoachDisplayName(selectedTicket.course.coach)
-  const coachInitial = coachLabel.slice(0, 1).toUpperCase()
-  const coachPreviewTags = getEventCoachPreviewTags(
+  const coachLabel = getEventCoachDisplayLabel(
     coachProfile,
+    getCoachDisplayName(selectedTicket.course.coach),
+    locale,
   )
-  const remainingLabel = getRemainingLabel(availability, hasLiveData)
+  const coachInitial = coachLabel.slice(0, 1).toUpperCase()
+  const coachPreviewTags = getEventCoachPreviewTags(coachProfile, locale)
+  const remainingLabel = getRemainingLabel(availability, hasLiveData, locale)
   const nearbyAreaLabel =
-    venueNearbyAreaLabelMap[selectedTicket.course.venueId]
+    getNearbyAreaLabel(selectedTicket.course.venueId, locale)
+  const courseName = getCourseDisplayName(selectedTicket.course, locale)
   const courseFacts = [
     {
-      label: '時間',
+      label: copy.modal.time,
       value: `${selectedTicket.dateLabel}｜${selectedTicket.timeLabel}`,
     },
     {
-      label: '場館',
+      label: copy.modal.venue,
       value: nearbyAreaLabel
         ? `${selectedTicket.venueLabel}｜${nearbyAreaLabel}`
         : selectedTicket.venueLabel,
     },
     {
-      label: '狀態',
+      label: copy.modal.status,
       value: remainingLabel,
     },
   ]
-  const coachParagraphs = coachProfile
-    ? coachProfile.bio?.length
-      ? coachProfile.bio.slice(0, 2)
-      : [coachProfile.intro]
-    : [`${coachLabel} 教練會帶你進入這一場 Fight Night。`]
+  const coachParagraphs = getEventCoachParagraphs(
+    coachProfile,
+    coachLabel,
+    locale,
+  )
+  const coachTrustPoints = getEventCoachTrustPoints(coachProfile, locale)
+  const coachCertifications = getEventCoachDetailItems(
+    coachProfile,
+    'certifications',
+    locale,
+  )
+  const coachExperience = getEventCoachDetailItems(
+    coachProfile,
+    'experience',
+    locale,
+  )
+  const coachAchievements = getEventCoachDetailItems(
+    coachProfile,
+    'achievements',
+    locale,
+  )
+  const showCoachDetails = Boolean(
+    coachProfile &&
+      (coachCertifications.length || coachExperience.length || coachAchievements.length),
+  )
 
   return createPortal(
     <motion.div
@@ -1079,7 +2065,7 @@ function EventTicketInfoModal({
       exit={{ opacity: 0 }}
       role="dialog"
       aria-modal="true"
-      aria-label={`${selectedTicket.course.name} 教練與課程資訊`}
+      aria-label={`${courseName} ${copy.modal.coachInfo}`}
       onClick={onClose}
     >
       <motion.div
@@ -1092,7 +2078,7 @@ function EventTicketInfoModal({
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-pearl/10 bg-abyss/95 px-4 py-3 backdrop-blur md:px-6">
           <div>
             <p className="text-[10px] font-heading uppercase tracking-[0.24em] text-neon/80">
-              教練與課程資訊
+              {copy.modal.coachInfo}
             </p>
             <p className="mt-0.5 text-xs text-mist/55">
               {selectedTicket.dateLabel} · {selectedTicket.timeLabel}
@@ -1103,7 +2089,7 @@ function EventTicketInfoModal({
             onClick={onClose}
             data-interaction-hint
             className="interaction-hint flex h-10 w-10 items-center justify-center rounded-full border border-pearl/15 bg-black/35 font-heading text-lg font-black text-pearl transition-colors hover:bg-black/55"
-            aria-label="關閉教練與課程資訊"
+            aria-label={copy.modal.coachInfoClose}
           >
             ×
           </button>
@@ -1115,7 +2101,7 @@ function EventTicketInfoModal({
               {coachProfile ? (
                 <img
                   src={coachProfile.photo}
-                  alt={coachProfile.displayName}
+                  alt={coachLabel}
                   className="h-16 w-16 shrink-0 rounded-full border border-neon/30 object-cover"
                   loading="lazy"
                 />
@@ -1129,7 +2115,11 @@ function EventTicketInfoModal({
                   {coachLabel}
                 </p>
                 <p className="mt-1 text-sm font-heading text-mist/72">
-                  {coachProfile?.role ?? 'Fight Night 教練'}
+                  {getEventCoachRole(
+                    coachProfile,
+                    locale,
+                    copy.modal.coachFallbackRole,
+                  )}
                 </p>
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {coachPreviewTags.map((tag) => (
@@ -1155,13 +2145,13 @@ function EventTicketInfoModal({
               ))}
             </div>
 
-            {coachProfile?.trustPoints.length ? (
+            {coachTrustPoints.length ? (
               <div className="mt-4 rounded-2xl border border-neon/16 bg-neon/8 p-4">
                 <p className="text-xs font-heading uppercase tracking-[0.2em] text-neon/85">
-                  為什麼值得跟他上這堂
+                  {copy.modal.whyThisCoach}
                 </p>
                 <div className="mt-3 grid gap-2">
-                  {coachProfile.trustPoints.map((point) => (
+                  {coachTrustPoints.map((point) => (
                     <div
                       key={point}
                       className="flex gap-2 text-sm leading-relaxed text-mist/78"
@@ -1175,20 +2165,20 @@ function EventTicketInfoModal({
             ) : null}
           </section>
 
-          {coachProfile ? (
+          {showCoachDetails && coachProfile ? (
             <div className="grid gap-3">
               <EventCoachProfileDetailList
-                title="資格證明"
-                items={coachProfile.certifications?.slice(0, 4)}
+                title={copy.modal.certifications}
+                items={coachCertifications}
                 tone="neon"
               />
               <EventCoachProfileDetailList
-                title="教學 / 經歷"
-                items={coachProfile.experience?.slice(0, 4)}
+                title={copy.modal.experience}
+                items={coachExperience}
               />
               <EventCoachProfileDetailList
-                title="比賽成就"
-                items={coachProfile.achievements?.slice(0, 4)}
+                title={copy.modal.achievements}
+                items={coachAchievements}
                 tone="blaze"
               />
             </div>
@@ -1196,13 +2186,13 @@ function EventTicketInfoModal({
 
           <section className="rounded-2xl border border-blaze/24 bg-blaze/10 p-4">
             <p className="text-xs font-heading uppercase tracking-[0.2em] text-neon">
-              課程資訊
+              {copy.modal.courseInfo}
             </p>
             <h3 className="mt-3 font-heading text-2xl font-black leading-tight text-pearl">
-              {selectedTicket.course.name}
+              {courseName}
             </h3>
             <p className="mt-2 text-sm leading-relaxed text-mist/78">
-              這堂會由教練帶你跟上現場節奏，從能進入的動作開始。
+              {copy.modal.courseInfoBody}
             </p>
 
             <div className="mt-4 grid gap-2">
@@ -1229,7 +2219,7 @@ function EventTicketInfoModal({
             onClick={onClose}
             data-cta="event-ticket-info-close"
           >
-            回到場次選擇
+            {copy.modal.backToSessions}
           </Button>
         </div>
       </motion.div>
@@ -1240,11 +2230,15 @@ function EventTicketInfoModal({
 
 function EventPassHighlightRow({
   item,
+  locale,
   onOpenProduct,
 }: {
   item: EventPassHighlight
+  locale: SupportedLocale
   onOpenProduct: (productId: EventProductId) => void
 }) {
+  const copy = getCopy(locale).tickets
+
   return (
     <div className="grid grid-cols-[0.45rem_minmax(0,1fr)] gap-2 break-words text-xs leading-relaxed text-mist/74">
       <span className="mt-[0.43rem] h-1.5 w-1.5 rounded-full bg-neon" />
@@ -1258,7 +2252,7 @@ function EventPassHighlightRow({
           >
             <span className="truncate">{item.title}</span>
             <span className="shrink-0 rounded-full border border-neon/20 px-1.5 py-0.5 text-[10px] leading-none text-neon/90">
-              查看照片
+              {copy.photo}
             </span>
           </button>
         ) : (
@@ -1275,16 +2269,19 @@ function EventPassHighlightRow({
 
 function EventProductPhotoModal({
   selectedProductId,
+  locale,
   onClose,
 }: {
   selectedProductId: EventProductId | null
+  locale: SupportedLocale
   onClose: () => void
 }) {
   if (!selectedProductId || typeof document === 'undefined') {
     return null
   }
 
-  const product = eventProductDetails[selectedProductId]
+  const product = getEventProductDetail(selectedProductId, locale)
+  const copy = getCopy(locale).modal
 
   return createPortal(
     <motion.div
@@ -1318,7 +2315,7 @@ function EventProductPhotoModal({
             onClick={onClose}
             data-interaction-hint
             className="interaction-hint flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-pearl/15 bg-black/35 font-heading text-lg font-black text-pearl transition-colors hover:bg-black/55"
-            aria-label="關閉商品照片"
+            aria-label={copy.close}
           >
             ×
           </button>
@@ -1339,6 +2336,7 @@ function EventTicketCard({
   variant,
   availability,
   hasLiveData,
+  locale,
   preferences,
   onPreferenceChange,
   onOpenInfo,
@@ -1349,6 +2347,7 @@ function EventTicketCard({
   variant: EventPassVariant
   availability: SessionAvailability
   hasLiveData: boolean
+  locale: SupportedLocale
   preferences: EventServicePreferences
   onPreferenceChange: (
     key: keyof EventServicePreferences,
@@ -1358,25 +2357,33 @@ function EventTicketCard({
   onOpenProduct: (productId: EventProductId) => void
   onPurchase: (ticket: EventTicket, variant: EventPassVariant) => void
 }) {
-  const remainingLabel = getRemainingLabel(availability, hasLiveData)
+  const copy = getCopy(locale)
+  const remainingLabel = getRemainingLabel(availability, hasLiveData, locale)
   const price = getEventTicketPrice(
     ticket,
     availability,
     variant,
   )
   const disabled = hasLiveData && availability.remaining <= 0
-  const nearbyAreaLabel = venueNearbyAreaLabelMap[ticket.course.venueId]
+  const nearbyAreaLabel = getNearbyAreaLabel(ticket.course.venueId, locale)
   const coachProfile = findCoachProfile(ticket.course.coach)
-  const coachLabel =
-    coachProfile?.shortName ?? getCoachDisplayName(ticket.course.coach)
+  const coachLabel = getEventCoachDisplayLabel(
+    coachProfile,
+    getCoachDisplayName(ticket.course.coach),
+    locale,
+  )
   const coachInitial = coachLabel.slice(0, 1).toUpperCase()
   const coachPreviewTags = getEventCoachPreviewTags(
     coachProfile,
+    locale,
   )
+  const courseName = getCourseDisplayName(ticket.course, locale)
+  const variantTitle = getEventPassVariantTitle(variant, locale)
+  const passHighlights = getEventPassHighlights(variant, locale)
 
   return (
     <motion.article
-      aria-label={`${variant.title}，${ticket.dateLabel} ${ticket.timeLabel}，${ticket.venueLabel}`}
+      aria-label={`${variantTitle}，${ticket.dateLabel} ${ticket.timeLabel}，${ticket.venueLabel}`}
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
@@ -1403,7 +2410,7 @@ function EventTicketCard({
 
           <div className="mt-5 min-w-0">
             <h3 className="whitespace-nowrap font-heading text-[1.06rem] font-black leading-tight text-pearl">
-              {variant.title}
+              {variantTitle}
             </h3>
             <p className="mt-2 font-heading text-sm text-mist/84">
               {ticket.dateLabel}｜{ticket.timeLabel}
@@ -1414,7 +2421,7 @@ function EventTicketCard({
               onClick={() => onOpenInfo(ticket)}
               data-interaction-hint
               className="coach-avatar-trigger interaction-hint mt-4 flex w-full min-w-0 items-center gap-3 rounded-xl border border-pearl/10 bg-black/22 p-2 text-left transition-colors hover:border-neon/28 hover:bg-neon/8 focus:outline-none focus-visible:ring-2 focus-visible:ring-neon/70"
-              aria-label={`查看 ${coachLabel} 教練與 ${ticket.course.name} 課程資訊`}
+              aria-label={`${copy.tickets.view} ${coachLabel} ${copy.tickets.coachSuffix} ${courseName}`}
             >
               {coachProfile ? (
                 <img
@@ -1430,11 +2437,11 @@ function EventTicketCard({
               )}
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-heading font-semibold leading-snug text-pearl">
-                  {ticket.course.name}
+                  {courseName}
                 </span>
                 <span className="mt-1 flex flex-wrap items-center gap-1.5">
                   <span className="font-heading text-xs font-semibold text-neon/85">
-                    {coachLabel} 教練
+                    {coachLabel} {copy.tickets.coachSuffix}
                   </span>
                   {coachPreviewTags.map((tag) => (
                     <span
@@ -1447,7 +2454,7 @@ function EventTicketCard({
                 </span>
               </span>
               <span className="shrink-0 rounded-full border border-neon/20 px-2 py-1 font-heading text-[10px] text-neon/80">
-                查看
+                {copy.tickets.view}
               </span>
             </button>
           </div>
@@ -1455,10 +2462,11 @@ function EventTicketCard({
       </div>
 
       <div className="shrink-0 space-y-2 border-b border-pearl/10 px-4 py-3">
-        {variant.highlights.map((item) => (
+        {passHighlights.map((item) => (
           <EventPassHighlightRow
             key={item.title}
             item={item}
+            locale={locale}
             onOpenProduct={onOpenProduct}
           />
         ))}
@@ -1466,6 +2474,7 @@ function EventTicketCard({
 
       <div className="shrink-0 px-4 py-3">
         <EventPreferenceControls
+          locale={locale}
           preferences={preferences}
           onPreferenceChange={onPreferenceChange}
         />
@@ -1481,7 +2490,9 @@ function EventTicketCard({
           data-ticket={ticket.id}
         >
           <AutoFitButtonLabel>
-            {disabled ? '本場候補中' : getEventPurchaseLabel(price, variant)}
+            {disabled
+              ? copy.tickets.soldOut
+              : getEventPurchaseLabel(price, variant, locale)}
           </AutoFitButtonLabel>
         </Button>
       </div>
@@ -1493,6 +2504,7 @@ function FreeTrialTicketCard({
   ticket,
   availability,
   hasLiveData,
+  locale,
   freeTrialStatus,
   onOpenInfo,
   onReserve,
@@ -1501,6 +2513,7 @@ function FreeTrialTicketCard({
   ticket: EventTicket
   availability: SessionAvailability
   hasLiveData: boolean
+  locale: SupportedLocale
   freeTrialStatus: FreeTrialStatusState
   onOpenInfo: (ticket: EventTicket) => void
   onReserve: (ticket: EventTicket) => void
@@ -1508,18 +2521,23 @@ function FreeTrialTicketCard({
 }) {
   const used = freeTrialStatus === 'used'
   const statusUnavailable = freeTrialStatus === 'unavailable'
-  const remainingLabel = getRemainingLabel(availability, hasLiveData)
+  const copy = getCopy(locale)
+  const remainingLabel = getRemainingLabel(availability, hasLiveData, locale)
   const disabled = hasLiveData && availability.remaining <= 0
-  const nearbyAreaLabel = venueNearbyAreaLabelMap[ticket.course.venueId]
+  const nearbyAreaLabel = getNearbyAreaLabel(ticket.course.venueId, locale)
   const coachProfile = findCoachProfile(ticket.course.coach)
-  const coachLabel =
-    coachProfile?.shortName ?? getCoachDisplayName(ticket.course.coach)
+  const coachLabel = getEventCoachDisplayLabel(
+    coachProfile,
+    getCoachDisplayName(ticket.course.coach),
+    locale,
+  )
   const coachInitial = coachLabel.slice(0, 1).toUpperCase()
-  const coachPreviewTags = getEventCoachPreviewTags(coachProfile)
+  const coachPreviewTags = getEventCoachPreviewTags(coachProfile, locale)
+  const courseName = getCourseDisplayName(ticket.course, locale)
 
   return (
     <motion.article
-      aria-label={`本週限量免費體驗課，${ticket.dateLabel} ${ticket.timeLabel}，${ticket.venueLabel}`}
+      aria-label={`${copy.tickets.freeTrialTitle}，${ticket.dateLabel} ${ticket.timeLabel}，${ticket.venueLabel}`}
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
@@ -1540,13 +2558,15 @@ function FreeTrialTicketCard({
               ) : null}
             </div>
             <span className="shrink-0 whitespace-nowrap rounded-full border border-neon/25 bg-neon/10 px-3 py-1 text-xs font-heading text-neon">
-              {used ? '一般體驗' : '首次限定'}
+              {used
+                ? copy.tickets.freeTrialUsedBadge
+                : copy.tickets.freeTrialFirstTimeBadge}
             </span>
           </div>
 
           <div className="mt-5 min-w-0">
             <h3 className="whitespace-nowrap font-heading text-[1.06rem] font-black leading-tight text-pearl">
-              {used ? '一般單堂體驗' : '本週限量免費體驗課'}
+              {used ? copy.tickets.paidFallbackTitle : copy.tickets.freeTrialTitle}
             </h3>
             <p className="mt-2 font-heading text-sm text-mist/84">
               {ticket.dateLabel}｜{ticket.timeLabel}
@@ -1560,7 +2580,7 @@ function FreeTrialTicketCard({
               onClick={() => onOpenInfo(ticket)}
               data-interaction-hint
               className="coach-avatar-trigger interaction-hint mt-4 flex w-full min-w-0 items-center gap-3 rounded-xl border border-pearl/10 bg-black/22 p-2 text-left transition-colors hover:border-neon/28 hover:bg-neon/8 focus:outline-none focus-visible:ring-2 focus-visible:ring-neon/70"
-              aria-label={`查看 ${coachLabel} 教練與 ${ticket.course.name} 課程資訊`}
+              aria-label={`${copy.tickets.view} ${coachLabel} ${copy.tickets.coachSuffix} ${courseName}`}
             >
               {coachProfile ? (
                 <img
@@ -1576,11 +2596,11 @@ function FreeTrialTicketCard({
               )}
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-heading font-semibold leading-snug text-pearl">
-                  {ticket.course.name}
+                  {courseName}
                 </span>
                 <span className="mt-1 flex flex-wrap items-center gap-1.5">
                   <span className="font-heading text-xs font-semibold text-neon/85">
-                    {coachLabel} 教練
+                    {coachLabel} {copy.tickets.coachSuffix}
                   </span>
                   {coachPreviewTags.map((tag) => (
                     <span
@@ -1593,7 +2613,7 @@ function FreeTrialTicketCard({
                 </span>
               </span>
               <span className="shrink-0 rounded-full border border-neon/20 px-2 py-1 font-heading text-[10px] text-neon/80">
-                查看
+                {copy.tickets.view}
               </span>
             </button>
           </div>
@@ -1605,20 +2625,20 @@ function FreeTrialTicketCard({
           <span className="mt-[0.43rem] h-1.5 w-1.5 rounded-full bg-neon" />
           <span>
             <strong className="break-words font-heading text-pearl">
-              一般體驗流程
+              {copy.passHighlights.standardFlow.title}
             </strong>
             <span className="text-mist/56">｜</span>
-            裝備可自備，或現場租用。
+            {copy.passHighlights.standardFlow.body}
           </span>
         </p>
         <p className="grid grid-cols-[0.45rem_minmax(0,1fr)] gap-2 break-words text-xs leading-relaxed text-mist/74">
           <span className="mt-[0.43rem] h-1.5 w-1.5 rounded-full bg-neon" />
           <span>
             <strong className="break-words font-heading text-pearl">
-              {used ? '已使用首次限定' : '首次限定'}
+              {used ? copy.tickets.usedFirstTime : copy.tickets.freeTrialFirstTimeBadge}
             </strong>
             <span className="text-mist/56">｜</span>
-            {used ? '這堂可用一般單堂價保留。' : '每個 LINE 帳號限保留一次。'}
+            {used ? copy.tickets.usedFallback : copy.tickets.freeTrialLimit}
           </span>
         </p>
       </div>
@@ -1634,14 +2654,14 @@ function FreeTrialTicketCard({
         >
           <AutoFitButtonLabel>
             {disabled
-              ? '本場候補中'
+              ? copy.tickets.soldOut
               : used
-                ? 'NT$680｜保留這堂'
+                ? copy.tickets.paidFallbackCta
                 : freeTrialStatus === 'checking'
-                  ? '確認資格中'
+                  ? copy.tickets.checking
                   : statusUnavailable
-                    ? '暫時無法確認資格'
-                  : '首次限定｜免費保留這堂'}
+                    ? copy.tickets.unavailable
+                  : copy.tickets.freeTrialCta}
           </AutoFitButtonLabel>
         </Button>
       </div>
@@ -1650,20 +2670,34 @@ function FreeTrialTicketCard({
 }
 
 function EventPreferenceControls({
+  locale,
   preferences,
   onPreferenceChange,
 }: {
+  locale: SupportedLocale
   preferences: EventServicePreferences
   onPreferenceChange: (
     key: keyof EventServicePreferences,
     value: boolean,
   ) => void
 }) {
+  const copy = getCopy(locale).preferences
+  const options = [
+    {
+      id: 'handWrapAssist' as const,
+      ...copy.handWrapAssist,
+    },
+    {
+      id: 'quietMode' as const,
+      ...copy.quietMode,
+    },
+  ]
+
   return (
     <div className="min-w-0 max-w-full">
-      <p className="font-heading text-xs text-blaze/80">入場偏好</p>
+      <p className="font-heading text-xs text-blaze/80">{copy.heading}</p>
       <div className="mt-2 grid grid-cols-1 gap-2">
-        {eventServicePreferenceOptions.map((option) => {
+        {options.map((option) => {
           const selected = preferences[option.id]
 
           return (
@@ -1694,7 +2728,7 @@ function EventPreferenceControls({
                       : 'border-pearl/15 text-mist/50'
                   }`}
                 >
-                  {selected ? '已選' : '可選'}
+                  {selected ? copy.selected : copy.optional}
                 </span>
               </span>
             </button>
@@ -1708,11 +2742,13 @@ function EventPreferenceControls({
 function EventPassPreview({
   actionLabel,
   onAction,
+  locale,
 }: {
   actionLabel: string
   onAction: () => void
+  locale: SupportedLocale
 }) {
-  const previewItems = ['入場通行', '裝備備妥', '可選安靜模式', 'LINE 確認']
+  const copy = getCopy(locale).passPreview
 
   return (
     <motion.article
@@ -1724,19 +2760,22 @@ function EventPassPreview({
     >
       <div className="relative z-10">
         <p className="font-heading text-xs font-bold tracking-[0.2em] text-neon/80">
-          FIGHT NIGHT PASS
+          {copy.eyebrow}
         </p>
         <h2 className="mt-4 font-heading text-[2.25rem] font-black leading-[0.98] text-pearl">
-          選一個晚上，
-          <br />
-          走進那個會讓人亮起來的現場。
+          {copy.title.split('\n').map((line, index) => (
+            <span key={line}>
+              {line}
+              {index < copy.title.split('\n').length - 1 ? <br /> : null}
+            </span>
+          ))}
         </h2>
         <p className="mt-5 text-base leading-relaxed text-mist/82">
-          到了那天，你不用先想自己會不會。裝備、置物櫃和入場確認都會先準備好；你只要出現，戴上拳套，跟著第一聲倒數開始。
+          {copy.body}
         </p>
 
         <div className="mt-5 grid grid-cols-2 gap-2">
-          {previewItems.map((item) => (
+          {copy.items.map((item) => (
             <div
               key={item}
               className="rounded-xl border border-pearl/10 bg-black/28 px-3 py-2"
@@ -1766,6 +2805,7 @@ function EventTicketDropSection({
   recommendation,
   showMoreSessions,
   moreSessionsActionLabel,
+  locale,
   preferences,
   getAvailability,
   hasLiveData,
@@ -1783,6 +2823,7 @@ function EventTicketDropSection({
   recommendation: VenueRecommendation | null
   showMoreSessions: boolean
   moreSessionsActionLabel: string
+  locale: SupportedLocale
   preferences: EventServicePreferences
   getAvailability: (sessionId: string) => SessionAvailability
   hasLiveData: boolean
@@ -1797,6 +2838,8 @@ function EventTicketDropSection({
   onFreeTrialReserve: (ticket: EventTicket) => void
   onFreeTrialPaidFallback: (ticket: EventTicket) => void
 }) {
+  const copy = getCopy(locale).tickets
+  const venueTabs = useMemo(() => getEventVenueTabs(locale), [locale])
   const visibleTickets = useMemo(
     () =>
       sortEventTicketsByVenuePriority(
@@ -1812,9 +2855,9 @@ function EventTicketDropSection({
     [freeTrialTickets, visibleTickets],
   )
   const firstAvailableVenueId =
-    eventVenueTabs.find((tab) =>
+    venueTabs.find((tab) =>
       visibleVenueTickets.some((ticket) => ticket.course.venueId === tab.venueId),
-    )?.venueId ?? eventVenueTabs[0]?.venueId
+    )?.venueId ?? venueTabs[0]?.venueId
   const recommendedVenueId =
     recommendation &&
     visibleVenueTickets.some((ticket) => ticket.course.venueId === recommendation.venueId)
@@ -1869,8 +2912,8 @@ function EventTicketDropSection({
     ),
   ).size
   const activeVenueLabel =
-    eventVenueTabs.find((tab) => tab.venueId === activeVenueId)?.label ??
-    '目前場館'
+    venueTabs.find((tab) => tab.venueId === activeVenueId)?.label ??
+    copy.currentVenue
 
   return (
     <SectionWrapper
@@ -1884,23 +2927,24 @@ function EventTicketDropSection({
             <EventPassPreview
               actionLabel={moreSessionsActionLabel}
               onAction={onShowMoreSessions}
+              locale={locale}
             />
           ) : null}
 
           {showMoreSessions ? (
             <div id="event-more-sessions" className="min-w-0 max-w-full scroll-mt-24">
               <EventSectionHeading
-                eyebrow="Fight Night Pass"
-                title="可選場次"
+                eyebrow={copy.sectionEyebrow}
+                title={copy.sectionTitle}
               >
-                {`${activeVenueLabel} 目前 ${activeVenueSessionCount} 場可選。`}
+                {copy.sectionSummary(activeVenueLabel, activeVenueSessionCount)}
               </EventSectionHeading>
               <div
                 className="mb-4 grid min-w-0 grid-cols-3 gap-2"
                 role="tablist"
-                aria-label="選擇場館"
+                aria-label={copy.venueTabsLabel}
               >
-                {eventVenueTabs.map((tab) => {
+                {venueTabs.map((tab) => {
                   const ticketCount = visibleTickets.filter(
                     (ticket) => ticket.course.venueId === tab.venueId,
                   ).length + freeTrialTickets.filter(
@@ -1936,7 +2980,7 @@ function EventTicketDropSection({
                 <div
                   data-swipe-hint
                   className="swipe-hint flex w-full max-w-full snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth pb-4"
-                  aria-label={`${activeVenueLabel} Fight Night Pass 可選場次`}
+                  aria-label={copy.cardsLabel(activeVenueLabel)}
                 >
                   {activeVenueCards.map((card) => (
                     <div
@@ -1949,6 +2993,7 @@ function EventTicketDropSection({
                           variant={card.variant}
                           availability={getAvailability(card.ticket.sessionId)}
                           hasLiveData={hasLiveData}
+                          locale={locale}
                           preferences={preferences}
                           onPreferenceChange={onPreferenceChange}
                           onOpenInfo={onOpenInfo}
@@ -1960,6 +3005,7 @@ function EventTicketDropSection({
                           ticket={card.ticket}
                           availability={getAvailability(card.ticket.sessionId)}
                           hasLiveData={hasLiveData}
+                          locale={locale}
                           freeTrialStatus={freeTrialStatus}
                           onOpenInfo={onOpenInfo}
                           onReserve={onFreeTrialReserve}
@@ -1971,7 +3017,7 @@ function EventTicketDropSection({
                 </div>
               ) : (
                 <p className="rounded-xl border border-pearl/10 bg-black/25 px-4 py-4 text-sm leading-relaxed text-mist/68">
-                  這個場館目前沒有可報名場次。
+                  {copy.noVenueSessions}
                 </p>
               )}
             </div>
@@ -1979,7 +3025,7 @@ function EventTicketDropSection({
         </div>
       ) : (
         <p className="rounded-xl border border-pearl/10 bg-black/30 px-4 py-5 text-sm leading-relaxed text-mist/72">
-          下一場整理中，開放後會更新在這裡。
+          {copy.noSessions}
         </p>
       )}
 
@@ -1987,17 +3033,19 @@ function EventTicketDropSection({
   )
 }
 
-function EventMinimalFooter() {
+function EventMinimalFooter({ locale }: { locale: SupportedLocale }) {
+  const copy = getCopy(locale).footer
+
   return (
     <footer className="mx-auto max-w-[430px] px-4 pb-28 pt-8 text-xs text-mist/50">
       <div className="border-t border-pearl/10 pt-5">
         <p className="font-heading text-pearl/70">Fight Night</p>
         <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2">
           <a href="/privacy-policy" className="transition-colors hover:text-neon">
-            隱私政策
+            {copy.privacy}
           </a>
           <a href="/refund-policy" className="transition-colors hover:text-neon">
-            退款與取消政策
+            {copy.refund}
           </a>
         </div>
       </div>
@@ -2009,12 +3057,14 @@ function CheckoutModal({
   selectedTicket,
   selectedVariant,
   availability,
+  locale,
   preferences,
   onClose,
 }: {
   selectedTicket: EventTicket | null
   selectedVariant: EventPassVariant
   availability: SessionAvailability | null
+  locale: SupportedLocale
   preferences: EventServicePreferences
   onClose: () => void
 }) {
@@ -2053,6 +3103,8 @@ function CheckoutModal({
   const checkoutServicePreferences = selectedVariant.showPreferences
     ? preferences
     : null
+  const copy = getCopy(locale).modal
+  const variantTitle = getEventPassVariantTitle(selectedVariant, locale)
 
   const handleChange =
     (field: keyof BuyerContactForm) =>
@@ -2069,7 +3121,7 @@ function CheckoutModal({
 
     const lineContext = getLineRequestContext()
     if (!lineContext?.lineUserId) {
-      setSubmitError('請先完成 LINE 登入，付款後才能收到入場確認卡。')
+      setSubmitError(copy.checkoutLoginRequired)
       return
     }
 
@@ -2149,7 +3201,7 @@ function CheckoutModal({
 
       if (!response.ok || !data?.sessionUrl) {
         throw new Error(
-          data?.error || '目前無法建立付款連結，請稍後再試。',
+          data?.error || copy.checkoutError,
         )
       }
 
@@ -2192,7 +3244,7 @@ function CheckoutModal({
       const message =
         error instanceof Error
           ? error.message
-          : '目前無法建立付款連結，請稍後再試。'
+          : copy.checkoutError
       setSubmitError(message)
       track({
         event: 'shopline_checkout_error',
@@ -2218,22 +3270,22 @@ function CheckoutModal({
           type="button"
           onClick={onClose}
           className="absolute right-4 top-4 rounded-full border border-pearl/10 bg-pearl/5 px-3 py-2 text-sm font-bold text-pearl"
-          aria-label="關閉"
+          aria-label={copy.close}
         >
           ×
         </button>
 
         <form onSubmit={handleSubmit}>
           <p className="font-heading text-xs text-neon/80">
-            Fight Night Pass
+            {copy.checkoutEyebrow}
           </p>
           <h2 className="mt-3 text-3xl font-heading font-bold text-pearl">
-            保留這一晚
+            {copy.checkoutTitle}
           </h2>
 
           <div className="mt-5 rounded-2xl border border-neon/20 bg-neon/[0.04] p-4">
             <p className="font-heading font-bold text-pearl">
-              {selectedVariant.title}
+              {variantTitle}
             </p>
             <p className="mt-2 text-sm text-mist/70">
               {selectedTicket.venueLabel} · {selectedTicket.dateLabel}{' '}
@@ -2244,32 +3296,34 @@ function CheckoutModal({
             </p>
             {displayPrice.compareAtLabel && (
               <p className="mt-1 text-xs text-mist/45">
-                一般{' '}
+                {copy.comparePrefix}{' '}
                 <span className="line-through">
                   {displayPrice.compareAtLabel}
                 </span>
               </p>
             )}
             <p className="mt-2 text-sm leading-relaxed text-mist/62">
-              付款後，LINE 會留下這一晚的時間、地點和入場確認。到了那天，直接走進 UFC GYM。
+              {copy.checkoutNote}
             </p>
             {selectedVariant.showPreferences && (
               <div className="mt-4 border-t border-pearl/10 pt-3">
-                <p className="font-heading text-xs text-mist/55">入場偏好</p>
+                <p className="font-heading text-xs text-mist/55">
+                  {getCopy(locale).preferences.heading}
+                </p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {preferences.handWrapAssist && (
                     <span className="rounded-full border border-neon/20 bg-neon/10 px-3 py-1 text-xs text-neon">
-                      專人協助教學及纏手綁帶
+                      {getCopy(locale).preferences.handWrapAssist.title}
                     </span>
                   )}
                   {preferences.quietMode && (
                     <span className="rounded-full border border-neon/20 bg-neon/10 px-3 py-1 text-xs text-neon">
-                      安靜模式
+                      {getCopy(locale).preferences.quietMode.title}
                     </span>
                   )}
                   {!preferences.handWrapAssist && !preferences.quietMode && (
                     <span className="rounded-full border border-pearl/15 bg-black/20 px-3 py-1 text-xs text-mist/58">
-                      現場依一般入場協助
+                      {copy.normalEntryAssist}
                     </span>
                   )}
                 </div>
@@ -2279,18 +3333,18 @@ function CheckoutModal({
 
           <div className="mt-5 space-y-4">
             <label className="block">
-              <span className="text-sm font-heading text-pearl">姓名</span>
+              <span className="text-sm font-heading text-pearl">{copy.name}</span>
               <input
                 value={form.name}
                 onChange={handleChange('name')}
                 required
                 autoComplete="name"
                 className="mt-2 w-full rounded-xl border border-pearl/20 bg-black/35 px-4 py-3 text-pearl outline-none transition focus:border-neon/60"
-                placeholder="王小明"
+                placeholder={copy.namePlaceholder}
               />
             </label>
             <label className="block">
-              <span className="text-sm font-heading text-pearl">手機</span>
+              <span className="text-sm font-heading text-pearl">{copy.phone}</span>
               <input
                 value={form.phone}
                 onChange={handleChange('phone')}
@@ -2327,10 +3381,10 @@ function CheckoutModal({
             className="mt-6 w-full"
             data-cta="event-checkout-submit"
           >
-            {isSubmitting ? '正在建立付款連結...' : '前往付款，保留這一晚'}
+            {isSubmitting ? copy.checkoutSubmitting : copy.checkoutSubmit}
           </Button>
           <p className="mt-3 text-center text-xs leading-relaxed text-mist/55">
-            送出後會儲存這次填寫的資料，下次購買或預約會自動帶入。
+            {copy.checkoutSaved}
           </p>
         </form>
       </motion.div>
@@ -2342,11 +3396,13 @@ function CheckoutModal({
 function FreeTrialReservationModal({
   selectedTicket,
   availability,
+  locale,
   onClose,
   onReserved,
 }: {
   selectedTicket: EventTicket | null
   availability: SessionAvailability | null
+  locale: SupportedLocale
   onClose: () => void
   onReserved: () => void
 }) {
@@ -2378,6 +3434,8 @@ function FreeTrialReservationModal({
   }
 
   const disabled = availability.remaining <= 0
+  const copy = getCopy(locale).modal
+  const courseName = getCourseDisplayName(selectedTicket.course, locale)
   const handleChange =
     (field: keyof BuyerContactForm) =>
     (event: ChangeEvent<HTMLInputElement>) => {
@@ -2393,7 +3451,7 @@ function FreeTrialReservationModal({
 
     const lineContext = getLineRequestContext()
     if (!lineContext?.lineUserId) {
-      setSubmitError('請先完成 LINE 登入後，再保留免費體驗。')
+      setSubmitError(copy.freeTrialLoginRequired)
       return
     }
 
@@ -2445,7 +3503,7 @@ function FreeTrialReservationModal({
         | null
 
       if (!response.ok || !data?.ok) {
-        throw new Error(data?.error || '免費預約建立失敗，請稍後再試。')
+        throw new Error(data?.error || copy.freeTrialError)
       }
 
       track({
@@ -2478,7 +3536,7 @@ function FreeTrialReservationModal({
       const message =
         error instanceof Error
           ? error.message
-          : '免費預約建立失敗，請稍後再試。'
+          : copy.freeTrialError
       setSubmitError(message)
       track({
         event: 'free_trial_reservation_error',
@@ -2504,46 +3562,46 @@ function FreeTrialReservationModal({
           type="button"
           onClick={onClose}
           className="absolute right-4 top-4 rounded-full border border-pearl/10 bg-pearl/5 px-3 py-2 text-sm font-bold text-pearl"
-          aria-label="關閉"
+          aria-label={copy.close}
         >
           ×
         </button>
 
         <form onSubmit={handleSubmit}>
           <p className="font-heading text-xs text-neon/80">
-            首次限定｜本週限量免費體驗課
+            {copy.freeTrialEyebrow}
           </p>
           <h2 className="mt-3 text-3xl font-heading font-bold text-pearl">
-            免費保留這堂
+            {copy.freeTrialTitle}
           </h2>
 
           <div className="mt-5 rounded-2xl border border-neon/20 bg-neon/[0.04] p-4">
             <p className="font-heading font-bold text-pearl">
-              {selectedTicket.course.name}
+              {courseName}
             </p>
             <p className="mt-2 text-sm text-mist/70">
               {selectedTicket.venueLabel} · {selectedTicket.dateLabel}{' '}
               {selectedTicket.timeLabel}
             </p>
             <p className="mt-3 text-sm leading-relaxed text-mist/62">
-              每個 LINE 帳號限保留一次。裝備可自備，或現場租用。
+              {copy.freeTrialNote}
             </p>
           </div>
 
           <div className="mt-5 space-y-4">
             <label className="block">
-              <span className="text-sm font-heading text-pearl">姓名</span>
+              <span className="text-sm font-heading text-pearl">{copy.name}</span>
               <input
                 value={form.name}
                 onChange={handleChange('name')}
                 required
                 autoComplete="name"
                 className="mt-2 w-full rounded-xl border border-pearl/20 bg-black/35 px-4 py-3 text-pearl outline-none transition focus:border-neon/60"
-                placeholder="王小明"
+                placeholder={copy.namePlaceholder}
               />
             </label>
             <label className="block">
-              <span className="text-sm font-heading text-pearl">手機</span>
+              <span className="text-sm font-heading text-pearl">{copy.phone}</span>
               <input
                 value={form.phone}
                 onChange={handleChange('phone')}
@@ -2581,10 +3639,10 @@ function FreeTrialReservationModal({
             data-cta="event-free-trial-submit"
           >
             {disabled
-              ? '本場候補中'
+              ? getCopy(locale).tickets.soldOut
               : isSubmitting
-                ? '正在保留...'
-                : '首次限定｜免費保留這堂'}
+                ? copy.freeTrialSubmitting
+                : getCopy(locale).tickets.freeTrialCta}
           </Button>
         </form>
       </motion.div>
@@ -2594,8 +3652,14 @@ function FreeTrialReservationModal({
 }
 
 export function FightNightEventPage() {
-  const tickets = useMemo(() => getPaidEventTickets(), [])
-  const freeTrialTickets = useMemo(() => getWeeklyFreeTrialTickets(), [])
+  const { locale, source: languageSource, setLocale } = useLocale()
+  const copy = getCopy(locale)
+  const tickets = useMemo(() => getPaidEventTickets(locale), [locale])
+  const freeTrialTickets = useMemo(
+    () => getWeeklyFreeTrialTickets(locale),
+    [locale],
+  )
+  const faqItems = useMemo(() => copy.faq.items as FAQItem[], [copy.faq.items])
   const sessionIds = useMemo(
     () =>
       Array.from(
@@ -2692,11 +3756,13 @@ export function FightNightEventPage() {
         source: landingVariant,
         event_name: eventName,
         entry_ticket_flow: true,
+        page_language: locale,
+        language_source: languageSource,
       },
       metaStandardEvent: 'ViewContent',
       lineEventName: 'EventPageView',
     })
-  }, [track])
+  }, [languageSource, locale, track])
 
   useEffect(() => {
     if (gateState.status !== 'unlocked') return
@@ -2767,8 +3833,8 @@ export function FightNightEventPage() {
 
   const showMoreSessionsActionLabel =
     gateState.status === 'unlocked'
-      ? '查看所有場次'
-      : 'LINE 登入查看所有場次'
+      ? copy.tickets.showAll
+      : copy.tickets.lineLoginShowAll
 
   const handleShowMoreSessions = async () => {
     track({
@@ -2878,8 +3944,8 @@ export function FightNightEventPage() {
   const structuredData = featuredTicket
     ? {
         '@type': 'Event',
-        name: `${eventName} 入場票`,
-        description: eventDescription,
+        name: locale === 'en' ? `${eventName} Entry Pass` : `${eventName} 入場票`,
+        description: copy.eventDescription,
         startDate: `${featuredTicket.course.date}T${featuredTicket.course.startTime}:00+08:00`,
         endDate: `${featuredTicket.course.date}T${featuredTicket.course.endTime}:00+08:00`,
         eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
@@ -2901,17 +3967,10 @@ export function FightNightEventPage() {
   return (
     <div className="relative mx-auto min-h-screen w-full max-w-[430px] overflow-x-hidden bg-abyss text-pearl shadow-[0_0_90px_rgba(0,0,0,0.45)]">
       <Seo
-        title="Fight Night｜Fight Night Pass"
-        description={eventDescription}
+        title={copy.seo.title}
+        description={copy.eventDescription}
         canonicalPath="/fight-night-event"
-        keywords={[
-          'Fight Night',
-          'Fight Night Pass',
-          'UFC GYM',
-          '運動娛樂',
-          '夜間運動',
-          '沙包聲',
-        ]}
+        keywords={copy.seo.keywords}
         image={eventHeroEmotion}
         structuredData={structuredData}
       />
@@ -2919,20 +3978,32 @@ export function FightNightEventPage() {
       <main>
         <EventHeroSection
           onPrimaryAction={() => scrollToId('event-entry')}
+          locale={locale}
+          onLocaleChange={(nextLocale) => {
+            setLocale(nextLocale)
+            track({
+              event: 'language_switch',
+              params: {
+                source: landingVariant,
+                page_language: nextLocale,
+                previous_language: locale,
+              },
+            })
+          }}
         />
         <EventStandalonePhotoSection
           id="event-group-photo"
           src={eventGroupEnergy}
-          alt="Fight Night 小團體被現場節奏帶起來"
+          alt={copy.photoAlts.group}
         />
-        <EventReframeSection />
+        <EventReframeSection locale={locale} />
         <EventStandalonePhotoSection
           id="event-impact-photo"
           src={eventBagImpact}
-          alt="全力專注並釋放情緒的沙包段落"
+          alt={copy.photoAlts.impact}
         />
-        <EventProofSection />
-        <EventSafetySection />
+        <EventProofSection locale={locale} />
+        <EventSafetySection locale={locale} />
         <EventTicketDropSection
           tickets={tickets}
           freeTrialTickets={freeTrialTickets}
@@ -2940,6 +4011,7 @@ export function FightNightEventPage() {
           recommendation={recommendation}
           showMoreSessions={showMoreSessions}
           moreSessionsActionLabel={showMoreSessionsActionLabel}
+          locale={locale}
           preferences={servicePreferences}
           getAvailability={getAvailability}
           hasLiveData={hasLiveData}
@@ -2960,24 +4032,24 @@ export function FightNightEventPage() {
         <EventStandalonePhotoSection
           id="event-afterglow-photo"
           src={eventAfterglow}
-          alt="Fight Night 結束後笑出來的放鬆感"
+          alt={copy.photoAlts.afterglow}
         />
-        <EventFlowPreviewSection />
+        <EventFlowPreviewSection locale={locale} />
         <FAQSection
           id="event-faq"
-          title="第一次來，先看這幾個。"
+          title={copy.faq.title}
           subtitle=""
-          items={eventFaqItems}
+          items={faqItems}
           compact
         />
       </main>
-      <EventMinimalFooter />
+      <EventMinimalFooter locale={locale} />
       <StickyActionBar
         eyebrow="Fight Night Pass"
         title="Fight Night"
-        detail={showMoreSessions ? '選擇方案｜線上付款｜LINE 確認' : 'Fight Night Pass'}
+        detail={showMoreSessions ? copy.sticky.detailOpen : copy.sticky.detailClosed}
         actionLabel={
-          showMoreSessions ? '把這一晚留下來' : showMoreSessionsActionLabel
+          showMoreSessions ? copy.flowPreview.cta : showMoreSessionsActionLabel
         }
         onAction={() => {
           if (showMoreSessions) {
@@ -2994,6 +4066,7 @@ export function FightNightEventPage() {
         availability={
           selectedTicket ? getAvailability(selectedTicket.sessionId) : null
         }
+        locale={locale}
         preferences={servicePreferences}
         onClose={() => {
           setSelectedTicket(null)
@@ -3007,6 +4080,7 @@ export function FightNightEventPage() {
             ? getAvailability(selectedFreeTrialTicket.sessionId)
             : null
         }
+        locale={locale}
         onClose={() => setSelectedFreeTrialTicket(null)}
         onReserved={() =>
           setFreeTrialStatusSnapshot({
@@ -3017,6 +4091,7 @@ export function FightNightEventPage() {
       />
       <EventProductPhotoModal
         selectedProductId={selectedProductId}
+        locale={locale}
         onClose={() => setSelectedProductId(null)}
       />
       <EventTicketInfoModal
@@ -3027,6 +4102,7 @@ export function FightNightEventPage() {
             : null
         }
         hasLiveData={hasLiveData}
+        locale={locale}
         onClose={() => setSelectedInfoTicket(null)}
       />
     </div>

@@ -31,6 +31,45 @@ It is a pass-based night combat experience.
 
 The page should feel like an entry into a different state, not a gym timetable.
 
+### Current Fight Night Proposition Memory
+
+Fight Night should be framed as a designed night experience that lets a first-time visitor enter the kind of confident, high-energy state they may have previously only seen in other people.
+
+Core idea in Chinese:
+
+你一定看過那種人。
+很自信，很有能量，走進哪裡都像自帶氣場。
+
+在 UFC GYM，這樣的人特別多。
+
+Fight Night 把那種會感染人的節奏、口令、沙包聲和集體能量，重新編排成一個晚上。
+
+你只要進來，跟著第一聲倒數開始。
+慢慢地，你也會被那個場帶進去。
+
+等你回過神，你已經短暫變成以前在別人身上看過的那種人。
+
+When writing or reviewing Fight Night copy, preserve this structure:
+
+- Start from a familiar social observation: some people seem naturally confident, energetic, and magnetic.
+- Make UFC GYM feel like a place where this state is often seen.
+- Position Fight Night as the mechanism that lets ordinary first-time visitors enter that state.
+- Avoid reducing the offer to boxing, fitness, stress relief, or a group class.
+- Do not over-explain the class flow. The emotional promise is entering a different state, not learning a sequence of actions.
+- Use human, concrete language. Avoid abstract brand manifesto copy.
+
+Current ad copy baseline:
+
+妳一定看過那種人。
+很自信，很有能量，走進哪裡都像自帶氣場。
+
+Fight Night 把倒數、口令、沙包聲和全場節奏，變成一個會把人帶進狀態的晚上。
+
+只要跟著第一聲倒數開始。
+回過神，已經在笑、在流汗、在跟著全場一起出聲。
+
+不知不覺，妳也會變成別人眼裡的那種人。
+
 ---
 
 ## Main Conversion Path
