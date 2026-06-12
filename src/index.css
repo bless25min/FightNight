@@ -329,6 +329,17 @@
     position: relative;
   }
 
+  .ticket-card-carousel {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    scroll-padding-inline: 0;
+    scrollbar-width: none;
+  }
+
+  .ticket-card-carousel::-webkit-scrollbar {
+    display: none;
+  }
+
   .swipe-hint:not([data-interacted='true'])::before {
     content: '';
     position: absolute;

@@ -309,6 +309,7 @@ const eventPageCopy = {
       sectionSummary: (venue: string, count: number) =>
         `${venue} 目前 ${count} 場可選。`,
       venueTabsLabel: '選擇場館',
+      venueSelectPrompt: '先選你會抵達的場館，再看該場館可保留的方案。',
       cardsLabel: (venue: string) => `${venue} Fight Night Pass 可選場次`,
       noVenueSessions: '這個場館目前沒有可報名場次。',
       noSessions: '下一場整理中，開放後會更新在這裡。',
@@ -555,6 +556,7 @@ const eventPageCopy = {
       sectionSummary: (venue: string, count: number) =>
         `${venue} has ${count} available session${count === 1 ? '' : 's'}.`,
       venueTabsLabel: 'Choose venue',
+      venueSelectPrompt: 'Choose the venue you can reach, then pick a pass for that location.',
       cardsLabel: (venue: string) => `${venue} Fight Night Pass sessions`,
       noVenueSessions: 'This venue has no available sessions right now.',
       noSessions: 'The next session is being arranged and will appear here once open.',
@@ -2821,23 +2823,24 @@ function EventTicketDropSection({
     () => [...visibleTickets, ...freeTrialTickets],
     [freeTrialTickets, visibleTickets],
   )
-  const firstAvailableVenueId =
-    venueTabs.find((tab) =>
-      visibleVenueTickets.some((ticket) => ticket.course.venueId === tab.venueId),
-    )?.venueId ?? venueTabs[0]?.venueId
-  const recommendedVenueId =
-    recommendation &&
-    visibleVenueTickets.some((ticket) => ticket.course.venueId === recommendation.venueId)
-      ? recommendation.venueId
-      : undefined
+  const venueOptions = venueTabs.map((tab) => {
+    const ticketCount =
+      visibleTickets.filter((ticket) => ticket.course.venueId === tab.venueId)
+        .length +
+      freeTrialTickets.filter((ticket) => ticket.course.venueId === tab.venueId)
+        .length
+    return {
+      ...tab,
+      ticketCount,
+    }
+  })
   const [selectedVenueId, setSelectedVenueId] = useState<string | null>(null)
   const selectedVenueHasTickets = selectedVenueId
-    ? visibleVenueTickets.some((ticket) => ticket.course.venueId === selectedVenueId)
+    ? venueOptions.some(
+        (option) => option.venueId === selectedVenueId && option.ticketCount > 0,
+      )
     : false
-  const activeVenueId =
-    selectedVenueHasTickets
-      ? selectedVenueId
-      : recommendedVenueId ?? firstAvailableVenueId
+  const activeVenueId = selectedVenueHasTickets ? selectedVenueId : null
   const activeVenueTickets = visibleTickets.filter(
     (ticket) => ticket.course.venueId === activeVenueId,
   )
@@ -2879,8 +2882,12 @@ function EventTicketDropSection({
     ),
   ).size
   const activeVenueLabel =
-    venueTabs.find((tab) => tab.venueId === activeVenueId)?.label ??
+    venueOptions.find((tab) => tab.venueId === activeVenueId)?.label ??
     copy.currentVenue
+  const getVenueCountLabel = (count: number) =>
+    locale === 'en'
+      ? `${count} session${count === 1 ? '' : 's'}`
+      : `${count} 場`
 
   return (
     <SectionWrapper
@@ -2904,83 +2911,123 @@ function EventTicketDropSection({
                 eyebrow={copy.sectionEyebrow}
                 title={copy.sectionTitle}
               >
-                {copy.sectionSummary(activeVenueLabel, activeVenueSessionCount)}
+                {activeVenueId
+                  ? copy.sectionSummary(activeVenueLabel, activeVenueSessionCount)
+                  : copy.venueSelectPrompt}
               </EventSectionHeading>
               <div
-                className="mb-4 grid min-w-0 grid-cols-3 gap-2"
-                role="tablist"
+                className="mb-4 rounded-2xl border border-pearl/10 bg-black/25 p-3"
                 aria-label={copy.venueTabsLabel}
               >
-                {venueTabs.map((tab) => {
-                  const ticketCount = visibleTickets.filter(
-                    (ticket) => ticket.course.venueId === tab.venueId,
-                  ).length + freeTrialTickets.filter(
-                    (ticket) => ticket.course.venueId === tab.venueId,
-                  ).length
-                  const selected = tab.venueId === activeVenueId
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <p className="font-heading text-xs font-bold tracking-[0.18em] text-neon/80">
+                    {copy.venueTabsLabel}
+                  </p>
+                  <span className="shrink-0 rounded-full border border-pearl/10 px-2.5 py-1 font-heading text-[10px] text-mist/70">
+                    {getVenueCountLabel(visibleVenueTickets.length)}
+                  </span>
+                </div>
+                <div className="grid min-w-0 gap-2">
+                  {venueOptions.map((tab) => {
+                    const selected = tab.venueId === activeVenueId
 
-                  return (
-                    <button
-                      key={tab.venueId}
-                      type="button"
-                      role="tab"
-                      aria-selected={selected}
-                      disabled={ticketCount === 0}
-                      className={`min-w-0 rounded-xl border px-2 py-2 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
-                        selected
-                          ? 'border-neon/35 bg-neon/10 text-pearl'
-                          : 'border-pearl/10 bg-black/20 text-mist/62 hover:border-pearl/20'
-                      }`}
-                      onClick={() => setSelectedVenueId(tab.venueId)}
-                    >
-                      <span className="block truncate font-heading text-xs">
-                        {tab.label}
-                      </span>
-                      <span className="mt-0.5 block truncate text-[10px] leading-snug">
-                        {tab.nearbyAreaLabel}
-                      </span>
-                    </button>
-                  )
-                })}
+                    return (
+                      <button
+                        key={tab.venueId}
+                        type="button"
+                        aria-pressed={selected}
+                        disabled={tab.ticketCount === 0}
+                        className={`grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-xl border px-3 py-3 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+                          selected
+                            ? 'border-neon/45 bg-neon/12 text-pearl shadow-[0_14px_36px_rgba(155,255,101,0.08)]'
+                            : 'border-pearl/10 bg-black/24 text-mist/72 hover:border-neon/24 hover:bg-neon/8'
+                        }`}
+                        onClick={() => setSelectedVenueId(tab.venueId)}
+                      >
+                        <span className="min-w-0">
+                          <span className="block truncate font-heading text-base font-black text-pearl">
+                            {tab.label}
+                          </span>
+                          <span className="mt-1 block truncate text-xs leading-snug text-mist/66">
+                            {tab.nearbyAreaLabel}
+                          </span>
+                        </span>
+                        <span
+                          className={`shrink-0 rounded-full border px-2.5 py-1 font-heading text-xs ${
+                            selected
+                              ? 'border-neon/35 bg-neon/10 text-neon'
+                              : 'border-pearl/10 bg-pearl/5 text-mist/66'
+                          }`}
+                        >
+                          {getVenueCountLabel(tab.ticketCount)}
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
-              {activeVenueCards.length > 0 ? (
-                <div
-                  data-swipe-hint
-                  className="swipe-hint flex w-full max-w-full snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth pb-4"
-                  aria-label={copy.cardsLabel(activeVenueLabel)}
-                >
-                  {activeVenueCards.map((card) => (
+
+              {!activeVenueId ? (
+                <p className="rounded-xl border border-pearl/10 bg-black/25 px-4 py-4 text-sm leading-relaxed text-mist/68">
+                  {copy.venueSelectPrompt}
+                </p>
+              ) : activeVenueCards.length > 0 ? (
+                <div className="min-w-0">
+                  <div
+                    data-swipe-hint
+                    className="ticket-card-carousel swipe-hint flex w-full max-w-full snap-x snap-proximity gap-2 overflow-x-auto pb-4"
+                    aria-label={copy.cardsLabel(activeVenueLabel)}
+                  >
+                    {activeVenueCards.map((card) => (
+                      <div
+                        key={card.key}
+                        className="flex min-w-[90%] max-w-[90%] shrink-0 snap-start flex-col"
+                      >
+                        {card.type === 'paid' ? (
+                          <EventTicketCard
+                            ticket={card.ticket}
+                            variant={card.variant}
+                            availability={getAvailability(card.ticket.sessionId)}
+                            hasLiveData={hasLiveData}
+                            locale={locale}
+                            preferences={preferences}
+                            onPreferenceChange={onPreferenceChange}
+                            onOpenInfo={onOpenInfo}
+                            onOpenProduct={onOpenProduct}
+                            onPurchase={onPurchase}
+                          />
+                        ) : (
+                          <FreeTrialTicketCard
+                            ticket={card.ticket}
+                            availability={getAvailability(card.ticket.sessionId)}
+                            hasLiveData={hasLiveData}
+                            locale={locale}
+                            freeTrialStatus={freeTrialStatus}
+                            onOpenInfo={onOpenInfo}
+                            onReserve={onFreeTrialReserve}
+                            onPaidFallback={onFreeTrialPaidFallback}
+                          />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  {activeVenueCards.length > 1 ? (
                     <div
-                      key={card.key}
-                      className="flex w-full min-w-full max-w-full shrink-0 snap-start flex-col"
+                      className="-mt-1 flex justify-center gap-1.5"
+                      aria-hidden="true"
                     >
-                      {card.type === 'paid' ? (
-                        <EventTicketCard
-                          ticket={card.ticket}
-                          variant={card.variant}
-                          availability={getAvailability(card.ticket.sessionId)}
-                          hasLiveData={hasLiveData}
-                          locale={locale}
-                          preferences={preferences}
-                          onPreferenceChange={onPreferenceChange}
-                          onOpenInfo={onOpenInfo}
-                          onOpenProduct={onOpenProduct}
-                          onPurchase={onPurchase}
+                      {activeVenueCards.slice(0, 8).map((card, index) => (
+                        <span
+                          key={card.key}
+                          className={`h-1.5 rounded-full ${
+                            index === 0
+                              ? 'w-4 bg-neon'
+                              : 'w-1.5 bg-pearl/24'
+                          }`}
                         />
-                      ) : (
-                        <FreeTrialTicketCard
-                          ticket={card.ticket}
-                          availability={getAvailability(card.ticket.sessionId)}
-                          hasLiveData={hasLiveData}
-                          locale={locale}
-                          freeTrialStatus={freeTrialStatus}
-                          onOpenInfo={onOpenInfo}
-                          onReserve={onFreeTrialReserve}
-                          onPaidFallback={onFreeTrialPaidFallback}
-                        />
-                      )}
+                      ))}
                     </div>
-                  ))}
+                  ) : null}
                 </div>
               ) : (
                 <p className="rounded-xl border border-pearl/10 bg-black/25 px-4 py-4 text-sm leading-relaxed text-mist/68">
