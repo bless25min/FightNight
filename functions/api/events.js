@@ -224,14 +224,20 @@ function canonicalizeRoutePath(value) {
   const raw = trimText(value, 800)
   if (!raw) return '/'
 
-  let pathname = raw
+  const hashRouteIndex = raw.indexOf('#/')
+  let pathname = hashRouteIndex >= 0 ? raw.slice(hashRouteIndex + 1) : raw
   try {
-    pathname = new URL(raw, 'https://fightnight.local').pathname
+    if (hashRouteIndex < 0) {
+      pathname = new URL(raw, 'https://fightnight.local').pathname
+    }
   } catch {
-    pathname = raw.split('#')[0].split('?')[0]
+    pathname = raw
   }
 
-  const normalized = trimText(pathname, 400).replace(/\/+$/, '') || '/'
+  const pathWithoutHash = pathname.split('#')[0] || pathname
+  const pathWithoutQuery = pathWithoutHash.split('?')[0] || '/'
+  const cleaned = trimText(pathWithoutQuery, 400).replace(/\/+$/, '') || '/'
+  const normalized = cleaned.startsWith('/') ? cleaned : `/${cleaned}`
   const lower = normalized.toLowerCase()
 
   if (lower === '/index.html') return '/'

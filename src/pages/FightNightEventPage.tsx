@@ -1757,7 +1757,7 @@ function EventHeroSection({
   return (
     <section
       id="event-hero"
-      className="relative overflow-hidden bg-[radial-gradient(circle_at_18%_18%,rgba(245,98,45,0.22),transparent_30%),linear-gradient(180deg,#090909,#050505)] text-pearl"
+      className="relative scroll-mt-20 overflow-hidden bg-[radial-gradient(circle_at_18%_18%,rgba(245,98,45,0.22),transparent_30%),linear-gradient(180deg,#090909,#050505)] pt-16 text-pearl md:scroll-mt-28 md:pt-24"
     >
       <motion.figure
         initial={{ opacity: 0 }}

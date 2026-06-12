@@ -1,6 +1,7 @@
 import { getCheckoutTrackingContext } from './checkoutTracking'
 import { getLandingSplitContext } from './landingSplit'
 import { getLocaleTrackingParams } from './locale'
+import { canonicalizeRoutePath } from './routePath'
 
 export type TrackingParams = Record<
   string,
@@ -252,47 +253,9 @@ function getPathOnly() {
   return `${window.location.pathname}${window.location.hash}`
 }
 
-function canonicalizeRoutePath(path: string) {
-  const raw = String(path || '/').trim()
-  const pathWithoutHash = raw.split('#')[0] || raw
-  const pathWithoutQuery = pathWithoutHash.split('?')[0] || '/'
-  const normalized = pathWithoutQuery.replace(/\/+$/, '') || '/'
-  const lower = normalized.toLowerCase()
-
-  if (lower === '/index.html') return '/'
-  if (lower === '/boot-camp' || lower === '/boot-camp.html') return '/boot-camp'
-  if (lower.startsWith('/boot-camp/')) return '/boot-camp'
-  if (lower === '/fight-night-event' || lower === '/fight-night-event.html') {
-    return '/fight-night-event'
-  }
-  if (lower.startsWith('/fight-night-event/')) return '/fight-night-event'
-  if (lower === '/fight-night-intro' || lower === '/fight-night-intro.html') {
-    return '/fight-night-intro'
-  }
-  if (lower.startsWith('/fight-night-intro/')) return '/fight-night-intro'
-  if (lower === '/offers' || lower === '/offers.html') return '/offers'
-  if (lower.startsWith('/offers/')) return '/offers'
-  if (lower === '/payment/success' || lower.startsWith('/payment/success/')) {
-    return '/payment/success'
-  }
-  if (lower.startsWith('/guides/')) return '/guides'
-  if (lower === '/privacy-policy' || lower === '/privacy-policy.html') {
-    return '/privacy-policy'
-  }
-  if (lower === '/refund-policy' || lower === '/refund-policy.html') {
-    return '/refund-policy'
-  }
-  if (lower.startsWith('/admin')) return '/admin'
-
-  return normalized
-}
-
 function getCanonicalRoutePath() {
   if (typeof window === 'undefined') return ''
-  const hashPath = window.location.hash.startsWith('#/')
-    ? window.location.hash.slice(1)
-    : ''
-  return canonicalizeRoutePath(hashPath || window.location.pathname)
+  return canonicalizeRoutePath(getRoutePath())
 }
 
 function isPrivateAnalyticsPath(path: string) {

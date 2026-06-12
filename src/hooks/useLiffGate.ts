@@ -3,6 +3,7 @@ import { saveBuyerContact } from '../lib/buyerContact'
 import { loadLiffSdk } from '../lib/liff'
 import { saveLineContext } from '../lib/lineContext'
 import { getCheckoutTrackingContext } from '../lib/checkoutTracking'
+import { canonicalizeRoutePath } from '../lib/routePath'
 
 export type LiffGateStatus =
   | 'loading'
@@ -53,9 +54,9 @@ function getSourcePath() {
 }
 
 function getLiffSurface(sourcePath = getSourcePath()): LiffSurface {
-  const pathname = sourcePath.split(/[?#]/)[0] || '/'
-  if (sourcePath.includes('boot-camp')) return 'bootCamp'
-  if (pathname === '/' || sourcePath.includes('fight-night-event')) return 'event'
+  const pathname = canonicalizeRoutePath(sourcePath)
+  if (pathname === '/boot-camp') return 'bootCamp'
+  if (pathname === '/' || pathname === '/fight-night-event') return 'event'
   return 'default'
 }
 
@@ -63,7 +64,7 @@ function getLiffPlacement() {
   const sourcePath = getSourcePath()
   if (getLiffSurface(sourcePath) === 'bootCamp') return 'boot_camp_gate'
   if (getLiffSurface(sourcePath) === 'event') return 'event_gate'
-  if (sourcePath.includes('offers')) return 'offers_gate'
+  if (canonicalizeRoutePath(sourcePath) === '/offers') return 'offers_gate'
   return 'ticket_gate'
 }
 
