@@ -140,8 +140,6 @@ type EventCoachProfileDetailTone = 'pearl' | 'neon' | 'blaze'
 
 const landingVariant = 'fightnight_event_night_ticket_paid_v3'
 const eventName = 'Fight Night'
-const eventMoreSessionsHash = '#event-more-sessions'
-const eventMoreSessionsIntentKey = 'fightnight_event_more_sessions_intent'
 const eventCoursePricingMode = 'weekly-course-no-first-purchase'
 
 const eventPageCopy = {
@@ -316,7 +314,7 @@ const eventPageCopy = {
       noSessions: '下一場整理中，開放後會更新在這裡。',
       currentVenue: '目前場館',
       showAll: '查看所有場次',
-      lineLoginShowAll: 'LINE 登入查看所有場次',
+      lineLoginShowAll: '查看所有場次',
       coachSuffix: '教練',
       view: '查看',
       soldOut: '本場候補中',
@@ -562,7 +560,7 @@ const eventPageCopy = {
       noSessions: 'The next session is being arranged and will appear here once open.',
       currentVenue: 'Current venue',
       showAll: 'View all sessions',
-      lineLoginShowAll: 'Log in with LINE to view all sessions',
+      lineLoginShowAll: 'View all sessions',
       coachSuffix: 'Coach',
       view: 'View',
       soldOut: 'Waitlist',
@@ -1598,27 +1596,6 @@ function getSourcePath() {
   return `${window.location.pathname}${window.location.search}${window.location.hash}`
 }
 
-function setEventMoreSessionsIntent() {
-  if (typeof window === 'undefined') return
-  window.sessionStorage.setItem(eventMoreSessionsIntentKey, '1')
-  if (window.location.hash !== eventMoreSessionsHash) {
-    window.history.replaceState(
-      null,
-      '',
-      `${window.location.pathname}${window.location.search}${eventMoreSessionsHash}`,
-    )
-  }
-}
-
-function consumeEventMoreSessionsIntent() {
-  if (typeof window === 'undefined') return false
-  const hasIntent =
-    window.sessionStorage.getItem(eventMoreSessionsIntentKey) === '1' ||
-    window.location.hash === eventMoreSessionsHash
-  window.sessionStorage.removeItem(eventMoreSessionsIntentKey)
-  return hasIntent
-}
-
 function scrollToMoreSessions() {
   if (typeof window === 'undefined') return
   window.setTimeout(() => {
@@ -1626,17 +1603,6 @@ function scrollToMoreSessions() {
       .getElementById('event-more-sessions')
       ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }, 120)
-}
-
-function isLocalLoggedInPreview() {
-  if (typeof window === 'undefined') return false
-
-  const isLocalHost =
-    window.location.hostname === '127.0.0.1' ||
-    window.location.hostname === 'localhost'
-  if (!isLocalHost) return false
-
-  return window.location.search.includes('preview=logged-in')
 }
 
 function EventSectionHeading({
@@ -2790,7 +2756,7 @@ function EventPassPreview({
           size="lg"
           className="mt-6 w-full"
           onClick={onAction}
-          data-cta="event-more-sessions-login"
+          data-cta="event-more-sessions"
         >
           {actionLabel}
         </Button>
@@ -3651,7 +3617,7 @@ export function FightNightEventPage() {
     [freeTrialTickets, tickets],
   )
   const { getAvailability, hasLiveData } = useSessionAvailability(sessionIds)
-  const { gateState, requestGateAccess, loginUrl } = useLiffGate()
+  const { gateState, requestGateAccess, loginUrl, getLoginUrl } = useLiffGate()
   const { track, trackGateAccess } = useTracking()
   const [selectedTicket, setSelectedTicket] = useState<EventTicket | null>(null)
   const [selectedVariant, setSelectedVariant] = useState<EventPassVariant>(
@@ -3667,9 +3633,7 @@ export function FightNightEventPage() {
     useState<EventProductId | null>(null)
   const [recommendation, setRecommendation] =
     useState<VenueRecommendation | null>(null)
-  const [showMoreSessions, setShowMoreSessions] = useState(() =>
-    isLocalLoggedInPreview(),
-  )
+  const showMoreSessions = true
   const [servicePreferences, setServicePreferences] =
     useState<EventServicePreferences>({
       handWrapAssist: true,
@@ -3747,17 +3711,6 @@ export function FightNightEventPage() {
 
   useEffect(() => {
     if (gateState.status !== 'unlocked') return
-    if (!consumeEventMoreSessionsIntent()) return
-    const revealId = window.setTimeout(() => {
-      setShowMoreSessions(true)
-      scrollToMoreSessions()
-    }, 0)
-
-    return () => window.clearTimeout(revealId)
-  }, [gateState.status])
-
-  useEffect(() => {
-    if (gateState.status !== 'unlocked') return
 
     let active = true
     const lineContext = getLineRequestContext()
@@ -3812,12 +3765,9 @@ export function FightNightEventPage() {
     }))
   }
 
-  const showMoreSessionsActionLabel =
-    gateState.status === 'unlocked'
-      ? copy.tickets.showAll
-      : copy.tickets.lineLoginShowAll
+  const showMoreSessionsActionLabel = copy.tickets.showAll
 
-  const handleShowMoreSessions = async () => {
+  const handleShowMoreSessions = () => {
     track({
       event: 'event_more_sessions_click',
       params: {
@@ -3825,20 +3775,7 @@ export function FightNightEventPage() {
         gate_status: gateState.status,
       },
     })
-    setEventMoreSessionsIntent()
 
-    if (gateState.status !== 'unlocked') {
-      trackGateAccess('event_more_sessions', gateState.status)
-      if (loginUrl && ['loading', 'logged-out'].includes(gateState.status)) {
-        window.location.href = loginUrl
-        return
-      }
-
-      const unlocked = await requestGateAccess()
-      if (!unlocked) return
-    }
-
-    setShowMoreSessions(true)
     scrollToMoreSessions()
   }
 
@@ -3871,8 +3808,9 @@ export function FightNightEventPage() {
 
     if (gateState.status !== 'unlocked') {
       trackGateAccess('event_entry_ticket', gateState.status)
-      if (loginUrl && ['loading', 'logged-out'].includes(gateState.status)) {
-        window.location.href = loginUrl
+      const eventLoginUrl = getLoginUrl() || loginUrl
+      if (eventLoginUrl && ['loading', 'logged-out'].includes(gateState.status)) {
+        window.location.href = eventLoginUrl
         return
       }
 
@@ -3901,8 +3839,9 @@ export function FightNightEventPage() {
 
     if (gateState.status !== 'unlocked') {
       trackGateAccess('event_free_trial', gateState.status)
-      if (loginUrl && ['loading', 'logged-out'].includes(gateState.status)) {
-        window.location.href = loginUrl
+      const eventLoginUrl = getLoginUrl() || loginUrl
+      if (eventLoginUrl && ['loading', 'logged-out'].includes(gateState.status)) {
+        window.location.href = eventLoginUrl
         return
       }
 

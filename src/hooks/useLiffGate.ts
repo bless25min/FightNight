@@ -82,6 +82,14 @@ function getFallbackLiffId(sourcePath = getSourcePath()) {
   return undefined
 }
 
+function buildLiffUrl(liffId: string, statePath = getSourcePath()) {
+  const baseUrl = `https://liff.line.me/${encodeURIComponent(liffId)}`
+  if (!statePath) return baseUrl
+
+  const stateUrl = new URL(statePath, 'https://fightnight.local')
+  return `${baseUrl}${stateUrl.pathname}${stateUrl.search}${stateUrl.hash}`
+}
+
 function getRuntimeString(data: unknown, key: string) {
   if (!data || typeof data !== 'object') return undefined
   const value = (data as Record<string, unknown>)[key]
@@ -199,10 +207,12 @@ export function useLiffGate() {
     buildTimeLiffId ||
     getRuntimeLiffIdForSource(runtimeLiffIds, sourcePath) ||
     (isConfigLoaded ? getFallbackLiffId(sourcePath) : undefined)
-  const liffUrl = liffId
-    ? `https://line.me/R/app/${liffId}`
-    : undefined
-  const loginUrl = isMobileDevice() ? liffUrl : undefined
+  const getLoginUrl = (returnPath = getSourcePath()) => {
+    if (!isMobileDevice() || !liffId) return undefined
+    return buildLiffUrl(liffId, returnPath)
+  }
+  const liffUrl = liffId ? buildLiffUrl(liffId, sourcePath) : undefined
+  const loginUrl = getLoginUrl(sourcePath)
 
   useEffect(() => {
     if (buildTimeLiffId) return
@@ -358,6 +368,7 @@ export function useLiffGate() {
     requestGateAccess,
     openWhenUnlocked,
     loginUrl,
+    getLoginUrl,
     liffUrl,
   }
 }
