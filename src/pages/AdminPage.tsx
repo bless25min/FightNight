@@ -731,6 +731,7 @@ function routeLabel(value?: string | null) {
   if (value === '/') return '首頁'
   if (value === '/boot-camp') return 'BOOTCAMP'
   if (value === '/fight-night-event') return '活動頁'
+  if (value === '/fight-night-intro') return 'Intro'
   if (value === '/offers') return 'Offers'
   if (value === '/payment/success') return '付款成功'
   return value || '-'

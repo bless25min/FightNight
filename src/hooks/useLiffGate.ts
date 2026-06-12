@@ -53,8 +53,9 @@ function getSourcePath() {
 }
 
 function getLiffSurface(sourcePath = getSourcePath()): LiffSurface {
+  const pathname = sourcePath.split(/[?#]/)[0] || '/'
   if (sourcePath.includes('boot-camp')) return 'bootCamp'
-  if (sourcePath.includes('fight-night-event')) return 'event'
+  if (pathname === '/' || sourcePath.includes('fight-night-event')) return 'event'
   return 'default'
 }
 

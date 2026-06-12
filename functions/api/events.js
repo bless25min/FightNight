@@ -241,6 +241,10 @@ function canonicalizeRoutePath(value) {
     return '/fight-night-event'
   }
   if (lower.startsWith('/fight-night-event/')) return '/fight-night-event'
+  if (lower === '/fight-night-intro' || lower === '/fight-night-intro.html') {
+    return '/fight-night-intro'
+  }
+  if (lower.startsWith('/fight-night-intro/')) return '/fight-night-intro'
   if (lower === '/offers' || lower === '/offers.html') return '/offers'
   if (lower.startsWith('/offers/')) return '/offers'
   if (lower === '/payment/success' || lower.startsWith('/payment/success/')) {

@@ -85,7 +85,7 @@ const LEAD_INTENT_EVENTS = [
 const TRAFFIC_ACTION_EVENT_SQL = TRAFFIC_ACTION_EVENTS.map(sqlString).join(', ')
 const CHECKOUT_INTENT_EVENT_SQL = CHECKOUT_INTENT_EVENTS.map(sqlString).join(', ')
 const LEAD_INTENT_EVENT_SQL = LEAD_INTENT_EVENTS.map(sqlString).join(', ')
-const SPLIT_TEST_ROUTE_SQL = ['/', '/boot-camp', '/fight-night-event']
+const SPLIT_TEST_ROUTE_SQL = ['/', '/boot-camp', '/fight-night-event', '/fight-night-intro']
   .map(sqlString)
   .join(', ')
 
@@ -95,6 +95,7 @@ const CANONICAL_ROUTE_SQL = `
     CASE
       WHEN route_path LIKE '/boot-camp%' THEN '/boot-camp'
       WHEN route_path LIKE '/fight-night-event%' THEN '/fight-night-event'
+      WHEN route_path LIKE '/fight-night-intro%' THEN '/fight-night-intro'
       WHEN route_path LIKE '/offers%' THEN '/offers'
       WHEN route_path LIKE '/payment/success%' THEN '/payment/success'
       WHEN route_path LIKE '/guides/%' THEN '/guides'

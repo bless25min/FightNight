@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { BootCampPage } from './pages/BootCampPage'
 import { FightNightEventPage } from './pages/FightNightEventPage'
+import { FightNightIntroPage } from './pages/FightNightIntroPage'
 import { OffersPage } from './pages/OffersPage'
 import { PaymentResultPage } from './pages/PaymentResultPage'
 import { AdminPage } from './pages/AdminPage'
@@ -19,6 +20,7 @@ function getCurrentRoutePath() {
     hashPath.startsWith('/offers') ||
     hashPath.startsWith('/boot-camp') ||
     hashPath.startsWith('/fight-night-event') ||
+    hashPath.startsWith('/fight-night-intro') ||
     hashPath.startsWith('/payment/success') ||
     hashPath.startsWith('/admin') ||
     hashPath.startsWith('/privacy-policy') ||
@@ -32,6 +34,7 @@ function getCurrentRoutePath() {
   if (pathname.endsWith('/offers.html')) return '/offers'
   if (pathname.endsWith('/boot-camp.html')) return '/boot-camp'
   if (pathname.endsWith('/fight-night-event.html')) return '/fight-night-event'
+  if (pathname.endsWith('/fight-night-intro.html')) return '/fight-night-intro'
   if (pathname.endsWith('/admin.html')) return '/admin'
   if (pathname.endsWith('/privacy-policy.html')) return '/privacy-policy'
   if (pathname.endsWith('/refund-policy.html')) return '/refund-policy'
@@ -125,6 +128,10 @@ function App() {
 
   if (pathname.startsWith('/fight-night-event')) {
     return <FightNightEventPage />
+  }
+
+  if (pathname.startsWith('/fight-night-intro')) {
+    return <FightNightIntroPage />
   }
 
   if (pathname.startsWith('/payment/success')) {
