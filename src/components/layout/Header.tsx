@@ -56,17 +56,11 @@ export function Header() {
       ? 'offers-plans'
       : 'fight-night-pass'
   const ctaHref = isUtilityPage ? '/boot-camp' : `#${ctaTargetId}`
-  const contentClass = isEventPage
-    ? 'max-w-[430px] mx-auto px-4 sm:px-4'
-    : 'max-w-6xl mx-auto px-3 sm:px-8'
-  const headerClass = isEventPage
-    ? scrolled
-      ? 'glass py-2'
-      : 'bg-transparent py-3'
-    : scrolled
-      ? 'glass py-2 md:py-3'
-      : 'bg-transparent py-3 md:py-5'
-  const logoClass = isEventPage ? 'h-7' : 'h-7 md:h-9'
+  const contentClass = 'max-w-6xl mx-auto px-3 sm:px-8'
+  const headerClass = scrolled
+    ? 'glass py-2 md:py-3'
+    : 'bg-transparent py-3 md:py-5'
+  const logoClass = 'h-7 md:h-9'
 
   return (
     <motion.header

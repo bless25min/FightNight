@@ -8,6 +8,7 @@ import eventAfterglow from '../assets/landing/flow-step-5.jpg'
 import eventHeroEmotion from '../assets/landing/hero-poster.jpg'
 import ufcBoxingGloves from '../assets/products/ufc-boxing-gloves.webp'
 import ufcHandWraps from '../assets/products/ufc-hand-wraps.webp'
+import { Footer } from '../components/layout/Footer'
 import { Header } from '../components/layout/Header'
 import { Seo } from '../components/Seo'
 import { FAQSection } from '../components/sections/FAQSection'
@@ -3033,26 +3034,6 @@ function EventTicketDropSection({
   )
 }
 
-function EventMinimalFooter({ locale }: { locale: SupportedLocale }) {
-  const copy = getCopy(locale).footer
-
-  return (
-    <footer className="mx-auto max-w-[430px] px-4 pb-28 pt-8 text-xs text-mist/50">
-      <div className="border-t border-pearl/10 pt-5">
-        <p className="font-heading text-pearl/70">Fight Night</p>
-        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2">
-          <a href="/privacy-policy" className="transition-colors hover:text-neon">
-            {copy.privacy}
-          </a>
-          <a href="/refund-policy" className="transition-colors hover:text-neon">
-            {copy.refund}
-          </a>
-        </div>
-      </div>
-    </footer>
-  )
-}
-
 function CheckoutModal({
   selectedTicket,
   selectedVariant,
@@ -3965,7 +3946,7 @@ export function FightNightEventPage() {
     : undefined
 
   return (
-    <div className="relative mx-auto min-h-screen w-full max-w-[430px] overflow-x-hidden bg-abyss text-pearl shadow-[0_0_90px_rgba(0,0,0,0.45)]">
+    <div className="relative min-h-screen w-full overflow-x-hidden bg-abyss text-pearl">
       <Seo
         title={copy.seo.title}
         description={copy.eventDescription}
@@ -3975,75 +3956,79 @@ export function FightNightEventPage() {
         structuredData={structuredData}
       />
       <Header />
-      <main>
-        <EventHeroSection
-          onPrimaryAction={() => scrollToId('event-entry')}
-          locale={locale}
-          onLocaleChange={(nextLocale) => {
-            setLocale(nextLocale)
-            track({
-              event: 'language_switch',
-              params: {
-                source: landingVariant,
-                page_language: nextLocale,
-                previous_language: locale,
-              },
-            })
-          }}
-        />
-        <EventStandalonePhotoSection
-          id="event-group-photo"
-          src={eventGroupEnergy}
-          alt={copy.photoAlts.group}
-        />
-        <EventReframeSection locale={locale} />
-        <EventStandalonePhotoSection
-          id="event-impact-photo"
-          src={eventBagImpact}
-          alt={copy.photoAlts.impact}
-        />
-        <EventProofSection locale={locale} />
-        <EventSafetySection locale={locale} />
-        <EventTicketDropSection
-          tickets={tickets}
-          freeTrialTickets={freeTrialTickets}
-          freeTrialStatus={freeTrialStatus}
-          recommendation={recommendation}
-          showMoreSessions={showMoreSessions}
-          moreSessionsActionLabel={showMoreSessionsActionLabel}
-          locale={locale}
-          preferences={servicePreferences}
-          getAvailability={getAvailability}
-          hasLiveData={hasLiveData}
-          onShowMoreSessions={() => {
-            void handleShowMoreSessions()
-          }}
-          onPreferenceChange={updateServicePreference}
-          onOpenInfo={setSelectedInfoTicket}
-          onOpenProduct={setSelectedProductId}
-          onPurchase={openCheckout}
-          onFreeTrialReserve={(ticket) => {
-            void openFreeTrialReservation(ticket)
-          }}
-          onFreeTrialPaidFallback={(ticket) => {
-            void openFreeTrialPaidFallback(ticket)
-          }}
-        />
-        <EventStandalonePhotoSection
-          id="event-afterglow-photo"
-          src={eventAfterglow}
-          alt={copy.photoAlts.afterglow}
-        />
-        <EventFlowPreviewSection locale={locale} />
-        <FAQSection
-          id="event-faq"
-          title={copy.faq.title}
-          subtitle=""
-          items={faqItems}
-          compact
-        />
-      </main>
-      <EventMinimalFooter locale={locale} />
+      <div className="mx-auto min-h-screen w-full max-w-[430px] shadow-[0_0_90px_rgba(0,0,0,0.45)]">
+        <main>
+          <EventHeroSection
+            onPrimaryAction={() => scrollToId('event-entry')}
+            locale={locale}
+            onLocaleChange={(nextLocale) => {
+              setLocale(nextLocale)
+              track({
+                event: 'language_switch',
+                params: {
+                  source: landingVariant,
+                  page_language: nextLocale,
+                  previous_language: locale,
+                },
+              })
+            }}
+          />
+          <EventStandalonePhotoSection
+            id="event-group-photo"
+            src={eventGroupEnergy}
+            alt={copy.photoAlts.group}
+          />
+          <EventReframeSection locale={locale} />
+          <EventStandalonePhotoSection
+            id="event-impact-photo"
+            src={eventBagImpact}
+            alt={copy.photoAlts.impact}
+          />
+          <EventProofSection locale={locale} />
+          <EventSafetySection locale={locale} />
+          <EventTicketDropSection
+            tickets={tickets}
+            freeTrialTickets={freeTrialTickets}
+            freeTrialStatus={freeTrialStatus}
+            recommendation={recommendation}
+            showMoreSessions={showMoreSessions}
+            moreSessionsActionLabel={showMoreSessionsActionLabel}
+            locale={locale}
+            preferences={servicePreferences}
+            getAvailability={getAvailability}
+            hasLiveData={hasLiveData}
+            onShowMoreSessions={() => {
+              void handleShowMoreSessions()
+            }}
+            onPreferenceChange={updateServicePreference}
+            onOpenInfo={setSelectedInfoTicket}
+            onOpenProduct={setSelectedProductId}
+            onPurchase={openCheckout}
+            onFreeTrialReserve={(ticket) => {
+              void openFreeTrialReservation(ticket)
+            }}
+            onFreeTrialPaidFallback={(ticket) => {
+              void openFreeTrialPaidFallback(ticket)
+            }}
+          />
+          <EventStandalonePhotoSection
+            id="event-afterglow-photo"
+            src={eventAfterglow}
+            alt={copy.photoAlts.afterglow}
+          />
+          <EventFlowPreviewSection locale={locale} />
+          <FAQSection
+            id="event-faq"
+            title={copy.faq.title}
+            subtitle=""
+            items={faqItems}
+            compact
+          />
+        </main>
+      </div>
+      <div className="pb-24 md:pb-0">
+        <Footer />
+      </div>
       <StickyActionBar
         eyebrow="Fight Night Pass"
         title="Fight Night"

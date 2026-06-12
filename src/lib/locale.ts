@@ -1,6 +1,6 @@
 export type SupportedLocale = 'zh-TW' | 'en'
 
-export type LocaleSource = 'url' | 'user' | 'browser' | 'default'
+export type LocaleSource = 'url' | 'user' | 'default'
 
 export type LocaleDecision = {
   locale: SupportedLocale
@@ -56,17 +56,6 @@ function readBrowserLanguage() {
   return window.navigator.languages?.[0] || window.navigator.language || ''
 }
 
-function detectBrowserLocale() {
-  if (typeof window === 'undefined') return ''
-
-  for (const language of window.navigator.languages || []) {
-    const locale = normalizeLocale(language)
-    if (locale) return locale
-  }
-
-  return normalizeLocale(window.navigator.language)
-}
-
 export function getLocaleDecision(): LocaleDecision {
   const browserLanguage = readBrowserLanguage()
   const urlLanguage = readUrlLocale()
@@ -86,17 +75,6 @@ export function getLocaleDecision(): LocaleDecision {
     return {
       locale: selectedLanguage,
       source: 'user',
-      browserLanguage,
-      selectedLanguage,
-      urlLanguage,
-    }
-  }
-
-  const browserLocale = detectBrowserLocale()
-  if (browserLocale) {
-    return {
-      locale: browserLocale,
-      source: 'browser',
       browserLanguage,
       selectedLanguage,
       urlLanguage,
