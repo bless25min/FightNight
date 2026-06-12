@@ -42,6 +42,8 @@ export async function onRequestPost({ request, env }) {
     return json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const result = await reconcilePendingOrders(env, getOptions(request, env))
+  const result = await reconcilePendingOrders(env, getOptions(request, env), {
+    request,
+  })
   return json({ ok: true, ...result })
 }

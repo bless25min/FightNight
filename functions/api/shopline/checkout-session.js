@@ -1177,11 +1177,11 @@ export async function onRequestPost({ request, env, waitUntil }) {
         contents: [
           {
             id: course.id,
-            quantity: Number(quantity || 1),
+            quantity: 1,
             item_price: amountValue,
           },
         ],
-        num_items: Number(quantity || 1),
+        num_items: 1,
         venue_name: course.venueName,
         package_size: packageSize,
         discount_code: offer.eligible ? offer.code : null,

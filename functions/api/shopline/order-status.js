@@ -48,7 +48,9 @@ export async function onRequestGet({ request, env }) {
     url.searchParams.get('sync') === '1'
   ) {
     provider = await queryShoplineSession(env, order)
-    const reconciledStatus = await reconcileProviderOrder(env, order, provider)
+    const reconciledStatus = await reconcileProviderOrder(env, order, provider, {
+      request,
+    })
     if (reconciledStatus) {
       order.status = reconciledStatus
       if (reconciledStatus === 'paid') order.paid_at = new Date().toISOString()

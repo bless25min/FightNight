@@ -21,7 +21,7 @@ export function Header() {
   const isBootCampPage =
     pathname.startsWith('/boot-camp')
   const isEventPage =
-    pathname.startsWith('/fight-night-event')
+    pathname === '/' || pathname.startsWith('/fight-night-event')
   const isGuidePage =
     pathname.startsWith('/guides/')
   const isUtilityPage =

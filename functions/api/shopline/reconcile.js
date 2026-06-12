@@ -1,5 +1,6 @@
 import { getShoplineConfigForVenue } from './config.js'
 import { notifyLinePaymentSuccess } from './line-notify.js'
+import { sendMetaPurchaseEvent } from './meta-capi.js'
 
 const DEFAULT_CAPACITY = 6
 const LOCKED_PAID_STATUSES = [
@@ -404,6 +405,101 @@ async function releasePaidSeats(env, sessionIds, quantity) {
   }
 }
 
+async function getOrderForMetaPurchase(env, referenceId) {
+  return env.DB.prepare(
+    `SELECT reference_id, status, event_id, course_id, course_name, category,
+            package_size, quantity, amount_value, currency, buyer_phone,
+            buyer_email, source_path, return_url, raw_request_json,
+            meta_purchase_event_id, meta_purchase_sent_at, meta_capi_status
+     FROM course_orders
+     WHERE reference_id = ?
+     LIMIT 1`,
+  )
+    .bind(referenceId)
+    .first()
+}
+
+async function claimMetaPurchaseSend(env, referenceId) {
+  const result = await env.DB.prepare(
+    `UPDATE course_orders
+     SET meta_capi_status = 'sending',
+         meta_capi_error = NULL,
+         updated_at = datetime('now')
+     WHERE reference_id = ?
+       AND status = 'paid'
+       AND meta_purchase_sent_at IS NULL
+       AND COALESCE(meta_capi_status, '') != 'sent'
+       AND (
+         COALESCE(meta_capi_status, '') != 'sending'
+         OR datetime(updated_at) <= datetime('now', '-5 minutes')
+       )`,
+  )
+    .bind(referenceId)
+    .run()
+
+  return Boolean(result.meta?.changes)
+}
+
+async function recordMetaCapiResult(env, referenceId, result) {
+  const status = String(result?.status || 'unknown').slice(0, 40)
+  const responseJson = result?.response
+    ? JSON.stringify(result.response).slice(0, 8000)
+    : null
+  const error = result?.error ? String(result.error).slice(0, 1000) : null
+
+  await env.DB.prepare(
+    `UPDATE course_orders
+     SET meta_purchase_event_id = COALESCE(?, meta_purchase_event_id),
+         meta_purchase_sent_at = CASE WHEN ? = 'sent' THEN datetime('now') ELSE meta_purchase_sent_at END,
+         meta_capi_status = ?,
+         meta_capi_response_json = ?,
+         meta_capi_error = ?,
+         updated_at = datetime('now')
+     WHERE reference_id = ?`,
+  )
+    .bind(
+      result?.eventId || null,
+      status,
+      status,
+      responseJson,
+      error,
+      referenceId,
+    )
+    .run()
+}
+
+async function sendMetaPurchaseForPaidOrder(env, request, referenceId) {
+  if (!request) return null
+
+  const order = await getOrderForMetaPurchase(env, referenceId)
+  if (!order || order.status !== 'paid') return null
+  if (order.meta_purchase_sent_at || order.meta_capi_status === 'sent') {
+    return { status: 'already_sent' }
+  }
+
+  const claimed = await claimMetaPurchaseSend(env, referenceId)
+  if (!claimed) return { status: 'already_claimed' }
+
+  try {
+    const result = await sendMetaPurchaseEvent({ env, request, order })
+    await recordMetaCapiResult(env, referenceId, result)
+    return result
+  } catch (error) {
+    const result = {
+      status: 'exception',
+      eventId: order.event_id || `purchase.${referenceId}`,
+      ok: false,
+      skipped: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Meta CAPI purchase send failed',
+    }
+    await recordMetaCapiResult(env, referenceId, result)
+    return result
+  }
+}
+
 async function markProviderTerminalStatus(env, order, provider) {
   const nextStatus = providerTerminalStatus(provider)
   if (!nextStatus) return null
@@ -473,7 +569,7 @@ async function reconcileRefundedOrder(env, order, provider) {
   return result.meta?.changes ? 'refunded' : null
 }
 
-export async function reconcileProviderOrder(env, order, provider) {
+export async function reconcileProviderOrder(env, order, provider, context = {}) {
   const refundedStatus = await reconcileRefundedOrder(env, order, provider)
   if (refundedStatus) return refundedStatus
 
@@ -535,6 +631,7 @@ export async function reconcileProviderOrder(env, order, provider) {
     .run()
 
   if (nextStatus === 'paid') {
+    await sendMetaPurchaseForPaidOrder(env, context.request, order.reference_id)
     await notifyLinePaymentSuccess(env, order.reference_id)
   }
 
@@ -590,13 +687,18 @@ export async function listReconciliationCandidates(env, options = {}) {
   return rows.results || []
 }
 
-export async function reconcilePendingOrders(env, options = {}) {
+export async function reconcilePendingOrders(env, options = {}, context = {}) {
   const candidates = await listReconciliationCandidates(env, options)
   const results = []
 
   for (const order of candidates) {
     const provider = await queryShoplineSession(env, order)
-    const reconciledStatus = await reconcileProviderOrder(env, order, provider)
+    const reconciledStatus = await reconcileProviderOrder(
+      env,
+      order,
+      provider,
+      context,
+    )
     results.push({
       referenceId: order.reference_id,
       previousStatus: order.status,

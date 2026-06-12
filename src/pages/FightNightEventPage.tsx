@@ -3969,7 +3969,7 @@ export function FightNightEventPage() {
       <Seo
         title={copy.seo.title}
         description={copy.eventDescription}
-        canonicalPath="/fight-night-event"
+        canonicalPath="/"
         keywords={copy.seo.keywords}
         image={eventHeroEmotion}
         structuredData={structuredData}

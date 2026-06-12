@@ -1,16 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import { Header } from './components/layout/Header'
-import { HeroSection } from './components/sections/HeroSection'
-import { PainSection } from './components/sections/PainSection'
-import { OldFrameworkBreakSection } from './components/sections/OldFrameworkBreakSection'
-import { NewModelSection } from './components/sections/NewModelSection'
-import { FormulaSection } from './components/sections/FormulaSection'
-import { ExperienceFlowSection } from './components/sections/ExperienceFlowSection'
-import { TicketSection } from './components/sections/TicketSection'
-import { IdentitySection } from './components/sections/IdentitySection'
-import { FAQSection } from './components/sections/FAQSection'
-import { FinalCTASection } from './components/sections/FinalCTASection'
-import { Footer } from './components/layout/Footer'
 import { BootCampPage } from './pages/BootCampPage'
 import { FightNightEventPage } from './pages/FightNightEventPage'
 import { OffersPage } from './pages/OffersPage'
@@ -49,27 +37,6 @@ function getCurrentRoutePath() {
   if (pathname.endsWith('/refund-policy.html')) return '/refund-policy'
 
   return pathname
-}
-
-function HomePage() {
-  return (
-    <div className="overflow-x-hidden w-full relative">
-      <Header />
-      <main>
-        <HeroSection />
-        <PainSection />
-        <OldFrameworkBreakSection />
-        <NewModelSection />
-        <FormulaSection />
-        <ExperienceFlowSection />
-        <TicketSection />
-        <IdentitySection />
-        <FAQSection />
-        <FinalCTASection />
-      </main>
-      <Footer />
-    </div>
-  )
 }
 
 function useInteractionHintLifecycle() {
@@ -181,7 +148,7 @@ function App() {
     return <RefundPolicyPage />
   }
 
-  return <HomePage />
+  return <FightNightEventPage />
 }
 
 export default App
