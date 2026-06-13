@@ -332,12 +332,59 @@
   .ticket-card-carousel {
     -webkit-overflow-scrolling: touch;
     overscroll-behavior-x: contain;
+    overscroll-behavior-y: auto;
     scroll-padding-inline: 0;
+    scroll-snap-type: x mandatory;
     scrollbar-width: none;
+    touch-action: pan-x pan-y;
+    user-select: none;
+    -webkit-user-drag: none;
+  }
+
+  .ticket-card-carousel > * {
+    scroll-snap-stop: always;
+  }
+
+  .ticket-card-carousel img {
+    -webkit-user-drag: none;
+    user-select: none;
   }
 
   .ticket-card-carousel::-webkit-scrollbar {
     display: none;
+  }
+
+  .venue-select-attention {
+    position: relative;
+    overflow: hidden;
+    box-shadow:
+      0 0 0 1px rgba(40, 236, 210, 0.16),
+      0 0 26px rgba(40, 236, 210, 0.16),
+      0 18px 48px rgba(0, 0, 0, 0.22);
+    animation: venue-select-pulse 2.1s ease-in-out infinite;
+  }
+
+  .venue-select-attention::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background: linear-gradient(
+      110deg,
+      transparent 0%,
+      transparent 34%,
+      rgba(40, 236, 210, 0.16) 48%,
+      transparent 62%,
+      transparent 100%
+    );
+    transform: translateX(-115%);
+    animation: venue-select-sheen 2.7s ease-in-out infinite;
+  }
+
+  .venue-select-attention > * {
+    position: relative;
+    z-index: 1;
   }
 
   .swipe-hint:not([data-interacted='true'])::before {
@@ -456,11 +503,47 @@
     }
   }
 
+  @keyframes venue-select-pulse {
+    0%,
+    100% {
+      border-color: rgba(40, 236, 210, 0.3);
+      box-shadow:
+        0 0 0 1px rgba(40, 236, 210, 0.12),
+        0 0 22px rgba(40, 236, 210, 0.12),
+        0 18px 48px rgba(0, 0, 0, 0.22);
+    }
+    50% {
+      border-color: rgba(40, 236, 210, 0.58);
+      box-shadow:
+        0 0 0 1px rgba(40, 236, 210, 0.24),
+        0 0 34px rgba(40, 236, 210, 0.24),
+        0 18px 54px rgba(0, 0, 0, 0.28);
+    }
+  }
+
+  @keyframes venue-select-sheen {
+    0%,
+    46% {
+      transform: translateX(-115%);
+      opacity: 0;
+    }
+    55% {
+      opacity: 1;
+    }
+    82%,
+    100% {
+      transform: translateX(115%);
+      opacity: 0;
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .interaction-hint,
     .interaction-hint::after,
     .course-detail-trigger::before,
     .coach-avatar-trigger::before,
+    .venue-select-attention,
+    .venue-select-attention::before,
     .swipe-hint::before,
     .swipe-hint::after {
       animation: none !important;

@@ -6,6 +6,11 @@ import eventGroupEnergy from '../assets/landing/collective-euphoria-card.jpg'
 import eventBagImpact from '../assets/landing/flow-step-4.jpg'
 import eventAfterglow from '../assets/landing/flow-step-5.jpg'
 import eventHeroEmotion from '../assets/landing/hero-poster.jpg'
+import courseBasicBoxing from '../assets/event/course-basic-boxing.jpg'
+import courseBasicMuaythai from '../assets/event/course-basic-muaythai.jpg'
+import courseBoxingConditioning from '../assets/event/course-boxing-conditioning.jpg'
+import courseFightFit from '../assets/event/course-fight-fit.jpg'
+import courseMuaythaiKickboxingConditioning from '../assets/event/course-muaythai-kickboxing-conditioning.jpg'
 import ufcBoxingGloves from '../assets/products/ufc-boxing-gloves.webp'
 import ufcHandWraps from '../assets/products/ufc-hand-wraps.webp'
 import { Footer } from '../components/layout/Footer'
@@ -14,7 +19,6 @@ import { Seo } from '../components/Seo'
 import { FAQSection } from '../components/sections/FAQSection'
 import { Button } from '../components/ui/Button'
 import { SectionWrapper } from '../components/ui/SectionWrapper'
-import { StickyActionBar } from '../components/ui/StickyActionBar'
 import {
   findCoachProfile,
   getCoachDisplayName,
@@ -72,6 +76,12 @@ type EventTicketPrice = {
   compareAtLabel?: string
   offerApplied: boolean
   pricingTier: 'foreign-fighter' | 'domestic-teacher'
+}
+
+type EventCoursePhoto = {
+  src: string
+  altZh: string
+  altEn: string
 }
 
 type EventPassVariantId =
@@ -140,7 +150,37 @@ type EventCoachProfileDetailTone = 'pearl' | 'neon' | 'blaze'
 
 const landingVariant = 'fightnight_event_night_ticket_paid_v3'
 const eventName = 'Fight Night'
+const eventMoreSessionsHash = '#event-more-sessions'
+const eventCheckoutTicketParam = 'event_checkout_ticket'
+const eventCheckoutVariantParam = 'event_checkout_variant'
 const eventCoursePricingMode = 'weekly-course-no-first-purchase'
+const eventCoursePhotos = {
+  basicBoxing: {
+    src: courseBasicBoxing,
+    altZh: '基礎拳擊課程照片',
+    altEn: 'Basic Boxing course photo',
+  },
+  basicMuaythai: {
+    src: courseBasicMuaythai,
+    altZh: '基礎泰拳課程照片',
+    altEn: 'Basic Muay Thai course photo',
+  },
+  boxingConditioning: {
+    src: courseBoxingConditioning,
+    altZh: '拳擊體適能課程照片',
+    altEn: 'Boxing Conditioning course photo',
+  },
+  fightFit: {
+    src: courseFightFit,
+    altZh: '戰鬥體適能課程照片',
+    altEn: 'Fight Fit course photo',
+  },
+  muaythaiKickboxingConditioning: {
+    src: courseMuaythaiKickboxingConditioning,
+    altZh: '泰拳與踢拳體適能課程照片',
+    altEn: 'Muay Thai and Kickboxing Conditioning course photo',
+  },
+} satisfies Record<string, EventCoursePhoto>
 
 const eventPageCopy = {
   'zh-TW': {
@@ -210,7 +250,7 @@ const eventPageCopy = {
       },
       quietMode: {
         title: '安靜模式',
-        body: '現場接待人員不主動介紹入會方案。',
+        body: '現場不主動介紹入會方案。',
       },
     },
     faq: {
@@ -860,6 +900,42 @@ function getCourseDisplayName(
   return locale === 'en' ? course.nameEn || course.name : course.name
 }
 
+function getEventCoursePhoto(
+  course: WeeklyCourse,
+): EventCoursePhoto {
+  const name = course.nameEn.toLowerCase()
+
+  if (name.includes('basic boxing')) return eventCoursePhotos.basicBoxing
+  if (name.includes('basic muay thai')) return eventCoursePhotos.basicMuaythai
+  if (name.includes('boxing conditioning')) {
+    return eventCoursePhotos.boxingConditioning
+  }
+  if (name.includes('muay thai conditioning') || name.includes('kickboxing')) {
+    return eventCoursePhotos.muaythaiKickboxingConditioning
+  }
+  return eventCoursePhotos.fightFit
+}
+
+function EventCoursePhotoPreview({
+  photo,
+  locale,
+}: {
+  photo: EventCoursePhoto
+  locale: SupportedLocale
+}) {
+  return (
+    <div className="mt-2 overflow-hidden rounded-xl border border-pearl/10 bg-black/28 shadow-[0_16px_38px_rgba(0,0,0,0.28)]">
+      <img
+        src={photo.src}
+        alt={locale === 'en' ? photo.altEn : photo.altZh}
+        draggable={false}
+        loading="lazy"
+        className="h-[clamp(8.5rem,24svh,12rem)] w-full object-cover sm:h-[clamp(6.75rem,18svh,9rem)]"
+      />
+    </div>
+  )
+}
+
 function sortEventTicketsByVenuePriority(
   tickets: EventTicket[],
   recommendation: VenueRecommendation | null,
@@ -1465,13 +1541,6 @@ function getEventPassVariantTitle(
   return getCopy(locale).passVariants[variant.id].title
 }
 
-function getEventPassVariantCtaName(
-  variant: EventPassVariant,
-  locale: SupportedLocale = 'zh-TW',
-) {
-  return getCopy(locale).passVariants[variant.id].ctaName
-}
-
 function getLocalizedPassHighlight(
   highlight: EventPassHighlight,
   locale: SupportedLocale = 'zh-TW',
@@ -1512,15 +1581,13 @@ function getEventPassHighlights(
 
 function getEventPurchaseLabel(
   price: EventTicketPrice,
-  variant: EventPassVariant = defaultEventPassVariant,
   locale: SupportedLocale = 'zh-TW',
 ) {
-  const separator = locale === 'en' ? ' | ' : '｜'
-  const verb = locale === 'en' ? 'Reserve ' : '保留 '
-  return `${price.label}${separator}${verb}${getEventPassVariantCtaName(
-    variant,
-    locale,
-  )}`
+  if (locale === 'en') {
+    return `First-purchase offer ${price.label}`
+  }
+
+  return `首購優惠 ${price.label}`
 }
 
 function AutoFitButtonLabel({
@@ -1596,6 +1663,76 @@ function getClientContext() {
 function getSourcePath() {
   if (typeof window === 'undefined') return '/fight-night-event'
   return `${window.location.pathname}${window.location.search}${window.location.hash}`
+}
+
+function getLiffStatePath() {
+  if (typeof window === 'undefined') return ''
+  const statePath = new URLSearchParams(window.location.search).get('liff.state') || ''
+  return statePath.startsWith('/') ? statePath : ''
+}
+
+function getEventPassVariantById(variantId: string | null) {
+  if (variantId === singleClassPaidVariant.id) return singleClassPaidVariant
+  return eventPassVariants.find((variant) => variant.id === variantId) ?? null
+}
+
+function getEventCheckoutIntentFromPath(value: string) {
+  if (!value || typeof window === 'undefined') return null
+
+  try {
+    const url = new URL(value, window.location.origin)
+    const ticketId = url.searchParams.get(eventCheckoutTicketParam)
+    const variant = getEventPassVariantById(
+      url.searchParams.get(eventCheckoutVariantParam),
+    )
+
+    if (!ticketId || !variant) return null
+    return { ticketId, variant }
+  } catch {
+    return null
+  }
+}
+
+function buildEventCheckoutReturnPath(
+  ticket: EventTicket,
+  variant: EventPassVariant,
+) {
+  if (typeof window === 'undefined') return '/fight-night-event'
+  const url = new URL(window.location.href)
+  url.searchParams.set(eventCheckoutTicketParam, ticket.id)
+  url.searchParams.set(eventCheckoutVariantParam, variant.id)
+  url.hash = eventMoreSessionsHash
+  return `${url.pathname}${url.search}${url.hash}`
+}
+
+function normalizeEventCheckoutIntentUrl(liffStatePath = '') {
+  if (typeof window === 'undefined') return
+  const targetUrl =
+    liffStatePath && getEventCheckoutIntentFromPath(liffStatePath)
+      ? new URL(liffStatePath, window.location.origin)
+      : new URL(window.location.href)
+
+  targetUrl.searchParams.delete(eventCheckoutTicketParam)
+  targetUrl.searchParams.delete(eventCheckoutVariantParam)
+  targetUrl.searchParams.delete('liff.state')
+  targetUrl.searchParams.delete('liff.referrer')
+  targetUrl.hash = eventMoreSessionsHash
+  window.history.replaceState(
+    null,
+    '',
+    `${targetUrl.pathname}${targetUrl.search}${targetUrl.hash}`,
+  )
+}
+
+function consumeEventCheckoutIntent() {
+  if (typeof window === 'undefined') return null
+  const liffStatePath = getLiffStatePath()
+  const intent =
+    getEventCheckoutIntentFromPath(getSourcePath()) ||
+    getEventCheckoutIntentFromPath(liffStatePath)
+
+  if (intent) normalizeEventCheckoutIntentUrl(liffStatePath)
+  return intent
 }
 
 function scrollToMoreSessions() {
@@ -2207,17 +2344,18 @@ function EventPassHighlightRow({
   onOpenProduct: (productId: EventProductId) => void
 }) {
   const copy = getCopy(locale).tickets
+  const body = item.productId ? '' : item.body
 
   return (
-    <div className="grid grid-cols-[0.45rem_minmax(0,1fr)] gap-2 break-words text-xs leading-relaxed text-mist/74">
-      <span className="mt-[0.43rem] h-1.5 w-1.5 rounded-full bg-neon" />
-      <span className="min-w-0">
+    <div className="flex min-w-0 items-center gap-2 overflow-hidden text-[0.72rem] leading-tight text-mist/74">
+      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-neon" />
+      <span className="flex min-w-0 items-center gap-1.5 overflow-hidden whitespace-nowrap">
         {item.productId ? (
           <button
             type="button"
             onClick={() => onOpenProduct(item.productId as EventProductId)}
             data-interaction-hint
-            className="interaction-hint inline-flex max-w-full items-center gap-1.5 rounded-full border border-neon/24 bg-neon/10 px-2 py-0.5 align-baseline font-heading text-pearl transition-colors hover:border-neon/48 hover:bg-neon/16 focus:outline-none focus-visible:ring-2 focus-visible:ring-neon/70"
+            className="interaction-hint inline-flex min-w-0 max-w-full items-center gap-1.5 rounded-full border border-neon/24 bg-neon/10 px-2 py-0.5 align-baseline font-heading text-pearl transition-colors hover:border-neon/48 hover:bg-neon/16 focus:outline-none focus-visible:ring-2 focus-visible:ring-neon/70"
           >
             <span className="truncate">{item.title}</span>
             <span className="shrink-0 rounded-full border border-neon/20 px-1.5 py-0.5 text-[10px] leading-none text-neon/90">
@@ -2225,12 +2363,16 @@ function EventPassHighlightRow({
             </span>
           </button>
         ) : (
-          <strong className="break-words font-heading text-pearl">
+          <strong className="shrink-0 font-heading text-pearl">
             {item.title}
           </strong>
         )}
-        <span className="text-mist/56">｜</span>
-        {item.body}
+        {body ? (
+          <>
+            <span className="shrink-0 text-mist/56">｜</span>
+            <span className="min-w-0 truncate">{body}</span>
+          </>
+        ) : null}
       </span>
     </div>
   )
@@ -2347,75 +2489,75 @@ function EventTicketCard({
     locale,
   )
   const courseName = getCourseDisplayName(ticket.course, locale)
+  const coursePhoto = getEventCoursePhoto(ticket.course)
   const variantTitle = getEventPassVariantTitle(variant, locale)
   const passHighlights = getEventPassHighlights(variant, locale)
 
   return (
-    <motion.article
+    <article
       aria-label={`${variantTitle}，${ticket.dateLabel} ${ticket.timeLabel}，${ticket.venueLabel}`}
-      initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.55 }}
-      className="relative flex min-w-0 max-w-full flex-col overflow-hidden rounded-2xl border border-pearl/12 bg-[linear-gradient(180deg,rgba(255,255,255,0.065),rgba(0,0,0,0.34))] shadow-[0_18px_52px_rgba(0,0,0,0.24)]"
+      className="relative flex h-full min-w-0 max-w-full flex-col overflow-hidden rounded-2xl border border-pearl/12 bg-[linear-gradient(180deg,rgba(255,255,255,0.065),rgba(0,0,0,0.34))] shadow-[0_18px_52px_rgba(0,0,0,0.24)]"
     >
-      <div className="relative shrink-0 border-b border-pearl/10 bg-[radial-gradient(circle_at_18%_18%,rgba(245,98,45,0.18),transparent_34%),linear-gradient(135deg,rgba(0,0,0,0.94),rgba(12,12,12,0.72))] p-3.5">
+      <div className="relative shrink-0 border-b border-pearl/10 bg-[radial-gradient(circle_at_18%_18%,rgba(245,98,45,0.18),transparent_34%),linear-gradient(135deg,rgba(0,0,0,0.94),rgba(12,12,12,0.72))] p-2.5">
         <div className="relative z-10">
-          <div className="flex min-w-0 items-start justify-between gap-2">
-            <div className="flex min-w-0 flex-1 flex-wrap gap-2">
-              <span className="rounded-full border border-pearl/15 bg-black/20 px-3 py-1.5 font-heading text-xs text-pearl">
+          <div className="flex min-w-0 items-center justify-between gap-2">
+            <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden">
+              <span className="truncate rounded-full border border-pearl/15 bg-black/20 px-2.5 py-1 font-heading text-[0.68rem] text-pearl">
                 {ticket.venueLabel}
               </span>
               {nearbyAreaLabel ? (
-                <span className="rounded-full border border-neon/20 bg-neon/10 px-3 py-1.5 font-heading text-xs text-neon">
+                <span className="truncate rounded-full border border-neon/20 bg-neon/10 px-2.5 py-1 font-heading text-[0.68rem] text-neon">
                   {nearbyAreaLabel}
                 </span>
               ) : null}
             </div>
-            <span className="shrink-0 whitespace-nowrap rounded-full border border-neon/25 bg-neon/10 px-3 py-1 text-xs font-heading text-neon">
+            <span className="shrink-0 whitespace-nowrap rounded-full border border-neon/25 bg-neon/10 px-2.5 py-1 text-[0.68rem] font-heading text-neon">
               {remainingLabel}
             </span>
           </div>
 
-          <div className="mt-5 min-w-0">
-            <h3 className="whitespace-nowrap font-heading text-[1.06rem] font-black leading-tight text-pearl">
+          <div className="mt-2 min-w-0">
+            <h3 className="whitespace-nowrap font-heading text-[1.18rem] font-black leading-none text-pearl">
               {variantTitle}
             </h3>
-            <p className="mt-2 font-heading text-sm text-mist/84">
+            <p className="mt-1 whitespace-nowrap font-heading text-[0.82rem] text-mist/84">
               {ticket.dateLabel}｜{ticket.timeLabel}
             </p>
+
+            <EventCoursePhotoPreview photo={coursePhoto} locale={locale} />
 
             <button
               type="button"
               onClick={() => onOpenInfo(ticket)}
               data-interaction-hint
-              className="coach-avatar-trigger interaction-hint mt-4 flex w-full min-w-0 items-center gap-3 rounded-xl border border-pearl/10 bg-black/22 p-2 text-left transition-colors hover:border-neon/28 hover:bg-neon/8 focus:outline-none focus-visible:ring-2 focus-visible:ring-neon/70"
+              className="coach-avatar-trigger interaction-hint mt-2 flex w-full min-w-0 items-center gap-2 rounded-xl border border-pearl/10 bg-black/22 p-1.5 text-left transition-colors hover:border-neon/28 hover:bg-neon/8 focus:outline-none focus-visible:ring-2 focus-visible:ring-neon/70"
               aria-label={`${copy.tickets.view} ${coachLabel} ${copy.tickets.coachSuffix} ${courseName}`}
             >
               {coachProfile ? (
                 <img
                   src={coachProfile.photo}
                   alt={coachProfile.displayName}
+                  draggable={false}
                   loading="lazy"
-                  className="h-11 w-11 shrink-0 rounded-full border border-neon/30 object-cover"
+                  className="h-9 w-9 shrink-0 rounded-full border border-neon/30 object-cover"
                 />
               ) : (
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-pearl/10 bg-pearl/8 font-heading text-base font-black text-mist">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-pearl/10 bg-pearl/8 font-heading text-base font-black text-mist">
                   {coachInitial}
                 </span>
               )}
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-heading font-semibold leading-snug text-pearl">
+                <span className="block truncate text-[0.82rem] font-heading font-semibold leading-tight text-pearl">
                   {courseName}
                 </span>
-                <span className="mt-1 flex flex-wrap items-center gap-1.5">
-                  <span className="font-heading text-xs font-semibold text-neon/85">
+                <span className="mt-0.5 flex min-w-0 items-center gap-1.5 overflow-hidden whitespace-nowrap">
+                  <span className="shrink-0 font-heading text-[0.68rem] font-semibold text-neon/85">
                     {coachLabel} {copy.tickets.coachSuffix}
                   </span>
-                  {coachPreviewTags.map((tag) => (
+                  {coachPreviewTags.slice(0, 2).map((tag) => (
                     <span
                       key={tag}
-                      className="rounded-full border border-pearl/10 bg-pearl/5 px-2 py-0.5 text-[10px] leading-snug text-mist/72"
+                      className="hidden shrink-0 whitespace-nowrap rounded-full border border-pearl/10 bg-pearl/5 px-1.5 py-0.5 text-[9px] leading-snug text-mist/72 sm:inline-flex"
                     >
                       {tag}
                     </span>
@@ -2430,7 +2572,7 @@ function EventTicketCard({
         </div>
       </div>
 
-      <div className="shrink-0 space-y-2 border-b border-pearl/10 px-4 py-3">
+      <div className="shrink-0 space-y-1 border-b border-pearl/10 px-3 py-2">
         {passHighlights.map((item) => (
           <EventPassHighlightRow
             key={item.title}
@@ -2441,18 +2583,20 @@ function EventTicketCard({
         ))}
       </div>
 
-      <div className="shrink-0 px-4 py-3">
-        <EventPreferenceControls
-          locale={locale}
-          preferences={preferences}
-          onPreferenceChange={onPreferenceChange}
-        />
-      </div>
+      {variant.showPreferences ? (
+        <div className="shrink-0 border-b border-pearl/10 px-3 py-2">
+          <EventPreferenceControls
+            locale={locale}
+            preferences={preferences}
+            onPreferenceChange={onPreferenceChange}
+          />
+        </div>
+      ) : null}
 
-      <div className="mt-auto px-4 pb-4 pt-3">
+      <div className="shrink-0 px-3 pb-3 pt-2">
         <Button
           size="lg"
-          className="w-full"
+          className="w-full py-3"
           disabled={disabled}
           onClick={() => onPurchase(ticket, variant)}
           data-cta="event-ticket-purchase"
@@ -2461,11 +2605,80 @@ function EventTicketCard({
           <AutoFitButtonLabel>
             {disabled
               ? copy.tickets.soldOut
-              : getEventPurchaseLabel(price, variant, locale)}
+              : getEventPurchaseLabel(price, locale)}
           </AutoFitButtonLabel>
         </Button>
       </div>
-    </motion.article>
+    </article>
+  )
+}
+
+function EventPreferenceControls({
+  locale,
+  preferences,
+  onPreferenceChange,
+}: {
+  locale: SupportedLocale
+  preferences: EventServicePreferences
+  onPreferenceChange: (
+    key: keyof EventServicePreferences,
+    value: boolean,
+  ) => void
+}) {
+  const copy = getCopy(locale).preferences
+  const options = [
+    {
+      id: 'handWrapAssist' as const,
+      ...copy.handWrapAssist,
+    },
+    {
+      id: 'quietMode' as const,
+      ...copy.quietMode,
+    },
+  ]
+
+  return (
+    <div className="min-w-0 max-w-full">
+      <div className="grid grid-cols-2 gap-1.5">
+        {options.map((option) => {
+          const selected = preferences[option.id]
+
+          return (
+            <button
+              key={option.id}
+              type="button"
+              aria-pressed={selected}
+              onClick={() => onPreferenceChange(option.id, !selected)}
+              className={`interaction-hint min-w-0 rounded-lg border px-2 py-1.5 text-left transition-colors ${
+                selected
+                  ? 'border-neon/30 bg-neon/10'
+                  : 'border-pearl/10 bg-black/16 hover:border-pearl/20'
+              }`}
+            >
+              <span className="grid min-w-0 gap-1">
+                <span className="min-w-0">
+                  <span className="block truncate font-heading text-[0.78rem] leading-tight text-pearl">
+                    {option.title}
+                  </span>
+                  <span className="mt-0.5 block text-[10px] leading-snug text-mist/56">
+                    {option.body}
+                  </span>
+                </span>
+                <span
+                  className={`w-fit rounded-full border px-1.5 py-0.5 font-heading text-[0.62rem] leading-none ${
+                    selected
+                      ? 'border-neon/30 text-neon'
+                      : 'border-pearl/15 text-mist/50'
+                  }`}
+                >
+                  {selected ? copy.selected : copy.optional}
+                </span>
+              </span>
+            </button>
+          )
+        })}
+      </div>
+    </div>
   )
 }
 
@@ -2503,15 +2716,12 @@ function FreeTrialTicketCard({
   const coachInitial = coachLabel.slice(0, 1).toUpperCase()
   const coachPreviewTags = getEventCoachPreviewTags(coachProfile, locale)
   const courseName = getCourseDisplayName(ticket.course, locale)
+  const coursePhoto = getEventCoursePhoto(ticket.course)
 
   return (
-    <motion.article
+    <article
       aria-label={`${copy.tickets.freeTrialTitle}，${ticket.dateLabel} ${ticket.timeLabel}，${ticket.venueLabel}`}
-      initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.55 }}
-      className="relative flex min-w-0 max-w-full flex-col overflow-hidden rounded-2xl border border-pearl/12 bg-[linear-gradient(180deg,rgba(255,255,255,0.065),rgba(0,0,0,0.34))] shadow-[0_18px_52px_rgba(0,0,0,0.24)]"
+      className="relative flex h-full min-w-0 max-w-full flex-col overflow-hidden rounded-2xl border border-pearl/12 bg-[linear-gradient(180deg,rgba(255,255,255,0.065),rgba(0,0,0,0.34))] shadow-[0_18px_52px_rgba(0,0,0,0.24)]"
     >
       <div className="relative shrink-0 border-b border-pearl/10 bg-[radial-gradient(circle_at_18%_18%,rgba(245,98,45,0.18),transparent_34%),linear-gradient(135deg,rgba(0,0,0,0.94),rgba(12,12,12,0.72))] p-3.5">
         <div className="relative z-10">
@@ -2533,33 +2743,36 @@ function FreeTrialTicketCard({
             </span>
           </div>
 
-          <div className="mt-5 min-w-0">
+          <div className="mt-3 min-w-0">
             <h3 className="whitespace-nowrap font-heading text-[1.06rem] font-black leading-tight text-pearl">
               {used ? copy.tickets.paidFallbackTitle : copy.tickets.freeTrialTitle}
             </h3>
-            <p className="mt-2 font-heading text-sm text-mist/84">
+            <p className="mt-1.5 font-heading text-sm text-mist/84">
               {ticket.dateLabel}｜{ticket.timeLabel}
             </p>
             <p className="mt-1 font-heading text-xs text-neon/80">
               {remainingLabel}
             </p>
 
+            <EventCoursePhotoPreview photo={coursePhoto} locale={locale} />
+
             <button
               type="button"
               onClick={() => onOpenInfo(ticket)}
               data-interaction-hint
-              className="coach-avatar-trigger interaction-hint mt-4 flex w-full min-w-0 items-center gap-3 rounded-xl border border-pearl/10 bg-black/22 p-2 text-left transition-colors hover:border-neon/28 hover:bg-neon/8 focus:outline-none focus-visible:ring-2 focus-visible:ring-neon/70"
+              className="coach-avatar-trigger interaction-hint mt-2.5 flex w-full min-w-0 items-center gap-2 rounded-xl border border-pearl/10 bg-black/22 p-1.5 text-left transition-colors hover:border-neon/28 hover:bg-neon/8 focus:outline-none focus-visible:ring-2 focus-visible:ring-neon/70"
               aria-label={`${copy.tickets.view} ${coachLabel} ${copy.tickets.coachSuffix} ${courseName}`}
             >
               {coachProfile ? (
                 <img
                   src={coachProfile.photo}
                   alt={coachProfile.displayName}
+                  draggable={false}
                   loading="lazy"
-                  className="h-11 w-11 shrink-0 rounded-full border border-neon/30 object-cover"
+                  className="h-10 w-10 shrink-0 rounded-full border border-neon/30 object-cover"
                 />
               ) : (
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-pearl/10 bg-pearl/8 font-heading text-base font-black text-mist">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-pearl/10 bg-pearl/8 font-heading text-base font-black text-mist">
                   {coachInitial}
                 </span>
               )}
@@ -2634,77 +2847,7 @@ function FreeTrialTicketCard({
           </AutoFitButtonLabel>
         </Button>
       </div>
-    </motion.article>
-  )
-}
-
-function EventPreferenceControls({
-  locale,
-  preferences,
-  onPreferenceChange,
-}: {
-  locale: SupportedLocale
-  preferences: EventServicePreferences
-  onPreferenceChange: (
-    key: keyof EventServicePreferences,
-    value: boolean,
-  ) => void
-}) {
-  const copy = getCopy(locale).preferences
-  const options = [
-    {
-      id: 'handWrapAssist' as const,
-      ...copy.handWrapAssist,
-    },
-    {
-      id: 'quietMode' as const,
-      ...copy.quietMode,
-    },
-  ]
-
-  return (
-    <div className="min-w-0 max-w-full">
-      <p className="font-heading text-xs text-blaze/80">{copy.heading}</p>
-      <div className="mt-2 grid grid-cols-1 gap-2">
-        {options.map((option) => {
-          const selected = preferences[option.id]
-
-          return (
-            <button
-              key={option.id}
-              type="button"
-              aria-pressed={selected}
-              onClick={() => onPreferenceChange(option.id, !selected)}
-              className={`interaction-hint min-w-0 rounded-lg border px-3 py-2 text-left transition-colors ${
-                selected
-                  ? 'border-neon/30 bg-neon/10'
-                  : 'border-pearl/10 bg-black/16 hover:border-pearl/20'
-              }`}
-            >
-              <span className="flex min-w-0 items-center justify-between gap-2">
-                <span className="min-w-0">
-                  <span className="block break-words font-heading text-xs text-pearl">
-                    {option.title}
-                  </span>
-                  <span className="mt-0.5 block break-words text-[10px] leading-snug text-mist/56">
-                    {option.body}
-                  </span>
-                </span>
-                <span
-                  className={`shrink-0 rounded-full border px-1.5 py-0.5 font-heading text-[0.62rem] ${
-                    selected
-                      ? 'border-neon/30 text-neon'
-                      : 'border-pearl/15 text-mist/50'
-                  }`}
-                >
-                  {selected ? copy.selected : copy.optional}
-                </span>
-              </span>
-            </button>
-          )
-        })}
-      </div>
-    </div>
+    </article>
   )
 }
 
@@ -2847,35 +2990,122 @@ function EventTicketDropSection({
   const activeVenueFreeTrialTickets = freeTrialTickets.filter(
     (ticket) => ticket.course.venueId === activeVenueId,
   )
-  const activeVenueCards = [
-    ...activeVenueTickets.flatMap((ticket) =>
-      eventPassVariants.map((variant, variantIndex) => ({
-        type: 'paid' as const,
-        key: `${ticket.id}-${variant.id}`,
-        ticket,
-        variant,
-        sortIndex: variantIndex,
-      })),
-    ),
-    ...activeVenueFreeTrialTickets.map((ticket, index) => ({
+  const sortVenueCardsByTime = <
+    T extends { ticket: EventTicket; sortIndex: number },
+  >(
+    cards: T[],
+  ) =>
+    [...cards].sort((a, b) => {
+      if (a.ticket.course.date !== b.ticket.course.date) {
+        return a.ticket.course.date < b.ticket.course.date ? -1 : 1
+      }
+      if (a.ticket.course.startTime !== b.ticket.course.startTime) {
+        return a.ticket.course.startTime < b.ticket.course.startTime ? -1 : 1
+      }
+      if (a.ticket.course.endTime !== b.ticket.course.endTime) {
+        return a.ticket.course.endTime < b.ticket.course.endTime ? -1 : 1
+      }
+      if (a.ticket.id !== b.ticket.id) return a.ticket.id < b.ticket.id ? -1 : 1
+      return a.sortIndex - b.sortIndex
+    })
+  const activeVenueGearCards = sortVenueCardsByTime(
+    activeVenueTickets.map((ticket) => ({
+      type: 'paid' as const,
+      key: `${ticket.id}-fight-night-gear-pass`,
+      ticket,
+      variant: eventPassVariants.find(
+        (variant) => variant.id === 'fight-night-gear-pass',
+      ) ?? eventPassVariants[0],
+      sortIndex: 0,
+    })),
+  )
+  const activeVenuePassCards = sortVenueCardsByTime(
+    activeVenueTickets.map((ticket) => ({
+      type: 'paid' as const,
+      key: `${ticket.id}-fight-night-pass`,
+      ticket,
+      variant: eventPassVariants.find(
+        (variant) => variant.id === 'fight-night-pass',
+      ) ?? eventPassVariants[0],
+      sortIndex: 0,
+    })),
+  )
+  const activeVenueFreeTrialCards = sortVenueCardsByTime(
+    activeVenueFreeTrialTickets.map((ticket, index) => ({
       type: 'free-trial' as const,
       key: `${ticket.id}-free-trial`,
       ticket,
-      sortIndex: eventPassVariants.length + index,
+      sortIndex: index,
     })),
-  ].sort((a, b) => {
-    if (a.ticket.course.date !== b.ticket.course.date) {
-      return a.ticket.course.date < b.ticket.course.date ? -1 : 1
-    }
-    if (a.ticket.course.startTime !== b.ticket.course.startTime) {
-      return a.ticket.course.startTime < b.ticket.course.startTime ? -1 : 1
-    }
-    if (a.ticket.course.endTime !== b.ticket.course.endTime) {
-      return a.ticket.course.endTime < b.ticket.course.endTime ? -1 : 1
-    }
-    if (a.ticket.id !== b.ticket.id) return a.ticket.id < b.ticket.id ? -1 : 1
-    return a.sortIndex - b.sortIndex
-  })
+  )
+  const activeVenueCardRows = [
+    {
+      id: 'gear',
+      title: 'FIGHT NIGHT GEAR',
+      cards: activeVenueGearCards,
+    },
+    {
+      id: 'pass',
+      title: 'FIGHT NIGHT',
+      cards: activeVenuePassCards,
+    },
+    {
+      id: 'free-trial',
+      title: locale === 'en' ? 'FREE TRIAL THIS WEEK' : '本週免費課程',
+      cards: activeVenueFreeTrialCards,
+    },
+  ].filter((row) => row.cards.length > 0)
+  const activeVenueCardCount = activeVenueCardRows.reduce(
+    (count, row) => count + row.cards.length,
+    0,
+  )
+  const renderVenueCard = (
+    card:
+      | {
+          type: 'paid'
+          key: string
+          ticket: EventTicket
+          variant: EventPassVariant
+          sortIndex: number
+        }
+      | {
+          type: 'free-trial'
+          key: string
+          ticket: EventTicket
+          sortIndex: number
+        },
+  ) => (
+    <div
+      key={card.key}
+      className="flex min-w-[90%] max-w-[90%] shrink-0 snap-start flex-col"
+    >
+      {card.type === 'paid' ? (
+        <EventTicketCard
+          ticket={card.ticket}
+          variant={card.variant}
+          availability={getAvailability(card.ticket.sessionId)}
+          hasLiveData={hasLiveData}
+          locale={locale}
+          preferences={preferences}
+          onPreferenceChange={onPreferenceChange}
+          onOpenInfo={onOpenInfo}
+          onOpenProduct={onOpenProduct}
+          onPurchase={onPurchase}
+        />
+      ) : (
+        <FreeTrialTicketCard
+          ticket={card.ticket}
+          availability={getAvailability(card.ticket.sessionId)}
+          hasLiveData={hasLiveData}
+          locale={locale}
+          freeTrialStatus={freeTrialStatus}
+          onOpenInfo={onOpenInfo}
+          onReserve={onFreeTrialReserve}
+          onPaidFallback={onFreeTrialPaidFallback}
+        />
+      )}
+    </div>
+  )
   const activeVenueSessionCount = new Set(
     [...activeVenueTickets, ...activeVenueFreeTrialTickets].map(
       (ticket) => ticket.id,
@@ -2916,7 +3146,11 @@ function EventTicketDropSection({
                   : copy.venueSelectPrompt}
               </EventSectionHeading>
               <div
-                className="mb-4 rounded-2xl border border-pearl/10 bg-black/25 p-3"
+                className={`mb-4 rounded-2xl border bg-black/25 p-3 ${
+                  activeVenueId
+                    ? 'border-pearl/10'
+                    : 'venue-select-attention border-neon/35'
+                }`}
                 aria-label={copy.venueTabsLabel}
               >
                 <div className="mb-3 flex items-center justify-between gap-3">
@@ -2971,63 +3205,44 @@ function EventTicketDropSection({
                 <p className="rounded-xl border border-pearl/10 bg-black/25 px-4 py-4 text-sm leading-relaxed text-mist/68">
                   {copy.venueSelectPrompt}
                 </p>
-              ) : activeVenueCards.length > 0 ? (
-                <div className="min-w-0">
-                  <div
-                    data-swipe-hint
-                    className="ticket-card-carousel swipe-hint flex w-full max-w-full snap-x snap-proximity gap-2 overflow-x-auto pb-4"
-                    aria-label={copy.cardsLabel(activeVenueLabel)}
-                  >
-                    {activeVenueCards.map((card) => (
-                      <div
-                        key={card.key}
-                        className="flex min-w-[90%] max-w-[90%] shrink-0 snap-start flex-col"
-                      >
-                        {card.type === 'paid' ? (
-                          <EventTicketCard
-                            ticket={card.ticket}
-                            variant={card.variant}
-                            availability={getAvailability(card.ticket.sessionId)}
-                            hasLiveData={hasLiveData}
-                            locale={locale}
-                            preferences={preferences}
-                            onPreferenceChange={onPreferenceChange}
-                            onOpenInfo={onOpenInfo}
-                            onOpenProduct={onOpenProduct}
-                            onPurchase={onPurchase}
-                          />
-                        ) : (
-                          <FreeTrialTicketCard
-                            ticket={card.ticket}
-                            availability={getAvailability(card.ticket.sessionId)}
-                            hasLiveData={hasLiveData}
-                            locale={locale}
-                            freeTrialStatus={freeTrialStatus}
-                            onOpenInfo={onOpenInfo}
-                            onReserve={onFreeTrialReserve}
-                            onPaidFallback={onFreeTrialPaidFallback}
-                          />
-                        )}
+              ) : activeVenueCardCount > 0 ? (
+                <div className="grid min-w-0 gap-6">
+                  {activeVenueCardRows.map((row) => (
+                    <div key={row.id} className="min-w-0">
+                      <div className="mb-2 flex items-center justify-between gap-3 px-1">
+                        <p className="truncate font-heading text-xs font-black tracking-[0.2em] text-neon/85">
+                          {row.title}
+                        </p>
+                        <span className="shrink-0 rounded-full border border-pearl/10 px-2.5 py-1 font-heading text-[10px] text-mist/66">
+                          {getVenueCountLabel(row.cards.length)}
+                        </span>
                       </div>
-                    ))}
-                  </div>
-                  {activeVenueCards.length > 1 ? (
-                    <div
-                      className="-mt-1 flex justify-center gap-1.5"
-                      aria-hidden="true"
-                    >
-                      {activeVenueCards.slice(0, 8).map((card, index) => (
-                        <span
-                          key={card.key}
-                          className={`h-1.5 rounded-full ${
-                            index === 0
-                              ? 'w-4 bg-neon'
-                              : 'w-1.5 bg-pearl/24'
-                          }`}
-                        />
-                      ))}
+                      <div
+                        data-swipe-hint
+                        className="ticket-card-carousel swipe-hint flex w-full max-w-full snap-x snap-mandatory gap-2 overflow-x-auto pb-4"
+                        aria-label={`${activeVenueLabel} ${row.title}`}
+                      >
+                        {row.cards.map((card) => renderVenueCard(card))}
+                      </div>
+                      {row.cards.length > 1 ? (
+                        <div
+                          className="-mt-1 flex justify-center gap-1.5"
+                          aria-hidden="true"
+                        >
+                          {row.cards.slice(0, 8).map((card, index) => (
+                            <span
+                              key={card.key}
+                              className={`h-1.5 rounded-full ${
+                                index === 0
+                                  ? 'w-4 bg-neon'
+                                  : 'w-1.5 bg-pearl/24'
+                              }`}
+                            />
+                          ))}
+                        </div>
+                      ) : null}
                     </div>
-                  ) : null}
+                  ))}
                 </div>
               ) : (
                 <p className="rounded-xl border border-pearl/10 bg-black/25 px-4 py-4 text-sm leading-relaxed text-mist/68">
@@ -3758,6 +3973,25 @@ export function FightNightEventPage() {
 
   useEffect(() => {
     if (gateState.status !== 'unlocked') return
+    const checkoutIntent = consumeEventCheckoutIntent()
+    if (!checkoutIntent) return
+
+    const targetTicket = [...tickets, ...freeTrialTickets].find(
+      (ticket) => ticket.id === checkoutIntent.ticketId,
+    )
+    if (!targetTicket) return
+
+    const revealId = window.setTimeout(() => {
+      scrollToMoreSessions()
+      setSelectedVariant(checkoutIntent.variant)
+      setSelectedTicket(targetTicket)
+    }, 0)
+
+    return () => window.clearTimeout(revealId)
+  }, [freeTrialTickets, gateState.status, tickets])
+
+  useEffect(() => {
+    if (gateState.status !== 'unlocked') return
 
     let active = true
     const lineContext = getLineRequestContext()
@@ -3855,7 +4089,8 @@ export function FightNightEventPage() {
 
     if (gateState.status !== 'unlocked') {
       trackGateAccess('event_entry_ticket', gateState.status)
-      const eventLoginUrl = getLoginUrl() || loginUrl
+      const returnPath = buildEventCheckoutReturnPath(targetTicket, variant)
+      const eventLoginUrl = getLoginUrl(returnPath) || loginUrl
       if (eventLoginUrl && ['loading', 'logged-out'].includes(gateState.status)) {
         window.location.href = eventLoginUrl
         return
@@ -4012,25 +4247,7 @@ export function FightNightEventPage() {
           />
         </main>
       </div>
-      <div className="pb-24 md:pb-0">
-        <Footer />
-      </div>
-      <StickyActionBar
-        eyebrow="Fight Night Pass"
-        title="Fight Night"
-        detail={showMoreSessions ? copy.sticky.detailOpen : copy.sticky.detailClosed}
-        actionLabel={
-          showMoreSessions ? copy.flowPreview.cta : showMoreSessionsActionLabel
-        }
-        onAction={() => {
-          if (showMoreSessions) {
-            scrollToId('event-entry')
-            return
-          }
-
-          void handleShowMoreSessions()
-        }}
-      />
+      <Footer />
       <CheckoutModal
         selectedTicket={selectedTicket}
         selectedVariant={selectedVariant}
