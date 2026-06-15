@@ -32,6 +32,7 @@ import { FormulaSection } from '../components/sections/FormulaSection'
 import { IdentitySection } from '../components/sections/IdentitySection'
 import { NewModelSection } from '../components/sections/NewModelSection'
 import { OldFrameworkBreakSection } from '../components/sections/OldFrameworkBreakSection'
+import { OtherCoursesConsultBlock } from '../components/sections/OtherCoursesConsultBlock'
 import { PainSection } from '../components/sections/PainSection'
 import { WeeklyScheduleSection } from '../components/sections/WeeklyScheduleSection'
 import { FAQSection } from '../components/sections/FAQSection'
@@ -295,6 +296,10 @@ function OffersFightNightPlan({
           />
         </div>
       </LockedContent>
+
+      <div className="mx-auto mt-4 max-w-xl md:mt-5">
+        <OtherCoursesConsultBlock />
+      </div>
     </SectionWrapper>
   )
 }

@@ -17,6 +17,7 @@ import { Footer } from '../components/layout/Footer'
 import { Header } from '../components/layout/Header'
 import { Seo } from '../components/Seo'
 import { FAQSection } from '../components/sections/FAQSection'
+import { OtherCoursesConsultBlock } from '../components/sections/OtherCoursesConsultBlock'
 import { Button } from '../components/ui/Button'
 import { SectionWrapper } from '../components/ui/SectionWrapper'
 import {
@@ -3240,6 +3241,9 @@ function EventTicketDropSection({
                             />
                           ))}
                         </div>
+                      ) : null}
+                      {row.id === 'free-trial' ? (
+                        <OtherCoursesConsultBlock className="mt-3 max-w-full" />
                       ) : null}
                     </div>
                   ))}
