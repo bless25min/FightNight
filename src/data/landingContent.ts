@@ -15,11 +15,40 @@ import type {
 export const siteConfig = {
   brandName: 'UFCGYM TAIWAN',
   eventName: 'Fight Night',
-  lineUrl: 'https://page.line.me/488ujlbg',
+  sitePurpose: 'UFCGYM TAIWAN 活動預約與課程報名落地頁',
+  siteRelationship:
+    '本頁由 UFCGYM TAIWAN 營運，用於介紹 Fight Night 夜間入場體驗、Boot Camp 課程方案、免費體驗預約、線上付款與官方 LINE 報名確認。',
+  lineUrl: 'https://s.no8.io/link/channels/zGX7ApSAv6',
+  messengerUrl: 'https://m.me/UFCGYMTaiwan',
   // 方案卡負責帶到可購買場次；指定場次付款由 SHOPLINE checkout session 建立。
   ticketUrl: '#fight-night-pass',
   offersUrl: '/offers',
   bootCampUrl: '/boot-camp',
+}
+
+export const businessInfo = {
+  companyName: 'UFC Gym Taiwan Ltd.',
+  registrationNumber: '52467800',
+  registrationLabel: '營業登記證號',
+  serviceEmail: 'service@ufcgym.com.tw',
+  marketingEmail: 'marketing@ufcgym.com.tw',
+  locations: [
+    {
+      name: '台北-敦南旗艦館',
+      address: '台北市大安區安和路一段27號 B1',
+      phone: '02-8773-3772',
+    },
+    {
+      name: '台北-內科模範館',
+      address: '台北市內湖區洲子街55號1F',
+      phone: '02-2799-6666',
+    },
+    {
+      name: '台中-台中勤美旗艦館',
+      address: '台中市西區公益路68號12、13F',
+      phone: '04-2321-2103',
+    },
+  ],
 }
 
 // ── Hero ─────────────────────────────────────────
@@ -657,7 +686,7 @@ export const venues: Venue[] = [
     name: '台北 — 敦南旗艦館',
     address: '台北市大安區安和路一段27號 B1',
     transit: '捷運忠孝敦化站5號出口，步行2分鐘',
-    lineUrl: 'https://page.line.me/488ujlbg',
+    lineUrl: 'https://s.no8.io/link/channels/zGX7ApSAv6',
     mapEmbedUrl:
       'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3614.8455611296736!2d121.54767441193627!3d25.03931467772036!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3442abcf90bf71ab%3A0x7d7e74bdafe72664!2zVUZDIEd5bSDmlabljZfml5foiabppKg!5e0!3m2!1szh-TW!2stw!4v1778650670170!5m2!1szh-TW!2stw',
   },
@@ -666,7 +695,7 @@ export const venues: Venue[] = [
     name: '台北 — 內科模範館',
     address: '台北市內湖區洲子街55號1F',
     transit: '捷運港墘站2號出口，步行1分鐘',
-    lineUrl: 'https://page.line.me/488ujlbg',
+    lineUrl: 'https://s.no8.io/link/channels/zGX7ApSAv6',
     mapEmbedUrl:
       'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3613.6660747640794!2d121.57099151193722!3d25.079304677694402!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3442ac650cf40e81%3A0xf48b85ba2f238dfc!2zVUZDIEdZTeWFp-enkeaooeevhOmkqA!5e0!3m2!1szh-TW!2stw!4v1778650720964!5m2!1szh-TW!2stw',
   },
@@ -676,7 +705,7 @@ export const venues: Venue[] = [
     address: '台中市西區公益路68號12、13F',
     transit:
       '台中高鐵站免費接駁專車（往中國醫藥大學），至科博館站，步行5分鐘',
-    lineUrl: 'https://page.line.me/488ujlbg',
+    lineUrl: 'https://s.no8.io/link/channels/zGX7ApSAv6',
     mapEmbedUrl:
       'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3640.584226597405!2d120.66126771191507!3d24.151235378309035!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x34693d2593548857%3A0x42da96286faa6a85!2zVUZDIEdZTSDlj7DkuK3li6Tnvo7ml5foiabppKg!5e0!3m2!1szh-TW!2stw!4v1778650738687!5m2!1szh-TW!2stw',
   },

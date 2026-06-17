@@ -1,7 +1,7 @@
 import { Header } from '../components/layout/Header'
 import { Footer } from '../components/layout/Footer'
 import { Seo } from '../components/Seo'
-import { siteConfig } from '../data/landingContent'
+import { businessInfo, siteConfig } from '../data/landingContent'
 
 type PolicySection = {
   title: string
@@ -13,75 +13,76 @@ const refundPolicySections: PolicySection[] = [
   {
     title: '一、適用範圍',
     body: [
-      '本政策適用於本網站所販售之 Fight Night / Boot Camp 體驗課程、訓練活動、課程票券或相關服務。',
-      '本服務屬於預約制運動訓練課程，並非實體商品，因此無一般商品退貨情形；如需取消、改期或退款，請依本政策辦理。',
+      '本退款與取消政策適用於 UFCGYM TAIWAN 活動預約與課程報名落地頁所提供之體驗預約、付費課程、活動票券、訓練服務及其相關訂單。',
+      '本頁由 UFCGYM TAIWAN 營運，用於 Fight Night 夜間入場體驗、Boot Camp 課程方案、免費體驗預約、線上付款與官方 LINE 報名確認。',
+      '本服務屬預約制運動訓練與活動服務，並非一般實體商品。若您需要取消、改期或申請退款，請依本政策及訂單頁面載明之規則辦理。',
     ],
   },
   {
-    title: '二、七日鑑賞期說明',
+    title: '二、免費體驗預約',
     body: [
-      '若您是透過本網站完成線上付款，依消費者保護法相關規定，通訊交易原則上享有七日解除契約權。消費者得於接受服務後七日內，以書面通知方式解除契約。',
-      '但若課程已經開始、您已實際參與課程，或已依您的預約完成服務安排，退款將依實際使用情況與本政策規範辦理。',
+      '免費體驗預約不涉及線上付款。完成預約資料提交後，請依感謝頁、官方 LINE 或 Meta Messenger 指示與專員確認館場、日期、時段及報到資訊。',
+      '若您無法如期參與，請儘早透過官方 LINE、Meta Messenger 或客服信箱通知，以利釋出名額並重新安排。',
     ],
   },
   {
-    title: '三、課程尚未使用之退款',
+    title: '三、付費課程之七日解除契約',
     body: [
-      '若您完成付款後，尚未使用任何課程或服務，可於付款日起七日內提出退款申請。',
-      '經確認符合退款條件後，本公司將協助辦理退款。退款金額將扣除金流平台、銀行或第三方支付實際產生之手續費後退還。',
+      '消費者透過本網站完成線上付款後，原則上得依消費者保護法等相關規定，於法定期間內提出解除契約或退款申請。',
+      '如課程已經開始、您已完成報到、已實際參與課程，或本公司已依您的指定時段完成服務安排，退款將依實際使用狀態、未使用堂數及本政策規範辦理。',
     ],
   },
   {
-    title: '四、課程已使用或活動已開始',
+    title: '四、尚未使用課程之退款',
     body: [
-      '若您已完成報到、參與課程、使用票券或活動已開始，該次課程或活動視為已提供服務，恕不接受該次費用退款。',
-      '如購買多堂課程或多次票券，尚未使用之剩餘堂數，可依實際未使用堂數比例申請退費。依健身教練服務相關規範，消費者於契約期限屆滿前，原則上得終止契約；退費可依未完成服務堂數比例計算，並得依契約約定收取合理手續費，但不得逾法規上限。',
+      '若您完成付款後尚未使用任何課程、未完成報到且未占用課程名額，可於付款日起七日內提出退款申請。',
+      '經本公司確認符合退款條件後，將依原付款方式或雙方確認之退款方式辦理。退款金額可能扣除金流平台、銀行或第三方支付實際產生之必要手續費。',
     ],
   },
   {
-    title: '五、取消與改期規則',
+    title: '五、已使用、未到與逾期取消',
     body: [
-      '為維護課程品質與名額安排，若您無法如期參與，請依以下規範辦理：',
+      '為維護課程品質、教練安排與名額控管，請於付款或預約前確認可參與之館場與時段。',
     ],
     items: [
-      '課程開始前 24 小時以上通知，可協助改期一次。',
-      '課程開始前未滿 24 小時取消，恕不退費；是否可改期，將依現場名額與實際狀況協助安排。',
-      '課程當日未到，視同已使用該次課程，恕不退費。',
-      '若因天災、政府公告、場館因素或不可抗力導致課程取消，本公司將主動通知並協助改期或退款。',
+      '課程開始前 24 小時以上通知，可協助改期一次；實際可預約時段仍以館場名額為準。',
+      '課程開始前未滿 24 小時取消，或活動當日未到，該次課程視為已保留名額並可能不予退費。',
+      '若您已完成報到、參與課程、使用票券或活動已開始，該次課程或活動視為已提供服務。',
+      '若購買多堂課程或多次票券，未使用之剩餘堂數將依實際訂單、使用紀錄及相關法規計算可退金額。',
     ],
   },
   {
-    title: '六、退款申請方式',
+    title: '六、不可抗力與場館異動',
     body: [
-      '如需申請退款，請提供以下資料，並透過官方客服或報名頁面指定聯絡方式提出：',
+      '如因天災、政府命令、場館安全、設備維護、教練臨時不可抗力或其他非可歸責於消費者之原因導致課程取消或異動，本公司將主動通知並協助改期、轉換課程或退款。',
+    ],
+  },
+  {
+    title: '七、退款申請資料',
+    body: [
+      `如需申請退款，請透過官方 LINE、Meta Messenger、訂單頁面指定聯絡方式或 ${businessInfo.serviceEmail} 提出，並提供以下資料以利核對：`,
     ],
     items: [
-      '姓名',
-      '聯絡電話',
-      '電子信箱',
-      '訂單編號或付款證明',
-      '購買方案名稱',
-      '退款原因',
-      '退款帳戶資訊',
+      '姓名與聯絡電話。',
+      '電子信箱。',
+      '訂單編號、付款證明或交易識別資訊。',
+      '購買方案名稱、預約館場與預約日期。',
+      '退款原因。',
+      '退款帳戶資訊或原付款方式相關資訊。',
     ],
   },
   {
-    title: '七、退款作業時間',
+    title: '八、審核與退款作業時間',
     body: [
-      '收到申請後，我們將於 3 至 7 個工作天內完成審核。若資料不完整，退款處理時間將以補齊資料後重新起算。',
-      '退款審核通過後，實際入帳時間將依您原付款方式、銀行或第三方支付平台作業時間為準，通常約需 7 至 14 個工作天。',
+      '本公司收到完整退款資料後，通常於 3 至 7 個工作天內完成資格審核。若資料不完整或需進一步核對付款狀態，處理時間將自補齊資料後重新起算。',
+      '退款審核通過後，實際入帳時間依原付款方式、銀行、信用卡組織或第三方支付平台作業時間為準，通常約需 7 至 14 個工作天。',
     ],
   },
   {
-    title: '八、特殊情況',
+    title: '九、政策修訂與官方聯絡',
     body: [
-      '若因傷害、疾病或其他不可歸責於消費者之重大因素，導致無法繼續參與課程，請提供相關證明文件，本公司將依實際情況協助辦理延期、轉讓、轉換課程或退款。',
-    ],
-  },
-  {
-    title: '九、政策修改',
-    body: [
-      '本公司保留調整本退款與取消政策之權利。若政策內容更新，將公告於本網站，並以最新公告版本為準。',
+      '本公司得因課程內容、付款方式、場館營運或法令要求修訂本政策。更新後之政策將公告於本網站，並以最新公告版本為準。',
+      `如您對退款、取消或改期規則有疑問，請聯繫 ${businessInfo.serviceEmail}。`,
     ],
   },
 ]
@@ -91,7 +92,7 @@ export function RefundPolicyPage() {
     <div className="min-h-screen overflow-x-hidden bg-abyss text-pearl">
       <Seo
         title={`退款與取消政策｜${siteConfig.brandName}`}
-        description="了解 Fight Night / Boot Camp 課程付款後的七日退款、取消、改期與退款申請方式。"
+        description="UFCGYM TAIWAN 活動預約與課程報名落地頁退款與取消政策，說明免費體驗、付費課程、改期、退款申請與作業時間。"
         canonicalPath="/refund-policy"
         keywords={['退款與取消政策', 'Fight Night 退款', 'Boot Camp 退款', 'UFCGYM TAIWAN']}
       />
@@ -105,8 +106,36 @@ export function RefundPolicyPage() {
           退款與取消政策
         </h1>
         <p className="mt-5 text-base leading-relaxed text-mist/76 md:text-lg">
-          感謝您報名 Fight Night / Boot Camp 課程活動。為保障您的權益，請於付款前詳閱以下退款與取消規範。
+          為保障消費者權益並維護課程名額安排，請於預約或付款前詳閱以下退款、取消與改期規範。
         </p>
+
+        <section className="mt-8 rounded-2xl border border-pearl/10 bg-black/32 p-5 text-sm leading-relaxed text-mist/74 md:p-7">
+          <h2 className="font-heading text-xl font-black text-pearl">
+            文件與營運識別
+          </h2>
+          <dl className="mt-4 grid gap-3 md:grid-cols-2">
+            <div>
+              <dt className="text-mist/45">頁面用途</dt>
+              <dd className="mt-1 text-pearl">{siteConfig.sitePurpose}</dd>
+            </div>
+            <div>
+              <dt className="text-mist/45">與 UFC GYM TAIWAN 關係</dt>
+              <dd className="mt-1 text-pearl">{siteConfig.siteRelationship}</dd>
+            </div>
+            <div>
+              <dt className="text-mist/45">營運主體</dt>
+              <dd className="mt-1 text-pearl">{businessInfo.companyName}</dd>
+            </div>
+            <div>
+              <dt className="text-mist/45">{businessInfo.registrationLabel}</dt>
+              <dd className="mt-1 text-pearl">{businessInfo.registrationNumber}</dd>
+            </div>
+            <div>
+              <dt className="text-mist/45">文件版本日期</dt>
+              <dd className="mt-1 text-pearl">2026 年 6 月 16 日</dd>
+            </div>
+          </dl>
+        </section>
 
         <div className="mt-8 divide-y divide-pearl/10 rounded-2xl border border-pearl/10 bg-black/32">
           {refundPolicySections.map((section) => (
@@ -130,9 +159,20 @@ export function RefundPolicyPage() {
           ))}
         </div>
 
-        <p className="mt-6 text-sm leading-relaxed text-mist/55">
-          最後更新：2026 年 5 月 27 日
-        </p>
+        <section className="mt-8 rounded-2xl border border-pearl/10 bg-black/28 p-5 text-sm leading-relaxed text-mist/72 md:p-7">
+          <h2 className="font-heading text-xl font-black text-pearl">
+            官方聯絡資訊
+          </h2>
+          <p className="mt-3">
+            退款、取消與改期申請，請以官方客服信箱或官方 LINE 聯繫，並保留訂單與付款資料供核對。
+          </p>
+          <a
+            href={`mailto:${businessInfo.serviceEmail}`}
+            className="mt-2 inline-flex font-semibold text-neon hover:text-neon/80"
+          >
+            {businessInfo.serviceEmail}
+          </a>
+        </section>
       </main>
 
       <Footer />

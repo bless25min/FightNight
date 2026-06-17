@@ -27,6 +27,7 @@ export function Header() {
   const isUtilityPage =
     isGuidePage ||
     pathname.startsWith('/privacy-policy') ||
+    pathname.startsWith('/terms-of-service') ||
     pathname.startsWith('/refund-policy')
 
   useEffect(() => {

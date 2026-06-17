@@ -2,6 +2,7 @@ import {
   RECONCILABLE_STATUSES,
   queryShoplineSession,
   reconcileProviderOrder,
+  sendMetaPurchaseForPaidOrder,
 } from './reconcile.js'
 import { notifyLinePaymentSuccess } from './line-notify.js'
 
@@ -58,6 +59,7 @@ export async function onRequestGet({ request, env }) {
   }
 
   if (order.status === 'paid') {
+    await sendMetaPurchaseForPaidOrder(env, request, referenceId)
     await notifyLinePaymentSuccess(env, referenceId)
   }
 

@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { siteConfig, venues } from '../../data/landingContent'
+import { businessInfo, siteConfig, venues } from '../../data/landingContent'
 import { seoGuides } from '../../data/seoGuides'
 import { useTracking } from '../../hooks/useTracking'
 import logo from '../../assets/ufcgymtaiwan_logo.svg'
@@ -113,30 +113,99 @@ export function Footer({ onVenueAction }: FooterProps = {}) {
           </div>
         </div>
 
+        <div className="mt-10 grid gap-5 border-t border-pearl/5 pt-6 text-sm text-mist/70 md:mt-14 md:grid-cols-[1.1fr_1.4fr]">
+          <div>
+            <p className="font-heading text-xs uppercase tracking-[0.28em] text-mist/50">
+              營運資訊
+            </p>
+            <dl className="mt-4 space-y-2 leading-relaxed">
+              <div>
+                <dt className="inline text-mist/45">登記公司名稱：</dt>
+                <dd className="inline text-mist/82">{businessInfo.companyName}</dd>
+              </div>
+              <div>
+                <dt className="inline text-mist/45">
+                  {businessInfo.registrationLabel}：
+                </dt>
+                <dd className="inline text-mist/82">
+                  {businessInfo.registrationNumber}
+                </dd>
+              </div>
+              <div>
+                <dt className="inline text-mist/45">官方信箱：</dt>
+                <dd className="inline">
+                  <a
+                    href={`mailto:${businessInfo.serviceEmail}`}
+                    className="text-mist/82 transition-colors hover:text-neon"
+                  >
+                    {businessInfo.serviceEmail}
+                  </a>
+                </dd>
+              </div>
+            </dl>
+          </div>
+
+          <div>
+            <p className="font-heading text-xs uppercase tracking-[0.28em] text-mist/50">
+              官方館場聯繫
+            </p>
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              {businessInfo.locations.map((location) => (
+                <div
+                  key={location.name}
+                  className="rounded-xl border border-pearl/10 bg-black/20 p-4"
+                >
+                  <p className="font-heading text-sm font-semibold text-pearl">
+                    {location.name}
+                  </p>
+                  <p className="mt-2 text-xs leading-relaxed text-mist/62">
+                    {location.address}
+                  </p>
+                  <a
+                    href={`tel:${location.phone.replace(/-/g, '')}`}
+                    className="mt-2 inline-flex text-xs font-semibold text-neon transition-colors hover:text-neon/80"
+                  >
+                    {location.phone}
+                  </a>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
         <div className="mt-10 flex flex-col gap-3 border-t border-pearl/5 pt-6 text-xs text-mist/50 md:mt-14 md:flex-row md:items-center md:justify-between">
           <p>
             © {new Date().getFullYear()} {siteConfig.brandName}. All rights reserved.
+          </p>
+          <p>
+            Designed by{' '}
+            <a
+              href="https://blessliao.25min.co/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-mist/70 transition-colors hover:text-neon"
+            >
+              廖天佑
+            </a>
           </p>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
             <a
               href="/privacy-policy"
               className="transition-colors hover:text-neon"
             >
-              隱私政策
+              隱私權政策
+            </a>
+            <a
+              href="/terms-of-service"
+              className="transition-colors hover:text-neon"
+            >
+              服務條款
             </a>
             <a
               href="/refund-policy"
               className="transition-colors hover:text-neon"
             >
               退款與取消政策
-            </a>
-            <a
-              href="https://blessliao.25min.co/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="transition-colors hover:text-neon"
-            >
-              專案維護：廖天佑
             </a>
           </div>
         </div>

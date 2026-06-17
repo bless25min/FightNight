@@ -21,6 +21,10 @@
     <priority>0.4</priority>
   </url>
   <url>
+    <loc>https://fightnight.25min.co/terms-of-service</loc>
+    <priority>0.4</priority>
+  </url>
+  <url>
     <loc>https://fightnight.25min.co/refund-policy</loc>
     <priority>0.4</priority>
   </url>

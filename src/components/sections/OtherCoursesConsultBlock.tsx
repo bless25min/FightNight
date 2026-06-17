@@ -1,12 +1,14 @@
+import { siteConfig } from '../../data/landingContent'
+import { useTracking } from '../../hooks/useTracking'
 import { Button } from '../ui/Button'
-
-const consultUrl = 'https://s.no8.io/link/channels/zGX7ApSAv6'
 
 type Props = {
   className?: string
 }
 
 export function OtherCoursesConsultBlock({ className = '' }: Props) {
+  const { track, trackLineCta } = useTracking()
+
   return (
     <div
       data-section="other-courses-consult"
@@ -26,15 +28,42 @@ export function OtherCoursesConsultBlock({ className = '' }: Props) {
             讓我們帥氣／甜美的同仁為您推薦。
           </p>
         </div>
-
-        <Button
-          href={consultUrl}
-          variant="secondary"
-          className="w-full shrink-0 md:w-auto"
-          data-cta="other-courses-consult"
-        >
-          立即諮詢
-        </Button>
+        <div className="flex w-full shrink-0 flex-col gap-2 md:w-auto md:flex-row">
+          <Button
+            href={siteConfig.lineUrl}
+            variant="secondary"
+            className="w-full md:w-auto"
+            data-cta="other-courses-consult"
+            onClick={() =>
+              trackLineCta({
+                cta_id: 'other-courses-consult',
+                placement: 'other_courses_consult',
+                channel: 'line',
+              })
+            }
+          >
+            LINE 諮詢
+          </Button>
+          <Button
+            href={siteConfig.messengerUrl}
+            variant="secondary"
+            className="w-full md:w-auto"
+            data-cta="other-courses-messenger-consult"
+            onClick={() =>
+              track({
+                event: 'messenger_consult_click',
+                params: {
+                  cta_id: 'other-courses-messenger-consult',
+                  placement: 'other_courses_consult',
+                  channel: 'messenger',
+                },
+                metaStandardEvent: 'Lead',
+              })
+            }
+          >
+            Messenger 私訊
+          </Button>
+        </div>
       </div>
     </div>
   )

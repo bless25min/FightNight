@@ -41,6 +41,7 @@ import { PlanCard } from '../components/ui/PlanCard'
 import { Button } from '../components/ui/Button'
 import { SectionHeading } from '../components/ui/SectionHeading'
 import { SectionWrapper } from '../components/ui/SectionWrapper'
+import { Seo } from '../components/Seo'
 import { StickyActionBar } from '../components/ui/StickyActionBar'
 import { ZoomableImage } from '../components/ui/ZoomableImage'
 
@@ -603,6 +604,8 @@ export function OffersPage() {
             plan_id: planId,
             action_type: 'schedule_nav',
           },
+          metaStandardEvent: 'AddToCart',
+          lineEventName: 'AddToCart',
         })
         navigateToSchedule('FIGHT_NIGHT')
         return
@@ -618,6 +621,8 @@ export function OffersPage() {
             category: target.category,
             route: target.route ?? 'none',
           },
+          metaStandardEvent: 'AddToCart',
+          lineEventName: 'AddToCart',
         })
         navigateToSchedule(target.category, target.route)
         return
@@ -651,6 +656,22 @@ export function OffersPage() {
 
   return (
     <div className="overflow-x-hidden w-full relative">
+      <Seo
+        title="UFC GYM 課程方案｜預約與購買入口｜UFCGYM TAIWAN"
+        description="UFCGYM TAIWAN 課程預約與購買入口。比較 Fight Night Pass、首次免費體驗與 Boot Camp 方案，先選場館、日期與時段，再線上保留課程。"
+        canonicalPath="/offers"
+        keywords={[
+          'UFC GYM 課程方案',
+          'Fight Night Pass',
+          'Boot Camp',
+          '免費體驗',
+          '拳擊課程',
+          '泰拳課程',
+          '台北拳擊',
+          '台中拳擊',
+        ]}
+        image={offersHeroPoster}
+      />
       <Header />
       <main>
         <PainSection />

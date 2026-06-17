@@ -40,6 +40,7 @@ import {
   getCheckoutTrackingContext,
 } from '../../lib/checkoutTracking'
 import { getLineRequestContext } from '../../lib/lineContext'
+import { buildPaymentResultUrl } from '../../lib/paymentResult'
 import type { BootCampRoute, CourseCategory, WeeklyCourse } from '../../types'
 import { Button } from '../ui/Button'
 import { SectionHeading } from '../ui/SectionHeading'
@@ -2720,16 +2721,6 @@ export function WeeklyScheduleSection({
         phone: normalizedPhone,
       }
       const lineContext = getLineRequestContext()
-      if (pendingCheckout.intent === 'free_trial') {
-        if (!lineContext?.accessToken) {
-          setCheckoutError('請先完成 LINE 登入後，再保留免費體驗。')
-          return
-        }
-        if (lineContext.isFriend !== true) {
-          setCheckoutError('請先加入官方 LINE 好友，再保留免費體驗。這樣預約確認卡才送得到。')
-          return
-        }
-      }
 
       saveBuyerContact(
         {
@@ -2768,8 +2759,8 @@ export function WeeklyScheduleSection({
                 ),
                 original_value: pendingCheckout.originalValue,
               },
-              metaStandardEvent: 'CompleteRegistration',
-              lineEventName: 'FreeTrialContactSubmit',
+              metaStandardEvent: 'Lead',
+              lineEventName: 'FreeTrialLead',
             })
 
             setPendingCheckout(null)
@@ -2778,7 +2769,7 @@ export function WeeklyScheduleSection({
             return
           }
 
-          const scheduleEventId = createMetaEventId('schedule')
+          const leadEventId = createMetaEventId('lead')
           const response = await fetch('/api/free-trial-reservation', {
             method: 'POST',
             headers: {
@@ -2801,7 +2792,7 @@ export function WeeklyScheduleSection({
               },
               tracking: {
                 ...getCheckoutTrackingContext(),
-                scheduleEventId,
+                leadEventId,
               },
               sourcePath: `${window.location.pathname}${window.location.search}${window.location.hash}`,
             }),
@@ -2870,20 +2861,24 @@ export function WeeklyScheduleSection({
               reference_id: data.referenceId,
               already_reserved: data.alreadyReserved === true,
               original_value: pendingCheckout.originalValue,
-              event_id: scheduleEventId,
+              event_id: leadEventId,
             },
-            metaStandardEvent: 'Schedule',
-            metaEventId: scheduleEventId,
+            metaStandardEvent: 'Lead',
+            metaEventId: leadEventId,
             lineEventName:
               data.alreadyReserved === true
                 ? 'FreeTrialAlreadyReserved'
-                : 'FreeTrialReserved',
+                : 'FreeTrialLead',
           })
 
           setPendingCheckout(null)
           setFreeTrialSuccess(reservation)
           setIsCheckoutSubmitting(false)
           onFreeTrialReserved?.(reservation)
+          window.location.href = buildPaymentResultUrl(
+            data.referenceId,
+            'free-trial',
+          )
           return
         }
 

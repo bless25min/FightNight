@@ -468,7 +468,7 @@ async function recordMetaCapiResult(env, referenceId, result) {
     .run()
 }
 
-async function sendMetaPurchaseForPaidOrder(env, request, referenceId) {
+export async function sendMetaPurchaseForPaidOrder(env, request, referenceId) {
   if (!request) return null
 
   const order = await getOrderForMetaPurchase(env, referenceId)
@@ -575,6 +575,11 @@ export async function reconcileProviderOrder(env, order, provider, context = {})
 
   const terminalStatus = await markProviderTerminalStatus(env, order, provider)
   if (terminalStatus) return terminalStatus
+
+  if (order.status === 'paid') {
+    await sendMetaPurchaseForPaidOrder(env, context.request, order.reference_id)
+    return null
+  }
 
   if (!provider || provider.diagnosis !== 'provider_paid_webhook_missing') {
     return null

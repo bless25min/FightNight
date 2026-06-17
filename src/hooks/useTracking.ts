@@ -94,7 +94,7 @@ export function useTracking() {
         event: 'line_cta_click',
         params,
         metaStandardEvent: 'Lead',
-        lineEventName: 'LineClick',
+        lineEventName: 'LeadClick',
       }),
     [track],
   )
@@ -104,7 +104,7 @@ export function useTracking() {
       track({
         event: 'gate_access_click',
         params: { surface, status },
-        metaStandardEvent: 'Lead',
+        metaStandardEvent: 'Contact',
         lineEventName: 'LineLoginClick',
       }),
     [track],

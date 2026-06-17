@@ -8,6 +8,8 @@ import { useTracking } from '../hooks/useTracking'
 type OrderStatus =
   | 'pending'
   | 'payment_processing'
+  | 'free_reserved'
+  | 'free_attended'
   | 'paid'
   | 'expired'
   | 'failed'
@@ -57,6 +59,18 @@ const statusCopy: Record<
     eyebrow: 'PAYMENT COMPLETE',
     title: '付款完成，名額已保留。',
     description: '我們已收到 SHOPLINE 付款通知，課程名額會依你購買的日期保留。',
+    tone: 'border-neon/35 bg-neon/10 text-neon',
+  },
+  free_reserved: {
+    eyebrow: 'RESERVATION COMPLETE',
+    title: '預約完成，請到 LINE 確認報名。',
+    description: '我們已收到你的免費體驗預約資料，課程名額已依你選擇的日期保留。',
+    tone: 'border-neon/35 bg-neon/10 text-neon',
+  },
+  free_attended: {
+    eyebrow: 'TRIAL COMPLETE',
+    title: '免費體驗已完成。',
+    description: '這筆免費體驗紀錄已完成報到。若還需要確認後續課程，請到 LINE 與專員聯繫。',
     tone: 'border-neon/35 bg-neon/10 text-neon',
   },
   pending: {
@@ -157,8 +171,8 @@ function formatDate(iso: string) {
   return `${Number(parts[1])}/${Number(parts[2])}`
 }
 
-function getDisplayStatus(data: OrderStatusResponse | null) {
-  const localStatus = data?.order?.status || 'pending'
+function getDisplayStatus(data: OrderStatusResponse | null, mode: string | null) {
+  const localStatus = data?.order?.status || (mode === 'free-trial' ? 'free_reserved' : 'pending')
   const diagnosis = data?.provider?.diagnosis
   const canUseProviderDiagnosis = [
     'pending',
@@ -188,16 +202,68 @@ function providerStatusLabel(provider: OrderStatusResponse['provider']) {
   return null
 }
 
+function getLineHandoffCopy(status: string, isFreeTrialResult: boolean) {
+  const supportStatuses = new Set([
+    'cancelled',
+    'expired',
+    'failed',
+    'provider_not_paid',
+    'provider_payment_cancelled',
+    'provider_payment_failed',
+    'provider_session_expired',
+    'refund_processing',
+    'refunded',
+  ])
+
+  if (isFreeTrialResult) {
+    return {
+      title: '到 LINE 與專員確認報名',
+      body: '免費預約送出後，請加入官方 LINE，把預約編號傳給同仁，確認報名、入場與現場注意事項。',
+      buttonLabel: '到 LINE 確認報名',
+      intent: 'free_trial_booking_confirmation',
+    }
+  }
+
+  if (supportStatuses.has(status)) {
+    return {
+      title: '加入 LINE 協助處理',
+      body: '如果付款狀態和你看到的扣款結果不同，請加入官方 LINE，將訂單編號傳給同仁協助查詢。',
+      buttonLabel: '加入 LINE 協助處理',
+      intent: 'payment_support',
+    }
+  }
+
+  return {
+    title: '加入 LINE 確認報名',
+    body: '付款後請加入官方 LINE，將訂單編號傳給同仁確認報名與入場資訊。',
+    buttonLabel: '到 LINE 確認報名',
+    intent: 'booking_confirmation',
+  }
+}
+
 export function PaymentResultPage() {
-  const { trackLineCta } = useTracking()
+  const { track } = useTracking()
   const [data, setData] = useState<OrderStatusResponse | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const params = new URLSearchParams(window.location.search)
   const referenceId = params.get('referenceId') || ''
-  const copy = useMemo(() => {
-    const status = getDisplayStatus(data)
-    return statusCopy[status] ?? statusCopy.pending
-  }, [data])
+  const resultMode = params.get('mode')
+  const isFreeTrialResult =
+    resultMode === 'free-trial' ||
+    data?.order?.status === 'free_reserved' ||
+    data?.order?.status === 'free_attended'
+  const displayStatus = useMemo(
+    () => getDisplayStatus(data, resultMode),
+    [data, resultMode],
+  )
+  const copy = useMemo(
+    () => statusCopy[displayStatus] ?? statusCopy.pending,
+    [displayStatus],
+  )
+  const lineHandoffCopy = useMemo(
+    () => getLineHandoffCopy(displayStatus, isFreeTrialResult),
+    [displayStatus, isFreeTrialResult],
+  )
 
   useEffect(() => {
     if (!referenceId) {
@@ -234,6 +300,14 @@ export function PaymentResultPage() {
 
   const order = data?.order
   const providerLabel = providerStatusLabel(data?.provider)
+  const referenceLabel = isFreeTrialResult ? '預約編號' : '訂單編號'
+  const amountLabel =
+    isFreeTrialResult || order?.amountValue === 0
+      ? '免費'
+      : `NT${(order?.amountValue ?? 0).toLocaleString('en-US')}`
+  const loadingTitle = isFreeTrialResult
+    ? '讀取預約結果中。'
+    : '讀取付款結果中。'
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-abyss text-pearl">
@@ -246,7 +320,7 @@ export function PaymentResultPage() {
             {copy.eyebrow}
           </p>
           <h1 className="mt-5 font-heading text-3xl font-black leading-tight text-pearl md:text-5xl">
-            {isLoading ? '讀取付款結果中。' : copy.title}
+            {isLoading ? loadingTitle : copy.title}
           </h1>
           <p className="mt-4 text-base leading-relaxed text-mist/76 md:text-lg">
             {isLoading ? '請稍候。' : data?.error || copy.description}
@@ -255,7 +329,7 @@ export function PaymentResultPage() {
           {order && (
             <div className="mt-6 grid gap-3 border-t border-pearl/10 pt-5 text-sm text-mist/72">
               <div className="flex justify-between gap-4">
-                <span className="font-heading text-mist/45">訂單編號</span>
+                <span className="font-heading text-mist/45">{referenceLabel}</span>
                 <span className="text-right font-heading text-pearl">
                   {order.referenceId}
                 </span>
@@ -281,7 +355,7 @@ export function PaymentResultPage() {
               <div className="flex justify-between gap-4">
                 <span className="font-heading text-mist/45">金額</span>
                 <span className="text-right font-heading text-neon">
-                  NT${order.amountValue.toLocaleString('en-US')}
+                  {amountLabel}
                 </span>
               </div>
               {providerLabel && (
@@ -293,22 +367,76 @@ export function PaymentResultPage() {
             </div>
           )}
 
+          <div className="mt-6 rounded-2xl border border-neon/20 bg-neon/[0.06] p-4">
+            <p className="font-heading text-base font-bold text-pearl">
+              {lineHandoffCopy.title}
+            </p>
+            <p className="mt-2 text-sm leading-relaxed text-mist/72">
+              {lineHandoffCopy.body}
+            </p>
+            {referenceId && (
+              <p className="mt-3 rounded-xl border border-pearl/10 bg-black/24 px-3 py-2 font-mono text-xs text-mist/72">
+                {referenceLabel}：{referenceId}
+              </p>
+            )}
+          </div>
+
           <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-            <Button href={siteConfig.offersUrl} variant="primary">
-              回到課程頁
-            </Button>
             <Button
               href={siteConfig.lineUrl}
-              variant="secondary"
+              variant="primary"
+              size="lg"
+              className="w-full"
+              data-cta={isFreeTrialResult ? 'free-trial-result-line' : 'payment-result-line'}
               onClick={() =>
-                trackLineCta({
-                  cta_id: 'payment-result-line',
-                  reference_id: referenceId,
-                  order_status: order?.status ?? '',
+                track({
+                  event: isFreeTrialResult
+                    ? 'free_trial_result_line_click'
+                    : 'payment_result_line_click',
+                  params: {
+                    cta_id: isFreeTrialResult
+                      ? 'free-trial-result-line'
+                      : 'payment-result-line',
+                    reference_id: referenceId,
+                    reference_type: isFreeTrialResult ? 'reservation' : 'order',
+                    order_status: order?.status ?? '',
+                    display_status: displayStatus,
+                    line_handoff_intent: lineHandoffCopy.intent,
+                  },
+                  metaStandardEvent: 'Lead',
+                  lineEventName: 'LeadClick',
                 })
               }
             >
-              加入 LINE 確認
+              {lineHandoffCopy.buttonLabel}
+            </Button>
+            <Button
+              href={siteConfig.messengerUrl}
+              variant="secondary"
+              size="lg"
+              className="w-full"
+              data-cta={isFreeTrialResult ? 'free-trial-result-messenger' : 'payment-result-messenger'}
+              onClick={() =>
+                track({
+                  event: isFreeTrialResult
+                    ? 'free_trial_result_messenger_click'
+                    : 'payment_result_messenger_click',
+                  params: {
+                    cta_id: isFreeTrialResult
+                      ? 'free-trial-result-messenger'
+                      : 'payment-result-messenger',
+                    reference_id: referenceId,
+                    reference_type: isFreeTrialResult ? 'reservation' : 'order',
+                    order_status: order?.status ?? '',
+                    display_status: displayStatus,
+                    handoff_intent: lineHandoffCopy.intent,
+                    channel: 'messenger',
+                  },
+                  metaStandardEvent: 'Lead',
+                })
+              }
+            >
+              Messenger 私訊專員
             </Button>
           </div>
         </section>

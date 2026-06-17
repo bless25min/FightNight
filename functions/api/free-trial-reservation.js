@@ -20,6 +20,7 @@ import { sendMetaFunnelEvent } from './shopline/meta-capi.js'
 const CURRENCY = 'TWD'
 const FREE_TRIAL_STATUS = 'free_reserved'
 const EXISTING_FREE_TRIAL_STATUSES = ['free_reserved', 'free_attended']
+const PURCHASED_ORDER_STATUSES = ['paid', 'refund_processing', 'refunded']
 const FREE_TRIAL_SESSION_LIMIT = 2
 const PAID_SEAT_BUFFER = 2
 
@@ -83,20 +84,69 @@ function getExistingReservationPayload(order, fallbackCourse) {
   }
 }
 
-async function getExistingFreeTrial(env, lineUserId) {
-  if (!lineUserId) return null
+async function hasPurchasedOrderForBuyer(env, { lineUserId, phone, email }) {
+  if (lineUserId && (await hasPurchasedOrderForLineUser(env, lineUserId))) {
+    return true
+  }
+
+  const conditions = []
+  const values = []
+
+  if (phone) {
+    conditions.push('buyer_phone = ?')
+    values.push(phone)
+  }
+  if (email) {
+    conditions.push('LOWER(buyer_email) = ?')
+    values.push(email)
+  }
+
+  if (!conditions.length) return false
+
+  const placeholders = PURCHASED_ORDER_STATUSES.map(() => '?').join(',')
+  const row = await env.DB.prepare(
+    `SELECT reference_id
+     FROM course_orders
+     WHERE status IN (${placeholders})
+       AND (${conditions.join(' OR ')})
+     LIMIT 1`,
+  )
+    .bind(...PURCHASED_ORDER_STATUSES, ...values)
+    .first()
+
+  return Boolean(row?.reference_id)
+}
+
+async function getExistingFreeTrial(env, { lineUserId, phone, email }) {
+  const conditions = []
+  const values = []
+
+  if (lineUserId) {
+    conditions.push('line_user_id = ?')
+    values.push(lineUserId)
+  }
+  if (phone) {
+    conditions.push('buyer_phone = ?')
+    values.push(phone)
+  }
+  if (email) {
+    conditions.push('LOWER(buyer_email) = ?')
+    values.push(email)
+  }
+
+  if (!conditions.length) return null
 
   const placeholders = EXISTING_FREE_TRIAL_STATUSES.map(() => '?').join(',')
   const row = await env.DB.prepare(
     `SELECT reference_id, status, course_id, course_name, venue_name,
             original_amount_value, currency, series_dates_json
      FROM course_orders
-     WHERE line_user_id = ?
-       AND status IN (${placeholders})
+     WHERE status IN (${placeholders})
+       AND (${conditions.join(' OR ')})
      ORDER BY created_at DESC
      LIMIT 1`,
   )
-    .bind(lineUserId, ...EXISTING_FREE_TRIAL_STATUSES)
+    .bind(...EXISTING_FREE_TRIAL_STATUSES, ...values)
     .first()
 
   return row || null
@@ -190,38 +240,31 @@ export async function onRequestPost({ request, env, waitUntil }) {
     await ensureTables(env)
 
     const lineContext = await resolveLineContext(body?.lineContext, env)
-    if (!lineContext?.lineUserId) {
-      return json(
-        {
-          error: '請先完成 LINE 登入後再免費預約。',
-          reason: 'line_login_required',
-        },
-        { status: 401 },
-      )
-    }
-    if (lineContext.isFriend !== true) {
-      return json(
-        {
-          error: '請先加入官方 LINE 好友，再保留免費體驗。這樣預約確認卡才送得到。',
-          reason: 'line_friend_required',
-        },
-        { status: 403 },
-      )
+    if (lineContext?.lineUserId) {
+      await upsertLineCustomerFromCheckout(env, lineContext)
     }
 
-    await upsertLineCustomerFromCheckout(env, lineContext)
-
-    if (await hasPurchasedOrderForLineUser(env, lineContext.lineUserId)) {
+    if (
+      await hasPurchasedOrderForBuyer(env, {
+        lineUserId: lineContext?.lineUserId,
+        phone: buyer.phone,
+        email: buyer.email,
+      })
+    ) {
       return json(
         {
-          error: '這個 LINE 帳號已有付款紀錄，免費體驗保留給第一次線上預約的新朋友。',
+          error: '這組聯絡資料已有付款紀錄，免費體驗保留給第一次線上預約的新朋友。',
           reason: 'already_purchased',
         },
         { status: 409 },
       )
     }
 
-    const existingFreeTrial = await getExistingFreeTrial(env, lineContext.lineUserId)
+    const existingFreeTrial = await getExistingFreeTrial(env, {
+      lineUserId: lineContext?.lineUserId,
+      phone: buyer.phone,
+      email: buyer.email,
+    })
     if (existingFreeTrial) {
       let baseCourse = null
       try {
@@ -346,13 +389,13 @@ export async function onRequestPost({ request, env, waitUntil }) {
           buyer.name,
           buyer.phone,
           buyer.email,
-          lineContext.lineUserId,
-          lineContext.displayName || null,
-          lineContext.pictureUrl || null,
-          lineContext.email || null,
-          lineContext.emailVerified ? 1 : 0,
-          lineContext.isFriend ? 1 : 0,
-          JSON.stringify(lineContext),
+          lineContext?.lineUserId || null,
+          lineContext?.displayName || null,
+          lineContext?.pictureUrl || null,
+          lineContext?.email || null,
+          lineContext ? (lineContext.emailVerified ? 1 : 0) : null,
+          lineContext ? (lineContext.isFriend ? 1 : 0) : null,
+          lineContext ? JSON.stringify(lineContext) : null,
           body?.sourcePath || null,
           returnUrl,
           JSON.stringify(localOrderRequest),
@@ -364,13 +407,14 @@ export async function onRequestPost({ request, env, waitUntil }) {
     }
 
     const lineNotify = await notifyLineFreeTrialReservation(env, referenceId)
-    const metaScheduleEvent = sendMetaFunnelEvent({
+    const metaLeadEvent = sendMetaFunnelEvent({
       env,
       request,
-      eventName: 'Schedule',
+      eventName: 'Lead',
       eventId:
+        trimText(body?.tracking?.leadEventId, 160) ||
         trimText(body?.tracking?.scheduleEventId, 160) ||
-        `schedule.${referenceId}`,
+        `lead.${referenceId}`,
       buyer,
       lineContext,
       tracking: localOrderRequest.tracking,
@@ -397,15 +441,13 @@ export async function onRequestPost({ request, env, waitUntil }) {
       ok: false,
       status: 'failed',
       error:
-        error instanceof Error
-          ? error.message
-          : 'Meta CAPI schedule send failed',
+        error instanceof Error ? error.message : 'Meta CAPI lead send failed',
     }))
 
     if (typeof waitUntil === 'function') {
-      waitUntil(metaScheduleEvent)
+      waitUntil(metaLeadEvent)
     } else {
-      await metaScheduleEvent
+      await metaLeadEvent
     }
 
     return json({

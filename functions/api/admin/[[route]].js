@@ -47,6 +47,7 @@ const TRAFFIC_ACTION_EVENTS = [
   'course_purchase_click',
   'shopline_checkout_submit',
   'shopline_checkout_error',
+  'payment_result_line_click',
   'free_trial_reservation_click',
   'free_trial_contact_submit',
   'free_trial_extension_offer_view',
@@ -80,6 +81,10 @@ const CHECKOUT_INTENT_EVENTS = [
 const LEAD_INTENT_EVENTS = [
   'gate_access_click',
   'line_cta_click',
+  'payment_result_line_click',
+  'free_trial_contact_submit',
+  'free_trial_reservation_submit',
+  'free_trial_reservation_submit_before_checkout',
 ]
 
 const TRAFFIC_ACTION_EVENT_SQL = TRAFFIC_ACTION_EVENTS.map(sqlString).join(', ')
@@ -88,6 +93,480 @@ const LEAD_INTENT_EVENT_SQL = LEAD_INTENT_EVENTS.map(sqlString).join(', ')
 const SPLIT_TEST_ROUTE_SQL = ['/', '/boot-camp', '/fight-night-event', '/fight-night-intro']
   .map(sqlString)
   .join(', ')
+
+const DEFAULT_CHANGE_RELEASES = [
+  {
+    id: '2026-06-17-admin-version-impact',
+    title: '後台版本歷程與轉換影響面板',
+    category: 'ADMIN_OPS',
+    scope: '/admin/changes',
+    impactLevel: 'medium',
+    deployedAt: '2026-06-17 06:03:00',
+    changedSummary:
+      '新增版本歷程頁，將每次改版對應到前後期間的使用者、Lead、AddToCart、Checkout、Purchase 與轉換率變化。',
+    hypothesis:
+      '讓後台不只列出改了什麼，也能看見每個版本期間客觀數據如何變化，降低只靠主觀感受判斷成效的風險。',
+    primaryMetric: 'release impact visibility / conversion rate delta',
+    notes: 'Historical entry reconstructed from admin version history rollout.',
+  },
+  {
+    id: '2026-06-15-offers-consult-block',
+    title: '方案後方加入其他課程諮詢區塊',
+    category: 'CTA',
+    scope: '/ /offers / consult CTA',
+    impactLevel: 'medium',
+    deployedAt: '2026-06-15 07:36:00',
+    changedSummary:
+      '在方案卡片後加入其他課程、服務與時間諮詢入口，補足不想直接購買或預約的使用者路徑。',
+    hypothesis:
+      '當三種方案都不符合當下需求時，提供清楚的諮詢入口可減少直接離站，提升 Lead 與後續人工轉換機會。',
+    primaryMetric: 'Lead rate / consult CTA clicks / paid checkout continuity',
+    notes: 'Reconstructed from git commit 391338a.',
+  },
+  {
+    id: '2026-06-13-social-meta-tags',
+    title: '社群分享與廣告預覽標籤補強',
+    category: 'TRUST',
+    scope: 'Open Graph / social meta',
+    impactLevel: 'low',
+    deployedAt: '2026-06-13 11:40:00',
+    changedSummary:
+      '補強 Fight Night 頁面的社群標題、描述與預覽資訊，讓廣告或貼文點擊前後的品牌內容更一致。',
+    hypothesis:
+      '社群預覽與落地頁內容一致，有助於降低審查與使用者預期落差，也提升分享入口的可信度。',
+    primaryMetric: 'social preview consistency / landing sessions',
+    notes: 'Reconstructed from git commit 9b4eb75.',
+  },
+  {
+    id: '2026-06-13-ticket-checkout-intent',
+    title: '票卡與結帳意圖流程精修',
+    category: 'CONVERSION',
+    scope: 'ticket cards / checkout intent',
+    impactLevel: 'high',
+    deployedAt: '2026-06-13 03:40:00',
+    changedSummary:
+      '調整 Fight Night 票卡與購買前的 checkout intent 流程，讓方案選擇、訂購資料與付款銜接更清楚。',
+    hypothesis:
+      '更清楚的方案卡與購買意圖紀錄，可降低結帳前流失，並讓 AddToCart 與 InitiateCheckout 更容易追蹤。',
+    primaryMetric: 'AddToCart rate / checkout rate / Purchase rate',
+    notes: 'Reconstructed from git commit 7efced7.',
+  },
+  {
+    id: '2026-06-12-facebook-verification-venue-select',
+    title: 'Facebook 驗證與館別選擇補強',
+    category: 'TRUST',
+    scope: 'verification / venue ticket selection',
+    impactLevel: 'medium',
+    deployedAt: '2026-06-12 15:00:00',
+    changedSummary:
+      '補強 Facebook 相關驗證與館別票券選擇，讓使用者在進入購買前能更明確確認場館與活動關係。',
+    hypothesis:
+      '館別與官方內容更明確，可提升落地頁可信度，並降低廣告審查對品牌一致性的疑慮。',
+    primaryMetric: 'paid sessions / checkout start rate / venue selection clicks',
+    notes: 'Reconstructed from git commit be58019.',
+  },
+  {
+    id: '2026-06-12-liff-state-session-routes',
+    title: 'LIFF state 與工作階段路由標準化',
+    category: 'LINE',
+    scope: 'LIFF / session / analytics routes',
+    impactLevel: 'high',
+    deployedAt: '2026-06-12 13:10:00',
+    changedSummary:
+      '整理 LIFF state URL、登入後回流路徑與分析用 route path，讓不同入口回到一致的頁面與追蹤路徑。',
+    hypothesis:
+      '減少登入、回流與分析路徑不一致，可降低 LINE 流程流失，也讓各頁版本成效比較更乾淨。',
+    primaryMetric: 'Lead rate / canonical route attribution / LINE return completion',
+    notes: 'Reconstructed from git commits a73a7a6 and c144aec.',
+  },
+  {
+    id: '2026-06-12-layout-footer-restore',
+    title: '活動頁寬版排版與頁尾恢復',
+    category: 'UX',
+    scope: '/fight-night-event / footer',
+    impactLevel: 'medium',
+    deployedAt: '2026-06-12 11:22:00',
+    changedSummary:
+      '恢復 Fight Night 活動頁較完整的寬版排版與頁尾資訊，改善桌面版閱讀與品牌信任資訊露出。',
+    hypothesis:
+      '桌面版有足夠頁寬展示圖片與方案，可降低內容壓縮感；頁尾資訊則補足審查與信任判斷所需訊號。',
+    primaryMetric: 'desktop engagement / policy clicks / checkout rate',
+    notes: 'Reconstructed from git commit c46511a.',
+  },
+  {
+    id: '2026-06-12-event-intro-routing',
+    title: 'Fight Night intro 路由與分流關閉',
+    category: 'ROUTING',
+    scope: '/fight-night-intro / split routing',
+    impactLevel: 'medium',
+    deployedAt: '2026-06-12 11:04:00',
+    changedSummary:
+      '新增 Fight Night intro 路由並調整分流策略，讓活動入口與首頁導向更可控。',
+    hypothesis:
+      '集中入口判斷能減少不同使用者看到內容不一致的機率，改善 Meta 審查與實際訪客體驗的一致性。',
+    primaryMetric: 'canonical route sessions / route mismatch warnings',
+    notes: 'Reconstructed from git commit 71891d3.',
+  },
+  {
+    id: '2026-06-12-home-event-meta-purchase-sync',
+    title: '首頁導向活動頁並同步 Meta Purchase',
+    category: 'TRACKING',
+    scope: 'home / event page / Meta Purchase',
+    impactLevel: 'high',
+    deployedAt: '2026-06-12 03:56:00',
+    changedSummary:
+      '讓首頁進入 Fight Night 活動頁主流程，並修正付款成功後 Meta Purchase 同步路徑。',
+    hypothesis:
+      '首頁、付款結果與 Meta Purchase 的主流程一致，可提升事件歸因完整度並降低成交後追蹤漏失。',
+    primaryMetric: 'Purchase event match / paid order attribution / event_source_url consistency',
+    notes: 'Reconstructed from git commit 0498ce1.',
+  },
+  {
+    id: '2026-06-09-coach-locale-copy',
+    title: '教練資料與場館語系文案精修',
+    category: 'CONTENT',
+    scope: 'coach data / locale copy',
+    impactLevel: 'low',
+    deployedAt: '2026-06-09 07:28:00',
+    changedSummary:
+      '整理教練資料、館別名稱與頁面語系文字，讓活動內容與 UFC GYM Taiwan 場域資訊更一致。',
+    hypothesis:
+      '具體教練與場館資訊可提高真實感，降低頁面像臨時廣告頁或不明來源活動的疑慮。',
+    primaryMetric: 'engaged sessions / venue clicks / checkout confidence',
+    notes: 'Reconstructed from git commit 908a72d.',
+  },
+  {
+    id: '2026-06-07-split-test-traffic-reporting',
+    title: '分流流量報表與標準路由追蹤',
+    category: 'ADMIN_OPS',
+    scope: '/admin / canonical routes',
+    impactLevel: 'medium',
+    deployedAt: '2026-06-07 10:21:00',
+    changedSummary:
+      '新增分流流量報表與 canonical route 追蹤，讓不同入口、版本與頁面路徑能被統一比較。',
+    hypothesis:
+      '把路由標準化後，後台才能正確比較不同版本的使用者、互動與轉換，不會被 URL 變體稀釋。',
+    primaryMetric: 'route attribution coverage / split-test sessions / conversion comparison quality',
+    notes: 'Reconstructed from git commit 42679cd.',
+  },
+  {
+    id: '2026-06-06-page-specific-liff',
+    title: '不同頁面使用對應 LIFF ID',
+    category: 'LINE',
+    scope: 'event page / boot camp / LIFF IDs',
+    impactLevel: 'high',
+    deployedAt: '2026-06-06 07:32:00',
+    changedSummary:
+      '讓 Fight Night 活動頁與 Boot Camp 頁使用各自對應的 LIFF ID，降低跨頁登入與回流混淆。',
+    hypothesis:
+      '頁面專屬 LIFF 設定可減少登入後回到錯頁、資料帶入錯誤或追蹤來源混淆。',
+    primaryMetric: 'LINE return completion / Lead rate / session continuity',
+    notes: 'Reconstructed from git commit eafdbe9.',
+  },
+  {
+    id: '2026-06-06-event-pass-framing',
+    title: '活動 Pass 定位與頁面敘事精修',
+    category: 'POSITIONING',
+    scope: '/fight-night-event',
+    impactLevel: 'medium',
+    deployedAt: '2026-06-06 06:04:00',
+    changedSummary:
+      '調整 Fight Night 落地頁，使其更像夜間入場體驗與活動 Pass，而不是一般健身課程頁。',
+    hypothesis:
+      '清楚的活動 Pass 定位能提高廣告到落地頁的期待一致性，也讓使用者更容易理解購買的是一次入場體驗。',
+    primaryMetric: 'AddToCart rate / checkout rate / engaged sessions',
+    notes: 'Reconstructed from git commit fc71c76.',
+  },
+  {
+    id: '2026-06-04-nearby-venue-recommendations',
+    title: '加入鄰近場館推薦',
+    category: 'CONTENT',
+    scope: '/fight-night-event / venue recommendations',
+    impactLevel: 'medium',
+    deployedAt: '2026-06-04 15:34:00',
+    changedSummary:
+      '在 Fight Night 活動頁加入鄰近館別推薦，讓使用者能更快確認適合自己的到場地點。',
+    hypothesis:
+      '如果使用者能快速找到可抵達的館場，方案點擊與預約完成率會更穩定。',
+    primaryMetric: 'venue selection clicks / AddToCart rate / Lead rate',
+    notes: 'Reconstructed from git commit 4917f97.',
+  },
+  {
+    id: '2026-06-04-capi-checkout-events',
+    title: 'Meta CAPI 追蹤 ID 與結帳事件補強',
+    category: 'TRACKING',
+    scope: 'Meta CAPI / checkout events',
+    impactLevel: 'high',
+    deployedAt: '2026-06-04 04:21:00',
+    changedSummary:
+      '補強 Meta CAPI tracking IDs 與結帳相關事件，讓前端事件、後端紀錄與廣告平台事件更能對齊。',
+    hypothesis:
+      'AddToCart、InitiateCheckout 與 Purchase 的事件鏈越完整，廣告學習與成效判讀越穩定。',
+    primaryMetric: 'Meta event match quality / AddToCart / InitiateCheckout / Purchase',
+    notes: 'Reconstructed from git commit 4e4e326.',
+  },
+  {
+    id: '2026-06-03-free-trial-liff-fallback',
+    title: '免費體驗 LIFF 門檻與首購補送',
+    category: 'LINE',
+    scope: 'free trial / first purchase fallback',
+    impactLevel: 'medium',
+    deployedAt: '2026-06-03 13:19:00',
+    changedSummary:
+      '調整免費體驗原本的 LIFF 門檻，並補上首購相關的 LINE 通知 fallback。',
+    hypothesis:
+      '確保免費體驗與首購後續通知都有可用路徑，可降低成功填單或付款後沒被承接的營運風險。',
+    primaryMetric: 'Lead completion / LINE notification success / follow-up coverage',
+    notes: 'Reconstructed from git commit 32c5f74.',
+  },
+  {
+    id: '2026-06-03-admin-line-resend',
+    title: '後台新增 LINE 確認通知重送',
+    category: 'ADMIN_OPS',
+    scope: '/admin / LINE confirmation resend',
+    impactLevel: 'medium',
+    deployedAt: '2026-06-03 12:58:00',
+    changedSummary:
+      '在後台加入 LINE 確認通知重送能力，讓營運人員能補救未成功送達或需再次提醒的訂單與預約。',
+    hypothesis:
+      '提供人工補送工具可降低客服跟進成本，也能避免已成交或已預約使用者漏接確認資訊。',
+    primaryMetric: 'LINE resend success / unmatched paid orders / follow-up actionability',
+    notes: 'Reconstructed from git commit b34bc40.',
+  },
+  {
+    id: '2026-06-03-line-recovery-carousel',
+    title: 'LINE 補救卡片改為故事輪播樣式',
+    category: 'LINE',
+    scope: 'LINE recovery cards',
+    impactLevel: 'medium',
+    deployedAt: '2026-06-03 12:34:00',
+    changedSummary:
+      '重做 LINE recovery cards，使補救與再互動訊息更接近故事卡片，而不是單純通知文字。',
+    hypothesis:
+      '更符合活動敘事的 LINE 卡片可提高回流點擊與未完成流程的補救機會。',
+    primaryMetric: 'LINE recovery click rate / checkout recovery / Lead recovery',
+    notes: 'Reconstructed from git commit 782960b.',
+  },
+  {
+    id: '2026-06-03-ticket-purchase-page',
+    title: '活動頁改成票券購買主流程',
+    category: 'CONVERSION',
+    scope: '/fight-night-event / ticket purchase',
+    impactLevel: 'high',
+    deployedAt: '2026-06-03 08:53:00',
+    changedSummary:
+      '將 Fight Night 活動頁重構成以票券購買為核心的流程，強化方案選擇與付款前資訊。',
+    hypothesis:
+      '把頁面主目標集中在購買票券，可降低使用者不知道下一步要做什麼的問題。',
+    primaryMetric: 'AddToCart rate / checkout rate / Purchase rate',
+    notes: 'Reconstructed from git commit fba3cc9.',
+  },
+  {
+    id: '2026-06-03-ticket-first-flow',
+    title: '票券優先的頁面流程',
+    category: 'CONVERSION',
+    scope: '/fight-night-event / ticket-first flow',
+    impactLevel: 'high',
+    deployedAt: '2026-06-03 08:24:00',
+    changedSummary:
+      '把活動頁動線調整為先理解入場體驗、再選票券、再進入購買或預約。',
+    hypothesis:
+      '票券優先的資訊順序能讓使用者更快完成決策，並提高方案卡片 CTA 的點擊品質。',
+    primaryMetric: 'ticket CTA clicks / AddToCart rate / checkout rate',
+    notes: 'Reconstructed from git commit 3037a6c.',
+  },
+  {
+    id: '2026-06-03-paid-experience-framing',
+    title: '付費體驗定位重整',
+    category: 'POSITIONING',
+    scope: '/fight-night-event / paid experience',
+    impactLevel: 'medium',
+    deployedAt: '2026-06-03 05:01:00',
+    changedSummary:
+      '重整 Fight Night 的付費體驗文案，使其更像一晚的活動入場，而不是一般課程說明。',
+    hypothesis:
+      '清楚說明付費體驗本質，可提升價格接受度並降低付款前疑慮。',
+    primaryMetric: 'checkout rate / Purchase rate / refund inquiry risk',
+    notes: 'Reconstructed from git commit 6626bd0.',
+  },
+  {
+    id: '2026-06-02-event-page-routing',
+    title: '新增 Fight Night 活動頁路由',
+    category: 'ROUTING',
+    scope: '/fight-night-event',
+    impactLevel: 'medium',
+    deployedAt: '2026-06-02 08:06:00',
+    changedSummary:
+      '新增 Fight Night 活動頁入口，將活動內容與原本頁面動線拆出成可追蹤的獨立路由。',
+    hypothesis:
+      '獨立活動頁能讓廣告、追蹤與後台報表更清楚分辨活動流量。',
+    primaryMetric: 'route sessions / engaged sessions / route-specific conversion',
+    notes: 'Reconstructed from git commit 385ab0e.',
+  },
+  {
+    id: '2026-06-02-coach-profiles',
+    title: '加入對應教練資料與照片',
+    category: 'CONTENT',
+    scope: 'coach profiles / instructor proof',
+    impactLevel: 'medium',
+    deployedAt: '2026-06-02 06:51:00',
+    changedSummary:
+      '新增教練介紹與照片素材，讓頁面能呈現更具體的教練與場館真實感。',
+    hypothesis:
+      '具體人物與教練資訊能增加信任，也讓使用者更能想像到場後的體驗。',
+    primaryMetric: 'engaged sessions / scroll depth / CTA clicks',
+    notes: 'Reconstructed from git commit 1752a48.',
+  },
+  {
+    id: '2026-06-02-liff-buyer-prefill',
+    title: 'LINE 使用者限定訂購資料預填',
+    category: 'LINE',
+    scope: 'buyer prefill / LINE identity',
+    impactLevel: 'medium',
+    deployedAt: '2026-06-02 06:26:00',
+    changedSummary:
+      '將買家資料預填限制在已確認的 LINE 使用者脈絡內，避免跨使用者資料誤帶。',
+    hypothesis:
+      '預填資料若只在正確身分下啟用，可兼顧表單便利與個資安全。',
+    primaryMetric: 'form completion / data mismatch risk / checkout start rate',
+    notes: 'Reconstructed from git commit 8d5ed22.',
+  },
+  {
+    id: '2026-06-01-admin-funnel-dashboard',
+    title: '後台流量儀表板改為漏斗階段視角',
+    category: 'ADMIN_OPS',
+    scope: '/admin / funnel dashboard',
+    impactLevel: 'medium',
+    deployedAt: '2026-06-01 06:15:00',
+    changedSummary:
+      '調整後台流量儀表板，以瀏覽、互動、Lead、Checkout、Paid 等漏斗階段呈現。',
+    hypothesis:
+      '用漏斗階段查看後台數據，能更快定位流失點與版本變更後的主要影響。',
+    primaryMetric: 'funnel visibility / operational diagnosis speed',
+    notes: 'Reconstructed from git commit a1dd846.',
+  },
+  {
+    id: '2026-05-30-ticket-unlock-copy',
+    title: '票券解鎖 CTA 文案調整',
+    category: 'CTA',
+    scope: 'ticket unlock CTA',
+    impactLevel: 'low',
+    deployedAt: '2026-05-30 08:31:00',
+    changedSummary:
+      '調整票券解鎖與預覽相關 CTA 文案，讓使用者更清楚點擊後會看到或完成什麼。',
+    hypothesis:
+      '降低 CTA 語意不明，可提升點擊品質並減少無效互動。',
+    primaryMetric: 'CTA click quality / AddToCart rate',
+    notes: 'Reconstructed from git commit 29a2460.',
+  },
+  {
+    id: '2026-05-29-lead-deduping',
+    title: 'Lead 去重與 LINE 登入事件修正',
+    category: 'TRACKING',
+    scope: 'Lead events / LINE login',
+    impactLevel: 'high',
+    deployedAt: '2026-05-29 13:20:00',
+    changedSummary:
+      '修正 CTA 與 LINE 登入之間的 Lead 去重邏輯，避免同一位使用者在不同步驟被重複計算。',
+    hypothesis:
+      'Lead 去重正確後，Meta 與後台的 Lead rate 才能反映真實成效，而不是事件重複造成的假成長。',
+    primaryMetric: 'Lead dedupe quality / Lead rate / Meta event consistency',
+    notes: 'Reconstructed from git commit fd3c042.',
+  },
+  {
+    id: '2026-05-29-free-trial-admin-stats',
+    title: '免費體驗預約流程與後台統計',
+    category: 'CONVERSION',
+    scope: 'free trial / admin stats',
+    impactLevel: 'high',
+    deployedAt: '2026-05-29 07:50:00',
+    changedSummary:
+      '新增免費體驗預約流程與後台統計，讓免費預約不只是一個 CTA，也能被營運追蹤與跟進。',
+    hypothesis:
+      '免費體驗若能完整寫入後台與統計，可提高名單承接能力並看出它與付費流程的差異。',
+    primaryMetric: 'free trial Lead rate / admin follow-up coverage',
+    notes: 'Reconstructed from git commit 4850d80.',
+  },
+  {
+    id: '2026-05-29-first-purchase-offer',
+    title: '首購優惠追蹤與價格露出',
+    category: 'PRICING',
+    scope: 'first purchase offer / locked course CTAs',
+    impactLevel: 'medium',
+    deployedAt: '2026-05-29 06:29:00',
+    changedSummary:
+      '新增首購優惠追蹤與方案價格露出，並在鎖定課程 CTA 中顯示首購價格資訊。',
+    hypothesis:
+      '價格與優惠條件越早清楚呈現，使用者越能判斷是否進入下一步，降低付款前認知落差。',
+    primaryMetric: 'offer checks / AddToCart rate / checkout rate',
+    notes: 'Reconstructed from git commits dd05d46, f1c259e, and ed078d2.',
+  },
+  {
+    id: '2026-06-17-neihu-signature',
+    title: '英文館名 Neihu Signature',
+    category: 'CONTENT',
+    scope: '/fight-night-event / LINE confirmation',
+    impactLevel: 'low',
+    deployedAt: '2026-06-17 05:16:00',
+    changedSummary:
+      '將英文版 Neihu Flagship 修正為 Neihu Signature，並同步付款後 LINE 通知文字。',
+    hypothesis: '降低館名不一致造成的品牌與客服誤解。',
+    primaryMetric: 'venue copy consistency / checkout confirmation clarity',
+    notes: 'Historical entry reconstructed from current admin handoff rollout.',
+  },
+  {
+    id: '2026-06-17-footer-operations-designer',
+    title: 'Footer 營運資訊與 Designed by',
+    category: 'TRUST',
+    scope: 'footer / policy links',
+    impactLevel: 'low',
+    deployedAt: '2026-06-17 05:13:00',
+    changedSummary:
+      '移除頁尾中像審查說明的頁面用途與品牌關係長文，改為正式營運資訊，並新增 Designed by 廖天佑。',
+    hypothesis: '讓頁尾更像正式品牌網站，降低審查與用戶看到奇怪聲明的疑慮。',
+    primaryMetric: 'footer trust clarity / policy click continuity',
+    notes: 'Historical entry reconstructed from current admin handoff rollout.',
+  },
+  {
+    id: '2026-06-17-floating-consult-icons',
+    title: '浮動諮詢改為純 ICON',
+    category: 'CTA',
+    scope: 'public funnel / consult CTA',
+    impactLevel: 'medium',
+    deployedAt: '2026-06-17 05:08:00',
+    changedSummary:
+      '將浮動 LINE / Messenger 諮詢改為純圖示；完整諮詢文案與按鈕放回其他課程諮詢區塊。',
+    hypothesis: '保留快速聯絡入口，同時降低浮動文案干擾閱讀與主要 CTA。',
+    primaryMetric: 'Lead rate / consult CTA clicks / checkout continuity',
+    notes: 'Historical entry reconstructed from current admin handoff rollout.',
+  },
+  {
+    id: '2026-06-16-free-trial-web-form',
+    title: '免費預約改為填寫資料後進感謝頁',
+    category: 'CONVERSION',
+    scope: 'free trial / payment result',
+    impactLevel: 'high',
+    deployedAt: '2026-06-16 10:00:00',
+    changedSummary:
+      '免費體驗不再要求 LIFF，改成像付費流程一樣填寫姓名、手機與 Email，送出後進入感謝頁並引導 LINE 確認報名。',
+    hypothesis: '移除 LINE/LIFF 前置摩擦，提升免費體驗 Lead 完成率。',
+    primaryMetric: 'free trial submit rate / Lead rate / LINE confirmation clicks',
+    notes: 'Historical entry reconstructed from current admin handoff rollout.',
+  },
+  {
+    id: '2026-06-15-domain-trust-refresh',
+    title: '新網域與官方信任內容調整',
+    category: 'TRUST',
+    scope: 'home / offers / policies',
+    impactLevel: 'high',
+    deployedAt: '2026-06-15 08:00:00',
+    changedSummary:
+      '配合 ufcgymtaiwan.25min.co 與 Meta 審查疑慮，補強官方場域、政策、退款取消、商家聯絡與品牌一致性內容。',
+    hypothesis: '改善廣告與落地頁一致性，降低詐騙連結誤判風險。',
+    primaryMetric: 'paid sessions / Lead rate / checkout rate / policy trust path',
+    notes: 'Historical entry reconstructed from current admin handoff rollout.',
+  },
+]
 
 const CANONICAL_ROUTE_SQL = `
   COALESCE(
@@ -248,6 +727,72 @@ async function ensureAdminCoreTables(env) {
   await ensureLineRecoveryTables(env)
   await ensureLineMessageSendsTable(env)
   await ensureLineMessageSendMetadataColumns(env)
+  await ensureReleaseVersionTables(env)
+}
+
+async function ensureReleaseVersionTables(env) {
+  await env.DB.batch([
+    env.DB.prepare(
+      `CREATE TABLE IF NOT EXISTS release_versions (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        category TEXT,
+        scope TEXT,
+        impact_level TEXT,
+        deployed_at TEXT NOT NULL,
+        deployment_url TEXT,
+        changed_summary TEXT,
+        hypothesis TEXT,
+        primary_metric TEXT,
+        notes TEXT,
+        source TEXT NOT NULL DEFAULT 'manual',
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+      )`,
+    ),
+    env.DB.prepare(
+      `CREATE INDEX IF NOT EXISTS idx_release_versions_deployed_at
+       ON release_versions (deployed_at)`,
+    ),
+  ])
+
+  await env.DB.batch(
+    DEFAULT_CHANGE_RELEASES.map((release) =>
+      env.DB.prepare(
+        `INSERT INTO release_versions (
+          id, title, category, scope, impact_level, deployed_at, deployment_url,
+          changed_summary, hypothesis, primary_metric, notes, source
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET
+          title = excluded.title,
+          category = excluded.category,
+          scope = excluded.scope,
+          impact_level = excluded.impact_level,
+          deployed_at = excluded.deployed_at,
+          deployment_url = excluded.deployment_url,
+          changed_summary = excluded.changed_summary,
+          hypothesis = excluded.hypothesis,
+          primary_metric = excluded.primary_metric,
+          notes = excluded.notes,
+          source = excluded.source,
+          updated_at = datetime('now')
+        WHERE release_versions.source = 'historical_reconstructed'`,
+      ).bind(
+        release.id,
+        release.title,
+        release.category,
+        release.scope,
+        release.impactLevel,
+        release.deployedAt,
+        release.deploymentUrl || null,
+        release.changedSummary,
+        release.hypothesis,
+        release.primaryMetric,
+        release.notes,
+        'historical_reconstructed',
+      ),
+    ),
+  )
 }
 
 async function ensureCustomerTrackingTables(env) {
@@ -407,6 +952,7 @@ async function ensureCustomerTrackingTables(env) {
     ),
   ])
   await ensureOrderTrackingColumns(env)
+  await ensureReleaseVersionTables(env)
 }
 
 async function ensureTrackingColumns(env) {
@@ -1947,6 +2493,247 @@ async function getTraffic(env, url) {
   }
 }
 
+function parseSqlDate(value) {
+  const raw = trimText(value, 40)
+  if (!raw) return new Date(0)
+  return new Date(`${raw.replace(' ', 'T').replace(/\.\d+$/, '')}Z`)
+}
+
+function toSqlDate(date) {
+  return date.toISOString().slice(0, 19).replace('T', ' ')
+}
+
+function addHours(date, hours) {
+  return new Date(date.getTime() + hours * 60 * 60 * 1000)
+}
+
+function hoursBetween(startAt, endAt) {
+  const start = parseSqlDate(startAt)
+  const end = parseSqlDate(endAt)
+  const hours = (end.getTime() - start.getTime()) / (60 * 60 * 1000)
+  return Number.isFinite(hours) ? Math.max(0, hours) : 0
+}
+
+function rate(numerator, denominator) {
+  const total = Number(denominator || 0)
+  if (total <= 0) return 0
+  return (Number(numerator || 0) / total) * 100
+}
+
+function percentageChange(after, before) {
+  const beforeValue = Number(before || 0)
+  const afterValue = Number(after || 0)
+  if (beforeValue <= 0) return afterValue > 0 ? null : 0
+  return ((afterValue - beforeValue) / beforeValue) * 100
+}
+
+function roundMetric(value, digits = 2) {
+  const number = Number(value || 0)
+  if (!Number.isFinite(number)) return 0
+  return Number(number.toFixed(digits))
+}
+
+function normalizePeriodMetrics(eventMetrics, orderMetrics, startAt, endAt) {
+  const users = toNumber(eventMetrics.users)
+  const sessions = toNumber(eventMetrics.sessions)
+  const leads = toNumber(eventMetrics.lead_sessions)
+  const addToCart = toNumber(eventMetrics.add_to_cart_sessions)
+  const checkout = toNumber(eventMetrics.checkout_sessions)
+  const freeTrials = toNumber(eventMetrics.free_trial_sessions)
+  const paidOrders = toNumber(orderMetrics.paid_orders)
+  const revenue = toNumber(orderMetrics.revenue)
+  const durationHours = hoursBetween(startAt, endAt)
+  const durationDays = durationHours / 24
+
+  return {
+    startAt,
+    endAt,
+    durationHours: roundMetric(durationHours, 1),
+    durationDays: roundMetric(durationDays, 2),
+    users,
+    sessions,
+    paidSessions: toNumber(eventMetrics.paid_sessions),
+    clickIdSessions: toNumber(eventMetrics.click_id_sessions),
+    mobileSessions: toNumber(eventMetrics.mobile_sessions),
+    desktopSessions: toNumber(eventMetrics.desktop_sessions),
+    leads,
+    addToCart,
+    checkout,
+    freeTrials,
+    orders: toNumber(orderMetrics.orders),
+    paidOrders,
+    freeOrders: toNumber(orderMetrics.free_orders),
+    revenue,
+    leadRate: roundMetric(rate(leads, users), 2),
+    addToCartRate: roundMetric(rate(addToCart, users), 2),
+    checkoutRate: roundMetric(rate(checkout, users), 2),
+    purchaseRate: roundMetric(rate(paidOrders, users), 2),
+    checkoutToPaidRate: roundMetric(rate(paidOrders, checkout), 2),
+    revenuePerUser: roundMetric(users > 0 ? revenue / users : 0, 2),
+    usersPerDay: roundMetric(durationDays > 0 ? users / durationDays : 0, 2),
+  }
+}
+
+function buildChangeDelta(before, after) {
+  return {
+    users: after.users - before.users,
+    usersPct: percentageChange(after.users, before.users),
+    sessions: after.sessions - before.sessions,
+    sessionsPct: percentageChange(after.sessions, before.sessions),
+    paidSessions: after.paidSessions - before.paidSessions,
+    paidSessionsPct: percentageChange(after.paidSessions, before.paidSessions),
+    leads: after.leads - before.leads,
+    leadsPct: percentageChange(after.leads, before.leads),
+    leadRatePp: roundMetric(after.leadRate - before.leadRate, 2),
+    addToCartRatePp: roundMetric(after.addToCartRate - before.addToCartRate, 2),
+    checkoutRatePp: roundMetric(after.checkoutRate - before.checkoutRate, 2),
+    purchaseRatePp: roundMetric(after.purchaseRate - before.purchaseRate, 2),
+    checkoutToPaidRatePp: roundMetric(
+      after.checkoutToPaidRate - before.checkoutToPaidRate,
+      2,
+    ),
+    paidOrders: after.paidOrders - before.paidOrders,
+    freeTrials: after.freeTrials - before.freeTrials,
+    revenue: after.revenue - before.revenue,
+    revenuePct: percentageChange(after.revenue, before.revenue),
+    revenuePerUser: roundMetric(after.revenuePerUser - before.revenuePerUser, 2),
+    usersPerDay: roundMetric(after.usersPerDay - before.usersPerDay, 2),
+  }
+}
+
+async function getPeriodMetrics(env, startAt, endAt) {
+  const eventMetrics =
+    (await safeFirst(
+      env,
+      `SELECT COUNT(DISTINCT CASE WHEN event_name = 'page_view' THEN anonymous_id ELSE NULL END) AS users,
+              COUNT(DISTINCT CASE WHEN event_name = 'page_view' THEN session_id ELSE NULL END) AS sessions,
+              COUNT(DISTINCT CASE WHEN event_name = 'page_view' AND COALESCE(first_source_channel, source_channel, '') = 'paid' THEN session_id ELSE NULL END) AS paid_sessions,
+              COUNT(DISTINCT CASE WHEN event_name = 'page_view' AND click_id_type IS NOT NULL THEN session_id ELSE NULL END) AS click_id_sessions,
+              COUNT(DISTINCT CASE WHEN event_name = 'page_view' AND device_type = 'mobile' THEN session_id ELSE NULL END) AS mobile_sessions,
+              COUNT(DISTINCT CASE WHEN event_name = 'page_view' AND device_type = 'desktop' THEN session_id ELSE NULL END) AS desktop_sessions,
+              COUNT(DISTINCT CASE WHEN event_name IN (${LEAD_INTENT_EVENT_SQL}) THEN session_id ELSE NULL END) AS lead_sessions,
+              COUNT(DISTINCT CASE WHEN event_name = 'course_purchase_click' THEN session_id ELSE NULL END) AS add_to_cart_sessions,
+              COUNT(DISTINCT CASE WHEN event_name = 'shopline_checkout_submit' THEN session_id ELSE NULL END) AS checkout_sessions,
+              COUNT(DISTINCT CASE WHEN event_name = 'free_trial_reservation_submit' THEN session_id ELSE NULL END) AS free_trial_sessions
+       FROM tracking_events
+       WHERE created_at >= ? AND created_at < ?`,
+      [startAt, endAt],
+    )) || {}
+
+  const orderMetrics =
+    (await safeFirst(
+      env,
+      `SELECT COUNT(*) AS orders,
+              COALESCE(SUM(CASE WHEN status = 'paid' THEN 1 ELSE 0 END), 0) AS paid_orders,
+              COALESCE(SUM(CASE WHEN status = 'free_reserved' THEN 1 ELSE 0 END), 0) AS free_orders,
+              COALESCE(SUM(CASE WHEN status = 'paid' THEN amount_value ELSE 0 END), 0) AS revenue
+       FROM course_orders
+       WHERE created_at >= ? AND created_at < ?`,
+      [startAt, endAt],
+    )) || {}
+
+  return normalizePeriodMetrics(eventMetrics, orderMetrics, startAt, endAt)
+}
+
+function buildChangeWarnings(change, isLatest) {
+  const warnings = []
+  if (isLatest) {
+    warnings.push(
+      'After 期間尚未完整，請優先看轉換率、每日平均與漏斗步驟差異，不要只看總量。',
+    )
+  }
+  if (change.after.durationHours < 24) {
+    warnings.push('After 觀察期低於 24 小時，樣本容易受時段影響。')
+  }
+  if (change.after.users < 50) {
+    warnings.push('After users 少於 50，轉換率變化只能當方向訊號。')
+  }
+  if (Math.abs(change.delta.paidSessionsPct || 0) >= 50) {
+    warnings.push('Paid traffic 結構變化明顯，不能把所有差異直接歸因於頁面改版。')
+  }
+  return warnings
+}
+
+async function getChanges(env, url) {
+  const days = getLookbackDays(url, 30, 90)
+  const nowAt = toSqlDate(new Date())
+  const releaseRows = await safeAll(
+    env,
+    `SELECT id, title, category, scope, impact_level, deployed_at, deployment_url,
+            changed_summary, hypothesis, primary_metric, notes, source
+     FROM release_versions
+     WHERE deployed_at >= datetime('now', ?)
+     ORDER BY deployed_at ASC`,
+    [`-${days + 14} days`],
+  )
+
+  const visibleCutoff = addHours(new Date(), -days * 24)
+  const changes = []
+
+  for (let index = 0; index < releaseRows.length; index += 1) {
+    const release = releaseRows[index]
+    const deployedAt = release.deployed_at
+    const deployedDate = parseSqlDate(deployedAt)
+    const nextRelease = releaseRows[index + 1]
+    const previousRelease = releaseRows[index - 1]
+    const afterStart = deployedAt
+    const afterEnd = nextRelease?.deployed_at || nowAt
+    const beforeEnd = deployedAt
+    const beforeStart = previousRelease
+      ? previousRelease.deployed_at
+      : toSqlDate(addHours(deployedDate, -24 * 7))
+
+    if (deployedDate < visibleCutoff && !nextRelease) continue
+    if (deployedDate < visibleCutoff && parseSqlDate(afterEnd) < visibleCutoff) continue
+
+    const [before, after] = await Promise.all([
+      getPeriodMetrics(env, beforeStart, beforeEnd),
+      getPeriodMetrics(env, afterStart, afterEnd),
+    ])
+    const delta = buildChangeDelta(before, after)
+    const change = {
+      id: release.id,
+      title: release.title,
+      category: release.category,
+      scope: release.scope,
+      impactLevel: release.impact_level,
+      deployedAt,
+      deployedAtTw: release.deployed_at
+        ? toSqlDate(addHours(parseSqlDate(release.deployed_at), 8))
+        : '',
+      deploymentUrl: release.deployment_url,
+      changedSummary: release.changed_summary,
+      hypothesis: release.hypothesis,
+      primaryMetric: release.primary_metric,
+      notes: release.notes,
+      source: release.source,
+      before,
+      after,
+      delta,
+      isLatest: !nextRelease,
+    }
+    changes.push({
+      ...change,
+      warnings: buildChangeWarnings(change, !nextRelease),
+    })
+  }
+
+  const visibleChanges = changes
+    .filter((change) => parseSqlDate(change.deployedAt) >= visibleCutoff || change.isLatest)
+    .sort((a, b) => parseSqlDate(b.deployedAt).getTime() - parseSqlDate(a.deployedAt).getTime())
+
+  return {
+    days,
+    generatedAt: nowAt,
+    changes: visibleChanges,
+    overview: {
+      totalChanges: visibleChanges.length,
+      latestChangeId: visibleChanges[0]?.id || null,
+      latestChangeTitle: visibleChanges[0]?.title || null,
+    },
+  }
+}
+
 async function listJourneys(env, url) {
   const limit = getLimit(url, 30, 80)
   const lookbackDays = getLookbackDays(url, 7, 30)
@@ -3334,6 +4121,7 @@ export async function onRequestGet({ request, env }) {
   const action = parts[2] || ''
   const needsFullTrackingEnsure =
     resource === 'traffic' ||
+    resource === 'changes' ||
     resource === 'journeys' ||
     resource === 'events' ||
     (resource === 'summary' && url.searchParams.get('light') !== '1')
@@ -3367,6 +4155,10 @@ export async function onRequestGet({ request, env }) {
 
   if (resource === 'traffic') {
     return json({ ok: true, traffic: await getTraffic(env, url) })
+  }
+
+  if (resource === 'changes') {
+    return json({ ok: true, changes: await getChanges(env, url) })
   }
 
   if (resource === 'journeys') {

@@ -260,6 +260,9 @@ function canonicalizeRoutePath(value) {
   if (lower === '/privacy-policy' || lower === '/privacy-policy.html') {
     return '/privacy-policy'
   }
+  if (lower === '/terms-of-service' || lower === '/terms-of-service.html') {
+    return '/terms-of-service'
+  }
   if (lower === '/refund-policy' || lower === '/refund-policy.html') {
     return '/refund-policy'
   }

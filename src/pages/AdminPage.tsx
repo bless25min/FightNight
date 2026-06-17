@@ -2,7 +2,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 const adminTokenKey = 'fightnight_admin_token'
 
-type AdminTab = 'traffic' | 'journeys' | 'orders' | 'inventory' | 'events' | 'line'
+type AdminTab =
+  | 'changes'
+  | 'traffic'
+  | 'journeys'
+  | 'orders'
+  | 'inventory'
+  | 'events'
+  | 'line'
 
 type AdminOrder = {
   referenceId: string
@@ -517,6 +524,88 @@ type TrafficData = {
   recentEvents?: TrafficRecentEvent[]
 }
 
+type ChangePeriodMetrics = {
+  startAt: string
+  endAt: string
+  durationHours: number
+  durationDays: number
+  users: number
+  sessions: number
+  paidSessions: number
+  clickIdSessions: number
+  mobileSessions: number
+  desktopSessions: number
+  leads: number
+  addToCart: number
+  checkout: number
+  freeTrials: number
+  orders: number
+  paidOrders: number
+  freeOrders: number
+  revenue: number
+  leadRate: number
+  addToCartRate: number
+  checkoutRate: number
+  purchaseRate: number
+  checkoutToPaidRate: number
+  revenuePerUser: number
+  usersPerDay: number
+}
+
+type ChangeDelta = {
+  users: number
+  usersPct: number | null
+  sessions: number
+  sessionsPct: number | null
+  paidSessions: number
+  paidSessionsPct: number | null
+  leads: number
+  leadsPct: number | null
+  leadRatePp: number
+  addToCartRatePp: number
+  checkoutRatePp: number
+  purchaseRatePp: number
+  checkoutToPaidRatePp: number
+  paidOrders: number
+  freeTrials: number
+  revenue: number
+  revenuePct: number | null
+  revenuePerUser: number
+  usersPerDay: number
+}
+
+type ChangeEntry = {
+  id: string
+  title: string
+  category?: string | null
+  scope?: string | null
+  impactLevel?: string | null
+  deployedAt: string
+  deployedAtTw?: string | null
+  deploymentUrl?: string | null
+  changedSummary?: string | null
+  hypothesis?: string | null
+  primaryMetric?: string | null
+  notes?: string | null
+  source?: string | null
+  before: ChangePeriodMetrics
+  after: ChangePeriodMetrics
+  delta: ChangeDelta
+  warnings: string[]
+  isLatest?: boolean
+}
+
+type ChangesData = {
+  days: number
+  generatedAt: string
+  overview: {
+    totalChanges: number
+    latestChangeId?: string | null
+    latestChangeTitle?: string | null
+  }
+  changes: ChangeEntry[]
+}
+
 type JourneyEvent = {
   eventName: string
   routePath?: string | null
@@ -579,6 +668,7 @@ type AdminData = {
   customers: LineCustomer[]
   lineMessages: LineMessageRecord[]
   journeys: Journey[]
+  changes?: ChangesData
 }
 
 type ApiError = {
@@ -652,6 +742,7 @@ const recoveryTemplates: Array<{
 ]
 
 const tabs: Array<{ id: AdminTab; label: string }> = [
+  { id: 'changes', label: '版本歷程' },
   { id: 'traffic', label: '流量優化' },
   { id: 'journeys', label: '用戶歷程' },
   { id: 'orders', label: '訂單客戶' },
@@ -717,6 +808,46 @@ function formatRate(numerator?: number | null, denominator?: number | null) {
 function bounceRate(bounces: number, exits: number) {
   if (!exits) return '0%'
   return `${Math.round((bounces / exits) * 100)}%`
+}
+
+function formatNumber(value?: number | null, digits = 0) {
+  const number = Number(value || 0)
+  return new Intl.NumberFormat('zh-TW', {
+    maximumFractionDigits: digits,
+    minimumFractionDigits: digits > 0 ? 1 : 0,
+  }).format(number)
+}
+
+function formatSignedNumber(value?: number | null, suffix = '', digits = 0) {
+  const number = Number(value || 0)
+  const sign = number > 0 ? '+' : ''
+  return `${sign}${formatNumber(number, digits)}${suffix}`
+}
+
+function formatSignedPercent(value?: number | null) {
+  if (value === null || value === undefined) return '新增'
+  return formatSignedNumber(value, '%', Math.abs(value) >= 10 ? 1 : 2)
+}
+
+function formatSignedPoint(value?: number | null) {
+  return formatSignedNumber(value, 'pp', Math.abs(Number(value || 0)) >= 10 ? 1 : 2)
+}
+
+function deltaTone(value?: number | null) {
+  const number = Number(value || 0)
+  if (number > 0) return 'text-neon'
+  if (number < 0) return 'text-blaze'
+  return 'text-mist/65'
+}
+
+function impactBadgeClass(level?: string | null) {
+  if (level === 'high') return 'border-blaze/25 bg-blaze/10 text-blaze'
+  if (level === 'low') return 'border-neon/20 bg-neon/10 text-neon'
+  return 'border-gold/25 bg-gold/10 text-gold'
+}
+
+function formatPeriodRange(period: ChangePeriodMetrics) {
+  return `${formatDateTime(period.startAt)} - ${formatDateTime(period.endAt)}`
 }
 
 function splitVariantLabel(value?: string | null) {
@@ -2182,6 +2313,279 @@ function LineMessagesTable({ messages }: { messages: LineMessageRecord[] }) {
   )
 }
 
+function PeriodSummaryCard({
+  title,
+  period,
+}: {
+  title: string
+  period: ChangePeriodMetrics
+}) {
+  return (
+    <div className="rounded-lg border border-pearl/8 bg-black/24 p-3">
+      <p className="font-heading text-xs uppercase tracking-[0.16em] text-mist/50">
+        {title}
+      </p>
+      <p className="mt-2 text-xs leading-relaxed text-mist/60">
+        {formatPeriodRange(period)}
+      </p>
+      <p className="mt-1 text-xs text-mist/45">
+        期間 {formatNumber(period.durationDays, 1)} 天
+      </p>
+      <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+        <div>
+          <p className="text-mist/45">Users</p>
+          <p className="font-heading text-pearl">{formatNumber(period.users)}</p>
+        </div>
+        <div>
+          <p className="text-mist/45">Sessions</p>
+          <p className="font-heading text-pearl">{formatNumber(period.sessions)}</p>
+        </div>
+        <div>
+          <p className="text-mist/45">Checkout</p>
+          <p className="font-heading text-gold">{formatNumber(period.checkout)}</p>
+        </div>
+        <div>
+          <p className="text-mist/45">Paid</p>
+          <p className="font-heading text-neon">{formatNumber(period.paidOrders)}</p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ImpactMetricRow({
+  label,
+  before,
+  after,
+  delta,
+}: {
+  label: string
+  before: string
+  after: string
+  delta: string
+}) {
+  return (
+    <div className="border-t border-pearl/8 py-3">
+      <div className="flex items-center justify-between gap-3">
+        <p className="font-heading text-sm text-pearl">{label}</p>
+        <p className={`font-heading text-sm ${deltaTone(Number(delta.replace(/[^\d.-]/g, '')))}`}>
+          {delta}
+        </p>
+      </div>
+      <div className="mt-2 grid grid-cols-2 gap-2 text-sm">
+        <div className="rounded-lg bg-pearl/[0.04] p-3">
+          <p className="text-xs text-mist/45">before</p>
+          <p className="mt-1 font-heading text-pearl">{before}</p>
+        </div>
+        <div className="rounded-lg bg-pearl/[0.04] p-3">
+          <p className="text-xs text-mist/45">after</p>
+          <p className="mt-1 font-heading text-pearl">{after}</p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ChangesPanel({ changes }: { changes?: ChangesData }) {
+  const entries = changes?.changes ?? []
+  const [selectedId, setSelectedId] = useState('')
+
+  if (!changes) return <EmptyState>版本影響資料讀取中。</EmptyState>
+  if (entries.length === 0) {
+    return <EmptyState>最近 30 天尚未建立版本歷程資料。</EmptyState>
+  }
+
+  const selected = entries.find((entry) => entry.id === selectedId) || entries[0]
+  const metricRows = [
+    {
+      label: 'Users / day',
+      before: `${formatNumber(selected.before.usersPerDay, 1)}/day`,
+      after: `${formatNumber(selected.after.usersPerDay, 1)}/day`,
+      delta: formatSignedNumber(selected.delta.usersPerDay, '/day', 1),
+    },
+    {
+      label: 'Lead rate',
+      before: `${formatNumber(selected.before.leadRate, 1)}%`,
+      after: `${formatNumber(selected.after.leadRate, 1)}%`,
+      delta: formatSignedPoint(selected.delta.leadRatePp),
+    },
+    {
+      label: 'AddToCart rate',
+      before: `${formatNumber(selected.before.addToCartRate, 1)}%`,
+      after: `${formatNumber(selected.after.addToCartRate, 1)}%`,
+      delta: formatSignedPoint(selected.delta.addToCartRatePp),
+    },
+    {
+      label: 'Checkout rate',
+      before: `${formatNumber(selected.before.checkoutRate, 1)}%`,
+      after: `${formatNumber(selected.after.checkoutRate, 1)}%`,
+      delta: formatSignedPoint(selected.delta.checkoutRatePp),
+    },
+    {
+      label: 'Purchase rate',
+      before: `${formatNumber(selected.before.purchaseRate, 1)}%`,
+      after: `${formatNumber(selected.after.purchaseRate, 1)}%`,
+      delta: formatSignedPoint(selected.delta.purchaseRatePp),
+    },
+    {
+      label: 'Revenue / user',
+      before: formatMoney(selected.before.revenuePerUser),
+      after: formatMoney(selected.after.revenuePerUser),
+      delta: formatMoney(selected.delta.revenuePerUser),
+    },
+  ]
+
+  return (
+    <div className="grid gap-5 xl:grid-cols-[minmax(220px,0.72fr)_minmax(360px,1.55fr)_minmax(320px,0.95fr)]">
+      <aside className="rounded-lg border border-pearl/10 bg-black/24">
+        <div className="border-b border-pearl/8 p-4">
+          <p className="font-heading text-xs uppercase tracking-[0.18em] text-mist/55">
+            最近 {changes.days} 天
+          </p>
+          <h2 className="mt-1 font-heading text-xl font-black text-pearl">
+            版本歷程
+          </h2>
+        </div>
+        <div className="max-h-[70vh] overflow-y-auto">
+          {entries.map((entry) => (
+            <button
+              key={entry.id}
+              type="button"
+              onClick={() => setSelectedId(entry.id)}
+              className={`block w-full border-b border-pearl/8 px-4 py-3 text-left transition-colors ${
+                selected.id === entry.id
+                  ? 'bg-neon/14 text-pearl'
+                  : 'bg-transparent text-mist hover:bg-pearl/[0.04] hover:text-pearl'
+              }`}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <p className="line-clamp-2 font-heading text-sm font-bold">
+                  {entry.title}
+                </p>
+                <span
+                  className={`shrink-0 rounded-full border px-2 py-0.5 text-[11px] ${impactBadgeClass(
+                    entry.impactLevel,
+                  )}`}
+                >
+                  {entry.impactLevel || 'medium'}
+                </span>
+              </div>
+              <p className="mt-1 text-xs text-mist/55">
+                {formatDateTime(entry.deployedAt)} / {entry.scope || '-'}
+              </p>
+            </button>
+          ))}
+        </div>
+      </aside>
+
+      <section className="rounded-lg border border-pearl/10 bg-black/24 p-5">
+        <div className="flex flex-col gap-3 border-b border-pearl/8 pb-5 md:flex-row md:items-start md:justify-between">
+          <div>
+            <p className="font-heading text-xs uppercase tracking-[0.18em] text-neon/70">
+              {selected.category || 'CHANGE'}
+            </p>
+            <h2 className="mt-2 font-heading text-2xl font-black text-pearl">
+              {selected.title}
+            </h2>
+            <p className="mt-1 text-sm text-mist/60">
+              {selected.scope || '-'} / {formatDateTime(selected.deployedAt)}
+            </p>
+          </div>
+          <span
+            className={`w-fit rounded-full border px-3 py-1 text-xs ${impactBadgeClass(
+              selected.impactLevel,
+            )}`}
+          >
+            {selected.impactLevel || 'medium'}
+          </span>
+        </div>
+
+        <div className="mt-5 space-y-5 text-sm leading-relaxed">
+          <div>
+            <p className="font-heading text-xs uppercase tracking-[0.18em] text-mist/50">
+              改了什麼
+            </p>
+            <p className="mt-2 text-mist/82">{selected.changedSummary || '-'}</p>
+          </div>
+          <div>
+            <p className="font-heading text-xs uppercase tracking-[0.18em] text-mist/50">
+              判斷假設
+            </p>
+            <p className="mt-2 text-mist/82">{selected.hypothesis || '-'}</p>
+          </div>
+          <div>
+            <p className="font-heading text-xs uppercase tracking-[0.18em] text-mist/50">
+              主要觀察指標
+            </p>
+            <p className="mt-2 text-neon">{selected.primaryMetric || '-'}</p>
+          </div>
+        </div>
+
+        <div className="mt-6 border-t border-pearl/8 pt-4 text-xs text-mist/50">
+          <p>資料來源：{selected.source || 'release_versions'}</p>
+          {selected.deploymentUrl && (
+            <a
+              href={selected.deploymentUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 inline-flex text-neon hover:text-neon/80"
+            >
+              Deployment
+            </a>
+          )}
+          {selected.notes && <p className="mt-2">{selected.notes}</p>}
+        </div>
+      </section>
+
+      <aside className="rounded-lg border border-pearl/10 bg-black/24 p-5">
+        <p className="font-heading text-sm tracking-[0.18em] text-pearl">
+          前後影響
+        </p>
+
+        {selected.warnings.length > 0 && (
+          <div className="mt-4 space-y-2">
+            {selected.warnings.map((warning) => (
+              <p
+                key={warning}
+                className="rounded-lg border border-gold/25 bg-gold/10 px-3 py-2 text-xs leading-relaxed text-gold"
+              >
+                {warning}
+              </p>
+            ))}
+          </div>
+        )}
+
+        <div className="mt-4 grid gap-2">
+          <PeriodSummaryCard title="Before" period={selected.before} />
+          <PeriodSummaryCard title="After" period={selected.after} />
+        </div>
+
+        <div className="mt-4">
+          {metricRows.map((row) => (
+            <ImpactMetricRow
+              key={row.label}
+              label={row.label}
+              before={row.before}
+              after={row.after}
+              delta={row.delta}
+            />
+          ))}
+        </div>
+
+        <div className="mt-4 rounded-lg border border-pearl/8 bg-pearl/[0.04] p-3 text-xs leading-relaxed text-mist/60">
+          <p>
+            Paid sessions 差 {formatSignedPercent(selected.delta.paidSessionsPct)}
+            ，目前期間營收差 {formatMoney(selected.delta.revenue)}。
+          </p>
+          <p className="mt-1">
+            若流量結構改變過大，請先看各來源、裝置與 CTA 漏斗，不要直接把差異歸因於單一改版。
+          </p>
+        </div>
+      </aside>
+    </div>
+  )
+}
+
 function TrafficDashboard({ traffic }: { traffic?: TrafficData }) {
   if (!traffic) return <EmptyState>流量資料讀取中。</EmptyState>
 
@@ -2867,7 +3271,7 @@ function JourneysPanel({ journeys }: { journeys: Journey[] }) {
 export function AdminPage() {
   const [token, setToken] = useState(getStoredToken)
   const [tokenInput, setTokenInput] = useState(getStoredToken)
-  const [activeTab, setActiveTab] = useState<AdminTab>('orders')
+  const [activeTab, setActiveTab] = useState<AdminTab>('changes')
   const [data, setData] = useState<AdminData>(initialData)
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -2900,6 +3304,13 @@ export function AdminPage() {
         ? fetchAdmin<{ summary: AdminSummary }>('/api/admin/summary?light=1', token)
         : Promise.resolve(null)
       const tabPromise = (async (): Promise<Partial<AdminData>> => {
+        if (tab === 'changes') {
+          const response = await fetchAdmin<{ changes: ChangesData }>(
+            '/api/admin/changes?days=30',
+            token,
+          )
+          return { changes: response.changes }
+        }
         if (tab === 'traffic') {
           const response = await fetchAdmin<{ traffic: TrafficData }>(
             '/api/admin/traffic?days=7',
@@ -3323,6 +3734,7 @@ export function AdminPage() {
         </nav>
 
         <section className="mt-5 pb-12">
+          {activeTab === 'changes' && <ChangesPanel changes={data.changes} />}
           {activeTab === 'traffic' && <TrafficDashboard traffic={data.traffic} />}
           {activeTab === 'journeys' && <JourneysPanel journeys={data.journeys} />}
           {activeTab === 'orders' && (

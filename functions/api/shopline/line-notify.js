@@ -221,7 +221,7 @@ function getVenueDisplayName(venueName, locale) {
   const englishVenues = {
     敦南旗艦館: 'Dunnan Flagship',
     敦南館: 'Dunnan',
-    內湖旗艦館: 'Neihu Flagship',
+    內湖旗艦館: 'Neihu Signature',
     內湖館: 'Neihu',
     內科模範館: 'Neihu Tech Park',
     台中勤美旗艦館: 'Taichung CMP Flagship',

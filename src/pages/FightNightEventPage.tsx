@@ -18,6 +18,7 @@ import { Header } from '../components/layout/Header'
 import { Seo } from '../components/Seo'
 import { FAQSection } from '../components/sections/FAQSection'
 import { OtherCoursesConsultBlock } from '../components/sections/OtherCoursesConsultBlock'
+import { OfficialAppointmentProofSection } from '../components/sections/OfficialAppointmentProofSection'
 import { Button } from '../components/ui/Button'
 import { SectionWrapper } from '../components/ui/SectionWrapper'
 import {
@@ -50,6 +51,7 @@ import {
 } from '../lib/coursePricing'
 import { getLineRequestContext } from '../lib/lineContext'
 import type { SupportedLocale } from '../lib/locale'
+import { buildPaymentResultUrl } from '../lib/paymentResult'
 import type { FAQItem, WeeklyCourse } from '../types'
 
 type BuyerContactForm = {
@@ -365,7 +367,7 @@ const eventPageCopy = {
       freeTrialTitle: '本週限量免費體驗課',
       paidFallbackTitle: '一般單堂體驗',
       usedFirstTime: '已使用首次限定',
-      freeTrialLimit: '每個 LINE 帳號限保留一次。',
+      freeTrialLimit: '每支手機限保留一次。',
       usedFallback: '這堂可用一般單堂價保留。',
       paidFallbackCta: 'NT$680｜保留這堂',
       checking: '確認資格中',
@@ -392,7 +394,7 @@ const eventPageCopy = {
       checkoutTitle: '保留這一晚',
       comparePrefix: '一般',
       checkoutNote:
-        '付款後，LINE 會留下這一晚的時間、地點和入場確認。到了那天，直接走進 UFC GYM。',
+        '先填訂購人資訊，接著前往 SHOPLINE 付款。完成付款後，請加入 LINE 確認報名。',
       normalEntryAssist: '現場依一般入場協助',
       name: '姓名',
       phone: '手機',
@@ -400,18 +402,18 @@ const eventPageCopy = {
       checkoutSubmit: '前往付款，保留這一晚',
       checkoutSubmitting: '正在建立付款連結...',
       checkoutSaved:
-        '送出後會儲存這次填寫的資料，下次購買或預約會自動帶入。',
-      checkoutLoginRequired: '請先完成 LINE 登入，付款後才能收到入場確認卡。',
+        '訂購資料只用於建立付款與現場確認；付款完成頁會提供 LINE 加好友連結。',
+      checkoutLoginRequired: '請先確認訂購人資訊後再前往付款。',
       checkoutError: '目前無法建立付款連結，請稍後再試。',
       freeTrialEyebrow: '首次限定｜本週限量免費體驗課',
       freeTrialTitle: '免費保留這堂',
-      freeTrialNote: '每個 LINE 帳號限保留一次。裝備可自備，或現場租用。',
-      freeTrialLoginRequired: '請先完成 LINE 登入後，再保留免費體驗。',
+      freeTrialNote: '每支手機限保留一次。裝備可自備，或現場租用。',
+      freeTrialLoginRequired: '請先填寫姓名與手機後，再保留免費體驗。',
       freeTrialError: '免費預約建立失敗，請稍後再試。',
       freeTrialSubmitting: '正在保留...',
     },
     footer: {
-      privacy: '隱私政策',
+      privacy: '隱私權政策',
       refund: '退款與取消政策',
     },
     sticky: {
@@ -433,7 +435,7 @@ const eventPageCopy = {
       'Fight Night is a pass into a different kind of night at UFC GYM: gloves on, countdowns close, bag sounds loud, and the whole room moving with you.',
     venueLabels: {
       'venue-dunnan': 'Dunnan Flagship',
-      'venue-neihu': 'Neihu Flagship',
+      'venue-neihu': 'Neihu Signature',
       'venue-taichung': 'Taichung Flagship',
     },
     nearbyAreaLabels: {
@@ -612,7 +614,7 @@ const eventPageCopy = {
       freeTrialTitle: 'Limited free trial this week',
       paidFallbackTitle: 'Single Session',
       usedFirstTime: 'First-time offer used',
-      freeTrialLimit: 'One free trial per LINE account.',
+      freeTrialLimit: 'One free trial per mobile number.',
       usedFallback: 'You can reserve this session at the standard single-session price.',
       paidFallbackCta: 'NT$680 | Reserve this session',
       checking: 'Checking eligibility',
@@ -640,7 +642,7 @@ const eventPageCopy = {
       checkoutTitle: 'Reserve this night',
       comparePrefix: 'Regular',
       checkoutNote:
-        'After payment, your time, location, and entry confirmation stay in LINE. On the day, walk straight into UFC GYM.',
+        'Fill in the buyer details first, then continue to SHOPLINE payment. After payment, add LINE to confirm your booking.',
       normalEntryAssist: 'Standard arrival support on site',
       name: 'Name',
       phone: 'Mobile',
@@ -648,16 +650,16 @@ const eventPageCopy = {
       checkoutSubmit: 'Pay and keep this night',
       checkoutSubmitting: 'Creating payment link...',
       checkoutSaved:
-        'Your details will be saved for your next purchase or reservation.',
+        'These details are used to create the payment and confirm your booking on site. The payment result page will show the LINE add-friend link.',
       checkoutLoginRequired:
-        'Please complete LINE login first so the entry confirmation can be sent after payment.',
+        'Please confirm the buyer details before continuing to payment.',
       checkoutError: 'Unable to create the payment link. Please try again later.',
       freeTrialEyebrow: 'First-time only | Limited free trial this week',
       freeTrialTitle: 'Reserve free',
       freeTrialNote:
-        'One free trial per LINE account. Bring your own gear or rent gear on site.',
+        'One free trial per mobile number. Bring your own gear or rent gear on site.',
       freeTrialLoginRequired:
-        'Please complete LINE login first before reserving the free trial.',
+        'Please enter your name and mobile number before reserving the free trial.',
       freeTrialError: 'Unable to create the free reservation. Please try again later.',
       freeTrialSubmitting: 'Reserving...',
     },
@@ -931,7 +933,7 @@ function EventCoursePhotoPreview({
         alt={locale === 'en' ? photo.altEn : photo.altZh}
         draggable={false}
         loading="lazy"
-        className="h-[clamp(8.5rem,24svh,12rem)] w-full object-cover sm:h-[clamp(6.75rem,18svh,9rem)]"
+        className="h-[clamp(8.5rem,24svh,12rem)] w-full object-cover sm:h-[clamp(6.75rem,18svh,9rem)] lg:h-48 xl:h-52"
       />
     </div>
   )
@@ -1666,6 +1668,13 @@ function getSourcePath() {
   return `${window.location.pathname}${window.location.search}${window.location.hash}`
 }
 
+function getEventCanonicalPath() {
+  if (typeof window === 'undefined') return '/'
+  return window.location.pathname.startsWith('/fight-night-event')
+    ? '/fight-night-event'
+    : '/'
+}
+
 function getLiffStatePath() {
   if (typeof window === 'undefined') return ''
   const statePath = new URLSearchParams(window.location.search).get('liff.state') || ''
@@ -1692,18 +1701,6 @@ function getEventCheckoutIntentFromPath(value: string) {
   } catch {
     return null
   }
-}
-
-function buildEventCheckoutReturnPath(
-  ticket: EventTicket,
-  variant: EventPassVariant,
-) {
-  if (typeof window === 'undefined') return '/fight-night-event'
-  const url = new URL(window.location.href)
-  url.searchParams.set(eventCheckoutTicketParam, ticket.id)
-  url.searchParams.set(eventCheckoutVariantParam, variant.id)
-  url.hash = eventMoreSessionsHash
-  return `${url.pathname}${url.search}${url.hash}`
 }
 
 function normalizeEventCheckoutIntentUrl(liffStatePath = '') {
@@ -1787,7 +1784,7 @@ function EventStandalonePhotoSection({
   return (
     <SectionWrapper
       id={id}
-      className="max-w-[430px] px-0 sm:px-0"
+      className="max-w-[430px] px-0 sm:px-0 lg:max-w-[1040px] lg:px-6"
       padding="py-0"
     >
       <motion.figure
@@ -1795,12 +1792,12 @@ function EventStandalonePhotoSection({
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
         transition={{ duration: 0.6 }}
-        className="overflow-hidden border-y border-pearl/10 bg-black/30"
+        className="overflow-hidden border-y border-pearl/10 bg-black/30 lg:rounded-2xl lg:border"
       >
         <img
           src={src}
           alt={alt}
-          className="block h-auto w-full"
+          className="block h-auto w-full lg:aspect-[16/7] lg:object-cover"
           loading={loading}
           decoding="async"
         />
@@ -1863,29 +1860,29 @@ function EventHeroSection({
   return (
     <section
       id="event-hero"
-      className="relative scroll-mt-20 overflow-hidden bg-[radial-gradient(circle_at_18%_18%,rgba(245,98,45,0.22),transparent_30%),linear-gradient(180deg,#090909,#050505)] pt-16 text-pearl md:scroll-mt-28 md:pt-24"
+      className="relative scroll-mt-20 overflow-hidden bg-[radial-gradient(circle_at_18%_18%,rgba(245,98,45,0.22),transparent_30%),linear-gradient(180deg,#090909,#050505)] pt-16 text-pearl md:scroll-mt-28 md:pt-24 lg:grid lg:min-h-[680px] lg:grid-cols-[minmax(0,1.12fr)_minmax(360px,0.88fr)] lg:items-stretch lg:pt-0"
     >
       <motion.figure
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.65 }}
-        className="border-b border-pearl/10 bg-black"
+        className="border-b border-pearl/10 bg-black lg:border-b-0 lg:border-r"
       >
         <img
           src={eventHeroEmotion}
           alt={copy.imageAlt}
-          className="block h-auto w-full"
+          className="block h-auto w-full lg:h-full lg:min-h-[680px] lg:object-cover"
           loading="eager"
           decoding="async"
         />
       </motion.figure>
 
-      <div className="relative z-10 mx-auto flex max-w-[430px] items-end px-4 pb-9 pt-8">
+      <div className="relative z-10 mx-auto flex max-w-[430px] items-end px-4 pb-9 pt-8 lg:mx-0 lg:h-full lg:max-w-none lg:items-center lg:px-10 lg:py-14 xl:px-14">
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.75 }}
-          className="max-w-full"
+          className="max-w-full lg:max-w-[430px]"
         >
           <div className="mb-5 flex justify-end">
             <EventLanguageSwitch locale={locale} onChange={onLocaleChange} />
@@ -1920,7 +1917,7 @@ function EventReframeSection({ locale }: { locale: SupportedLocale }) {
   return (
     <SectionWrapper
       id="event-reframe"
-      className="max-w-[430px] px-4 sm:px-4"
+      className="max-w-[430px] px-4 sm:px-4 lg:max-w-[960px] lg:px-6"
       padding="py-8"
     >
       <motion.div
@@ -1948,7 +1945,7 @@ function EventProofSection({ locale }: { locale: SupportedLocale }) {
   return (
     <SectionWrapper
       id="event-proof"
-      className="max-w-[430px] px-4 sm:px-4"
+      className="max-w-[430px] px-4 sm:px-4 lg:max-w-[960px] lg:px-6"
       padding="py-8"
     >
       <EventSectionHeading title={copy.title} />
@@ -1977,12 +1974,12 @@ function EventSafetySection({ locale }: { locale: SupportedLocale }) {
   return (
     <SectionWrapper
       id="event-easy-entry"
-      className="max-w-[430px] px-4 sm:px-4"
+      className="max-w-[430px] px-4 sm:px-4 lg:max-w-[960px] lg:px-6"
       padding="py-8"
     >
       <EventSectionHeading title={copy.title} />
 
-      <div className="grid gap-3">
+      <div className="grid gap-3 lg:grid-cols-3">
         {copy.items.map((item, index) => (
           <motion.div
             key={item.title}
@@ -2011,7 +2008,7 @@ function EventFlowPreviewSection({ locale }: { locale: SupportedLocale }) {
   return (
     <SectionWrapper
       id="event-flow-preview"
-      className="max-w-[430px] px-4 sm:px-4"
+      className="max-w-[430px] px-4 sm:px-4 lg:max-w-[960px] lg:px-6"
       padding="py-8"
     >
       <EventSectionHeading title={copy.title} />
@@ -3078,7 +3075,7 @@ function EventTicketDropSection({
   ) => (
     <div
       key={card.key}
-      className="flex min-w-[90%] max-w-[90%] shrink-0 snap-start flex-col"
+      className="flex min-w-[90%] max-w-[90%] shrink-0 snap-start flex-col lg:min-w-0 lg:max-w-none lg:snap-align-none"
     >
       {card.type === 'paid' ? (
         <EventTicketCard
@@ -3123,7 +3120,7 @@ function EventTicketDropSection({
   return (
     <SectionWrapper
       id="event-entry"
-      className="min-w-0 scroll-mt-24 max-w-[430px] overflow-hidden px-4 sm:px-4"
+      className="min-w-0 scroll-mt-24 max-w-[430px] overflow-hidden px-4 sm:px-4 lg:max-w-[1120px] lg:overflow-visible lg:px-6"
       padding="py-8"
     >
       {visibleVenueTickets.length > 0 ? (
@@ -3162,7 +3159,7 @@ function EventTicketDropSection({
                     {getVenueCountLabel(visibleVenueTickets.length)}
                   </span>
                 </div>
-                <div className="grid min-w-0 gap-2">
+                <div className="grid min-w-0 gap-2 lg:grid-cols-3">
                   {venueOptions.map((tab) => {
                     const selected = tab.venueId === activeVenueId
 
@@ -3207,7 +3204,7 @@ function EventTicketDropSection({
                   {copy.venueSelectPrompt}
                 </p>
               ) : activeVenueCardCount > 0 ? (
-                <div className="grid min-w-0 gap-6">
+                <div className="grid min-w-0 gap-8">
                   {activeVenueCardRows.map((row) => (
                     <div key={row.id} className="min-w-0">
                       <div className="mb-2 flex items-center justify-between gap-3 px-1">
@@ -3220,14 +3217,14 @@ function EventTicketDropSection({
                       </div>
                       <div
                         data-swipe-hint
-                        className="ticket-card-carousel swipe-hint flex w-full max-w-full snap-x snap-mandatory gap-2 overflow-x-auto pb-4"
+                        className="ticket-card-carousel swipe-hint flex w-full max-w-full snap-x snap-mandatory gap-2 overflow-x-auto pb-4 lg:grid lg:grid-cols-2 lg:items-stretch lg:gap-4 lg:overflow-visible lg:pb-0 xl:grid-cols-3"
                         aria-label={`${activeVenueLabel} ${row.title}`}
                       >
                         {row.cards.map((card) => renderVenueCard(card))}
                       </div>
                       {row.cards.length > 1 ? (
                         <div
-                          className="-mt-1 flex justify-center gap-1.5"
+                          className="-mt-1 flex justify-center gap-1.5 lg:hidden"
                           aria-hidden="true"
                         >
                           {row.cards.slice(0, 8).map((card, index) => (
@@ -3333,22 +3330,21 @@ function CheckoutModal({
     if (isSubmitting) return
 
     const lineContext = getLineRequestContext()
-    if (!lineContext?.lineUserId) {
-      setSubmitError(copy.checkoutLoginRequired)
-      return
-    }
+    const linkedLineUserId = lineContext?.lineUserId
 
     setIsSubmitting(true)
     setSubmitError('')
-    saveBuyerContact(
-      {
-        lineUserId: lineContext.lineUserId,
-        name: form.name,
-        phone: form.phone,
-        email: form.email,
-      },
-      lineContext.lineUserId,
-    )
+    if (linkedLineUserId) {
+      saveBuyerContact(
+        {
+          lineUserId: linkedLineUserId,
+          name: form.name,
+          phone: form.phone,
+          email: form.email,
+        },
+        linkedLineUserId,
+      )
+    }
 
     try {
       const checkoutPrice = getEventTicketPrice(
@@ -3397,6 +3393,8 @@ function CheckoutModal({
               checkoutServicePreferences?.handWrapAssist ?? false,
             quietMode: checkoutServicePreferences?.quietMode ?? false,
             noMembershipSalesFlow: true,
+            webFormFirst: true,
+            lineLinkedBeforeCheckout: Boolean(linkedLineUserId),
           },
           servicePreferences: checkoutServicePreferences,
           client: getClientContext(),
@@ -3446,6 +3444,7 @@ function CheckoutModal({
           equipment_package: selectedVariant.equipmentPackage,
           event_id: initiateCheckoutEventId,
           pricing_mode: eventCoursePricingMode,
+          line_linked_before_checkout: Boolean(linkedLineUserId),
         },
         metaStandardEvent: 'InitiateCheckout',
         metaEventId: initiateCheckoutEventId,
@@ -3663,25 +3662,24 @@ function FreeTrialReservationModal({
     if (isSubmitting || disabled) return
 
     const lineContext = getLineRequestContext()
-    if (!lineContext?.lineUserId) {
-      setSubmitError(copy.freeTrialLoginRequired)
-      return
-    }
+    const linkedLineUserId = lineContext?.lineUserId
 
     setIsSubmitting(true)
     setSubmitError('')
-    saveBuyerContact(
-      {
-        lineUserId: lineContext.lineUserId,
-        name: form.name,
-        phone: form.phone,
-        email: form.email,
-      },
-      lineContext.lineUserId,
-    )
+    if (linkedLineUserId) {
+      saveBuyerContact(
+        {
+          lineUserId: linkedLineUserId,
+          name: form.name,
+          phone: form.phone,
+          email: form.email,
+        },
+        linkedLineUserId,
+      )
+    }
 
     try {
-      const scheduleEventId = createMetaEventId('schedule')
+      const leadEventId = createMetaEventId('lead')
       const response = await fetch('/api/free-trial-reservation', {
         method: 'POST',
         headers: {
@@ -3695,7 +3693,7 @@ function FreeTrialReservationModal({
           sourcePath: getSourcePath(),
           tracking: {
             ...getCheckoutTrackingContext(),
-            scheduleEventId,
+            leadEventId,
             landingVariant,
             eventName,
             ticketId: selectedTicket.id,
@@ -3715,7 +3713,7 @@ function FreeTrialReservationModal({
           }
         | null
 
-      if (!response.ok || !data?.ok) {
+      if (!response.ok || !data?.ok || !data.referenceId) {
         throw new Error(data?.error || copy.freeTrialError)
       }
 
@@ -3736,15 +3734,15 @@ function FreeTrialReservationModal({
           coach: selectedTicket.course.coach,
           remaining: availability.remaining,
           first_time_only: true,
-          event_id: scheduleEventId,
+          event_id: leadEventId,
         },
-        metaStandardEvent: 'Schedule',
-        metaEventId: scheduleEventId,
-        lineEventName: 'FreeTrialReserve',
+        metaStandardEvent: 'Lead',
+        metaEventId: leadEventId,
+        lineEventName: 'FreeTrialLead',
       })
 
       onReserved()
-      onClose()
+      window.location.href = buildPaymentResultUrl(data.referenceId, 'free-trial')
     } catch (error) {
       const message =
         error instanceof Error
@@ -3883,8 +3881,8 @@ export function FightNightEventPage() {
     [freeTrialTickets, tickets],
   )
   const { getAvailability, hasLiveData } = useSessionAvailability(sessionIds)
-  const { gateState, requestGateAccess, loginUrl, getLoginUrl } = useLiffGate()
-  const { track, trackGateAccess } = useTracking()
+  const { gateState } = useLiffGate()
+  const { track } = useTracking()
   const [selectedTicket, setSelectedTicket] = useState<EventTicket | null>(null)
   const [selectedVariant, setSelectedVariant] = useState<EventPassVariant>(
     defaultEventPassVariant,
@@ -4064,7 +4062,7 @@ export function FightNightEventPage() {
     scrollToMoreSessions()
   }
 
-  const openCheckout = async (
+  const openCheckout = (
     ticket?: EventTicket,
     variant: EventPassVariant = defaultEventPassVariant,
   ) => {
@@ -4091,19 +4089,6 @@ export function FightNightEventPage() {
       lineEventName: 'EventTicketClick',
     })
 
-    if (gateState.status !== 'unlocked') {
-      trackGateAccess('event_entry_ticket', gateState.status)
-      const returnPath = buildEventCheckoutReturnPath(targetTicket, variant)
-      const eventLoginUrl = getLoginUrl(returnPath) || loginUrl
-      if (eventLoginUrl && ['loading', 'logged-out'].includes(gateState.status)) {
-        window.location.href = eventLoginUrl
-        return
-      }
-
-      const unlocked = await requestGateAccess()
-      if (!unlocked) return
-    }
-
     setSelectedVariant(variant)
     setSelectedTicket(targetTicket)
   }
@@ -4119,34 +4104,22 @@ export function FightNightEventPage() {
         first_time_only: true,
         free_trial_status: freeTrialStatus,
       },
-      metaStandardEvent: 'AddToCart',
       lineEventName: 'FreeTrialClick',
     })
 
-    if (gateState.status !== 'unlocked') {
-      trackGateAccess('event_free_trial', gateState.status)
-      const eventLoginUrl = getLoginUrl() || loginUrl
-      if (eventLoginUrl && ['loading', 'logged-out'].includes(gateState.status)) {
-        window.location.href = eventLoginUrl
-        return
-      }
-
-      const unlocked = await requestGateAccess()
-      if (!unlocked) return
-    }
-
     if (freeTrialStatus === 'used') {
-      void openCheckout(ticket, singleClassPaidVariant)
+      openCheckout(ticket, singleClassPaidVariant)
       return
     }
 
     setSelectedFreeTrialTicket(ticket)
   }
 
-  const openFreeTrialPaidFallback = async (ticket: EventTicket) => {
-    await openCheckout(ticket, singleClassPaidVariant)
+  const openFreeTrialPaidFallback = (ticket: EventTicket) => {
+    openCheckout(ticket, singleClassPaidVariant)
   }
 
+  const canonicalPath = getEventCanonicalPath()
   const structuredData = featuredTicket
     ? {
         '@type': 'Event',
@@ -4175,13 +4148,13 @@ export function FightNightEventPage() {
       <Seo
         title={copy.seo.title}
         description={copy.eventDescription}
-        canonicalPath="/"
+        canonicalPath={canonicalPath}
         keywords={copy.seo.keywords}
         image={eventHeroEmotion}
         structuredData={structuredData}
       />
       <Header />
-      <div className="mx-auto min-h-screen w-full max-w-[430px] shadow-[0_0_90px_rgba(0,0,0,0.45)]">
+      <div className="mx-auto min-h-screen w-full max-w-[430px] shadow-[0_0_90px_rgba(0,0,0,0.45)] lg:max-w-[1180px]">
         <main>
           <EventHeroSection
             onPrimaryAction={() => scrollToId('event-entry')}
@@ -4236,6 +4209,7 @@ export function FightNightEventPage() {
               void openFreeTrialPaidFallback(ticket)
             }}
           />
+          <OfficialAppointmentProofSection />
           <EventStandalonePhotoSection
             id="event-afterglow-photo"
             src={eventAfterglow}

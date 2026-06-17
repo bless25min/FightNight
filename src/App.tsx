@@ -8,7 +8,9 @@ import { AdminPage } from './pages/AdminPage'
 import { SeoGuidePage } from './pages/SeoGuidePage'
 import { PrivacyPolicyPage } from './pages/PrivacyPolicyPage'
 import { RefundPolicyPage } from './pages/RefundPolicyPage'
+import { TermsOfServicePage } from './pages/TermsOfServicePage'
 import { trackPageView } from './lib/analytics'
+import { FloatingConsultButtons } from './components/ui/FloatingConsultButtons'
 
 const CLIENT_BUILD_MARK = 'inventory-guard-20260522a'
 
@@ -24,6 +26,7 @@ function getCurrentRoutePath() {
     hashPath.startsWith('/payment/success') ||
     hashPath.startsWith('/admin') ||
     hashPath.startsWith('/privacy-policy') ||
+    hashPath.startsWith('/terms-of-service') ||
     hashPath.startsWith('/refund-policy') ||
     hashPath.startsWith('/guides/')
   ) {
@@ -37,6 +40,7 @@ function getCurrentRoutePath() {
   if (pathname.endsWith('/fight-night-intro.html')) return '/fight-night-intro'
   if (pathname.endsWith('/admin.html')) return '/admin'
   if (pathname.endsWith('/privacy-policy.html')) return '/privacy-policy'
+  if (pathname.endsWith('/terms-of-service.html')) return '/terms-of-service'
   if (pathname.endsWith('/refund-policy.html')) return '/refund-policy'
 
   return pathname
@@ -88,6 +92,24 @@ function useInteractionHintLifecycle() {
   }, [])
 }
 
+function shouldShowFloatingConsult(pathname: string) {
+  return (
+    !pathname.startsWith('/admin') &&
+    !pathname.startsWith('/privacy-policy') &&
+    !pathname.startsWith('/terms-of-service') &&
+    !pathname.startsWith('/refund-policy') &&
+    !pathname.startsWith('/guides/')
+  )
+}
+
+function getFloatingConsultPlacement(pathname: string) {
+  if (pathname.startsWith('/offers')) return 'offers'
+  if (pathname.startsWith('/boot-camp')) return 'boot_camp'
+  if (pathname.startsWith('/fight-night-intro')) return 'fight_night_intro'
+  if (pathname.startsWith('/payment/success')) return 'payment_result'
+  return 'fight_night_event'
+}
+
 function App() {
   const [pathname, setPathname] = useState(getCurrentRoutePath)
   const trackedInitialPageView = useRef(false)
@@ -118,44 +140,43 @@ function App() {
     }
   }, [])
 
+  let page
+
   if (pathname.startsWith('/offers')) {
-    return <OffersPage />
-  }
-
-  if (pathname.startsWith('/boot-camp')) {
-    return <BootCampPage />
-  }
-
-  if (pathname.startsWith('/fight-night-event')) {
-    return <FightNightEventPage />
-  }
-
-  if (pathname.startsWith('/fight-night-intro')) {
-    return <FightNightIntroPage />
-  }
-
-  if (pathname.startsWith('/payment/success')) {
-    return <PaymentResultPage />
-  }
-
-  if (pathname.startsWith('/guides/')) {
+    page = <OffersPage />
+  } else if (pathname.startsWith('/boot-camp')) {
+    page = <BootCampPage />
+  } else if (pathname.startsWith('/fight-night-event')) {
+    page = <FightNightEventPage />
+  } else if (pathname.startsWith('/fight-night-intro')) {
+    page = <FightNightIntroPage />
+  } else if (pathname.startsWith('/payment/success')) {
+    page = <PaymentResultPage />
+  } else if (pathname.startsWith('/guides/')) {
     const slug = pathname.replace(/^\/guides\//, '').split('/')[0]
-    return <SeoGuidePage slug={decodeURIComponent(slug)} />
+    page = <SeoGuidePage slug={decodeURIComponent(slug)} />
+  } else if (pathname.startsWith('/admin')) {
+    page = <AdminPage />
+  } else if (pathname.startsWith('/privacy-policy')) {
+    page = <PrivacyPolicyPage />
+  } else if (pathname.startsWith('/terms-of-service')) {
+    page = <TermsOfServicePage />
+  } else if (pathname.startsWith('/refund-policy')) {
+    page = <RefundPolicyPage />
+  } else {
+    page = <FightNightEventPage />
   }
 
-  if (pathname.startsWith('/admin')) {
-    return <AdminPage />
-  }
-
-  if (pathname.startsWith('/privacy-policy')) {
-    return <PrivacyPolicyPage />
-  }
-
-  if (pathname.startsWith('/refund-policy')) {
-    return <RefundPolicyPage />
-  }
-
-  return <FightNightEventPage />
+  return (
+    <>
+      {page}
+      {shouldShowFloatingConsult(pathname) ? (
+        <FloatingConsultButtons
+          placement={getFloatingConsultPlacement(pathname)}
+        />
+      ) : null}
+    </>
+  )
 }
 
 export default App

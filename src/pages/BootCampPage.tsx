@@ -665,7 +665,7 @@ export function BootCampPage() {
   const finalizeBridgeFreeTrial = useCallback(async () => {
     if (!freeTrialBridge || freeTrialReservationReferenceId) return
 
-    const scheduleEventId = createMetaEventId('schedule')
+    const leadEventId = createMetaEventId('lead')
     const response = await fetch('/api/free-trial-reservation', {
       method: 'POST',
       headers: {
@@ -692,7 +692,7 @@ export function BootCampPage() {
         },
         tracking: {
           ...getCheckoutTrackingContext(),
-          scheduleEventId,
+          leadEventId,
         },
         sourcePath: `${window.location.pathname}${window.location.search}${window.location.hash}`,
       }),
@@ -754,11 +754,11 @@ export function BootCampPage() {
         course_id: data.reservation?.courseId ?? freeTrialBridge.courseId,
         course_name: data.reservation?.courseName ?? freeTrialBridge.courseName,
         line_notify_status: data.lineNotify?.status ?? '',
-        event_id: scheduleEventId,
+        event_id: leadEventId,
       },
-      metaStandardEvent: 'Schedule',
-      metaEventId: scheduleEventId,
-      lineEventName: 'FreeTrialReserved',
+      metaStandardEvent: 'Lead',
+      metaEventId: leadEventId,
+      lineEventName: 'FreeTrialLead',
     })
   }, [freeTrialBridge, freeTrialReservationReferenceId, track])
 
