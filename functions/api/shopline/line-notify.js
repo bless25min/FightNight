@@ -104,9 +104,9 @@ const lineCopy = {
     reservedBody:
       '不用再重填一次資料。原本的預約仍然保留，當天照 LINE 確認資訊到場即可。',
     reservedFootnote:
-      '如果你想再選其他場次，可以回到活動頁查看目前開放的 UFC GYM 單堂體驗場次與方案。',
+      '如果你想再選其他場次，可以回到活動頁查看目前開放的 UFC GYM 單次體驗場次與方案。',
     reservedButton: '查看其他場次',
-    reservedAlt: '你已經保留免費體驗，可以查看其他 UFC GYM 單堂體驗場次',
+    reservedAlt: '你已經保留免費體驗，可以查看其他 UFC GYM 單次體驗場次',
     labels: {
       venue: '場館',
       course: '課程',
@@ -121,11 +121,11 @@ const lineCopy = {
       phone: '電話',
     },
     packages: {
-      trainingPlan: (size) => `訓練方案 ${size} 堂`,
-      trainingPlanSingle: '一般單堂體驗',
-      singleSessionPass: '單堂體驗券',
-      singleSessionGearPass: '單堂體驗裝備券',
-      singleClassPaid: '一般單堂體驗',
+      trainingPlan: (size) => `拳擊／泰拳課程方案 ${size} 堂`,
+      trainingPlanSingle: '一般單次體驗',
+      singleSessionPass: '基本裝備入場',
+      singleSessionGearPass: '完整裝備入場',
+      singleClassPaid: '一般單次體驗',
     },
     equipment: {
       glovesAndWraps: '全新 UFC GYM 手綁帶＋拳擊手套',
@@ -177,8 +177,8 @@ const lineCopy = {
     packages: {
       trainingPlan: (size) => `Training package ${size} sessions`,
       trainingPlanSingle: 'Single Class Experience',
-      singleSessionPass: '單堂體驗券',
-      singleSessionGearPass: '單堂體驗裝備券',
+      singleSessionPass: 'Basic Gear Entry',
+      singleSessionGearPass: 'Complete Gear Entry',
       singleClassPaid: 'Single Class Experience',
     },
     equipment: {

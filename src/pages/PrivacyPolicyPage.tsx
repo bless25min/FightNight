@@ -13,7 +13,7 @@ const privacySections: PolicySection[] = [
   {
     title: '一、政策適用範圍',
     body: [
-      '本隱私權政策適用於 UFCGYM TAIWAN 活動預約與課程報名落地頁。本頁由 UFCGYM TAIWAN 營運，用於 UFC GYM 夜間體驗、夜間入場體驗、拳擊／泰拳專項課程、免費體驗預約、線上付款與官方 LINE 報名確認。',
+      '本隱私權政策適用於 UFCGYM TAIWAN 官方課程預約頁。本頁由 UFCGYM TAIWAN 營運，用於 UFC GYM 夜間體驗、拳擊／泰拳課程方案、免費體驗預約、線上付款與官方 LINE 報名確認。',
       '本政策同時適用於您透過本網站進行瀏覽、預約、購買、加入 LINE、使用 Meta Messenger、提交表單或聯繫客服時所產生之個人資料與技術資料。',
       '若您透過本網站連結至 LINE、Meta Messenger、金流、廣告、分析或其他第三方服務，該第三方服務可能依其隱私政策與服務條款處理相關資料。',
     ],
@@ -51,7 +51,7 @@ const privacySections: PolicySection[] = [
   {
     title: '五、Cookie、分析與廣告成效',
     body: [
-      '本網站可能使用 Cookie 或類似技術記錄瀏覽狀態、廣告來源、轉換事件與網站互動，以協助確認廣告內容與落地頁體驗是否一致，並改善網站品質。',
+      '本網站可能使用 Cookie 或類似技術記錄瀏覽狀態、廣告來源、轉換事件與網站互動，以協助確認廣告內容與網頁體驗是否一致，並改善網站品質。',
       '您可透過瀏覽器設定限制或刪除 Cookie；惟部分功能可能因此無法正常運作，例如付款狀態確認、表單流程或廣告來源辨識。',
     ],
   },
@@ -89,9 +89,9 @@ export function PrivacyPolicyPage() {
     <div className="min-h-screen overflow-x-hidden bg-abyss text-pearl">
       <Seo
         title={`隱私權政策｜${siteConfig.brandName}`}
-        description="UFCGYM TAIWAN 活動預約與課程報名落地頁隱私權政策，說明預約、購買、LINE 確認、付款與廣告成效資料之處理方式。"
+        description="UFCGYM TAIWAN 官方課程預約頁隱私權政策，說明預約、購買、LINE 確認、付款與廣告成效資料之處理方式。"
         canonicalPath="/privacy-policy"
-        keywords={['隱私權政策', '個人資料保護', 'UFC GYM 夜間體驗', '拳擊／泰拳專項課程', 'UFCGYM TAIWAN']}
+        keywords={['隱私權政策', '個人資料保護', 'UFC GYM 夜間體驗', '拳擊／泰拳課程方案', 'UFCGYM TAIWAN']}
       />
       <Header />
 
@@ -103,7 +103,7 @@ export function PrivacyPolicyPage() {
           隱私權政策
         </h1>
         <p className="mt-5 text-base leading-relaxed text-mist/76 md:text-lg">
-          本政策說明 UFCGYM TAIWAN 活動預約與課程報名落地頁如何蒐集、處理、利用與保護您的個人資料。
+          本政策說明 UFCGYM TAIWAN 官方課程預約頁如何蒐集、處理、利用與保護您的個人資料。
         </p>
 
         <section className="mt-8 rounded-2xl border border-pearl/10 bg-black/32 p-5 text-sm leading-relaxed text-mist/74 md:p-7">

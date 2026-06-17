@@ -30,21 +30,21 @@ const LEGACY_EVENT_PASS_VARIANT_MAP = {
 }
 const EVENT_PASS_VARIANTS = {
   'single-session-pass': {
-    label: '單堂體驗券',
+    label: '基本裝備入場',
     priceDelta: 0,
     equipmentPackage: 'wraps',
     includesGloves: false,
     includesWraps: true,
   },
   'single-session-gear-pass': {
-    label: '單堂體驗裝備券',
+    label: '完整裝備入場',
     priceDelta: 1800,
     equipmentPackage: 'gloves-and-wraps',
     includesGloves: true,
     includesWraps: true,
   },
   'single-class-paid': {
-    label: '一般單堂體驗',
+    label: '一般單次體驗',
     priceDelta: 0,
     fixedAmount: 680,
     equipmentPackage: 'self-or-rental',
@@ -883,7 +883,7 @@ function buildShoplinePayload({
   }
   const productName =
     isTrainingPlanCategory(course.category) && packageSize !== 1
-      ? `拳擊／泰拳訓練方案 ${packageSize} 堂｜${course.name}`
+      ? `拳擊／泰拳課程方案 ${packageSize} 堂｜${course.name}`
       : `${eventPassVariant.label}｜${course.name}`
 
   return cleanObject({

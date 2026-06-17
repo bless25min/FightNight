@@ -15,9 +15,9 @@
 export const siteConfig = {
   brandName: 'UFCGYM TAIWAN',
   eventName: 'UFC GYM 夜間體驗',
-  sitePurpose: 'UFCGYM TAIWAN 活動預約與課程報名落地頁',
+  sitePurpose: 'UFCGYM TAIWAN 官方課程預約頁',
   siteRelationship:
-    '本頁由 UFCGYM TAIWAN 營運，用於介紹 UFC GYM 夜間體驗、拳擊／泰拳課程方案、免費體驗預約、線上付款與官方 LINE 報名確認。',
+    '本頁由 UFCGYM TAIWAN 營運，用於提供 UFC GYM 夜間體驗、拳擊／泰拳課程方案、免費體驗預約、線上付款與官方 LINE 報名確認。',
   lineUrl: 'https://s.no8.io/link/channels/zGX7ApSAv6',
   messengerUrl: 'https://m.me/UFCGYMTaiwan',
   // 方案卡負責帶到可購買場次；指定場次付款由 SHOPLINE checkout session 建立。

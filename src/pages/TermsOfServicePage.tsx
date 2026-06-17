@@ -13,7 +13,7 @@ const termsSections: PolicySection[] = [
   {
     title: '一、條款適用與接受',
     body: [
-      '歡迎使用 UFCGYM TAIWAN 活動預約與課程報名落地頁。本頁由 UFCGYM TAIWAN 營運，用於 UFC GYM 夜間體驗、夜間入場體驗、拳擊／泰拳專項課程、免費體驗預約、線上付款與官方 LINE 報名確認。',
+      '歡迎使用 UFCGYM TAIWAN 官方課程預約頁。本頁由 UFCGYM TAIWAN 營運，用於 UFC GYM 夜間體驗、拳擊／泰拳課程方案、免費體驗預約、線上付款與官方 LINE 報名確認。',
       '當您瀏覽本網站、提交預約資料、購買課程、完成付款、加入 LINE、使用 Meta Messenger 或使用本網站提供之任何服務時，即表示您已閱讀、了解並同意遵守本服務條款。',
       '若您不同意本條款內容，請停止使用本網站及相關服務。',
     ],
@@ -21,7 +21,7 @@ const termsSections: PolicySection[] = [
   {
     title: '二、服務內容與資訊揭露',
     body: [
-      '本網站提供 UFCGYM TAIWAN 單堂體驗、夜間入場體驗、拳擊／泰拳專項課程、館場資訊、免費體驗預約、付費課程購買、付款結果確認、LINE 報名確認與客服聯繫等服務。',
+      '本網站提供 UFCGYM TAIWAN 單次體驗、夜間體驗、拳擊／泰拳課程方案、館場資訊、免費體驗預約、付費課程購買、付款結果確認、LINE 報名確認與客服聯繫等服務。',
       '本公司將盡力維持網站資訊正確與即時；惟課程內容、場館、時段、名額、價格、優惠、教練安排與活動規則，仍以本網站、付款頁面、官方 LINE 或館場現場最新公告為準。',
     ],
   },
@@ -49,7 +49,7 @@ const termsSections: PolicySection[] = [
   {
     title: '六、健康狀況、安全與課程參與',
     body: [
-      'UFC GYM 夜間體驗與拳擊／泰拳專項課程，屬 UFCGYM TAIWAN 提供之運動訓練與體驗活動。參與前，您應自行評估健康狀況、體能條件及是否適合進行相關運動。',
+      'UFC GYM 夜間體驗與拳擊／泰拳課程方案，屬 UFCGYM TAIWAN 提供之運動訓練與體驗活動。參與前，您應自行評估健康狀況、體能條件及是否適合進行相關運動。',
       '如您有心血管疾病、氣喘、懷孕、重大傷病、近期手術、醫師囑咐不宜劇烈運動或其他健康疑慮，請於預約前諮詢醫師，並於報到時主動告知現場人員。',
       '參與課程時，請遵守教練與場館人員指示，正確使用器材並尊重其他參與者。若有危害自身或他人安全之行為，本公司得拒絕或中止您的參與。',
     ],
@@ -90,9 +90,9 @@ export function TermsOfServicePage() {
     <div className="min-h-screen overflow-x-hidden bg-abyss text-pearl">
       <Seo
         title={`服務條款｜${siteConfig.brandName}`}
-        description="UFCGYM TAIWAN 活動預約與課程報名落地頁服務條款，說明預約、購買、付款、課程參與、第三方服務與使用者權利義務。"
+        description="UFCGYM TAIWAN 官方課程預約頁服務條款，說明預約、購買、付款、課程參與、第三方服務與使用者權利義務。"
         canonicalPath="/terms-of-service"
-        keywords={['服務條款', 'UFC GYM 夜間體驗條款', '拳擊／泰拳專項課程條款', 'UFCGYM TAIWAN']}
+        keywords={['服務條款', 'UFC GYM 夜間體驗條款', '拳擊／泰拳課程方案條款', 'UFCGYM TAIWAN']}
       />
       <Header />
 
@@ -104,7 +104,7 @@ export function TermsOfServicePage() {
           服務條款
         </h1>
         <p className="mt-5 text-base leading-relaxed text-mist/76 md:text-lg">
-          本服務條款規範您使用 UFCGYM TAIWAN 活動預約與課程報名落地頁、預約服務、購買課程及參與活動之權利義務。
+          本服務條款規範您使用 UFCGYM TAIWAN 官方課程預約頁、預約服務、購買課程及參與活動之權利義務。
         </p>
 
         <section className="mt-8 rounded-2xl border border-pearl/10 bg-black/32 p-5 text-sm leading-relaxed text-mist/74 md:p-7">
