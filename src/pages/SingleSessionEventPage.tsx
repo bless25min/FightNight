@@ -1,4 +1,4 @@
-import { motion } from 'framer-motion'
+﻿import { motion } from 'framer-motion'
 import type { ChangeEvent, FormEvent } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
@@ -88,8 +88,8 @@ type EventCoursePhoto = {
 }
 
 type EventPassVariantId =
-  | 'fight-night-pass'
-  | 'fight-night-gear-pass'
+  | 'single-session-pass'
+  | 'single-session-gear-pass'
   | 'single-class-paid'
 
 type EventPassHighlight = {
@@ -151,8 +151,8 @@ type EventServicePreferences = {
 
 type EventCoachProfileDetailTone = 'pearl' | 'neon' | 'blaze'
 
-const landingVariant = 'fightnight_event_night_ticket_paid_v3'
-const eventName = 'Fight Night'
+const landingVariant = 'ufcgym_single_session_paid_v1'
+const eventName = 'UFC GYM 夜間體驗'
 const eventMoreSessionsHash = '#event-more-sessions'
 const eventCheckoutTicketParam = 'event_checkout_ticket'
 const eventCheckoutVariantParam = 'event_checkout_variant'
@@ -188,7 +188,7 @@ const eventCoursePhotos = {
 const eventPageCopy = {
   'zh-TW': {
     eventDescription:
-      'Fight Night 是一張 Fight Night Pass。走進 UFC GYM，戴上拳套，把 50 分鐘交給倒數、沙包聲和全場。',
+      '這是一張單次入場券。走進 UFC GYM，戴上拳套，把 50 分鐘交給倒數、沙包聲和全場。',
     venueLabels: {
       'venue-dunnan': '敦南旗艦館',
       'venue-neihu': '內湖旗艦館',
@@ -230,16 +230,16 @@ const eventPageCopy = {
       },
     },
     passVariants: {
-      'fight-night-pass': {
-        title: 'Fight Night Pass',
-        ctaName: 'Fight Night Pass',
+      'single-session-pass': {
+        title: '基本裝備入場',
+        ctaName: '基本裝備入場',
       },
-      'fight-night-gear-pass': {
-        title: 'Fight Night Gear Pass',
-        ctaName: 'Fight Night Gear Pass',
+      'single-session-gear-pass': {
+        title: '完整裝備入場',
+        ctaName: '完整裝備入場',
       },
       'single-class-paid': {
-        title: '一般單堂體驗',
+        title: '一般單次課程',
         ctaName: '這堂體驗',
       },
     },
@@ -292,9 +292,9 @@ const eventPageCopy = {
       lastSeats: (remaining: number) => `最後名額剩下${remaining}位`,
     },
     hero: {
-      imageAlt: 'Fight Night 拳套入場主視覺',
-      eyebrow: 'FIGHT NIGHT',
-      title: '下班後，進入另一種夜晚。',
+      imageAlt: 'UFC GYM 夜間體驗拳套入場主視覺',
+      eyebrow: 'UFC GYM',
+      title: '下班後，進入另一種狀態。',
       body:
         '你推門進 UFC GYM 的時候，白天還黏在身上。場地是紅的、黑的，音樂很近，有人已經戴好拳套在笑。第一聲倒數落下來，你會知道：這不是來上一堂課，是今晚真的要開始了。',
       cta: '看這一晚有多好玩',
@@ -340,20 +340,20 @@ const eventPageCopy = {
       cta: '把這一晚留下來',
     },
     passPreview: {
-      eyebrow: 'FIGHT NIGHT PASS',
+      eyebrow: 'SINGLE SESSION',
       title: '選一個晚上，\n走進那個會讓人亮起來的現場。',
       body:
         '到了那天，你不用先想自己會不會。裝備、置物櫃和入場確認都會先準備好；你只要出現，戴上拳套，跟著第一聲倒數開始。',
       items: ['入場通行', '裝備備妥', '可選安靜模式', 'LINE 確認'],
     },
     tickets: {
-      sectionEyebrow: 'Fight Night Pass',
+      sectionEyebrow: '單次體驗',
       sectionTitle: '可選場次',
       sectionSummary: (venue: string, count: number) =>
         `${venue} 目前 ${count} 場可選。`,
       venueTabsLabel: '選擇場館',
       venueSelectPrompt: '先選你會抵達的場館，再看該場館可保留的方案。',
-      cardsLabel: (venue: string) => `${venue} Fight Night Pass 可選場次`,
+      cardsLabel: (venue: string) => `${venue} 可選場次`,
       noVenueSessions: '這個場館目前沒有可報名場次。',
       noSessions: '下一場整理中，開放後會更新在這裡。',
       currentVenue: '目前場館',
@@ -364,11 +364,11 @@ const eventPageCopy = {
       soldOut: '本場候補中',
       freeTrialFirstTimeBadge: '首次限定',
       freeTrialUsedBadge: '一般體驗',
-      freeTrialTitle: '本週限量免費體驗課',
-      paidFallbackTitle: '一般單堂體驗',
+      freeTrialTitle: '本週限量免費體驗',
+      paidFallbackTitle: '一般單次課程',
       usedFirstTime: '已使用首次限定',
       freeTrialLimit: '每支手機限保留一次。',
-      usedFallback: '這堂可用一般單堂價保留。',
+      usedFallback: '這堂可用一般單次價保留。',
       paidFallbackCta: 'NT$680｜保留這堂',
       checking: '確認資格中',
       unavailable: '暫時無法確認資格',
@@ -379,7 +379,7 @@ const eventPageCopy = {
       close: '關閉',
       coachInfo: '教練與課程資訊',
       coachInfoClose: '關閉教練與課程資訊',
-      coachFallbackRole: 'Fight Night 教練',
+      coachFallbackRole: 'UFC GYM 夜間體驗教練',
       whyThisCoach: '為什麼值得跟他上這堂',
       certifications: '資格證明',
       experience: '教學 / 經歷',
@@ -390,7 +390,7 @@ const eventPageCopy = {
       venue: '場館',
       status: '狀態',
       backToSessions: '回到場次選擇',
-      checkoutEyebrow: 'Fight Night Pass',
+      checkoutEyebrow: '單次體驗',
       checkoutTitle: '保留這一晚',
       comparePrefix: '一般',
       checkoutNote:
@@ -405,7 +405,7 @@ const eventPageCopy = {
         '訂購資料只用於建立付款與現場確認；付款完成頁會提供 LINE 加好友連結。',
       checkoutLoginRequired: '請先確認訂購人資訊後再前往付款。',
       checkoutError: '目前無法建立付款連結，請稍後再試。',
-      freeTrialEyebrow: '首次限定｜本週限量免費體驗課',
+      freeTrialEyebrow: '首次限定｜本週限量免費體驗',
       freeTrialTitle: '免費保留這堂',
       freeTrialNote: '每支手機限保留一次。裝備可自備，或現場租用。',
       freeTrialLoginRequired: '請先填寫姓名與手機後，再保留免費體驗。',
@@ -418,21 +418,21 @@ const eventPageCopy = {
     },
     sticky: {
       detailOpen: '選擇方案｜線上付款｜LINE 確認',
-      detailClosed: 'Fight Night Pass',
+      detailClosed: '單次入場券',
     },
     seo: {
-      title: 'Fight Night｜Fight Night Pass',
-      keywords: ['Fight Night', 'Fight Night Pass', 'UFC GYM', '運動娛樂', '夜間運動', '沙包聲'],
+      title: 'UFC GYM 夜間體驗｜單次入場',
+      keywords: ['UFC GYM 夜間體驗', '單次入場券', 'UFC GYM', '運動娛樂', '夜間運動', '沙包聲'],
     },
     photoAlts: {
-      group: 'Fight Night 小團體被現場節奏帶起來',
+      group: 'UFC GYM 夜間體驗小團體被現場節奏帶起來',
       impact: '全力專注並釋放情緒的沙包段落',
-      afterglow: 'Fight Night 結束後笑出來的放鬆感',
+      afterglow: 'UFC GYM 夜間體驗結束後笑出來的放鬆感',
     },
   },
   en: {
     eventDescription:
-      'Fight Night is a pass into a different kind of night at UFC GYM: gloves on, countdowns close, bag sounds loud, and the whole room moving with you.',
+      'The UFC GYM single-session experience is a pass into a different kind of night at UFC GYM: gloves on, countdowns close, bag sounds loud, and the whole room moving with you.',
     venueLabels: {
       'venue-dunnan': 'Dunnan Flagship',
       'venue-neihu': 'Neihu Signature',
@@ -474,13 +474,13 @@ const eventPageCopy = {
       },
     },
     passVariants: {
-      'fight-night-pass': {
-        title: 'Fight Night Pass',
-        ctaName: 'Fight Night Pass',
+      'single-session-pass': {
+        title: '基本裝備入場',
+        ctaName: '基本裝備入場',
       },
-      'fight-night-gear-pass': {
-        title: 'Fight Night Gear Pass',
-        ctaName: 'Fight Night Gear Pass',
+      'single-session-gear-pass': {
+        title: '完整裝備入場',
+        ctaName: '完整裝備入場',
       },
       'single-class-paid': {
         title: 'Single Session',
@@ -538,8 +538,8 @@ const eventPageCopy = {
       lastSeats: (remaining: number) => `Last ${remaining} spots`,
     },
     hero: {
-      imageAlt: 'Fight Night entry visual with boxing gloves',
-      eyebrow: 'FIGHT NIGHT',
+      imageAlt: 'UFC GYM single-session experience entry visual with boxing gloves',
+      eyebrow: 'UFC GYM',
       title: 'After work, enter a different night.',
       body:
         'When you walk into UFC GYM, the day is still on you. The room is red and black, the music is close, and someone is already laughing with gloves on. When the first countdown drops, it does not feel like you came for a class. It feels like the night has started.',
@@ -587,20 +587,20 @@ const eventPageCopy = {
       cta: 'Keep this night',
     },
     passPreview: {
-      eyebrow: 'FIGHT NIGHT PASS',
+      eyebrow: 'SINGLE SESSION',
       title: 'Choose a night.\nStep into the room that brings people alive.',
       body:
         'On the day, you do not need to wonder if you are ready. Gear, locker, and entry confirmation are prepared first. You show up, put the gloves on, and follow the first countdown.',
       items: ['Entry pass', 'Gear prepared', 'Quiet mode optional', 'LINE confirmation'],
     },
     tickets: {
-      sectionEyebrow: 'Fight Night Pass',
+      sectionEyebrow: '單次體驗',
       sectionTitle: 'Available sessions',
       sectionSummary: (venue: string, count: number) =>
         `${venue} has ${count} available session${count === 1 ? '' : 's'}.`,
       venueTabsLabel: 'Choose venue',
       venueSelectPrompt: 'Choose the venue you can reach, then pick a pass for that location.',
-      cardsLabel: (venue: string) => `${venue} Fight Night Pass sessions`,
+      cardsLabel: (venue: string) => `${venue} available sessions`,
       noVenueSessions: 'This venue has no available sessions right now.',
       noSessions: 'The next session is being arranged and will appear here once open.',
       currentVenue: 'Current venue',
@@ -626,7 +626,7 @@ const eventPageCopy = {
       close: 'Close',
       coachInfo: 'Coach and session info',
       coachInfoClose: 'Close coach and session info',
-      coachFallbackRole: 'Fight Night Coach',
+      coachFallbackRole: 'UFC GYM Coach',
       whyThisCoach: 'Why train with this coach',
       certifications: 'Certifications',
       experience: 'Teaching / Experience',
@@ -638,7 +638,7 @@ const eventPageCopy = {
       venue: 'Venue',
       status: 'Status',
       backToSessions: 'Back to session selection',
-      checkoutEyebrow: 'Fight Night Pass',
+      checkoutEyebrow: '單次體驗',
       checkoutTitle: 'Reserve this night',
       comparePrefix: 'Regular',
       checkoutNote:
@@ -669,16 +669,16 @@ const eventPageCopy = {
     },
     sticky: {
       detailOpen: 'Choose pass | Pay online | Confirm in LINE',
-      detailClosed: 'Fight Night Pass',
+      detailClosed: '單次入場券',
     },
     seo: {
-      title: 'Fight Night | Fight Night Pass',
-      keywords: ['Fight Night', 'Fight Night Pass', 'UFC GYM', 'sports entertainment', 'night workout', 'heavy bag'],
+      title: 'UFC GYM Single-Session Experience | Entry Pass',
+      keywords: ['UFC GYM 夜間體驗', '單次入場券', 'UFC GYM', 'sports entertainment', 'night workout', 'heavy bag'],
     },
     photoAlts: {
-      group: 'A Fight Night group getting pulled into the room energy',
+      group: 'A UFC GYM single-session experience group getting pulled into the room energy',
       impact: 'A focused heavy bag moment with emotional release',
-      afterglow: 'The relaxed smile after Fight Night ends',
+      afterglow: 'The relaxed smile after the UFC GYM single-session experience ends',
     },
   },
 } satisfies Record<SupportedLocale, Record<string, unknown>>
@@ -763,9 +763,9 @@ const eventPassBaseHighlights: EventPassHighlight[] = [
 
 const eventPassVariants: EventPassVariant[] = [
   {
-    id: 'fight-night-pass',
-    title: 'Fight Night Pass',
-    ctaName: 'Fight Night Pass',
+    id: 'single-session-pass',
+    title: '基本裝備入場',
+    ctaName: '基本裝備入場',
     priceDelta: 0,
     equipmentPackage: 'wraps',
     includesGloves: false,
@@ -785,9 +785,9 @@ const eventPassVariants: EventPassVariant[] = [
     ],
   },
   {
-    id: 'fight-night-gear-pass',
-    title: 'Fight Night Gear Pass',
-    ctaName: 'Fight Night Gear Pass',
+    id: 'single-session-gear-pass',
+    title: '完整裝備入場',
+    ctaName: '完整裝備入場',
     priceDelta: 1800,
     equipmentPackage: 'gloves-and-wraps',
     includesGloves: true,
@@ -813,7 +813,7 @@ const defaultEventPassVariant = eventPassVariants[0]
 
 const singleClassPaidVariant: EventPassVariant = {
   id: 'single-class-paid',
-  title: '一般單堂體驗',
+  title: '一般單次課程',
   ctaName: '這堂體驗',
   priceDelta: 0,
   fixedAmount: 680,
@@ -862,7 +862,7 @@ function getDynamicCourseId(baseCourse: WeeklyCourse, date: string) {
 function getNextBookableOccurrence(
   baseCourse: WeeklyCourse,
   minDateIso: string,
-  category: WeeklyCourse['category'] = 'FIGHT_NIGHT',
+  category: WeeklyCourse['category'] = 'SINGLE_SESSION',
 ) {
   let date = baseCourse.date
 
@@ -1021,14 +1021,14 @@ function getPaidEventTickets(locale: SupportedLocale = 'zh-TW', limit = 72): Eve
     .filter(
       (course) =>
         hasCoachProfile(course) &&
-        (isWeeklyCourseAvailableForCategory(course, 'FIGHT_NIGHT') ||
+        (isWeeklyCourseAvailableForCategory(course, 'SINGLE_SESSION') ||
           isBasicPaidCourse(course)),
     )
     .map((course) =>
       getNextBookableOccurrence(
         course,
         bookableFromIso,
-        isBasicPaidCourse(course) ? 'BOOT_CAMP' : 'FIGHT_NIGHT',
+        isBasicPaidCourse(course) ? 'TRAINING_PLAN' : 'SINGLE_SESSION',
       ),
     )
     .sort((a, b) => {
@@ -1054,7 +1054,7 @@ function getWeeklyFreeTrialTickets(
       (course) =>
         hasCoachProfile(course) &&
         isDomesticTeacherCourse(course) &&
-        isWeeklyCourseAvailableForCategory(course, 'FIGHT_NIGHT'),
+        isWeeklyCourseAvailableForCategory(course, 'SINGLE_SESSION'),
     )
     .map((course) => getNextBookableOccurrence(course, bookableFromIso))
     .sort((a, b) => {
@@ -1100,7 +1100,7 @@ const eventCoachEnglishProfiles: Record<string, EventCoachEnglishProfile> = {
     tags: ['Muay Thai / MMA', 'Swiss / European Muay Thai Champion', 'Brazilian Coach', 'Fight Background'],
     paragraphs: [
       'Andre brings a Brazilian fight background into the room, with Muay Thai, MMA, and striking experience built through years of competition and coaching.',
-      'In Fight Night, his cues help you enter the rhythm fast: simple enough to follow, strong enough to make the room feel alive.',
+      'In UFC GYM 夜間體驗, his cues help you enter the rhythm fast: simple enough to follow, strong enough to make the room feel alive.',
     ],
     trustPoints: [
       'Swiss and European Muay Thai champion background',
@@ -1119,7 +1119,7 @@ const eventCoachEnglishProfiles: Record<string, EventCoachEnglishProfile> = {
     tags: ['Muay Thai / MMA', 'Pro Muay Thai Fighter', 'BJJ Black Belt', 'Fight Background'],
     paragraphs: [
       'Bruno is a Brazilian coach with professional Muay Thai and MMA experience, plus a Brazilian Jiu-Jitsu black belt background.',
-      'His Fight Night sessions feel direct and physical, but still easy to enter because the rhythm is broken down before the room gets intense.',
+      'His UFC GYM single-session experience sessions feel direct and physical, but still easy to enter because the rhythm is broken down before the room gets intense.',
     ],
     trustPoints: [
       'Professional Muay Thai record: 14 wins',
@@ -1157,7 +1157,7 @@ const eventCoachEnglishProfiles: Record<string, EventCoachEnglishProfile> = {
     tags: ['BJJ / MMA', 'Pro MMA Fighter', 'BJJ Black Belt', 'Fight Background'],
     paragraphs: [
       'Mario brings Brazilian Jiu-Jitsu, Muay Thai, and professional MMA experience into the training floor.',
-      'His Fight Night style is controlled but intense: you feel guided, while the room still has the energy of a real fight team.',
+      'His UFC GYM single-session experience style is controlled but intense: you feel guided, while the room still has the energy of a real fight team.',
     ],
     trustPoints: [
       'Professional MMA record: 28 wins',
@@ -1176,7 +1176,7 @@ const eventCoachEnglishProfiles: Record<string, EventCoachEnglishProfile> = {
     tags: ['BJJ Black Belt 4th Degree', 'Pro MMA Fighter', 'Brazilian Coach', 'Fight Background'],
     paragraphs: [
       'Rafael is a Brazilian Jiu-Jitsu black belt fourth degree with MMA and striking experience.',
-      'In Fight Night, that background turns into clear pacing: he keeps the room moving while making the rhythm understandable for people walking in for the first time.',
+      'In UFC GYM 夜間體驗, that background turns into clear pacing: he keeps the room moving while making the rhythm understandable for people walking in for the first time.',
     ],
     trustPoints: [
       'Brazilian Jiu-Jitsu black belt, fourth degree',
@@ -1214,7 +1214,7 @@ const eventCoachEnglishProfiles: Record<string, EventCoachEnglishProfile> = {
     tags: ['Boxing', 'Combat Conditioning', 'College Boxing Champion', 'Team Background'],
     paragraphs: [
       'Mengyan brings a boxing team background and years of ring-based competition into class.',
-      'His Fight Night coaching keeps the movement direct: follow the count, hit the bag, and let the room build your confidence one round at a time.',
+      'His UFC GYM single-session experience coaching keeps the movement direct: follow the count, hit the bag, and let the room build your confidence one round at a time.',
     ],
     trustPoints: [
       'Four-time college boxing champion',
@@ -1256,7 +1256,7 @@ const eventCoachEnglishProfiles: Record<string, EventCoachEnglishProfile> = {
     tags: ['Functional Training', 'Boxing Conditioning', 'RTS', 'Mobility'],
     paragraphs: [
       'Fly brings functional training, movement coaching, and boxing-conditioning experience into class.',
-      'His Fight Night sessions help the body wake up quickly, so the rhythm feels physical without becoming confusing.',
+      'His UFC GYM single-session experience sessions help the body wake up quickly, so the rhythm feels physical without becoming confusing.',
     ],
     trustPoints: [
       'RTS training background',
@@ -1284,7 +1284,7 @@ const eventCoachEnglishProfiles: Record<string, EventCoachEnglishProfile> = {
     tags: ['Kickboxing', 'Fitness Coaching', 'Conditioning', 'Competition Background'],
     paragraphs: [
       'Ren brings kickboxing and fitness coaching experience into a class style that is direct, upbeat, and easy to follow.',
-      'In Fight Night, his cues help the room move together so you can get pulled into the energy without overthinking.',
+      'In UFC GYM 夜間體驗, his cues help the room move together so you can get pulled into the energy without overthinking.',
     ],
     trustPoints: [
       'Kickboxing coaching certifications',
@@ -1298,7 +1298,7 @@ const eventCoachEnglishProfiles: Record<string, EventCoachEnglishProfile> = {
     tags: ['Boxing', 'WBC Coach', 'ACE-CPT', 'Conditioning'],
     paragraphs: [
       'Willis brings boxing, conditioning, and personal-training credentials into a clean and energetic class rhythm.',
-      'His Fight Night coaching makes the first round feel simple enough to start, while the room builds the energy around you.',
+      'His UFC GYM single-session experience coaching makes the first round feel simple enough to start, while the room builds the energy around you.',
     ],
     trustPoints: [
       'WBC boxing coach credential',
@@ -1312,7 +1312,7 @@ const eventCoachEnglishProfiles: Record<string, EventCoachEnglishProfile> = {
     tags: ['Muay Thai', 'Kickboxing', 'Kettlebell', 'Conditioning'],
     paragraphs: [
       'Simon blends Muay Thai, kickboxing, and conditioning work into a class that feels athletic without becoming hard to enter.',
-      'His coaching keeps the cues clear, so the sound, count, and movement can stack into the Fight Night atmosphere.',
+      'His coaching keeps the cues clear, so the sound, count, and movement can stack into the UFC GYM single-session experience atmosphere.',
     ],
     trustPoints: [
       'WBC Muay Thai coaching background',
@@ -1326,7 +1326,7 @@ const eventCoachEnglishProfiles: Record<string, EventCoachEnglishProfile> = {
     tags: ['Kickboxing', 'Functional Training', 'Mobility', 'Competition Background'],
     paragraphs: [
       'Edward brings kickboxing, mobility, and functional-training coaching into a controlled class flow.',
-      'His Fight Night sessions help you move from cautious to engaged without feeling thrown into something you cannot follow.',
+      'His UFC GYM single-session experience sessions help you move from cautious to engaged without feeling thrown into something you cannot follow.',
     ],
     trustPoints: [
       'Kickboxing coaching certifications',
@@ -1340,7 +1340,7 @@ const eventCoachEnglishProfiles: Record<string, EventCoachEnglishProfile> = {
     tags: ['Boxing', 'Kickboxing', 'TRX', 'Conditioning'],
     paragraphs: [
       'Tony brings boxing, kickboxing, and conditioning coaching into a class rhythm that feels strong but grounded.',
-      'In Fight Night, he helps the group enter the count together, then lets the room energy do the rest.',
+      'In UFC GYM 夜間體驗, he helps the group enter the count together, then lets the room energy do the rest.',
     ],
     trustPoints: [
       'Boxing and kickboxing coaching background',
@@ -1398,13 +1398,13 @@ function getEventCoachParagraphs(
   if (locale === 'en') {
     return (
       getEventCoachEnglishProfile(coachProfile)?.paragraphs ?? [
-        `${coachLabel} will lead you into this Fight Night session.`,
+        `${coachLabel} will lead you into this UFC GYM single-session experience session.`,
         'The session starts from movement you can enter, then builds through coaching cues, bag work, and the room energy around you.',
       ]
     )
   }
 
-  if (!coachProfile) return [`${coachLabel} 教練會帶你進入這一場 Fight Night。`]
+  if (!coachProfile) return [`${coachLabel} 教練會帶你進入這一場 UFC GYM 夜間體驗。`]
   return coachProfile.bio?.length ? coachProfile.bio.slice(0, 2) : [coachProfile.intro]
 }
 
@@ -1457,7 +1457,7 @@ function getEventCoachPreviewTags(
   if (locale === 'en') {
     return (
       getEventCoachEnglishProfile(coachProfile)?.tags ?? [
-        getEventCoachRole(coachProfile, locale, 'Fight Night Coach'),
+        getEventCoachRole(coachProfile, locale, 'UFC GYM Coach'),
         getEventCoachProofTag(coachProfile, locale),
       ]
     )
@@ -1664,15 +1664,12 @@ function getClientContext() {
 }
 
 function getSourcePath() {
-  if (typeof window === 'undefined') return '/fight-night-event'
+  if (typeof window === 'undefined') return '/'
   return `${window.location.pathname}${window.location.search}${window.location.hash}`
 }
 
 function getEventCanonicalPath() {
-  if (typeof window === 'undefined') return '/'
-  return window.location.pathname.startsWith('/fight-night-event')
-    ? '/fight-night-event'
-    : '/'
+  return '/'
 }
 
 function getLiffStatePath() {
@@ -3009,10 +3006,10 @@ function EventTicketDropSection({
   const activeVenueGearCards = sortVenueCardsByTime(
     activeVenueTickets.map((ticket) => ({
       type: 'paid' as const,
-      key: `${ticket.id}-fight-night-gear-pass`,
+      key: `${ticket.id}-single-session-gear-pass`,
       ticket,
       variant: eventPassVariants.find(
-        (variant) => variant.id === 'fight-night-gear-pass',
+        (variant) => variant.id === 'single-session-gear-pass',
       ) ?? eventPassVariants[0],
       sortIndex: 0,
     })),
@@ -3020,10 +3017,10 @@ function EventTicketDropSection({
   const activeVenuePassCards = sortVenueCardsByTime(
     activeVenueTickets.map((ticket) => ({
       type: 'paid' as const,
-      key: `${ticket.id}-fight-night-pass`,
+      key: `${ticket.id}-single-session-pass`,
       ticket,
       variant: eventPassVariants.find(
-        (variant) => variant.id === 'fight-night-pass',
+        (variant) => variant.id === 'single-session-pass',
       ) ?? eventPassVariants[0],
       sortIndex: 0,
     })),
@@ -3039,12 +3036,12 @@ function EventTicketDropSection({
   const activeVenueCardRows = [
     {
       id: 'gear',
-      title: 'FIGHT NIGHT GEAR',
+      title: '完整準備',
       cards: activeVenueGearCards,
     },
     {
       id: 'pass',
-      title: 'FIGHT NIGHT',
+      title: '新手入門',
       cards: activeVenuePassCards,
     },
     {
@@ -3439,7 +3436,7 @@ function CheckoutModal({
           discount_label: undefined,
           currency: 'TWD',
           remaining: availability.remaining,
-          event_product: 'fight_night_entry_ticket_no_membership',
+          event_product: 'single_session_entry_ticket_no_membership',
           event_pass_variant: selectedVariant.id,
           equipment_package: selectedVariant.equipmentPackage,
           event_id: initiateCheckoutEventId,
@@ -3862,7 +3859,7 @@ function FreeTrialReservationModal({
   )
 }
 
-export function FightNightEventPage() {
+export function SingleSessionEventPage() {
   const { locale, source: languageSource, setLocale } = useLocale()
   const copy = getCopy(locale)
   const tickets = useMemo(() => getPaidEventTickets(locale), [locale])
@@ -4076,7 +4073,7 @@ export function FightNightEventPage() {
         ticket_id: targetTicket.id,
         course_id: targetTicket.course.id,
         gate_status: gateState.status,
-        event_product: 'fight_night_entry_ticket_no_membership',
+        event_product: 'single_session_entry_ticket_no_membership',
         event_pass_variant: variant.id,
         equipment_package: variant.equipmentPackage,
         price_delta: variant.priceDelta,
@@ -4274,3 +4271,4 @@ export function FightNightEventPage() {
     </div>
   )
 }
+

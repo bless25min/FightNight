@@ -181,8 +181,8 @@ export function isFirstPurchaseOfferCourseEligible(
   course: WeeklyCourse,
   packageSize: 1 | 2 | 4,
 ) {
-  if (course.category === 'FIGHT_NIGHT') return packageSize === 1
-  if (course.category === 'BOOT_CAMP') return packageSize === 2 || packageSize === 4
+  if (course.category === 'SINGLE_SESSION') return packageSize === 1
+  if (course.category === 'TRAINING_PLAN') return packageSize === 2 || packageSize === 4
   return false
 }
 

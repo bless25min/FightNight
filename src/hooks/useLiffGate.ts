@@ -21,18 +21,18 @@ export type LiffGateState = {
 
 const defaultBuildTimeLiffId = import.meta.env.VITE_LINE_LIFF_ID
 const eventBuildTimeLiffId = import.meta.env.VITE_EVENT_LINE_LIFF_ID
-const bootCampBuildTimeLiffId = import.meta.env.VITE_BOOTCAMP_LINE_LIFF_ID
+const trainingPlanBuildTimeLiffId = import.meta.env.VITE_BOOTCAMP_LINE_LIFF_ID
 const eventFallbackLiffId = '2009987027-X2HAgwQw'
-const bootCampFallbackLiffId = '2009987027-MtHp8nrN'
+const trainingPlanFallbackLiffId = '2009987027-MtHp8nrN'
 const missingConfigMessage = '找不到 LINE LIFF ID，請先補上正式環境變數。'
 const liffErrorMessage = 'LIFF 驗證失敗，請稍後再試。'
 
-type LiffSurface = 'default' | 'event' | 'bootCamp'
+type LiffSurface = 'default' | 'event' | 'trainingPlan'
 
 type RuntimeLiffIds = {
   default?: string
   event?: string
-  bootCamp?: string
+  trainingPlan?: string
 }
 
 function getErrorMessage(error: unknown) {
@@ -55,14 +55,14 @@ function getSourcePath() {
 
 function getLiffSurface(sourcePath = getSourcePath()): LiffSurface {
   const pathname = canonicalizeRoutePath(sourcePath)
-  if (pathname === '/boot-camp') return 'bootCamp'
-  if (pathname === '/' || pathname === '/fight-night-event') return 'event'
+  if (pathname === '/training-plan') return 'trainingPlan'
+  if (pathname === '/' || pathname === '/single-session-event') return 'event'
   return 'default'
 }
 
 function getLiffPlacement() {
   const sourcePath = getSourcePath()
-  if (getLiffSurface(sourcePath) === 'bootCamp') return 'boot_camp_gate'
+  if (getLiffSurface(sourcePath) === 'trainingPlan') return 'training_plan_gate'
   if (getLiffSurface(sourcePath) === 'event') return 'event_gate'
   if (canonicalizeRoutePath(sourcePath) === '/offers') return 'offers_gate'
   return 'ticket_gate'
@@ -70,14 +70,14 @@ function getLiffPlacement() {
 
 function getBuildTimeLiffId(sourcePath = getSourcePath()) {
   const surface = getLiffSurface(sourcePath)
-  if (surface === 'bootCamp') return bootCampBuildTimeLiffId
+  if (surface === 'trainingPlan') return trainingPlanBuildTimeLiffId
   if (surface === 'event') return eventBuildTimeLiffId
   return defaultBuildTimeLiffId
 }
 
 function getFallbackLiffId(sourcePath = getSourcePath()) {
   const surface = getLiffSurface(sourcePath)
-  if (surface === 'bootCamp') return bootCampFallbackLiffId
+  if (surface === 'trainingPlan') return trainingPlanFallbackLiffId
   if (surface === 'event') return eventFallbackLiffId
   return undefined
 }
@@ -86,7 +86,7 @@ function buildLiffUrl(liffId: string, statePath = getSourcePath()) {
   const baseUrl = `https://liff.line.me/${encodeURIComponent(liffId)}`
   if (!statePath) return baseUrl
 
-  const stateUrl = new URL(statePath, 'https://fightnight.local')
+  const stateUrl = new URL(statePath, 'https://ufcgym.local')
   return `${baseUrl}${stateUrl.pathname}${stateUrl.search}${stateUrl.hash}`
 }
 
@@ -100,7 +100,7 @@ function getRuntimeLiffIds(data: unknown): RuntimeLiffIds {
   return {
     default: getRuntimeString(data, 'lineLiffId'),
     event: getRuntimeString(data, 'eventLineLiffId'),
-    bootCamp: getRuntimeString(data, 'bootCampLineLiffId'),
+    trainingPlan: getRuntimeString(data, 'trainingPlanLineLiffId'),
   }
 }
 
@@ -109,8 +109,8 @@ function getRuntimeLiffIdForSource(
   sourcePath = getSourcePath(),
 ) {
   const surface = getLiffSurface(sourcePath)
-  if (surface === 'bootCamp') {
-    return runtimeLiffIds.bootCamp
+  if (surface === 'trainingPlan') {
+    return runtimeLiffIds.trainingPlan
   }
   if (surface === 'event') {
     return runtimeLiffIds.event

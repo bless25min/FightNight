@@ -1,4 +1,4 @@
-import { Header } from '../components/layout/Header'
+﻿import { Header } from '../components/layout/Header'
 import { Footer } from '../components/layout/Footer'
 import { Seo } from '../components/Seo'
 import { businessInfo, siteConfig } from '../data/landingContent'
@@ -13,7 +13,7 @@ const privacySections: PolicySection[] = [
   {
     title: '一、政策適用範圍',
     body: [
-      '本隱私權政策適用於 UFCGYM TAIWAN 活動預約與課程報名落地頁。本頁由 UFCGYM TAIWAN 營運，用於 Fight Night 夜間入場體驗、Boot Camp 課程方案、免費體驗預約、線上付款與官方 LINE 報名確認。',
+      '本隱私權政策適用於 UFCGYM TAIWAN 活動預約與課程報名落地頁。本頁由 UFCGYM TAIWAN 營運，用於 UFC GYM 夜間體驗、夜間入場體驗、拳擊／泰拳專項課程、免費體驗預約、線上付款與官方 LINE 報名確認。',
       '本政策同時適用於您透過本網站進行瀏覽、預約、購買、加入 LINE、使用 Meta Messenger、提交表單或聯繫客服時所產生之個人資料與技術資料。',
       '若您透過本網站連結至 LINE、Meta Messenger、金流、廣告、分析或其他第三方服務，該第三方服務可能依其隱私政策與服務條款處理相關資料。',
     ],
@@ -91,7 +91,7 @@ export function PrivacyPolicyPage() {
         title={`隱私權政策｜${siteConfig.brandName}`}
         description="UFCGYM TAIWAN 活動預約與課程報名落地頁隱私權政策，說明預約、購買、LINE 確認、付款與廣告成效資料之處理方式。"
         canonicalPath="/privacy-policy"
-        keywords={['隱私權政策', '個人資料保護', 'Fight Night', 'Boot Camp', 'UFCGYM TAIWAN']}
+        keywords={['隱私權政策', '個人資料保護', 'UFC GYM 夜間體驗', '拳擊／泰拳專項課程', 'UFCGYM TAIWAN']}
       />
       <Header />
 
@@ -176,3 +176,4 @@ export function PrivacyPolicyPage() {
     </div>
   )
 }
+

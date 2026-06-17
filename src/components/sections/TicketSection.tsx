@@ -1,7 +1,7 @@
-import { motion, useInView } from 'framer-motion'
+﻿import { motion, useInView } from 'framer-motion'
 import { useEffect, useRef, useState } from 'react'
 import {
-  fightNightPassPlan,
+  singleSessionPassPlan,
   ticketSectionContent,
 } from '../../data/landingContent'
 import { useLiffGate } from '../../hooks/useLiffGate'
@@ -88,7 +88,7 @@ export function TicketSection() {
     const shouldFocusTicket =
       params.get('entry') === 'ticket' ||
       window.location.hash === '#ticket' ||
-      window.location.hash === '#fight-night-pass'
+      window.location.hash === '#single-session-pass'
 
     if (!shouldFocusTicket) return
 
@@ -97,25 +97,25 @@ export function TicketSection() {
         behavior: 'smooth',
         block: 'start',
       })
-      window.history.replaceState(null, '', `${window.location.pathname}#fight-night-pass`)
+      window.history.replaceState(null, '', `${window.location.pathname}#single-session-pass`)
     }, 120)
   }, [gateState.status])
 
   const scrollToSchedule = () => {
     document
-      .getElementById('fight-night-free-trial-schedule')
+      .getElementById('single-session-free-trial-schedule')
       ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
   const handleViewFirstPurchaseOffer = () => {
     track({
-      event: 'free_trial_bootcamp_bridge_click',
+      event: 'free_trial_training_plan_bridge_click',
       params: {
         offer_eligible: firstPurchaseOfferState === 'eligible',
       },
     })
 
-    window.history.pushState({}, '', '/boot-camp?from=free-trial')
+    window.history.pushState({}, '', '/offers?from=free-trial')
     window.dispatchEvent(new PopStateEvent('popstate'))
     window.setTimeout(() => {
       window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -138,7 +138,7 @@ export function TicketSection() {
   return (
     <SectionWrapper id="ticket">
       <div ref={ref}>
-        <div id="fight-night-pass" ref={titleRef} className="scroll-mt-24 md:scroll-mt-28">
+        <div id="single-session-pass" ref={titleRef} className="scroll-mt-24 md:scroll-mt-28">
           <SectionHeading
             title={ticketSectionContent.title}
             subtitle={ticketSectionContent.subtitle}
@@ -166,10 +166,10 @@ export function TicketSection() {
               <LockedContent
                 gateState={gateState}
                 title="LINE 登入解鎖首堂免費體驗"
-                description="登入後查看目前可免費預約的 Fight Night 體適能課程。"
+                description="登入後查看目前可免費預約的 UFC GYM 夜間體驗體適能課程。"
                 onGateAction={handleGateAction}
                 loginUrl={loginUrl}
-                lockedEyebrow="FIGHT NIGHT FREE TRIAL"
+                lockedEyebrow="FREE TRIAL"
                 actionLabel={
                   gateState.status === 'not-friend'
                     ? undefined
@@ -184,9 +184,9 @@ export function TicketSection() {
             {gateState.status === 'unlocked' && (
               <div className="mt-8">
                 <WeeklyScheduleSection
-                  id="fight-night-free-trial-schedule"
-                  activeCategory="FIGHT_NIGHT"
-                  categories={['FIGHT_NIGHT']}
+                  id="single-session-free-trial-schedule"
+                  activeCategory="SINGLE_SESSION"
+                  categories={['SINGLE_SESSION']}
                   showCategoryTabs={false}
                   showVenueFilter
                   title="選一堂想進場的課"
@@ -211,7 +211,7 @@ export function TicketSection() {
             detail="首堂免費體驗"
             actionLabel="看課程"
             onAction={() => {
-              trackTicketCta(fightNightPassPlan.id)
+              trackTicketCta(singleSessionPassPlan.id)
               scrollToSchedule()
             }}
           />
@@ -221,3 +221,4 @@ export function TicketSection() {
     </SectionWrapper>
   )
 }
+

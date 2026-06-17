@@ -51,10 +51,10 @@ type RuntimeAnalyticsConfig = {
   metaPixelId?: string
 }
 
-const anonymousIdKey = 'fightnight_anonymous_id'
-const sessionIdKey = 'fightnight_session_id'
-const attributionKey = 'fightnight_attribution'
-const visitorProfileKey = 'fightnight_visitor_profile'
+const anonymousIdKey = 'ufcgym_anonymous_id'
+const sessionIdKey = 'ufcgym_session_id'
+const attributionKey = 'ufcgym_attribution'
+const visitorProfileKey = 'ufcgym_visitor_profile'
 let runtimeConfig: RuntimeAnalyticsConfig = {}
 let runtimeConfigPromise: Promise<RuntimeAnalyticsConfig> | undefined
 let behaviorTrackingStarted = false

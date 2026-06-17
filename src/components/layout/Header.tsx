@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { siteConfig } from '../../data/landingContent'
 import { Button } from '../ui/Button'
@@ -18,10 +18,10 @@ export function Header() {
   const pathname = getCurrentRoutePath()
   const isOffersPage =
     pathname.startsWith('/offers')
-  const isBootCampPage =
-    pathname.startsWith('/boot-camp')
+  const isTrainingPlanPage =
+    pathname.startsWith('/training-plan')
   const isEventPage =
-    pathname === '/' || pathname.startsWith('/fight-night-event')
+    pathname === '/' || pathname.startsWith('/single-session-event')
   const isGuidePage =
     pathname.startsWith('/guides/')
   const isUtilityPage =
@@ -40,23 +40,23 @@ export function Header() {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
   }
 
-  const ctaLabel = isBootCampPage
+  const ctaLabel = isTrainingPlanPage
     ? '選路徑與梯次'
     : isEventPage
       ? '把這一晚留下來'
     : isOffersPage
-      ? '選 Boot Camp 場次'
+      ? '選課程方案場次'
       : isUtilityPage
-        ? '查看 Boot Camp 計畫'
+        ? '查看 拳擊／泰拳專項課程計畫'
         : '選日期購買'
-  const ctaTargetId = isBootCampPage
-    ? 'boot-camp-routes'
+  const ctaTargetId = isTrainingPlanPage
+    ? 'training-plan-routes'
     : isEventPage
       ? 'event-entry'
     : isOffersPage
       ? 'offers-plans'
-      : 'fight-night-pass'
-  const ctaHref = isUtilityPage ? '/boot-camp' : `#${ctaTargetId}`
+      : 'single-session-pass'
+  const ctaHref = isUtilityPage ? '/offers' : `#${ctaTargetId}`
   const contentClass = 'max-w-6xl mx-auto px-3 sm:px-8'
   const headerClass = scrolled
     ? 'glass py-2 md:py-3'
@@ -73,14 +73,14 @@ export function Header() {
       <div className={`${contentClass} flex items-center justify-between`}>
         <a
           href={
-            isOffersPage || isBootCampPage || isUtilityPage
+            isOffersPage || isTrainingPlanPage || isUtilityPage
               ? '/'
               : isEventPage
                 ? '#event-hero'
                 : '#hero'
           }
           onClick={(e) => {
-            if (!isOffersPage && !isBootCampPage && !isUtilityPage) {
+            if (!isOffersPage && !isTrainingPlanPage && !isUtilityPage) {
               e.preventDefault()
               scrollTo(isEventPage ? 'event-hero' : 'hero')
             }
@@ -121,3 +121,4 @@ export function Header() {
     </motion.header>
   )
 }
+

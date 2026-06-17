@@ -1,4 +1,4 @@
-const DEFAULT_ORIGIN = 'https://fightnight.25min.co'
+const DEFAULT_ORIGIN = 'https://booking.ufcgym.com.tw'
 
 export function toAbsoluteUrl(value: string) {
   if (/^https?:\/\//i.test(value)) return value

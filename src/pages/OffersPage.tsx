@@ -1,19 +1,19 @@
 ﻿import { motion } from 'framer-motion'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
-import bootcampModule2Poster from '../assets/offers/bootcamp-module-2-poster.jpg'
-import bootcampModule3Poster from '../assets/offers/bootcamp-module-3-poster.jpg'
-import bootcampModule5Poster from '../assets/offers/bootcamp-module-5-poster.jpg'
-import bootcampModule6Poster from '../assets/offers/bootcamp-module-6-poster.jpg'
+import trainingPlanModule2Poster from '../assets/offers/training-plan-module-2-poster.jpg'
+import trainingPlanModule3Poster from '../assets/offers/training-plan-module-3-poster.jpg'
+import trainingPlanModule5Poster from '../assets/offers/training-plan-module-5-poster.jpg'
+import trainingPlanModule6Poster from '../assets/offers/training-plan-module-6-poster.jpg'
 import offersHeroPoster from '../assets/offers/offers-hero-octagon-poster.jpg'
 import offersPlansTransitionPoster from '../assets/offers/offers-plans-transition-poster.jpg'
 import {
-  bootCampCoreContent,
-  bootCampFaqItems,
-  bootCampRouteContent,
+  trainingPlanCoreContent,
+  trainingPlanFaqItems,
+  trainingPlanRouteContent,
   curriculumModules,
   faqItems,
-  fightNightPassPlan,
+  singleSessionPassPlan,
   offersCurriculumSectionContent,
   offersHeroContent,
   offersOutcomeSectionContent,
@@ -24,7 +24,7 @@ import {
 import type { LiffGateState } from '../hooks/useLiffGate'
 import { useLiffGate } from '../hooks/useLiffGate'
 import { useTracking } from '../hooks/useTracking'
-import type { BootCampRoute, CourseCategory } from '../types'
+import type { TrainingPlanRoute, CourseCategory } from '../types'
 import { Footer } from '../components/layout/Footer'
 import { Header } from '../components/layout/Header'
 import { ExperienceFlowSection } from '../components/sections/ExperienceFlowSection'
@@ -46,10 +46,10 @@ import { StickyActionBar } from '../components/ui/StickyActionBar'
 import { ZoomableImage } from '../components/ui/ZoomableImage'
 
 const curriculumPosterMap: Partial<Record<string, string>> = {
-  'module-2': bootcampModule2Poster,
-  'module-3': bootcampModule3Poster,
-  'module-5': bootcampModule5Poster,
-  'module-6': bootcampModule6Poster,
+  'module-2': trainingPlanModule2Poster,
+  'module-3': trainingPlanModule3Poster,
+  'module-5': trainingPlanModule5Poster,
+  'module-6': trainingPlanModule6Poster,
 }
 
 const mobileFullBleedImageFrame =
@@ -156,7 +156,7 @@ function OffersCurriculum() {
           className="border-y border-pearl/10 px-2 py-8 md:px-0 md:py-12"
         >
           <p className="font-heading text-xs md:text-sm font-semibold tracking-[0.28em] uppercase text-neon/85">
-            BOOT CAMP EXPECTATION
+            COURSE EXPECTATION
           </p>
           <h2 className="mt-3 font-heading text-3xl md:text-5xl font-black leading-tight text-pearl">
             {offersCurriculumSectionContent.title}
@@ -258,7 +258,7 @@ function OffersOutcomeSummary() {
   )
 }
 
-function OffersFightNightPlan({
+function OffersSingleSessionPlan({
   gateState,
   onGateAction,
   onCtaAction,
@@ -269,19 +269,19 @@ function OffersFightNightPlan({
   gateState: LiffGateState
   onGateAction: () => void
   onCtaAction: (redirectUrl: string, planId: string) => void
-  onScheduleNav: (category: CourseCategory, route?: BootCampRoute) => void
+  onScheduleNav: (category: CourseCategory, route?: TrainingPlanRoute) => void
   scheduleCountByCategory: Record<CourseCategory, number>
   loginUrl?: string
 }) {
   return (
-    <SectionWrapper id="offers-fight-night-plan">
+    <SectionWrapper id="offers-single-session-plan">
       <SectionHeading
-        title="Fight Night Pass"
+        title="單次入場券"
         subtitle="如果你只想先嘗試一次，這張 pass 就是最直接的入口。"
       />
 
       <LockedContent
-        title="登入後查看 Fight Night Pass"
+        title="登入後查看單次入場券"
         description="登入後可查看可購買日期、即時剩餘名額與價格。"
         gateState={gateState}
         loginUrl={loginUrl}
@@ -289,10 +289,10 @@ function OffersFightNightPlan({
       >
         <div className="max-w-xl mx-auto">
           <PlanCard
-            plan={fightNightPassPlan}
+            plan={singleSessionPassPlan}
             onCtaAction={onCtaAction}
-            scheduleCategory="FIGHT_NIGHT"
-            scheduleCount={scheduleCountByCategory.FIGHT_NIGHT}
+            scheduleCategory="SINGLE_SESSION"
+            scheduleCount={scheduleCountByCategory.SINGLE_SESSION}
             onScheduleNav={onScheduleNav}
           />
         </div>
@@ -316,7 +316,7 @@ function OffersPlans({
   gateState: LiffGateState
   onGateAction: () => void
   onCtaAction: (redirectUrl: string, planId: string) => void
-  onScheduleNav: (category: CourseCategory, route?: BootCampRoute) => void
+  onScheduleNav: (category: CourseCategory, route?: TrainingPlanRoute) => void
   scheduleCountByCategory: Record<CourseCategory, number>
   loginUrl?: string
 }) {
@@ -330,20 +330,20 @@ function OffersPlans({
           <h2>{offersPlanSectionContent.title}</h2>
           <p>{offersPlanSectionContent.subtitle}</p>
           <p>
-            如果你已經確認想走進更完整的系統，Boot Camp 會把一晚的刺激轉成更穩定、更敢行動的身體記憶。
+            如果你已經確認想走進更完整的系統，拳擊／泰拳課程會把一晚的刺激轉成更穩定、更敢行動的身體記憶。
           </p>
         </PosterFigure>
       </div>
 
-      <BootCampCoreSection />
+      <TrainingPlanCoreSection />
 
-      <BootCampRouteComparison
-        onRouteSelect={(route) => onScheduleNav('BOOT_CAMP', route)}
+      <TrainingPlanRouteComparison
+        onRouteSelect={(route) => onScheduleNav('TRAINING_PLAN', route)}
       />
 
       <LockedContent
         title="登入後查看完整費用資訊"
-        description="登入後可查看 Boot Camp 路徑、四週自動帶入場次、即時剩餘名額與價格。"
+        description="登入後可查看課程方案、四週自動帶入場次、即時剩餘名額與價格。"
         gateState={gateState}
         loginUrl={loginUrl}
         onGateAction={onGateAction}
@@ -378,24 +378,24 @@ function OffersPlans({
   )
 }
 
-function BootCampCoreSection() {
+function TrainingPlanCoreSection() {
   return (
     <div className="mx-auto mb-8 max-w-6xl md:mb-10">
       <div className="border-y border-pearl/10 py-6 md:py-8">
         <div className="max-w-3xl">
           <p className="text-xs md:text-sm font-heading tracking-[0.28em] text-neon uppercase">
-            {bootCampCoreContent.eyebrow}
+            {trainingPlanCoreContent.eyebrow}
           </p>
           <h3 className="mt-3 text-2xl md:text-4xl font-heading font-bold text-pearl leading-tight">
-            {bootCampCoreContent.title}
+            {trainingPlanCoreContent.title}
           </h3>
           <p className="mt-4 text-sm md:text-lg leading-relaxed text-mist/75">
-            {bootCampCoreContent.description}
+            {trainingPlanCoreContent.description}
           </p>
         </div>
 
         <div className="mt-5 grid grid-cols-1 gap-3 md:mt-7 md:grid-cols-3">
-          {bootCampCoreContent.pillars.map((pillar) => (
+          {trainingPlanCoreContent.pillars.map((pillar) => (
             <div
               key={pillar.title}
               className="rounded-2xl border border-pearl/10 bg-black/25 p-4 md:p-5"
@@ -414,17 +414,17 @@ function BootCampCoreSection() {
   )
 }
 
-function BootCampRouteComparison({
+function TrainingPlanRouteComparison({
   onRouteSelect,
 }: {
-  onRouteSelect: (route: BootCampRoute) => void
+  onRouteSelect: (route: TrainingPlanRoute) => void
 }) {
-  const routes: BootCampRoute[] = ['BOXING', 'MUAY_THAI']
+  const routes: TrainingPlanRoute[] = ['BOXING', 'MUAY_THAI']
 
   return (
     <div className="mx-auto mb-8 grid max-w-6xl grid-cols-1 gap-4 md:mb-10 md:grid-cols-2 md:gap-6">
       {routes.map((route) => {
-        const content = bootCampRouteContent[route]
+        const content = trainingPlanRouteContent[route]
         const accentClass =
           route === 'BOXING'
             ? 'border-blaze/25 bg-blaze/10'
@@ -487,7 +487,7 @@ function BootCampRouteComparison({
               variant={route === 'BOXING' ? 'secondary' : 'primary'}
               className="mt-5 w-full"
               onClick={() => onRouteSelect(route)}
-              data-cta={`bootcamp-route-${route.toLowerCase()}`}
+              data-cta={`training-plan-route-${route.toLowerCase()}`}
             >
               看這條路徑可購買場次
             </Button>
@@ -499,11 +499,11 @@ function BootCampRouteComparison({
 }
 
 function OffersPlanJumpSection({
-  onFightNight,
-  onBootCamp,
+  onSingleSession,
+  onTrainingPlan,
 }: {
-  onFightNight: () => void
-  onBootCamp: () => void
+  onSingleSession: () => void
+  onTrainingPlan: () => void
 }) {
   return (
     <SectionWrapper
@@ -523,11 +523,11 @@ function OffersPlanJumpSection({
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3 md:justify-end">
-          <Button variant="secondary" onClick={onFightNight} className="w-full sm:w-auto">
-            FIGHT NIGHT
+          <Button variant="secondary" onClick={onSingleSession} className="w-full sm:w-auto">
+            UFC GYM
           </Button>
-          <Button variant="primary" onClick={onBootCamp} className="w-full sm:w-auto">
-            BOOT CAMP
+          <Button variant="primary" onClick={onTrainingPlan} className="w-full sm:w-auto">
+            課程方案
           </Button>
         </div>
       </div>
@@ -536,8 +536,8 @@ function OffersPlanJumpSection({
 }
 
 const scheduleCountByCategory: Record<CourseCategory, number> = {
-  FIGHT_NIGHT: 0,
-  BOOT_CAMP: 0,
+  SINGLE_SESSION: 0,
+  TRAINING_PLAN: 0,
 }
 
 export function OffersPage() {
@@ -546,9 +546,9 @@ export function OffersPage() {
   const { track, trackGateAccess } = useTracking()
 
   const [scheduleCategory, setScheduleCategory] =
-    useState<CourseCategory>('BOOT_CAMP')
+    useState<CourseCategory>('TRAINING_PLAN')
   const [scheduleRoute, setScheduleRoute] =
-    useState<BootCampRoute | null>(null)
+    useState<TrainingPlanRoute | null>(null)
 
   useEffect(() => {
     const targetId = window.location.hash.replace('#', '')
@@ -570,7 +570,7 @@ export function OffersPage() {
   }, [])
 
   const navigateToSchedule = useCallback(
-    (category: CourseCategory, route?: BootCampRoute) => {
+    (category: CourseCategory, route?: TrainingPlanRoute) => {
       track({
         event: 'offer_schedule_nav_click',
         params: {
@@ -579,7 +579,7 @@ export function OffersPage() {
         },
       })
       setScheduleCategory(category)
-      setScheduleRoute(category === 'BOOT_CAMP' ? route ?? null : null)
+      setScheduleRoute(category === 'TRAINING_PLAN' ? route ?? null : null)
       const el = document.getElementById('weekly-schedule')
       if (el) {
         el.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -597,7 +597,7 @@ export function OffersPage() {
 
   const handlePlanCta = useCallback(
     (url: string, planId: string) => {
-      if (planId === fightNightPassPlan.id) {
+      if (planId === singleSessionPassPlan.id) {
         track({
           event: 'plan_cta_click',
           params: {
@@ -607,7 +607,7 @@ export function OffersPage() {
           metaStandardEvent: 'AddToCart',
           lineEventName: 'AddToCart',
         })
-        navigateToSchedule('FIGHT_NIGHT')
+        navigateToSchedule('SINGLE_SESSION')
         return
       }
 
@@ -642,13 +642,13 @@ export function OffersPage() {
     [navigateToSchedule, openWhenUnlocked, track],
   )
 
-  const scrollToFightNightPlan = useCallback(() => {
+  const scrollToSingleSessionPlan = useCallback(() => {
     document
-      .getElementById('offers-fight-night-plan')
+      .getElementById('offers-single-session-plan')
       ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }, [])
 
-  const scrollToBootCampPlans = useCallback(() => {
+  const scrollToTrainingPlanPlans = useCallback(() => {
     document
       .getElementById('offers-plans')
       ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -658,12 +658,12 @@ export function OffersPage() {
     <div className="overflow-x-hidden w-full relative">
       <Seo
         title="UFC GYM 課程方案｜預約與購買入口｜UFCGYM TAIWAN"
-        description="UFCGYM TAIWAN 課程預約與購買入口。比較 Fight Night Pass、首次免費體驗與 Boot Camp 方案，先選場館、日期與時段，再線上保留課程。"
+        description="UFCGYM TAIWAN 課程預約與購買入口。比較單次入場券、首次免費體驗與拳擊／泰拳課程方案，先選場館、日期與時段，再線上保留課程。"
         canonicalPath="/offers"
         keywords={[
           'UFC GYM 課程方案',
-          'Fight Night Pass',
-          'Boot Camp',
+          '單次入場券',
+          '拳擊／泰拳課程方案',
           '免費體驗',
           '拳擊課程',
           '泰拳課程',
@@ -680,7 +680,7 @@ export function OffersPage() {
         <FormulaSection />
         <ExperienceFlowSection />
         <IdentitySection />
-        <OffersFightNightPlan
+        <OffersSingleSessionPlan
           gateState={gateState}
           onGateAction={handleGateAction}
           onCtaAction={handlePlanCta}
@@ -689,7 +689,7 @@ export function OffersPage() {
           loginUrl={loginUrl}
         />
         <FAQSection
-          id="offers-fight-night-faq"
+          id="offers-single-session-faq"
           title="常見問題"
           subtitle="先回答你心裡那些「可是...」"
           items={faqItems}
@@ -697,10 +697,10 @@ export function OffersPage() {
         <OffersHero gateState={gateState} />
         <OffersCurriculum />
         <FAQSection
-          id="boot-camp-faq"
-          title="Boot Camp 常見問題"
+          id="training-plan-faq"
+          title="課程方案常見問題"
           subtitle="先把四堂系統課會讓人猶豫的地方講清楚"
-          items={bootCampFaqItems}
+          items={trainingPlanFaqItems}
         />
         <OffersOutcomeSummary />
         <OffersPlans
@@ -715,30 +715,31 @@ export function OffersPage() {
           title="目前可購買的課程名額"
           subtitle="先選一個你真的會出現的日期、場館與時段，再把那一場的位置保留下來。"
           activeCategory={scheduleCategory}
-          activeBootCampRoute={scheduleRoute}
-          onBootCampRouteChange={setScheduleRoute}
-          categories={['FIGHT_NIGHT', 'BOOT_CAMP']}
+          activeTrainingPlanRoute={scheduleRoute}
+          onTrainingPlanRouteChange={setScheduleRoute}
+          categories={['SINGLE_SESSION', 'TRAINING_PLAN']}
           showCategoryTabs
           showVenueFilter
           onCategoryChange={setScheduleCategory}
         />
         <OffersPlanJumpSection
-          onFightNight={scrollToFightNightPlan}
-          onBootCamp={scrollToBootCampPlans}
+          onSingleSession={scrollToSingleSessionPlan}
+          onTrainingPlan={scrollToTrainingPlanPlans}
         />
       </main>
       <Footer />
       {gateState.status === 'unlocked' && (
         <StickyActionBar
           eyebrow="方案入口"
-          title="Fight Night 或 Boot Camp"
+          title="單次體驗或拳擊／泰拳課程"
           detail="先試一次，或直接走完整系統"
-          secondaryActionLabel="Fight Night"
-          onSecondaryAction={scrollToFightNightPlan}
-          actionLabel="Boot Camp"
-          onAction={scrollToBootCampPlans}
+          secondaryActionLabel="單次體驗"
+          onSecondaryAction={scrollToSingleSessionPlan}
+          actionLabel="拳擊／泰拳課程"
+          onAction={scrollToTrainingPlanPlans}
         />
       )}
     </div>
   )
 }
+

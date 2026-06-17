@@ -9,7 +9,7 @@ type StoredBuyerContact = SavedBuyerContact & {
   updatedAt?: string
 }
 
-export const buyerContactStorageKey = 'fightnight_buyer_contact'
+export const buyerContactStorageKey = 'ufcgym_buyer_contact'
 
 function cleanLineUserId(value: unknown) {
   return typeof value === 'string' ? value.trim().slice(0, 128) : ''

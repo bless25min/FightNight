@@ -18,21 +18,26 @@ import {
 
 const DEFAULT_CAPACITY = 6
 const CURRENCY = 'TWD'
-const EVENT_PASS_PRICING_MODE = 'fight-night-event-pass-v1'
+const EVENT_PASS_PRICING_MODE = 'single-session-pass-v1'
+const LEGACY_EVENT_PASS_PRICING_MODE = 'fight-night-event-pass-v1'
 const WEEKLY_COURSE_NO_FIRST_PURCHASE_MODE =
   'weekly-course-no-first-purchase'
 const EVENT_PASS_AMOUNT_VALUE = 980
-const DEFAULT_EVENT_PASS_VARIANT = 'fight-night-pass'
+const DEFAULT_EVENT_PASS_VARIANT = 'single-session-pass'
+const LEGACY_EVENT_PASS_VARIANT_MAP = {
+  'fight-night-pass': 'single-session-pass',
+  'fight-night-gear-pass': 'single-session-gear-pass',
+}
 const EVENT_PASS_VARIANTS = {
-  'fight-night-pass': {
-    label: 'Fight Night Pass',
+  'single-session-pass': {
+    label: '單堂體驗券',
     priceDelta: 0,
     equipmentPackage: 'wraps',
     includesGloves: false,
     includesWraps: true,
   },
-  'fight-night-gear-pass': {
-    label: 'Fight Night Gear Pass',
+  'single-session-gear-pass': {
+    label: '單堂體驗裝備券',
     priceDelta: 1800,
     equipmentPackage: 'gloves-and-wraps',
     includesGloves: true,
@@ -49,6 +54,41 @@ const EVENT_PASS_VARIANTS = {
 }
 const WEEKDAY_LABELS = ['日', '一', '二', '三', '四', '五', '六']
 const PURCHASED_ORDER_STATUSES = ['paid', 'refund_processing', 'refunded']
+
+function normalizeCourseCategory(value) {
+  if (value === 'SINGLE_SESSION' || value === 'FIGHT_NIGHT') {
+    return 'SINGLE_SESSION'
+  }
+  if (value === 'TRAINING_PLAN' || value === 'BOOT_CAMP') {
+    return 'TRAINING_PLAN'
+  }
+  return null
+}
+
+function isSingleSessionCategory(value) {
+  return normalizeCourseCategory(value) === 'SINGLE_SESSION'
+}
+
+function isTrainingPlanCategory(value) {
+  return normalizeCourseCategory(value) === 'TRAINING_PLAN'
+}
+
+function isAllowedCourseCategory(value) {
+  return Boolean(normalizeCourseCategory(value))
+}
+
+function isEventPassPricingMode(value) {
+  return (
+    value === EVENT_PASS_PRICING_MODE ||
+    value === LEGACY_EVENT_PASS_PRICING_MODE
+  )
+}
+
+function normalizePricingMode(value) {
+  if (isEventPassPricingMode(value)) return EVENT_PASS_PRICING_MODE
+  if (value === WEEKLY_COURSE_NO_FIRST_PURCHASE_MODE) return value
+  return value || null
+}
 
 const foreignFighterNameKeywords = [
   'Andre',
@@ -96,10 +136,10 @@ function getCoachIdFromName(coachName) {
 }
 
 export function getBasePriceAmount(course, packageSize, remaining) {
-  if (course.category === 'FIGHT_NIGHT' && packageSize !== 1) {
+  if (isSingleSessionCategory(course.category) && packageSize !== 1) {
     throw new Error('Invalid course package')
   }
-  if (course.category === 'BOOT_CAMP' && ![1, 2, 4].includes(packageSize)) {
+  if (isTrainingPlanCategory(course.category) && ![1, 2, 4].includes(packageSize)) {
     throw new Error('Invalid course package')
   }
 
@@ -166,7 +206,8 @@ export async function getFirstPurchaseOfferEligibility(
 }
 
 function getEventPassVariant(eventPassVariant) {
-  const key = String(eventPassVariant || DEFAULT_EVENT_PASS_VARIANT)
+  const rawKey = String(eventPassVariant || DEFAULT_EVENT_PASS_VARIANT)
+  const key = LEGACY_EVENT_PASS_VARIANT_MAP[rawKey] || rawKey
   const id = EVENT_PASS_VARIANTS[key] ? key : DEFAULT_EVENT_PASS_VARIANT
   return {
     id,
@@ -195,8 +236,8 @@ async function getCheckoutPriceQuote({
   const base = getBasePriceAmount(course, packageSize, remaining)
   const fallbackPassVariant = getEventPassVariant(DEFAULT_EVENT_PASS_VARIANT)
   if (
-    pricingMode === EVENT_PASS_PRICING_MODE &&
-    course.category === 'FIGHT_NIGHT' &&
+    isEventPassPricingMode(pricingMode) &&
+    isSingleSessionCategory(course.category) &&
     packageSize === 1
   ) {
     return {
@@ -227,7 +268,7 @@ async function getCheckoutPriceQuote({
     : base.value
   const isSingleSessionEventPagePricing =
     pricingMode === WEEKLY_COURSE_NO_FIRST_PURCHASE_MODE &&
-    ['FIGHT_NIGHT', 'BOOT_CAMP'].includes(course.category) &&
+    isAllowedCourseCategory(course.category) &&
     packageSize === 1
   const passVariant = isSingleSessionEventPagePricing
     ? getEventPassVariant(eventPassVariant)
@@ -299,11 +340,7 @@ export function resolveCourseFromCatalog(submittedCourse) {
     throw new Error('Course is not available for online checkout')
   }
   const courseCategory =
-    submittedCourse?.category === 'FIGHT_NIGHT'
-      ? 'FIGHT_NIGHT'
-      : submittedCourse?.category === 'BOOT_CAMP'
-        ? 'BOOT_CAMP'
-        : baseCourse.category
+    normalizeCourseCategory(submittedCourse?.category) ?? baseCourse.category
   if (!isWeeklyCourseAvailableForCategory(baseCourse, courseCategory)) {
     throw new Error('Course is not available for online checkout')
   }
@@ -350,7 +387,7 @@ export function buildSessionIds(course, packageSize) {
   }
 }
 
-function getBootCampRoute(course, submittedRoute) {
+function getTrainingPlanRoute(course, submittedRoute) {
   if (submittedRoute === 'BOXING' || submittedRoute === 'MUAY_THAI') {
     return submittedRoute
   }
@@ -387,7 +424,7 @@ export function normalizePhone(phone) {
 function splitName(name) {
   const trimmed = String(name || '').trim()
   if (!trimmed) {
-    return { firstName: 'Fight Night', lastName: 'Guest' }
+    return { firstName: 'UFC GYM', lastName: 'Guest' }
   }
 
   const parts = trimmed.split(/\s+/)
@@ -811,7 +848,7 @@ export function assertCourse(course) {
   for (const key of required) {
     if (!String(course[key] || '').trim()) throw new Error(`Missing course.${key}`)
   }
-  if (!['FIGHT_NIGHT', 'BOOT_CAMP'].includes(course.category)) {
+  if (!isAllowedCourseCategory(course.category)) {
     throw new Error('Invalid course category')
   }
 }
@@ -845,8 +882,8 @@ function buildShoplinePayload({
     street: `${course.venueName} 現場課程`,
   }
   const productName =
-    course.category === 'BOOT_CAMP' && packageSize !== 1
-      ? `Boot Camp ${packageSize}堂｜${course.name}`
+    isTrainingPlanCategory(course.category) && packageSize !== 1
+      ? `拳擊／泰拳訓練方案 ${packageSize} 堂｜${course.name}`
       : `${eventPassVariant.label}｜${course.name}`
 
   return cleanObject({
@@ -965,19 +1002,20 @@ export async function onRequestPost({ request, env, waitUntil }) {
     }
 
     const packageSize = Math.max(1, Math.min(4, Number(body?.packageSize || 1)))
-    if (course.category === 'FIGHT_NIGHT' && packageSize !== 1) {
-      throw new Error('Fight Night can only be purchased as one session')
+    const pricingMode = normalizePricingMode(body?.pricingMode)
+    if (isSingleSessionCategory(course.category) && packageSize !== 1) {
+      throw new Error('Single-session experience can only be purchased as one session')
     }
-    const allowEventPageSingleBootCamp =
-      course.category === 'BOOT_CAMP' &&
+    const allowEventPageSingleTrainingPlan =
+      isTrainingPlanCategory(course.category) &&
       packageSize === 1 &&
-      body?.pricingMode === WEEKLY_COURSE_NO_FIRST_PURCHASE_MODE
+      pricingMode === WEEKLY_COURSE_NO_FIRST_PURCHASE_MODE
     if (
-      course.category === 'BOOT_CAMP' &&
+      isTrainingPlanCategory(course.category) &&
       ![2, 4].includes(packageSize) &&
-      !allowEventPageSingleBootCamp
+      !allowEventPageSingleTrainingPlan
     ) {
-      throw new Error('Boot Camp must be purchased as 2 or 4 sessions')
+      throw new Error('Training package must be purchased as 2 or 4 sessions')
     }
 
     const buyer = {
@@ -1022,7 +1060,7 @@ export async function onRequestPost({ request, env, waitUntil }) {
       packageSize,
       remaining,
       lineContext,
-      pricingMode: body?.pricingMode,
+      pricingMode,
       eventPassVariant: body?.eventPassVariant,
     })
     const quotedAmountValue = getQuotedAmountValue(body)
@@ -1041,7 +1079,7 @@ export async function onRequestPost({ request, env, waitUntil }) {
     const url = new URL(request.url)
     const returnUrl = `${url.origin}/payment/success?referenceId=${encodeURIComponent(referenceId)}`
     const productUrl = `${url.origin}${body?.sourcePath || '/offers'}`
-    const route = getBootCampRoute(course, body?.route)
+    const route = getTrainingPlanRoute(course, body?.route)
     const shoplinePayload = buildShoplinePayload({
       referenceId,
       body,
@@ -1071,7 +1109,7 @@ export async function onRequestPost({ request, env, waitUntil }) {
       tracking:
         body?.tracking && typeof body.tracking === 'object' ? body.tracking : {},
       client: shoplinePayload.client,
-      pricingMode: body?.pricingMode || null,
+      pricingMode,
     }
 
     await env.DB.prepare(

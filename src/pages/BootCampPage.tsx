@@ -13,9 +13,9 @@ import { SectionWrapper } from '../components/ui/SectionWrapper'
 import { StickyActionBar } from '../components/ui/StickyActionBar'
 import { ZoomableImage } from '../components/ui/ZoomableImage'
 import {
-  bootCampCoreContent,
-  bootCampFaqItems,
-  bootCampRouteContent,
+  trainingPlanCoreContent,
+  trainingPlanFaqItems,
+  trainingPlanRouteContent,
   siteConfig,
   venues,
 } from '../data/landingContent'
@@ -33,26 +33,26 @@ import {
 } from '../lib/freeTrialBridge'
 import { getLineRequestContext } from '../lib/lineContext'
 import { toAbsoluteUrl } from '../lib/url'
-import type { BootCampRoute, CourseCategory } from '../types'
-import boxingRouteImage from '../assets/generated/bootcamp-route-boxing-poster.jpg'
-import bootCampCorePressureMemoryImage from '../assets/generated/bootcamp-core-pressure-memory.jpg'
-import muayThaiRouteImage from '../assets/generated/bootcamp-route-muaythai-poster.jpg'
-import bootcampModule2Poster from '../assets/offers/bootcamp-module-2-poster.jpg'
-import bootcampModule5Poster from '../assets/offers/bootcamp-module-5-poster.jpg'
+import type { TrainingPlanRoute, CourseCategory } from '../types'
+import boxingRouteImage from '../assets/generated/training-plan-route-boxing-poster.jpg'
+import trainingPlanCorePressureMemoryImage from '../assets/generated/training-plan-core-pressure-memory.jpg'
+import muayThaiRouteImage from '../assets/generated/training-plan-route-muaythai-poster.jpg'
+import trainingPlanModule2Poster from '../assets/offers/training-plan-module-2-poster.jpg'
+import trainingPlanModule5Poster from '../assets/offers/training-plan-module-5-poster.jpg'
 import offersHeroPoster from '../assets/offers/offers-hero-octagon-poster.jpg'
 
-const routeOrder: BootCampRoute[] = ['BOXING', 'MUAY_THAI']
+const routeOrder: TrainingPlanRoute[] = ['BOXING', 'MUAY_THAI']
 
-const routeImages: Record<BootCampRoute, string> = {
+const routeImages: Record<TrainingPlanRoute, string> = {
   BOXING: boxingRouteImage,
   MUAY_THAI: muayThaiRouteImage,
 }
 
 type FirstPurchaseOfferState = 'idle' | 'checking' | 'eligible' | 'ineligible' | 'error'
 
-const bootCampSeoKeywords = [
-  'Boot Camp 拳擊課程',
-  'Boot Camp 泰拳課程',
+const trainingPlanSeoKeywords = [
+  '拳擊課程',
+  '泰拳課程',
   '台北拳擊課程',
   '台北泰拳課程',
   '台中拳擊課程',
@@ -63,17 +63,17 @@ const bootCampSeoKeywords = [
   'UFCGYM TAIWAN',
 ]
 
-function buildBootCampStructuredData() {
-  const url = toAbsoluteUrl('/boot-camp')
+function buildTrainingPlanStructuredData() {
+  const url = toAbsoluteUrl('/offers')
 
   return [
     {
       '@type': 'WebPage',
       '@id': `${url}#webpage`,
       url,
-      name: 'Boot Camp 拳擊/泰拳課程',
+      name: '拳擊／泰拳課程',
       description:
-        'UFCGYM TAIWAN Boot Camp 提供台北、台中拳擊與泰拳訓練計畫，適合想從單次體驗進入固定運動節奏的初學者。',
+        'UFCGYM TAIWAN 拳擊／泰拳專項課程提供台北、台中拳擊與泰拳訓練計畫，適合想從單次體驗進入固定運動節奏的初學者。',
       inLanguage: 'zh-Hant',
       isPartOf: {
         '@type': 'WebSite',
@@ -84,7 +84,7 @@ function buildBootCampStructuredData() {
         '@type': 'ImageObject',
         url: toAbsoluteUrl(offersHeroPoster),
       },
-      about: bootCampSeoKeywords,
+      about: trainingPlanSeoKeywords,
     },
     {
       '@type': 'BreadcrumbList',
@@ -98,14 +98,14 @@ function buildBootCampStructuredData() {
         {
           '@type': 'ListItem',
           position: 2,
-          name: 'Boot Camp',
+          name: '拳擊／泰拳專項課程',
           item: url,
         },
       ],
     },
     {
       '@type': 'ItemList',
-      name: 'UFCGYM TAIWAN Boot Camp 場館',
+      name: 'UFCGYM TAIWAN 拳擊／泰拳專項課程場館',
       itemListElement: venues.map((venue, index) => ({
         '@type': 'ListItem',
         position: index + 1,
@@ -134,14 +134,14 @@ const mobileFullBleedImageFrame =
 
 const expectationScenes = [
   {
-    src: bootcampModule2Poster,
+    src: trainingPlanModule2Poster,
     label: '訓練中',
     title: '不僅僅是運動娛樂，也帶給你身體應對壓力的記憶',
     description:
       '讓你在歡笑中經歷一個可承受範圍的流汗、吶喊、穩定，完成反射性的記憶。',
   },
   {
-    src: bootcampModule5Poster,
+    src: trainingPlanModule5Poster,
     label: '幾週後',
     title: '身體會開始記得：我有辦法。',
     description:
@@ -185,7 +185,7 @@ function VisualPanel({
   )
 }
 
-function BootCampHero({
+function TrainingPlanHero({
   onPrimaryAction,
   onExpectationAction,
 }: {
@@ -194,8 +194,8 @@ function BootCampHero({
 }) {
   return (
     <section
-      id="boot-camp-hero"
-      data-section="boot-camp-hero"
+      id="training-plan-hero"
+      data-section="training-plan-hero"
       className="relative overflow-hidden pt-8 pb-8 md:pt-16 md:pb-16"
     >
       <div className="absolute inset-0 pointer-events-none">
@@ -212,7 +212,7 @@ function BootCampHero({
         >
           <ZoomableImage
             src={offersHeroPoster}
-            alt="UFC GYM 場館內 Boot Camp 主視覺"
+            alt="UFC GYM 場館內 拳擊／泰拳專項課程主視覺"
             className="h-auto w-full"
             loading="eager"
           />
@@ -225,7 +225,7 @@ function BootCampHero({
           className="mx-auto mt-5 max-w-4xl border-y border-pearl/10 py-6 md:mt-8 md:py-8"
         >
           <p className="font-heading text-xs font-semibold uppercase tracking-[0.32em] text-neon/85 md:text-sm">
-            BOOT CAMP
+            訓練方案
           </p>
           <h1 className="mt-3 font-heading text-4xl font-black leading-[0.98] text-pearl md:text-6xl">
             經驗能讓人產生由內至外的蛻變
@@ -238,7 +238,7 @@ function BootCampHero({
             <Button
               size="lg"
               onClick={onPrimaryAction}
-              data-cta="bootcamp-hero-primary"
+              data-cta="training-plan-hero-primary"
             >
               選路徑與梯次
             </Button>
@@ -246,7 +246,7 @@ function BootCampHero({
               size="lg"
               variant="secondary"
               onClick={onExpectationAction}
-              data-cta="bootcamp-hero-expectation"
+              data-cta="training-plan-hero-expectation"
             >
               先看你會得到什麼
             </Button>
@@ -265,7 +265,7 @@ function ExpectationSection({
 }) {
   return (
     <SectionWrapper
-      id="boot-camp-expectation"
+      id="training-plan-expectation"
       padding="py-10 md:py-24"
     >
       <SectionHeading
@@ -312,7 +312,7 @@ function ExpectationSection({
         <Button
           className="mt-5 w-full md:mt-0 md:w-auto"
           onClick={onBookingAction}
-          data-cta="bootcamp-expectation-booking"
+          data-cta="training-plan-expectation-booking"
         >
           看可購買梯次
         </Button>
@@ -325,11 +325,11 @@ function RouteSection({
   selectedRoute,
   onSelectRoute,
 }: {
-  selectedRoute: BootCampRoute | null
-  onSelectRoute: (route: BootCampRoute) => void
+  selectedRoute: TrainingPlanRoute | null
+  onSelectRoute: (route: TrainingPlanRoute) => void
 }) {
   return (
-    <SectionWrapper id="boot-camp-routes" padding="py-10 md:py-24">
+    <SectionWrapper id="training-plan-routes" padding="py-10 md:py-24">
       <SectionHeading
         title="先選你想走進哪一種狀態。"
         subtitle="拳擊、泰拳/踢拳只是入口。真正買下的是你想在壓力面前留下的反應。"
@@ -351,7 +351,7 @@ function RouteSection({
         className="swipe-hint -mx-3 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-3 pb-4 md:mx-0 md:grid md:grid-cols-2 md:gap-6 md:overflow-visible md:px-0 md:pb-0"
       >
         {routeOrder.map((route, index) => {
-          const content = bootCampRouteContent[route]
+          const content = trainingPlanRouteContent[route]
           const active = selectedRoute === route
           const accentClass =
             route === 'BOXING'
@@ -416,7 +416,7 @@ function RouteSection({
                   variant={buttonVariant}
                   className="mt-5 w-full"
                   onClick={() => onSelectRoute(route)}
-                  data-cta={`bootcamp-route-${route.toLowerCase()}`}
+                  data-cta={`training-plan-route-${route.toLowerCase()}`}
                 >
                   {active ? '已選擇，前往梯次' : '選這條路徑'}
                 </Button>
@@ -444,8 +444,8 @@ function BookingSection({
   onGateAction,
   loginUrl,
 }: {
-  selectedRoute: BootCampRoute | null
-  onRouteChange: (route: BootCampRoute | null) => void
+  selectedRoute: TrainingPlanRoute | null
+  onRouteChange: (route: TrainingPlanRoute | null) => void
   addOnCategory: CourseCategory
   onAddOnCategoryChange: (category: CourseCategory) => void
   firstPurchaseOfferEligible?: boolean
@@ -476,20 +476,20 @@ function BookingSection({
         : 'LINE 登入查看梯次'
 
   return (
-    <SectionWrapper id="boot-camp-booking" padding="py-10 md:py-24">
+    <SectionWrapper id="training-plan-booking" padding="py-10 md:py-24">
       <div className="relative mx-auto max-w-6xl overflow-hidden rounded-3xl border border-pearl/10 bg-black/30 p-4 md:p-8">
         <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_top_left,rgba(255,59,92,0.12),transparent_42%),radial-gradient(circle_at_bottom_right,rgba(40,236,210,0.1),transparent_44%)]" />
 
         <div className="relative">
           <LockedContent
-            title="LINE 登入後查看 Boot Camp 梯次"
+            title="LINE 登入後查看 拳擊／泰拳專項課程梯次"
             description="登入後可查看可購買日期、即時剩餘名額與價格。"
             gateState={gateState}
             loginUrl={loginUrl}
             onGateAction={onGateAction}
-            lockedEyebrow="BOOT CAMP"
+            lockedEyebrow="訓練方案"
             actionLabel={gateActionLabel}
-            actionNote="登入後會回到 Boot Camp 梯次區。"
+            actionNote="登入後會回到 拳擊／泰拳專項課程梯次區。"
             className="bg-black/55"
           >
             {isOfferResolving ? (
@@ -503,31 +503,31 @@ function BookingSection({
               </div>
             ) : (
               <WeeklyScheduleSection
-                id="boot-camp-schedule"
+                id="training-plan-schedule"
                 activeCategory={addOnCategory}
                 onCategoryChange={onAddOnCategoryChange}
-                activeBootCampRoute={selectedRoute}
-                onBootCampRouteChange={onRouteChange}
-                categories={isFreeTrialBridge ? ['BOOT_CAMP', 'FIGHT_NIGHT'] : ['BOOT_CAMP']}
+                activeTrainingPlanRoute={selectedRoute}
+                onTrainingPlanRouteChange={onRouteChange}
+                categories={isFreeTrialBridge ? ['TRAINING_PLAN', 'SINGLE_SESSION'] : ['TRAINING_PLAN']}
                 showCategoryTabs={isFreeTrialBridge}
                 showVenueFilter
-                showBootCampRouteFilter={false}
+                showTrainingPlanRouteFilter={false}
                 showCategoryLead={!isFreeTrialBridge}
                 categoryTabsPlacement={isFreeTrialBridge ? 'bottom' : 'top'}
                 footnoteText={
                   isFreeTrialBridge
-                    ? '覺得 BOOT CAMP 太多？可以先加購一堂 FIGHT NIGHT'
+                    ? '覺得訓練方案太多？可以先加購一堂單堂體驗'
                     : undefined
                 }
                 categorySwitchHeading={
                   isFreeTrialBridge
                     ? {
-                        BOOT_CAMP: '覺得 BOOT CAMP 太多？可以先加購一堂 FIGHT NIGHT',
-                        FIGHT_NIGHT: '想透過技術學習蛻變成長？切回 BOOT CAMP 基礎／技巧課程',
+                        TRAINING_PLAN: '覺得訓練方案太多？可以先加購一堂單堂體驗',
+                        SINGLE_SESSION: '想透過技術學習蛻變成長？切回專項基礎／技巧課程',
                       }
                     : undefined
                 }
-                bookingMode={addOnCategory === 'BOOT_CAMP' ? 'bootcamp' : 'standard'}
+                bookingMode={addOnCategory === 'TRAINING_PLAN' ? 'trainingPlan' : 'standard'}
                 title={scheduleTitle}
                 subtitle={scheduleSubtitle}
                 embedded
@@ -544,27 +544,27 @@ function BookingSection({
   )
 }
 
-function BootCampCoreSection() {
+function TrainingPlanCoreSection() {
   return (
-    <SectionWrapper id="boot-camp-core" fullWidth padding="py-8 md:py-16">
+    <SectionWrapper id="training-plan-core" fullWidth padding="py-8 md:py-16">
       <div className="mx-auto max-w-6xl px-3 sm:px-8">
         <div className="overflow-hidden border-y border-pearl/10 bg-black/28 sm:rounded-3xl sm:border">
           <div className="grid md:grid-cols-[0.95fr_1.05fr]">
             <div className="order-2 p-5 sm:p-8 md:order-1 md:p-10">
               <p className="font-heading text-xs font-semibold uppercase tracking-[0.28em] text-neon md:text-sm">
-                {bootCampCoreContent.eyebrow}
+                {trainingPlanCoreContent.eyebrow}
               </p>
               <h2 className="mt-3 font-heading text-4xl font-black leading-tight text-pearl md:text-5xl">
-                {bootCampCoreContent.title}
+                {trainingPlanCoreContent.title}
               </h2>
               <p className="mt-4 text-base leading-relaxed text-mist/78 md:text-xl">
-                {bootCampCoreContent.description}
+                {trainingPlanCoreContent.description}
               </p>
             </div>
 
             <div className="order-1 border-b border-pearl/10 md:order-2 md:border-b-0 md:border-l">
               <ZoomableImage
-                src={bootCampCorePressureMemoryImage}
+                src={trainingPlanCorePressureMemoryImage}
                 alt="教練在 UFC GYM 場館內用手靶引導學員面對壓力"
                 className="h-auto w-full md:h-full md:min-h-[23rem] md:object-cover"
               />
@@ -572,7 +572,7 @@ function BootCampCoreSection() {
           </div>
 
           <div className="grid border-t border-pearl/10 md:grid-cols-3">
-            {bootCampCoreContent.pillars.map((pillar, index) => (
+            {trainingPlanCoreContent.pillars.map((pillar, index) => (
               <motion.div
                 key={pillar.title}
                 initial={{ opacity: 0, y: 18 }}
@@ -596,13 +596,13 @@ function BootCampCoreSection() {
   )
 }
 
-export function BootCampPage() {
-  const [selectedRoute, setSelectedRoute] = useState<BootCampRoute | null>(null)
+export function TrainingPlanPage() {
+  const [selectedRoute, setSelectedRoute] = useState<TrainingPlanRoute | null>(null)
   const [freeTrialBridge] = useState<FreeTrialBridgeState | null>(
     getFreeTrialBridgeEntry,
   )
   const [addOnCategory, setAddOnCategory] =
-    useState<CourseCategory>('BOOT_CAMP')
+    useState<CourseCategory>('TRAINING_PLAN')
   const [firstPurchaseOfferState, setFirstPurchaseOfferState] =
     useState<FirstPurchaseOfferState>('idle')
   const [freeTrialReservationReferenceId, setFreeTrialReservationReferenceId] =
@@ -641,7 +641,7 @@ export function BootCampPage() {
         const eligible = data?.eligible === true
         setFirstPurchaseOfferState(eligible ? 'eligible' : 'ineligible')
         track({
-          event: 'bootcamp_bridge_first_purchase_offer_check',
+          event: 'training_plan_bridge_first_purchase_offer_check',
           params: {
             offer_code: '618_MIDYEAR_FIRST_PURCHASE_HALF',
             eligible,
@@ -677,7 +677,7 @@ export function BootCampPage() {
         course: {
           id: freeTrialBridge.courseId,
           name: freeTrialBridge.courseName,
-          category: 'FIGHT_NIGHT',
+          category: 'SINGLE_SESSION',
         },
         sessionIds: freeTrialBridge.sessionIds,
         seriesDates: freeTrialBridge.seriesDates,
@@ -763,24 +763,24 @@ export function BootCampPage() {
   }, [freeTrialBridge, freeTrialReservationReferenceId, track])
 
   const selectRouteAndScroll = useCallback(
-    (route: BootCampRoute) => {
+    (route: TrainingPlanRoute) => {
       setSelectedRoute(route)
       track({
-        event: 'bootcamp_route_select',
+        event: 'training_plan_route_select',
         params: {
           route,
-          route_label: bootCampRouteContent[route].label,
+          route_label: trainingPlanRouteContent[route].label,
         },
         metaStandardEvent: 'ViewContent',
         lineEventName: 'RouteSelect',
       })
-      window.setTimeout(() => scrollTo('boot-camp-booking'), 80)
+      window.setTimeout(() => scrollTo('training-plan-booking'), 80)
     },
     [scrollTo, track],
   )
 
   const handleGateAction = useCallback(() => {
-    trackGateAccess('bootcamp_booking', gateState.status)
+    trackGateAccess('training_plan_booking', gateState.status)
     const shouldUseLiffLink =
       loginUrl && ['loading', 'logged-out'].includes(gateState.status)
     if (!shouldUseLiffLink) void requestGateAccess()
@@ -789,41 +789,41 @@ export function BootCampPage() {
   return (
     <div className="relative w-full overflow-x-hidden bg-abyss pb-24 md:pb-0">
       <Seo
-        title="Boot Camp 拳擊/泰拳課程｜台北台中 UFCGYM 初學者訓練計畫"
-        description="想找台北或台中拳擊、泰拳、踢拳課程？UFCGYM TAIWAN Boot Camp 幫你選場館、第一堂日期與兩堂或四堂訓練節奏，適合初學者建立固定運動習慣。"
-        canonicalPath="/boot-camp"
-        keywords={bootCampSeoKeywords}
+        title="拳擊／泰拳課程｜台北台中 UFCGYM 初學者訓練計畫"
+        description="想找台北或台中拳擊、泰拳、踢拳課程？UFCGYM TAIWAN 拳擊／泰拳專項課程幫你選場館、第一堂日期與兩堂或四堂訓練節奏，適合初學者建立固定運動習慣。"
+        canonicalPath="/offers"
+        keywords={trainingPlanSeoKeywords}
         image={offersHeroPoster}
-        structuredData={buildBootCampStructuredData()}
+        structuredData={buildTrainingPlanStructuredData()}
       />
       <Header />
       <main>
-        <BootCampHero
+        <TrainingPlanHero
           onPrimaryAction={() => {
             track({
-              event: 'bootcamp_hero_cta_click',
+              event: 'training_plan_hero_cta_click',
               params: { target: 'routes' },
             })
-            scrollTo('boot-camp-routes')
+            scrollTo('training-plan-routes')
           }}
           onExpectationAction={() => {
             track({
-              event: 'bootcamp_expectation_click',
+              event: 'training_plan_expectation_click',
               params: { target: 'expectation' },
               metaStandardEvent: 'ViewContent',
-              lineEventName: 'BootcampView',
+              lineEventName: 'TrainingPlanView',
             })
-            scrollTo('boot-camp-expectation')
+            scrollTo('training-plan-expectation')
           }}
         />
-        <BootCampCoreSection />
+        <TrainingPlanCoreSection />
         <ExpectationSection
           onBookingAction={() => {
             track({
-              event: 'bootcamp_expectation_booking_click',
+              event: 'training_plan_expectation_booking_click',
               params: { target: 'routes' },
             })
-            scrollTo('boot-camp-routes')
+            scrollTo('training-plan-routes')
           }}
         />
         <RouteSection
@@ -844,9 +844,9 @@ export function BootCampPage() {
               },
               metaStandardEvent: 'ViewContent',
               lineEventName:
-                category === 'BOOT_CAMP'
-                  ? 'BootCampAddOnSelect'
-                  : 'FightNightAddOnSelect',
+                category === 'TRAINING_PLAN'
+                  ? 'TrainingPlanAddOnSelect'
+                  : 'SingleSessionAddOnSelect',
             })
           }}
           firstPurchaseOfferEligible={firstPurchaseOfferEligible}
@@ -860,42 +860,43 @@ export function BootCampPage() {
           loginUrl={loginUrl}
         />
         <FAQSection
-          id="boot-camp-faq"
-          title="Boot Camp 常見問題"
+          id="training-plan-faq"
+          title="訓練方案常見問題"
           subtitle="只回答購買前最後會卡住的地方"
-          items={bootCampFaqItems}
+          items={trainingPlanFaqItems}
         />
       </main>
       <Footer />
       <StickyActionBar
-        eyebrow="BOOT CAMP"
-        title="保留你的 Boot Camp 梯次"
-        detail={selectedRoute ? bootCampRouteContent[selectedRoute].shortLabel : '先選路徑與第一堂'}
+        eyebrow="訓練方案"
+        title="保留你的 拳擊／泰拳專項課程梯次"
+        detail={selectedRoute ? trainingPlanRouteContent[selectedRoute].shortLabel : '先選路徑與第一堂'}
         actionLabel={selectedRoute ? '看梯次' : '選路徑'}
         onAction={() => {
-          setAddOnCategory('BOOT_CAMP')
+          setAddOnCategory('TRAINING_PLAN')
           track({
-            event: 'bootcamp_sticky_action_click',
+            event: 'training_plan_sticky_action_click',
             params: {
               target: selectedRoute ? 'booking' : 'routes',
               route: selectedRoute ?? 'none',
             },
           })
-          scrollTo(selectedRoute ? 'boot-camp-booking' : 'boot-camp-routes')
+          scrollTo(selectedRoute ? 'training-plan-booking' : 'training-plan-routes')
         }}
-        secondaryActionLabel={freeTrialBridge ? 'Fight Night' : '路徑'}
+        secondaryActionLabel={freeTrialBridge ? 'UFC GYM 夜間體驗' : '路徑'}
         onSecondaryAction={() => {
           track({
-            event: 'bootcamp_sticky_secondary_click',
+            event: 'training_plan_sticky_secondary_click',
             params: {
-              target: freeTrialBridge ? 'fight_night_add_on' : 'routes',
+              target: freeTrialBridge ? 'single_session_add_on' : 'routes',
               draft_id: freeTrialBridge?.draftId ?? '',
             },
           })
-          if (freeTrialBridge) setAddOnCategory('FIGHT_NIGHT')
-          scrollTo(freeTrialBridge ? 'boot-camp-booking' : 'boot-camp-routes')
+          if (freeTrialBridge) setAddOnCategory('SINGLE_SESSION')
+          scrollTo(freeTrialBridge ? 'training-plan-booking' : 'training-plan-routes')
         }}
       />
     </div>
   )
 }
+

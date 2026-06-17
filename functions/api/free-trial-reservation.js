@@ -221,8 +221,8 @@ export async function onRequestPost({ request, env, waitUntil }) {
     const course = resolveCourseFromCatalog(body?.course)
     assertCourse(course)
 
-    if (course.category !== 'FIGHT_NIGHT') {
-      throw new Error('免費體驗僅開放 Fight Night 單堂課程。')
+    if (course.category !== 'SINGLE_SESSION') {
+      throw new Error('免費體驗僅開放 UFC GYM 單堂體驗課程。')
     }
 
     const buyer = {
@@ -270,7 +270,7 @@ export async function onRequestPost({ request, env, waitUntil }) {
       try {
         baseCourse = resolveCourseFromCatalog({
           id: getCourseBaseId(existingFreeTrial.course_id),
-          category: 'FIGHT_NIGHT',
+          category: 'SINGLE_SESSION',
         })
       } catch {
         baseCourse = null

@@ -23,7 +23,7 @@ function json(data, init = {}) {
 
 const offerProbeCourse = {
   id: 'first-purchase-offer-probe',
-  category: 'FIGHT_NIGHT',
+  category: 'SINGLE_SESSION',
 }
 
 export async function onRequestPost({ request, env }) {

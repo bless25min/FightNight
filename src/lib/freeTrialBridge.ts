@@ -1,4 +1,4 @@
-export const freeTrialBridgeStorageKey = 'fightnight_free_trial_bridge'
+export const freeTrialBridgeStorageKey = 'ufcgym_free_trial_bridge'
 
 export type FreeTrialBridgeBuyer = {
   name: string

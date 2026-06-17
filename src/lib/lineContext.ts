@@ -8,7 +8,7 @@ export type LineRequestContext = {
   idToken?: string
 }
 
-export const lineContextKey = 'fightnight_line_context'
+export const lineContextKey = 'ufcgym_line_context'
 
 export function saveLineContext(context: Omit<LineRequestContext, 'accessToken' | 'idToken'>) {
   if (typeof window === 'undefined') return

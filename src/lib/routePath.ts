@@ -20,7 +20,7 @@ export function getRoutePathFromSource(value: string) {
   if (hashRoute) return hashRoute
 
   try {
-    return normalizeRouteCandidate(new URL(raw, 'https://fightnight.local').pathname)
+    return normalizeRouteCandidate(new URL(raw, 'https://ufcgym.local').pathname)
   } catch {
     return normalizeRouteCandidate(raw)
   }
@@ -31,16 +31,16 @@ export function canonicalizeRoutePath(value: string) {
   const lower = normalized.toLowerCase()
 
   if (lower === '/index.html') return '/'
-  if (lower === '/boot-camp' || lower === '/boot-camp.html') return '/boot-camp'
-  if (lower.startsWith('/boot-camp/')) return '/boot-camp'
-  if (lower === '/fight-night-event' || lower === '/fight-night-event.html') {
-    return '/fight-night-event'
+  if (lower === '/training-plan' || lower === '/training-plan.html') return '/training-plan'
+  if (lower.startsWith('/training-plan/')) return '/training-plan'
+  if (lower === '/single-session-event' || lower === '/single-session-event.html') {
+    return '/single-session-event'
   }
-  if (lower.startsWith('/fight-night-event/')) return '/fight-night-event'
-  if (lower === '/fight-night-intro' || lower === '/fight-night-intro.html') {
-    return '/fight-night-intro'
+  if (lower.startsWith('/single-session-event/')) return '/single-session-event'
+  if (lower === '/single-session-intro' || lower === '/single-session-intro.html') {
+    return '/single-session-intro'
   }
-  if (lower.startsWith('/fight-night-intro/')) return '/fight-night-intro'
+  if (lower.startsWith('/single-session-intro/')) return '/single-session-intro'
   if (lower === '/offers' || lower === '/offers.html') return '/offers'
   if (lower.startsWith('/offers/')) return '/offers'
   if (lower === '/payment/success' || lower.startsWith('/payment/success/')) {

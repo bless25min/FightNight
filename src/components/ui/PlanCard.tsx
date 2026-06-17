@@ -1,5 +1,5 @@
-import { motion } from 'framer-motion'
-import type { BootCampRoute, CourseCategory, TicketPlan } from '../../types'
+﻿import { motion } from 'framer-motion'
+import type { TrainingPlanRoute, CourseCategory, TicketPlan } from '../../types'
 import { Badge } from './Badge'
 import { Button } from './Button'
 
@@ -8,15 +8,15 @@ type Props = {
   index?: number
   onCtaAction: (redirectUrl: string, planId: string) => void
   scheduleCategory?: CourseCategory
-  scheduleRoute?: BootCampRoute
+  scheduleRoute?: TrainingPlanRoute
   scheduleCount?: number
-  onScheduleNav?: (category: CourseCategory, route?: BootCampRoute) => void
+  onScheduleNav?: (category: CourseCategory, route?: TrainingPlanRoute) => void
   className?: string
 }
 
 const scheduleCategoryLabel: Record<CourseCategory, string> = {
-  FIGHT_NIGHT: 'FIGHT NIGHT',
-  BOOT_CAMP: 'BOOT CAMP',
+  SINGLE_SESSION: '單次體驗',
+  TRAINING_PLAN: '課程方案',
 }
 
 export function PlanCard({
@@ -105,3 +105,4 @@ export function PlanCard({
     </motion.div>
   )
 }
+

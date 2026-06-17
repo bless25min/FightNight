@@ -1,7 +1,7 @@
 import { weeklyCourses } from '../../../src/data/weeklySchedule.ts'
 
 const LINE_PUSH_ENDPOINT = 'https://api.line.me/v2/bot/message/push'
-const DEFAULT_PUBLIC_ORIGIN = 'https://fightnight.25min.co'
+const DEFAULT_PUBLIC_ORIGIN = 'https://booking.ufcgym.com.tw'
 
 function trimText(value, maxLength) {
   return String(value || '').trim().slice(0, maxLength)
@@ -104,9 +104,9 @@ const lineCopy = {
     reservedBody:
       '不用再重填一次資料。原本的預約仍然保留，當天照 LINE 確認資訊到場即可。',
     reservedFootnote:
-      '如果你想再選其他場次，可以回到活動頁查看目前開放的 Fight Night 場次與方案。',
+      '如果你想再選其他場次，可以回到活動頁查看目前開放的 UFC GYM 單堂體驗場次與方案。',
     reservedButton: '查看其他場次',
-    reservedAlt: '你已經保留免費體驗，可以查看其他 Fight Night 場次',
+    reservedAlt: '你已經保留免費體驗，可以查看其他 UFC GYM 單堂體驗場次',
     labels: {
       venue: '場館',
       course: '課程',
@@ -121,10 +121,10 @@ const lineCopy = {
       phone: '電話',
     },
     packages: {
-      bootCamp: (size) => `Boot Camp ${size} 堂`,
-      bootCampSingle: '一般單堂體驗',
-      fightNightPass: 'Fight Night Pass',
-      fightNightGearPass: 'Fight Night Gear Pass',
+      trainingPlan: (size) => `訓練方案 ${size} 堂`,
+      trainingPlanSingle: '一般單堂體驗',
+      singleSessionPass: '單堂體驗券',
+      singleSessionGearPass: '單堂體驗裝備券',
       singleClassPaid: '一般單堂體驗',
     },
     equipment: {
@@ -157,10 +157,10 @@ const lineCopy = {
     reservedBody:
       'No need to submit again. Your original reservation is still held; use the LINE confirmation details when you arrive.',
     reservedFootnote:
-      'If you want to pick another session, return to the event page to see the currently available Fight Night sessions and passes.',
+      'If you want to pick another session, return to the event page to see the currently available UFC GYM single-session experience sessions and passes.',
     reservedButton: 'View other sessions',
     reservedAlt:
-      'You already have a free trial reserved. View other Fight Night sessions.',
+      'You already have a free trial reserved. View other UFC GYM single-session experience sessions.',
     labels: {
       venue: 'Venue',
       course: 'Session',
@@ -175,10 +175,10 @@ const lineCopy = {
       phone: 'Phone',
     },
     packages: {
-      bootCamp: (size) => `Boot Camp ${size} sessions`,
-      bootCampSingle: 'Single Class Experience',
-      fightNightPass: 'Fight Night Pass',
-      fightNightGearPass: 'Fight Night Gear Pass',
+      trainingPlan: (size) => `Training package ${size} sessions`,
+      trainingPlanSingle: 'Single Class Experience',
+      singleSessionPass: '單堂體驗券',
+      singleSessionGearPass: '單堂體驗裝備券',
       singleClassPaid: 'Single Class Experience',
     },
     equipment: {
@@ -237,6 +237,24 @@ function getEventPassVariant(order) {
     : null
 }
 
+function getNormalizedEventPassVariantId(variant) {
+  if (variant?.id === 'fight-night-pass') return 'single-session-pass'
+  if (variant?.id === 'fight-night-gear-pass') {
+    return 'single-session-gear-pass'
+  }
+  return variant?.id || ''
+}
+
+function normalizeOrderCategory(value) {
+  if (value === 'TRAINING_PLAN' || value === 'BOOT_CAMP') {
+    return 'TRAINING_PLAN'
+  }
+  if (value === 'SINGLE_SESSION' || value === 'FIGHT_NIGHT') {
+    return 'SINGLE_SESSION'
+  }
+  return String(value || '')
+}
+
 function getEquipmentPackage(order) {
   const variant = getEventPassVariant(order)
   return variant?.equipmentPackage || null
@@ -245,19 +263,22 @@ function getEquipmentPackage(order) {
 function getPackageLabel(order, locale = 'zh-TW') {
   const copy = getLineCopy(locale)
   if (Number(order.package_size || 1) > 1) {
-    return copy.packages.bootCamp(order.package_size)
+    return copy.packages.trainingPlan(order.package_size)
   }
 
   const variant = getEventPassVariant(order)
-  if (variant?.id === 'fight-night-pass') return copy.packages.fightNightPass
-  if (variant?.id === 'fight-night-gear-pass') {
-    return copy.packages.fightNightGearPass
+  const variantId = getNormalizedEventPassVariantId(variant)
+  if (variantId === 'single-session-pass') return copy.packages.singleSessionPass
+  if (variantId === 'single-session-gear-pass') {
+    return copy.packages.singleSessionGearPass
   }
-  if (variant?.id === 'single-class-paid') return copy.packages.singleClassPaid
+  if (variantId === 'single-class-paid') return copy.packages.singleClassPaid
   if (variant?.label && locale !== 'en') return trimText(variant.label, 80)
 
-  if (order.category === 'BOOT_CAMP') return copy.packages.bootCampSingle
-  return copy.packages.fightNightPass
+  if (normalizeOrderCategory(order.category) === 'TRAINING_PLAN') {
+    return copy.packages.trainingPlanSingle
+  }
+  return copy.packages.singleSessionPass
 }
 
 function getEquipmentPackageLabel(order, locale = 'zh-TW') {
@@ -585,8 +606,8 @@ function getPublicOrigin(env) {
   return DEFAULT_PUBLIC_ORIGIN
 }
 
-function buildFightNightEventSessionsUrl(env, referenceId, locale = 'zh-TW') {
-  const url = new URL('/fight-night-event', getPublicOrigin(env))
+function buildSingleSessionEventSessionsUrl(env, referenceId, locale = 'zh-TW') {
+  const url = new URL('/offers', getPublicOrigin(env))
   url.searchParams.set('from', 'line-auto')
   url.searchParams.set('utm_source', 'line')
   url.searchParams.set('utm_medium', 'auto')
@@ -1023,7 +1044,7 @@ export async function notifyLineFreeTrialAlreadyReservedOffer(env, referenceId) 
   }
 
   const locale = getOrderLocale(order)
-  const targetUrl = buildFightNightEventSessionsUrl(env, referenceId, locale)
+  const targetUrl = buildSingleSessionEventSessionsUrl(env, referenceId, locale)
   const message = buildFreeTrialAlreadyReservedOfferCard(order, targetUrl)
   const messageId = createLineMessageId('lms_reserved_offer')
   const resultMeta = {

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-const adminTokenKey = 'fightnight_admin_token'
+const adminTokenKey = 'ufcgym_admin_token'
 
 type AdminTab =
   | 'changes'
@@ -727,7 +727,7 @@ const recoveryTemplates: Array<{
   {
     id: 'offer_viewed_unpaid',
     label: '看過優惠未付款',
-    detail: '給看過 618 / Boot Camp 優惠但尚未付款的人',
+    detail: '給看過 618 / 訓練方案優惠但尚未付款的人',
   },
   {
     id: 'course_reminder',
@@ -852,7 +852,7 @@ function formatPeriodRange(period: ChangePeriodMetrics) {
 
 function splitVariantLabel(value?: string | null) {
   if (value === 'home') return '首頁'
-  if (value === 'bootcamp') return 'BOOTCAMP'
+  if (value === 'trainingPlan') return 'BOOTCAMP'
   if (value === 'event') return '活動頁'
   if (value === 'unassigned') return '未分組'
   return value || '-'
@@ -860,9 +860,9 @@ function splitVariantLabel(value?: string | null) {
 
 function routeLabel(value?: string | null) {
   if (value === '/') return '首頁'
-  if (value === '/boot-camp') return 'BOOTCAMP'
-  if (value === '/fight-night-event') return '活動頁'
-  if (value === '/fight-night-intro') return 'Intro'
+  if (value === '/training-plan') return 'BOOTCAMP'
+  if (value === '/single-session-event') return '活動頁'
+  if (value === '/single-session-intro') return 'Intro'
   if (value === '/offers') return 'Offers'
   if (value === '/payment/success') return '付款成功'
   return value || '-'
@@ -1329,9 +1329,9 @@ function OrdersTable({
                   {order.venueName} · {order.coach}
                 </p>
                 <p className="mt-1 text-mist/45">
-                  {order.category === 'BOOT_CAMP'
-                    ? `${order.packageSize} 堂 Boot Camp`
-                    : '單堂 Fight Night'}
+                  {order.category === 'TRAINING_PLAN'
+                    ? `${order.packageSize} 堂訓練方案`
+                    : '單堂體驗'}
                   {order.route ? ` · ${order.route}` : ''}
                 </p>
                 {order.eventPassVariantLabel && (
@@ -1605,7 +1605,7 @@ function LineRecoveryCarouselPreview({
             <span className="rounded-full border border-pearl/12 bg-pearl/5 px-2.5 py-1 text-xs text-mist/75">
               {preview.targetKind === 'shopline_checkout'
                 ? 'Shopline checkout'
-                : 'Fight Night / 618 頁面'}
+                : '單堂體驗 / 618 頁面'}
             </span>
           </div>
           <div className="flex gap-4 overflow-x-auto rounded-lg bg-[#151515] px-2 py-4 pb-5">
@@ -2610,7 +2610,7 @@ function TrafficDashboard({ traffic }: { traffic?: TrafficData }) {
           detail={`Rate ${formatRate(overview?.leadSessions, overview?.sessions)} · UTM ${overview?.utmSessions ?? 0}`}
         />
         <MetricCard
-          label="Fight Night Pass"
+          label="單堂體驗券"
           value={`${overview?.ticketSessions ?? 0}`}
           detail={`View rate ${formatRate(overview?.ticketSessions, overview?.sessions)} · Scroll 50% ${overview?.scroll50Sessions ?? 0}`}
         />
@@ -3566,7 +3566,7 @@ export function AdminPage() {
       <div className="min-h-screen bg-abyss px-4 py-10 text-pearl">
         <main className="mx-auto flex min-h-[80vh] max-w-md flex-col justify-center">
           <p className="font-heading text-xs uppercase tracking-[0.24em] text-neon/80">
-            FightNight Admin
+            UFC GYM Admin
           </p>
           <h1 className="mt-3 font-heading text-3xl font-black text-pearl">
             客戶追蹤後台
@@ -3600,7 +3600,7 @@ export function AdminPage() {
         <header className="flex flex-col gap-4 border-b border-pearl/10 pb-5 md:flex-row md:items-end md:justify-between">
           <div>
             <p className="font-heading text-xs uppercase tracking-[0.24em] text-neon/80">
-              FightNight Admin
+              UFC GYM Admin
             </p>
             <h1 className="mt-2 font-heading text-3xl font-black text-pearl md:text-5xl">
               客戶追蹤後台

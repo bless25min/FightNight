@@ -25,7 +25,7 @@ function getStoredFacebookClickId() {
   if (typeof window === 'undefined') return ''
 
   try {
-    const raw = window.localStorage.getItem('fightnight_attribution')
+    const raw = window.localStorage.getItem('ufcgym_attribution')
     if (!raw) return ''
     const stored = JSON.parse(raw) as {
       clickIdType?: unknown

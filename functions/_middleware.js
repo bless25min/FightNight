@@ -3,62 +3,62 @@
 const PUBLIC_IMAGE_PATHS = {
   event: '/line-recovery/hero-poster.jpg',
   offers: '/line-recovery/offers-hero-octagon-poster.jpg',
-  bootCamp: '/line-recovery/bootcamp-origin-poster.jpg',
+  bootCamp: '/line-recovery/training-plan-origin-poster.jpg',
 }
 
 const DEFAULT_META = {
-  title: 'Fight Night｜Fight Night Pass｜UFCGYM TAIWAN',
+  title: 'UFC GYM 官方課程預約｜UFCGYM TAIWAN',
   description:
-    '本頁為 UFCGYM TAIWAN 活動預約與課程報名落地頁，提供 Fight Night 夜間入場體驗、首次免費體驗、Boot Camp 課程方案、線上付款與官方 LINE 報名確認。',
+    'UFCGYM TAIWAN 官方課程預約頁，提供單堂體驗、拳擊／泰拳訓練方案、免費體驗預約、線上付款與官方 LINE 報名確認。',
   keywords:
-    'Fight Night, Fight Night Pass, UFCGYM TAIWAN, UFC GYM, 免費體驗, Boot Camp, 拳擊課程, 泰拳課程',
+    'UFCGYM TAIWAN, UFC GYM, 官方課程預約, 免費體驗, 單堂體驗, 拳擊課程, 泰拳課程',
   imagePath: PUBLIC_IMAGE_PATHS.event,
-  imageAlt: 'UFC GYM Fight Night Pass 活動主視覺',
+  imageAlt: 'UFC GYM 官方課程預約主視覺',
 }
 
 const ROUTE_META = {
   '/': DEFAULT_META,
   '/fight-night-event': {
-    title: 'Fight Night｜Fight Night Pass｜UFCGYM TAIWAN',
+    title: 'UFC GYM 單堂體驗預約｜UFCGYM TAIWAN',
     description:
-      'UFCGYM TAIWAN Fight Night 活動預約頁。走進 UFC GYM，戴上拳套，把 50 分鐘交給倒數、沙包聲和全場，線上保留場次後以官方 LINE 確認報名。',
+      'UFCGYM TAIWAN 單堂體驗預約頁。選擇場館、日期與時段，線上保留課程或完成付款後，以官方 LINE 確認報名。',
     keywords:
-      'Fight Night, Fight Night Pass, UFCGYM TAIWAN, UFC GYM, 夜間運動, 沙包聲, 免費體驗',
+      'UFCGYM TAIWAN, UFC GYM, 單堂體驗, 官方課程預約, 免費體驗, 拳擊課程, 泰拳課程',
     imagePath: PUBLIC_IMAGE_PATHS.event,
-    imageAlt: 'UFC GYM Fight Night Pass 活動主視覺',
+    imageAlt: 'UFC GYM 單堂體驗預約主視覺',
   },
   '/offers': {
     title: 'UFC GYM 課程方案｜預約與購買入口｜UFCGYM TAIWAN',
     description:
-      'UFCGYM TAIWAN 課程預約與購買入口。比較 Fight Night Pass、首次免費體驗與 Boot Camp 方案，先選場館、日期與時段，再線上保留課程。',
+      'UFCGYM TAIWAN 課程預約與購買入口。比較單堂體驗、首次免費體驗與拳擊／泰拳訓練方案，先選場館、日期與時段，再線上保留課程。',
     keywords:
-      'UFC GYM 課程方案, Fight Night Pass, Boot Camp, 免費體驗, 拳擊課程, 泰拳課程, 台北拳擊, 台中拳擊',
+      'UFC GYM 課程方案, 單堂體驗, 免費體驗, 拳擊課程, 泰拳課程, 台北拳擊, 台中拳擊',
     imagePath: PUBLIC_IMAGE_PATHS.offers,
-    imageAlt: 'UFC GYM Fight Night 與 Boot Camp 課程方案主視覺',
+    imageAlt: 'UFC GYM 課程方案主視覺',
   },
   '/boot-camp': {
-    title: 'Boot Camp 拳擊/泰拳課程｜台北台中 UFCGYM 初學者訓練計畫',
+    title: 'UFC GYM 拳擊／泰拳訓練方案｜UFCGYM TAIWAN',
     description:
-      '想找台北或台中拳擊、泰拳、踢拳課程？UFCGYM TAIWAN Boot Camp 幫你選場館、第一堂日期與兩堂或四堂訓練節奏。',
+      '想找台北或台中拳擊、泰拳、踢拳課程？UFCGYM TAIWAN 幫你選場館、第一堂日期與兩堂或四堂訓練節奏。',
     keywords:
-      'Boot Camp, UFCGYM TAIWAN, 拳擊課程, 泰拳課程, 踢拳課程, 台北拳擊, 台中拳擊, 初學者訓練',
+      'UFCGYM TAIWAN, 拳擊課程, 泰拳課程, 踢拳課程, 台北拳擊, 台中拳擊, 初學者訓練',
     imagePath: PUBLIC_IMAGE_PATHS.bootCamp,
-    imageAlt: 'UFC GYM Boot Camp 拳擊與泰拳訓練主視覺',
+    imageAlt: 'UFC GYM 拳擊與泰拳訓練主視覺',
   },
   '/fight-night-intro': {
-    title: 'Fight Night｜TRAIN DIFFERENT｜UFCGYM TAIWAN',
+    title: 'UFC GYM 單堂體驗介紹｜UFCGYM TAIWAN',
     description:
-      'Fight Night 把倒數、口令、沙包聲和全場節奏，變成一個讓人進入狀態的晚上。了解 UFC GYM Fight Night 的入場體驗。',
+      '了解 UFC GYM 單堂體驗的入場流程、課程節奏、場館資訊與報名確認方式。',
     keywords:
-      'Fight Night, TRAIN DIFFERENT, UFCGYM TAIWAN, UFC GYM, 沙包聲, 夜間運動',
+      'UFCGYM TAIWAN, UFC GYM, 單堂體驗, 官方課程預約, 拳擊課程, 泰拳課程',
     imagePath: PUBLIC_IMAGE_PATHS.event,
-    imageAlt: 'UFC GYM Fight Night 入場體驗主視覺',
+    imageAlt: 'UFC GYM 單堂體驗主視覺',
   },
   '/privacy-policy': {
     title: '隱私權政策｜UFCGYM TAIWAN 活動預約與課程報名',
     description:
       'UFCGYM TAIWAN 活動預約與課程報名落地頁隱私權政策，說明預約、購買、LINE 確認、付款與廣告成效資料之處理方式。',
-    keywords: '隱私權政策, 個人資料保護, Fight Night, Boot Camp, UFCGYM TAIWAN',
+    keywords: '隱私權政策, 個人資料保護, UFCGYM TAIWAN, UFC GYM 官方課程預約',
     imagePath: PUBLIC_IMAGE_PATHS.event,
     imageAlt: 'UFCGYM TAIWAN 活動預約與課程報名網站資訊',
   },
@@ -66,7 +66,7 @@ const ROUTE_META = {
     title: '服務條款｜UFCGYM TAIWAN 活動預約與課程報名',
     description:
       'UFCGYM TAIWAN 活動預約與課程報名落地頁服務條款，說明預約、購買、付款、課程參與、第三方服務與使用者權利義務。',
-    keywords: '服務條款, Fight Night 條款, Boot Camp 條款, UFCGYM TAIWAN',
+    keywords: '服務條款, UFCGYM TAIWAN, UFC GYM 官方課程預約',
     imagePath: PUBLIC_IMAGE_PATHS.event,
     imageAlt: 'UFCGYM TAIWAN 活動預約與課程報名服務條款',
   },
@@ -74,7 +74,7 @@ const ROUTE_META = {
     title: '退款與取消政策｜UFCGYM TAIWAN 活動預約與課程報名',
     description:
       'UFCGYM TAIWAN 活動預約與課程報名落地頁退款與取消政策，說明免費體驗、付費課程、改期、退款申請與作業時間。',
-    keywords: '退款與取消政策, Fight Night 退款, Boot Camp 退款, UFCGYM TAIWAN',
+    keywords: '退款與取消政策, UFCGYM TAIWAN, UFC GYM 官方課程預約',
     imagePath: PUBLIC_IMAGE_PATHS.event,
     imageAlt: 'UFCGYM TAIWAN 活動預約與課程報名退款與取消政策',
   },
@@ -97,18 +97,18 @@ const ROUTE_META = {
   '/guides/beginner-combat-fitness': {
     title: '拳擊、泰拳初學者可以上嗎？第一次格鬥健身指南',
     description:
-      '第一次想上拳擊課或泰拳課，常會擔心跟不上、被打、動作不會做。整理 Fight Night 與 Boot Camp 的差異和選課方式。',
-    keywords: '拳擊初學者, 泰拳初學者, 格鬥健身新手, Fight Night, Boot Camp',
+      '第一次想上拳擊課或泰拳課，常會擔心跟不上、被打、動作不會做。整理單堂體驗與連續訓練方案的差異和選課方式。',
+    keywords: '拳擊初學者, 泰拳初學者, 格鬥健身新手, UFC GYM, 單堂體驗',
     imagePath: PUBLIC_IMAGE_PATHS.bootCamp,
     imageAlt: 'UFC GYM 初學者格鬥健身指南',
   },
   '/guides/stress-release-after-workout': {
-    title: '下班後壓力怎麼釋放？拳擊、泰拳與 Fight Night 指南',
+    title: '下班後壓力怎麼釋放？拳擊、泰拳與 UFC GYM 課程指南',
     description:
-      '如果你想找下班後能釋放壓力的運動，整理 Fight Night、拳擊、泰拳和 Boot Camp 如何用節奏、沙包聲與課程安排帶你進入狀態。',
-    keywords: '下班後運動, 壓力釋放, Fight Night, 拳擊課程, 泰拳課程, Boot Camp',
+      '如果你想找下班後能釋放壓力的運動，整理 UFC GYM 單堂體驗、拳擊、泰拳和連續訓練方案如何用節奏、沙包聲與課程安排帶你進入狀態。',
+    keywords: '下班後運動, 壓力釋放, UFC GYM, 拳擊課程, 泰拳課程',
     imagePath: PUBLIC_IMAGE_PATHS.event,
-    imageAlt: 'UFC GYM 下班後壓力釋放與 Fight Night 指南',
+    imageAlt: 'UFC GYM 下班後壓力釋放課程指南',
   },
 }
 

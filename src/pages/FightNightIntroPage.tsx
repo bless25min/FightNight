@@ -11,7 +11,7 @@ import { OldFrameworkBreakSection } from '../components/sections/OldFrameworkBre
 import { PainSection } from '../components/sections/PainSection'
 import { TicketSection } from '../components/sections/TicketSection'
 
-export function FightNightIntroPage() {
+export function SingleSessionIntroPage() {
   return (
     <div className="relative w-full overflow-x-hidden">
       <Header />

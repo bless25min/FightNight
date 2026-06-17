@@ -1,4 +1,4 @@
-import type {
+﻿import type {
   PainPoint,
   FrameworkCard,
   FormulaItem,
@@ -8,22 +8,22 @@ import type {
   FAQItem,
   CurriculumModule,
   CourseCategory,
-  BootCampRoute,
+  TrainingPlanRoute,
 } from '../types'
 
 // ── 全域設定 ──────────────────────────────────────
 export const siteConfig = {
   brandName: 'UFCGYM TAIWAN',
-  eventName: 'Fight Night',
+  eventName: 'UFC GYM 夜間體驗',
   sitePurpose: 'UFCGYM TAIWAN 活動預約與課程報名落地頁',
   siteRelationship:
-    '本頁由 UFCGYM TAIWAN 營運，用於介紹 Fight Night 夜間入場體驗、Boot Camp 課程方案、免費體驗預約、線上付款與官方 LINE 報名確認。',
+    '本頁由 UFCGYM TAIWAN 營運，用於介紹 UFC GYM 夜間體驗、拳擊／泰拳課程方案、免費體驗預約、線上付款與官方 LINE 報名確認。',
   lineUrl: 'https://s.no8.io/link/channels/zGX7ApSAv6',
   messengerUrl: 'https://m.me/UFCGYMTaiwan',
   // 方案卡負責帶到可購買場次；指定場次付款由 SHOPLINE checkout session 建立。
-  ticketUrl: '#fight-night-pass',
+  ticketUrl: '#single-session-pass',
   offersUrl: '/offers',
-  bootCampUrl: '/boot-camp',
+  trainingPlanUrl: '/offers',
 }
 
 export const businessInfo = {
@@ -126,9 +126,9 @@ export const frameworkCards: FrameworkCard[] = [
 
 // ── 新模型 ────────────────────────────────────────
 export const newModelContent = {
-  title: 'TRAIN DIFFERENT，可被帶入的集體情緒體驗',
+  title: '進到場裡，你會被 UFC GYM 的節奏帶起來',
   description:
-    'Fight Night 不是拳擊課，也不是團體健身。它是一個精心設計的情境，用激勵、同化、節奏編排，讓你得到從未有過的體驗。',
+    '這不是一般拳擊課，也不是制式團體健身。你會跟著倒數、口令、沙包聲和全場節奏，把下班後的狀態切換掉。',
   keywords: ['同步', '釋放', '歸屬', '進場', '身份'],
 }
 
@@ -242,7 +242,7 @@ export const audiencePoints: AudiencePoint[] = [
 
 // ── 票種區（首頁 teaser + 登入後完整資訊共用資料） ─────
 export const ticketSectionContent = {
-  title: 'Fight Night Pass',
+  title: '今晚先試一次',
   subtitle: '先替今晚的自己留一個出口。',
   description:
     '如果你只想先嘗試一次，直接選一個方便到場的場次，把今晚留下來。',
@@ -250,17 +250,17 @@ export const ticketSectionContent = {
   previewItems: ['目前可購買場次', '指定日期保留', '今晚重新進入狀態'],
 }
 
-export const fightNightPassPlan: TicketPlan = {
-  id: 'fight-night-pass',
-  name: 'Fight Night Pass',
+export const singleSessionPassPlan: TicketPlan = {
+  id: 'single-session-pass',
+  name: '單次入場券',
   subtitle: '今晚先讓自己回到有狀態的樣子',
   teaserCopy: '買的不是內容，是今晚重新被點燃的期待。',
   description:
-    '適合想先體驗一次 Fight Night 的人。你不是要先學會什麼技術，而是讓身體確認：自己還可以流汗、被帶動、釋放，從日常裡走出來。',
+    '適合想先進場體驗一次的人。你不是要先學會什麼技術，而是讓身體確認：自己還可以流汗、被帶動、釋放，從日常裡走出來。',
   price: 'NT$680 起',
   badge: '首頁限定',
   features: [
-    '指定日期 Fight Night 入場資格',
+    '指定日期夜間體驗入場資格',
     '教練口令、拳套與沙包回合',
     '新手可跟，不對打、不被打',
   ],
@@ -272,10 +272,10 @@ export const fightNightPassPlan: TicketPlan = {
 
 // ── /offers 頁面文案 ──────────────────────────────
 export const offersHeroContent = {
-  title: 'Boot Camp 完整方案',
+  title: '拳擊／泰拳課程方案',
   subtitle: '把那個想改變的期待，變成每週會出現的自己。',
   description:
-    'Boot Camp 不是把你變成拳擊手或泰拳手，而是替那個想更穩、更敢、更有行動感的自己，先保留一段連續出現的時間。',
+    '如果你想讓這種狀態不只發生一次，課程方案會先替你保留接下來幾週的訓練時間。',
   primaryCta: '快速登入查看',
   secondaryCta: '先看完整系統',
 }
@@ -285,7 +285,7 @@ export const offersCurriculumSectionContent = {
   subtitle:
     '職業 Fighter 最迷人的地方，不是會多少招式，而是在壓力靠近時還能保持存在感。',
   description:
-    'Boot Camp 的重點是先把接下來幾週的同一個時段保留下來。你不用每週重新決定要不要運動，而是從基礎或體適能課開始，讓固定訓練真的發生。',
+    '課程方案的重點是先把接下來幾週的同一個時段保留下來。你不用每週重新決定要不要運動，而是從基礎或體適能課開始，讓固定訓練真的發生。',
 }
 
 export const curriculumModules: CurriculumModule[] = [
@@ -322,63 +322,63 @@ export const curriculumModules: CurriculumModule[] = [
     stage: 5,
     title: '內心層面的自信成長',
     description:
-      '自信是身體完成過一件事之後留下的證據。完成Boot Camp後，會發現自己變得更堅定。',
+      '自信是身體完成過一件事之後留下的證據。完成這段課程後，會發現自己變得更堅定。',
   },
   {
     id: 'module-6',
     stage: 6,
     title: '克服壓力與焦慮的身體記憶',
     description:
-      '從容是內心習慣流程化應對壓力的結果。完成Boot Camp後，壓力不再像過去那樣影響你。',
+      '從容是內心習慣流程化應對壓力的結果。完成這段課程後，壓力不再像過去那樣影響你。',
   },
 ]
 
-export const bootCampFaqItems: FAQItem[] = [
+export const trainingPlanFaqItems: FAQItem[] = [
   {
-    id: 'bootcamp-faq-1',
-    question: 'Boot Camp 和 Fight Night 差在哪？',
+    id: 'training-plan-faq-1',
+    question: '這些課程和單次體驗差在哪？',
     answer:
-      'Fight Night 是單次入場，體驗這種高能量的運動娛樂，如何觸動你的情緒。Boot Camp 則會用固定的頻率、習慣、系統化的課程編排，由內到外的改變你。',
+      '單次體驗是先進場感受高能量的運動節奏；課程方案則會用固定頻率、習慣與系統化課程編排，把這種狀態留得更久。',
   },
   {
-    id: 'bootcamp-faq-2',
+    id: 'training-plan-faq-2',
     question: '四堂課會不會只是重複上同一套？',
     answer:
       '不會，系統化的訓練能保障你每一次課程循序漸進。每週固定頻率，讓身體一次比一次更容易進入狀態。',
   },
   {
-    id: 'bootcamp-faq-3',
-    question: '所以 Boot Camp 是學拳擊或泰拳技術嗎？',
+    id: 'training-plan-faq-3',
+    question: '所以這是學拳擊或泰拳技術嗎？',
     answer:
       '拳擊與泰拳是進入方式，核心是向職業 Fighter 學壓力應對：壓力靠近時，怎麼穩住、怎麼呼吸、怎麼做下一步。',
   },
   {
-    id: 'bootcamp-faq-4',
-    question: '拳擊 Boot Camp 和泰拳／踢拳 Boot Camp 怎麼選？',
+    id: 'training-plan-faq-4',
+    question: '拳擊和泰拳／踢拳怎麼選？',
     answer:
       '常把壓力往肚裡吞、需要邊界感，選拳擊。悶太久、想點燃全身打開狀態，選泰拳／踢拳。',
   },
   {
-    id: 'bootcamp-faq-5',
-    question: '沒有拳擊基礎，適合直接選 Boot Camp 嗎？',
+    id: 'training-plan-faq-5',
+    question: '沒有拳擊基礎，適合直接選嗎？',
     answer:
       '可以，我們建議從【體適能 / 基礎】開始，隨著進度可以升階至【技巧】以上的課程。',
   },
   {
-    id: 'bootcamp-faq-6',
-    question: '兩堂或四堂 Boot Camp 會怎麼安排？',
+    id: 'training-plan-faq-6',
+    question: '兩堂或四堂會怎麼安排？',
     answer:
       '你會先選第一堂的館別、日期、時間與路徑；後續課程會安排在同館同時段。完成購買前可以先確認每一堂日期。',
   },
   {
-    id: 'bootcamp-faq-7',
+    id: 'training-plan-faq-7',
     question: '教練是固定同一位嗎？',
     answer:
       '是的，你選擇的課程教練，就如同課程卡片中所描述，詳細資訊可見教練介紹。',
   },
   {
-    id: 'bootcamp-faq-refund',
-    question: 'Boot Camp 可以取消、改期或退款嗎？',
+    id: 'training-plan-faq-refund',
+    question: '可以取消、改期或退款嗎？',
     answer:
       '若付款後尚未使用課程，可於付款日起七日內依退款與取消政策提出申請；若已開始上課、已報到或未滿 24 小時取消，會依實際使用與名額安排狀況處理。',
     linkHref: '/refund-policy',
@@ -387,13 +387,13 @@ export const bootCampFaqItems: FAQItem[] = [
 ]
 
 export const offersPlanSectionContent = {
-  title: '選擇你想留下的改變路徑',
-  subtitle: '所有 Boot Camp 都是向職業 Fighter 學習應對壓力；拳擊與泰拳只是兩種不同的期待入口。',
+  title: '選一條接下來會真的出現的路',
+  subtitle: '拳擊與泰拳只是兩種入口，重點是把訓練時間先留住。',
   footnote: '名額有限，選定後再把這段訓練留給自己。',
 }
 
-export const bootCampCoreContent = {
-  eyebrow: 'BOOT CAMP CORE',
+export const trainingPlanCoreContent = {
+  eyebrow: 'COURSE CORE',
   title: '面對壓力的技巧變成身體記憶',
   description:
     '職業格鬥選手終其一生都在練習：如何面對恐懼、壓力、打擊，以及重新站起來的能力。',
@@ -413,8 +413,8 @@ export const bootCampCoreContent = {
   ],
 }
 
-export const bootCampRouteContent: Record<
-  BootCampRoute,
+export const trainingPlanRouteContent: Record<
+  TrainingPlanRoute,
   {
     label: string
     shortLabel: string
@@ -429,7 +429,7 @@ export const bootCampRouteContent: Record<
   }
 > = {
   BOXING: {
-    label: '拳擊 Boot Camp',
+    label: '拳擊課程',
     shortLabel: '拳擊',
     badge: '拳擊入門',
     hint: '站姿、出拳、移動、沙包回合',
@@ -447,7 +447,7 @@ export const bootCampRouteContent: Record<
     ],
   },
   MUAY_THAI: {
-    label: '泰拳／踢拳 Boot Camp',
+    label: '泰拳／踢拳課程',
     shortLabel: '泰拳／踢拳',
     badge: '踢拳入門',
     hint: '踢拳組合、高流汗、沙包回合',
@@ -469,8 +469,8 @@ export const bootCampRouteContent: Record<
 export const offersOutcomeSectionContent = {
   title: '不只是很嗨的夜晚。',
   subtitle:
-    'Fight Night是讓人期待的入口，但真正價值來自一套從感官刺激到身心變化的完整結構。',
-  formulaLabel: 'Boot Camp完整系統的結構',
+    'UFC GYM 夜間體驗是讓人期待的入口，但真正價值來自一套從感官刺激到身心變化的完整結構。',
+  formulaLabel: '拳擊／泰拳課程方案的結構',
   formulaInputs: ['刺激進場', '壓力排空', '身體適應', '心理成長'],
   formulaResult: '從釋放壓力的痛快，變成帶得走的能力',
 }
@@ -478,26 +478,26 @@ export const offersOutcomeSectionContent = {
 // Plan ID → 對應的課表入口。方案卡只負責帶使用者去選場次，不再直接代表購買完成。
 export const planScheduleTargetMap: Record<
   string,
-  { category: CourseCategory; route?: BootCampRoute }
+  { category: CourseCategory; route?: TrainingPlanRoute }
 > = {
-  'offers-bootcamp-boxing-2': { category: 'BOOT_CAMP', route: 'BOXING' },
-  'offers-bootcamp-muaythai-2': { category: 'BOOT_CAMP', route: 'MUAY_THAI' },
-  'offers-bootcamp-boxing-4': { category: 'BOOT_CAMP', route: 'BOXING' },
-  'offers-bootcamp-muaythai-4': { category: 'BOOT_CAMP', route: 'MUAY_THAI' },
+  'offers-training-plan-boxing-2': { category: 'TRAINING_PLAN', route: 'BOXING' },
+  'offers-training-plan-muaythai-2': { category: 'TRAINING_PLAN', route: 'MUAY_THAI' },
+  'offers-training-plan-boxing-4': { category: 'TRAINING_PLAN', route: 'BOXING' },
+  'offers-training-plan-muaythai-4': { category: 'TRAINING_PLAN', route: 'MUAY_THAI' },
 }
 
 // 課表卡上「可用方案」摘要：每個 category 顯示入門價
-// BOOT_CAMP 不能單堂買，最低是兩堂套票，所以價格帶「起」並用 hint 提示升級路徑
+// TRAINING_PLAN 不能單堂買，最低是兩堂套票，所以價格帶「起」並用 hint 提示升級路徑
 export const planSummaryByCategory: Record<
   CourseCategory,
   { label: string; price: string; hint?: string }
 > = {
-  FIGHT_NIGHT: {
-    label: 'Fight Night Pass',
+  SINGLE_SESSION: {
+    label: '單次入場券',
     price: 'NT$680 起',
   },
-  BOOT_CAMP: {
-    label: 'Boot Camp 路徑',
+  TRAINING_PLAN: {
+    label: '課程方案',
     price: 'NT$1,280 起',
     hint: '兩堂/四堂',
   },
@@ -505,8 +505,8 @@ export const planSummaryByCategory: Record<
 
 export const offersPlans: TicketPlan[] = [
   {
-    id: 'offers-bootcamp-boxing-2',
-    name: '拳擊 Boot Camp｜兩堂入門',
+    id: 'offers-training-plan-boxing-2',
+    name: '拳擊課程｜兩堂入門',
     subtitle: '拳擊入門：站姿、出拳、沙包回合',
     teaserCopy: '用兩堂先確認拳擊是不是你能固定來的訓練。',
     description:
@@ -523,8 +523,8 @@ export const offersPlans: TicketPlan[] = [
     ctaVariant: 'secondary',
   },
   {
-    id: 'offers-bootcamp-muaythai-2',
-    name: '泰拳／踢拳 Boot Camp｜兩堂入門',
+    id: 'offers-training-plan-muaythai-2',
+    name: '泰拳／踢拳課程｜兩堂入門',
     subtitle: '踢拳入門：拳、踢、體能回合',
     teaserCopy: '想要更高流汗量，先用兩堂感受踢拳訓練。',
     description:
@@ -541,8 +541,8 @@ export const offersPlans: TicketPlan[] = [
     ctaVariant: 'secondary',
   },
   {
-    id: 'offers-bootcamp-boxing-4',
-    name: '拳擊 Boot Camp｜四堂養成',
+    id: 'offers-training-plan-boxing-4',
+    name: '拳擊課程｜四堂養成',
     subtitle: '主推：每週固定練拳擊',
     teaserCopy: '保留接下來四週同一個時間，把拳擊排進生活。',
     description:
@@ -561,8 +561,8 @@ export const offersPlans: TicketPlan[] = [
     ctaVariant: 'primary',
   },
   {
-    id: 'offers-bootcamp-muaythai-4',
-    name: '泰拳／踢拳 Boot Camp｜四堂養成',
+    id: 'offers-training-plan-muaythai-4',
+    name: '泰拳／踢拳課程｜四堂養成',
     subtitle: '主推：每週固定練踢拳',
     teaserCopy: '保留接下來四週同一個時間，用踢拳回合建立運動節奏。',
     description:
@@ -620,7 +620,7 @@ export const faqItems: FAQItem[] = [
     id: 'faq-1',
     question: '這到底是拳擊課、團課，還是防身課？',
     answer:
-      'Fight Night 是精心編排的入門娛樂體驗課，不是傳統技術課，也不是實戰對打或防身課。你會跟著教練口令、沙包與基礎動作進入狀態，先用一晚確認這是不是你的壓力出口。',
+      'UFC GYM 夜間體驗是精心編排的入門娛樂體驗課，不是傳統技術課，也不是實戰對打或防身課。你會跟著教練口令、沙包與基礎動作進入狀態，先用一晚確認這是不是你的壓力出口。',
   },
   {
     id: 'faq-2',
@@ -710,3 +710,4 @@ export const venues: Venue[] = [
       'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3640.584226597405!2d120.66126771191507!3d24.151235378309035!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x34693d2593548857%3A0x42da96286faa6a85!2zVUZDIEdZTSDlj7DkuK3li6Tnvo7ml5foiabppKg!5e0!3m2!1szh-TW!2stw!4v1778650738687!5m2!1szh-TW!2stw',
   },
 ]
+

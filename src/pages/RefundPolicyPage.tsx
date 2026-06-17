@@ -1,4 +1,4 @@
-import { Header } from '../components/layout/Header'
+﻿import { Header } from '../components/layout/Header'
 import { Footer } from '../components/layout/Footer'
 import { Seo } from '../components/Seo'
 import { businessInfo, siteConfig } from '../data/landingContent'
@@ -14,7 +14,7 @@ const refundPolicySections: PolicySection[] = [
     title: '一、適用範圍',
     body: [
       '本退款與取消政策適用於 UFCGYM TAIWAN 活動預約與課程報名落地頁所提供之體驗預約、付費課程、活動票券、訓練服務及其相關訂單。',
-      '本頁由 UFCGYM TAIWAN 營運，用於 Fight Night 夜間入場體驗、Boot Camp 課程方案、免費體驗預約、線上付款與官方 LINE 報名確認。',
+      '本頁由 UFCGYM TAIWAN 營運，用於 UFC GYM 夜間體驗、夜間入場體驗、拳擊／泰拳專項課程、免費體驗預約、線上付款與官方 LINE 報名確認。',
       '本服務屬預約制運動訓練與活動服務，並非一般實體商品。若您需要取消、改期或申請退款，請依本政策及訂單頁面載明之規則辦理。',
     ],
   },
@@ -94,7 +94,7 @@ export function RefundPolicyPage() {
         title={`退款與取消政策｜${siteConfig.brandName}`}
         description="UFCGYM TAIWAN 活動預約與課程報名落地頁退款與取消政策，說明免費體驗、付費課程、改期、退款申請與作業時間。"
         canonicalPath="/refund-policy"
-        keywords={['退款與取消政策', 'Fight Night 退款', 'Boot Camp 退款', 'UFCGYM TAIWAN']}
+        keywords={['退款與取消政策', 'UFC GYM 夜間體驗退款', '拳擊／泰拳專項課程退款', 'UFCGYM TAIWAN']}
       />
       <Header />
 
@@ -179,3 +179,4 @@ export function RefundPolicyPage() {
     </div>
   )
 }
+

@@ -1,9 +1,9 @@
-import { motion } from 'framer-motion'
+﻿import { motion } from 'framer-motion'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { createPortal } from 'react-dom'
 import {
-  bootCampRouteContent,
+  trainingPlanRouteContent,
   venues,
 } from '../../data/landingContent'
 import {
@@ -41,22 +41,22 @@ import {
 } from '../../lib/checkoutTracking'
 import { getLineRequestContext } from '../../lib/lineContext'
 import { buildPaymentResultUrl } from '../../lib/paymentResult'
-import type { BootCampRoute, CourseCategory, WeeklyCourse } from '../../types'
+import type { TrainingPlanRoute, CourseCategory, WeeklyCourse } from '../../types'
 import { Button } from '../ui/Button'
 import { SectionHeading } from '../ui/SectionHeading'
 import { SectionWrapper } from '../ui/SectionWrapper'
 
-const CATEGORY_ORDER: CourseCategory[] = ['FIGHT_NIGHT', 'BOOT_CAMP']
+const CATEGORY_ORDER: CourseCategory[] = ['SINGLE_SESSION', 'TRAINING_PLAN']
 const WEEKDAY_LABELS = ['日', '一', '二', '三', '四', '五', '六']
-const BOOT_CAMP_START_DATE_WEEKS = 6
-const BOOT_CAMP_ROUTE_ORDER: Array<BootCampRoute | null> = [
+const TRAINING_PLAN_START_DATE_WEEKS = 6
+const TRAINING_PLAN_ROUTE_ORDER: Array<TrainingPlanRoute | null> = [
   null,
   'BOXING',
   'MUAY_THAI',
 ]
 const EMPTY_FEATURED_COURSE_NAMES: string[] = []
 const INTERACTION_HINT_SEEN_STORAGE_KEY =
-  'fightnight_seen_interaction_hints_v1'
+  'ufcgym_seen_interaction_hints_v1'
 
 type InteractionHintSeenState = {
   coaches: string[]
@@ -100,7 +100,7 @@ function getCourseHintKey(course: WeeklyCourse) {
   return course.name
 }
 
-const bootCampPackageMeta: Record<
+const trainingPlanPackageMeta: Record<
   2 | 4,
   { label: string; description: string }
 > = {
@@ -123,14 +123,14 @@ const categoryMeta: Record<
     lead: string
   }
 > = {
-  FIGHT_NIGHT: {
-    label: 'FIGHT NIGHT 體適能課程',
+  SINGLE_SESSION: {
+    label: 'UFC GYM 體適能課程',
     tabActiveClass: 'bg-blaze text-abyss border-blaze',
     badgeClass: 'border-blaze/40 bg-blaze/15 text-blaze',
     lead: '體適能課程。',
   },
-  BOOT_CAMP: {
-    label: 'BOOT CAMP 基礎／技巧課程',
+  TRAINING_PLAN: {
+    label: '專項基礎／技巧課程',
     tabActiveClass: 'bg-neon text-abyss border-neon',
     badgeClass: 'border-neon/40 bg-neon/15 text-neon',
     lead: '基礎／技巧課程。',
@@ -170,7 +170,7 @@ function getWeekdayLabel(iso: string) {
   return WEEKDAY_LABELS[d.getDay()] ?? ''
 }
 
-function getBootCampSeries(course: WeeklyCourse, count: 2 | 4) {
+function getTrainingPlanSeries(course: WeeklyCourse, count: 2 | 4) {
   return Array.from({ length: count }, (_, index) => {
     const date = addDays(course.date, index * 7)
     return {
@@ -240,16 +240,16 @@ function prioritizeFeaturedCourses(
   ]
 }
 
-function getBootCampRoute(course: WeeklyCourse): BootCampRoute | null {
+function getTrainingPlanRoute(course: WeeklyCourse): TrainingPlanRoute | null {
   if (course.name.includes('泰拳') || course.name.includes('踢拳')) return 'MUAY_THAI'
   if (course.name.includes('拳擊')) return 'BOXING'
   return null
 }
 
-function getBootCampRouteLabel(course: WeeklyCourse) {
-  const route = getBootCampRoute(course)
-  if (route) return bootCampRouteContent[route].label
-  return 'Boot Camp'
+function getTrainingPlanRouteLabel(course: WeeklyCourse) {
+  const route = getTrainingPlanRoute(course)
+  if (route) return trainingPlanRouteContent[route].label
+  return '拳擊／泰拳課程'
 }
 
 function formatShortDate(iso: string) {
@@ -356,10 +356,10 @@ function getCourseMerchandisingCopy(
   activeCategory: CourseCategory,
   coachProfile: CoachProfile | null,
 ): CourseMerchandisingCopy {
-  const isBootCamp = activeCategory === 'BOOT_CAMP'
+  const isTrainingPlan = activeCategory === 'TRAINING_PLAN'
   const coachHook = getCoachHook(course.coach, coachProfile)
 
-  if (isBootCamp) {
+  if (isTrainingPlan) {
     if (course.name.includes('拳擊技巧')) {
       return {
         title: '把拳套聲，磨成更清楚的拳路',
@@ -421,7 +421,7 @@ function getCourseMerchandisingCopy(
         title: '固定把自己交給全場，換一身完成感',
         pitch:
           '教練口令、體能回合和最後倒數會把你推過去；你不是自己硬撐，是被一整個場帶著完成。',
-        desire: '把 Fight Night 的集體推力留下來，變成每週固定能回到身上的完成感。',
+        desire: '把 UFC GYM 夜間體驗的集體推力留下來，變成每週固定能回到身上的完成感。',
         coachHook,
       }
     }
@@ -1229,9 +1229,9 @@ function getCourseDetailExperienceLead(
   course: WeeklyCourse,
   activeCategory: CourseCategory,
 ) {
-  const isBootCamp = activeCategory === 'BOOT_CAMP'
+  const isTrainingPlan = activeCategory === 'TRAINING_PLAN'
 
-  if (isBootCamp) {
+  if (isTrainingPlan) {
     if (course.name.includes('拳擊')) {
       return '固定回到同一個時段，把拳套落在沙包上的觸感留下來，讓站姿、出拳、呼吸和沙包悶響慢慢變成熟悉的身體記憶。'
     }
@@ -1276,7 +1276,7 @@ function getCourseExperienceMoments(
   course: WeeklyCourse,
   activeCategory: CourseCategory,
 ) {
-  if (activeCategory === 'BOOT_CAMP') {
+  if (activeCategory === 'TRAINING_PLAN') {
     return [
       {
         title: '先把時間留住',
@@ -1343,7 +1343,7 @@ function getCourseDetailCopy(
   activeCategory: CourseCategory,
   coachProfile: CoachProfile | null,
 ) {
-  const isBootCamp = activeCategory === 'BOOT_CAMP'
+  const isTrainingPlan = activeCategory === 'TRAINING_PLAN'
   const isBasic = course.name.includes('基礎')
   const isTechnique = course.name.includes('技巧')
   const isConditioning =
@@ -1372,7 +1372,7 @@ function getCourseDetailCopy(
         isBasic
           ? '怕一開始跟不上，想先從基本動作開始'
           : '平常運動不夠過癮，想要更有節奏、更會流汗',
-        isBootCamp
+        isTrainingPlan
           ? '想先把接下來幾週的運動時間排好'
           : '想先買一堂，讓今晚或這週真的有一個出口',
       ]
@@ -1469,16 +1469,16 @@ function CourseDetailModal({
     availableOptions[0] ??
     detail.packageOptions[0] ??
     null
-  const isBootCampDetail = detail.activeCategory === 'BOOT_CAMP'
+  const isTrainingPlanDetail = detail.activeCategory === 'TRAINING_PLAN'
   const isChoiceDetail =
-    detail.bookingIntent === 'choice' && detail.activeCategory === 'FIGHT_NIGHT'
+    detail.bookingIntent === 'choice' && detail.activeCategory === 'SINGLE_SESSION'
   const freeTrialOption =
     availableOptions.find((option) => option.intent === 'free_trial') ??
     detail.packageOptions.find((option) => option.intent === 'free_trial') ??
     null
   const showChoicePanel = isChoiceDetail && Boolean(freeTrialOption)
   const reserveLabel =
-    isBootCampDetail ? '保留這組日期' : isChoiceDetail ? '確認這堂體驗' : '保留這堂'
+    isTrainingPlanDetail ? '保留這組日期' : isChoiceDetail ? '確認這堂體驗' : '保留這堂'
   const getPurchaseButtonLabel = (option: CourseDetailPackageOption) => {
     if (detail.isPurchaseLocked) return detail.lockedPurchaseCtaLabel ?? '登入看此課首購價'
     if (option.intent === 'free_trial') return '免費保留體驗名額'
@@ -1491,7 +1491,7 @@ function CourseDetailModal({
     : `${detail.dateLabel} ${detail.timeLabel}`
   const showPackageOptions =
     !showChoicePanel &&
-    (detail.activeCategory === 'BOOT_CAMP' || detail.packageOptions.length > 1)
+    (detail.activeCategory === 'TRAINING_PLAN' || detail.packageOptions.length > 1)
 
   return createPortal(
     <motion.div
@@ -1715,7 +1715,7 @@ function CourseDetailModal({
                 )}
 
               </>
-            ) : !isBootCampDetail && (
+            ) : !isTrainingPlanDetail && (
               <>
                 <p className="text-xs font-heading uppercase tracking-[0.2em] text-blaze">
                   {reserveLabel}
@@ -1760,7 +1760,7 @@ function CourseDetailModal({
             {showPackageOptions && (
               <div
                 className={
-                  isBootCampDetail ? '' : 'mt-5 border-t border-pearl/10 pt-4'
+                  isTrainingPlanDetail ? '' : 'mt-5 border-t border-pearl/10 pt-4'
                 }
               >
                 <p className="text-xs font-heading uppercase tracking-[0.18em] text-mist/55">
@@ -1929,7 +1929,7 @@ export type PendingCheckout = {
   pricingTier: CoachPricingTier
   sessionIds: string[]
   seriesDates: string[]
-  route: BootCampRoute | null
+  route: TrainingPlanRoute | null
 }
 
 export type FreeTrialDraft = PendingCheckout & {
@@ -1978,11 +1978,11 @@ function CheckoutContactModal({
   const packageLabel =
     isFreeTrial
       ? '首堂免費體驗'
-      : pending.course.category === 'BOOT_CAMP'
-      ? `${pending.packageSize} 堂 Boot Camp`
-      : 'Fight Night Pass'
+    : pending.course.category === 'TRAINING_PLAN'
+      ? `${pending.packageSize} 堂拳擊／泰拳課程`
+      : '單次入場券'
   const routeLabel = pending.route
-    ? bootCampRouteContent[pending.route].shortLabel
+    ? trainingPlanRouteContent[pending.route].shortLabel
     : null
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -2229,7 +2229,7 @@ function FreeTrialSuccessModal({
         <p className="mt-5 text-sm leading-relaxed text-mist/76">
           {isAlreadyReserved
             ? '免費體驗只能保留一次。下一步如果想固定開始，可以直接看 618 首購方案，不用現場被推銷。'
-            : '618 首購可選 Boot Camp 基礎／技巧，或 Fight Night 體適能。'}
+            : '618 首購可選拳擊／泰拳基礎或技巧課，也可以先預約 UFC GYM 體適能體驗。'}
         </p>
 
         <div className="mt-5 grid gap-3">
@@ -2261,12 +2261,12 @@ type Props = {
   id?: string
   activeCategory?: CourseCategory
   onCategoryChange?: (category: CourseCategory) => void
-  activeBootCampRoute?: BootCampRoute | null
-  onBootCampRouteChange?: (route: BootCampRoute | null) => void
+  activeTrainingPlanRoute?: TrainingPlanRoute | null
+  onTrainingPlanRouteChange?: (route: TrainingPlanRoute | null) => void
   categories?: CourseCategory[]
   showCategoryTabs?: boolean
   showVenueFilter?: boolean
-  showBootCampRouteFilter?: boolean
+  showTrainingPlanRouteFilter?: boolean
   showCategoryLead?: boolean
   categoryTabsPlacement?: 'top' | 'bottom'
   footnoteText?: string
@@ -2274,8 +2274,8 @@ type Props = {
   title?: string
   subtitle?: string
   embedded?: boolean
-  bookingMode?: 'standard' | 'bootcamp'
-  bootCampPackageFilter?: 2 | 4
+  bookingMode?: 'standard' | 'trainingPlan'
+  trainingPlanPackageFilter?: 2 | 4
   className?: string
   displayLimit?: number
   featuredCourseNames?: string[]
@@ -2301,12 +2301,12 @@ export function WeeklyScheduleSection({
   id = 'weekly-schedule',
   activeCategory: controlledCategory,
   onCategoryChange,
-  activeBootCampRoute: controlledBootCampRoute,
-  onBootCampRouteChange,
+  activeTrainingPlanRoute: controlledTrainingPlanRoute,
+  onTrainingPlanRouteChange,
   categories = CATEGORY_ORDER,
   showCategoryTabs = categories.length > 1,
   showVenueFilter = false,
-  showBootCampRouteFilter = true,
+  showTrainingPlanRouteFilter = true,
   showCategoryLead = true,
   categoryTabsPlacement = 'top',
   footnoteText = weeklyScheduleSectionContent.footnote,
@@ -2315,7 +2315,7 @@ export function WeeklyScheduleSection({
   subtitle = weeklyScheduleSectionContent.subtitle,
   embedded = false,
   bookingMode = 'standard',
-  bootCampPackageFilter,
+  trainingPlanPackageFilter,
   className = '',
   displayLimit = SCHEDULE_DISPLAY_LIMIT,
   featuredCourseNames = EMPTY_FEATURED_COURSE_NAMES,
@@ -2337,36 +2337,36 @@ export function WeeklyScheduleSection({
   onFreeTrialKeepOnly,
 }: Props = {}) {
   const { track, trackCoursePurchaseClick } = useTracking()
-  const fallbackCategory = categories[0] ?? 'FIGHT_NIGHT'
+  const fallbackCategory = categories[0] ?? 'SINGLE_SESSION'
   const [internalCategory, setInternalCategory] =
     useState<CourseCategory>(fallbackCategory)
-  const [internalBootCampRoute, setInternalBootCampRoute] =
-    useState<BootCampRoute | null>(null)
+  const [internalTrainingPlanRoute, setInternalTrainingPlanRoute] =
+    useState<TrainingPlanRoute | null>(null)
   const activeCategory =
     controlledCategory && categories.includes(controlledCategory)
       ? controlledCategory
       : internalCategory
   const isFreeTrialMode =
-    bookingIntent === 'free_trial' && activeCategory === 'FIGHT_NIGHT'
+    bookingIntent === 'free_trial' && activeCategory === 'SINGLE_SESSION'
   const isChoiceMode =
-    bookingIntent === 'choice' && activeCategory === 'FIGHT_NIGHT'
+    bookingIntent === 'choice' && activeCategory === 'SINGLE_SESSION'
   const hasFreeTrialOption = (isFreeTrialMode || isChoiceMode) && !isPurchaseLocked
-  const bootCampPackageSizes = useMemo<Array<2 | 4>>(
-    () => (bootCampPackageFilter ? [bootCampPackageFilter] : [2, 4]),
-    [bootCampPackageFilter],
+  const trainingPlanPackageSizes = useMemo<Array<2 | 4>>(
+    () => (trainingPlanPackageFilter ? [trainingPlanPackageFilter] : [2, 4]),
+    [trainingPlanPackageFilter],
   )
-  const activeBootCampRoute =
-    activeCategory === 'BOOT_CAMP'
-      ? controlledBootCampRoute ?? internalBootCampRoute
+  const activeTrainingPlanRoute =
+    activeCategory === 'TRAINING_PLAN'
+      ? controlledTrainingPlanRoute ?? internalTrainingPlanRoute
       : null
   const setActiveCategory = (c: CourseCategory) => {
     if (onCategoryChange) onCategoryChange(c)
     else setInternalCategory(c)
   }
-  const setActiveBootCampRoute = useCallback((route: BootCampRoute | null) => {
-    if (onBootCampRouteChange) onBootCampRouteChange(route)
-    else setInternalBootCampRoute(route)
-  }, [onBootCampRouteChange])
+  const setActiveTrainingPlanRoute = useCallback((route: TrainingPlanRoute | null) => {
+    if (onTrainingPlanRouteChange) onTrainingPlanRouteChange(route)
+    else setInternalTrainingPlanRoute(route)
+  }, [onTrainingPlanRouteChange])
   const scrollerRef = useRef<HTMLDivElement>(null)
   const venueFilterRef = useRef<HTMLDivElement>(null)
   const [activeVenueId, setActiveVenueId] = useState<string | null>(null)
@@ -2387,8 +2387,8 @@ export function WeeklyScheduleSection({
   const [isCheckoutSubmitting, setIsCheckoutSubmitting] = useState(false)
   const [interactionHintSeen, setInteractionHintSeen] =
     useState<InteractionHintSeenState>(getInitialInteractionHintSeen)
-  const isBootCampBookingMode =
-    bookingMode === 'bootcamp' && activeCategory === 'BOOT_CAMP'
+  const isTrainingPlanBookingMode =
+    bookingMode === 'trainingPlan' && activeCategory === 'TRAINING_PLAN'
 
   const interactionHintSeenSets = useMemo(
     () => ({
@@ -2439,11 +2439,11 @@ export function WeeklyScheduleSection({
       }
 
       const categorizedCourse = getWeeklyCourseForCategory(course, activeCategory)
-      const upcomingOccurrences = isBootCampBookingMode
+      const upcomingOccurrences = isTrainingPlanBookingMode
         ? getUpcomingWeeklyOccurrences(
             categorizedCourse,
             bookableFromIso,
-            BOOT_CAMP_START_DATE_WEEKS,
+            TRAINING_PLAN_START_DATE_WEEKS,
           )
         : [getNextWeeklyOccurrence(categorizedCourse, bookableFromIso)]
 
@@ -2477,26 +2477,26 @@ export function WeeklyScheduleSection({
           return a.startTime < b.startTime ? -1 : 1
         return sortByVenueThenName(a, b)
       })
-  }, [activeCategory, bookableFromIso, excludedCourseIds, isBootCampBookingMode])
+  }, [activeCategory, bookableFromIso, excludedCourseIds, isTrainingPlanBookingMode])
 
   const upcomingCourses = useMemo(() => {
-    if (activeCategory !== 'BOOT_CAMP' || !activeBootCampRoute) {
+    if (activeCategory !== 'TRAINING_PLAN' || !activeTrainingPlanRoute) {
       return allUpcomingCourses
     }
     return allUpcomingCourses.filter(
-      (course) => getBootCampRoute(course) === activeBootCampRoute,
+      (course) => getTrainingPlanRoute(course) === activeTrainingPlanRoute,
     )
-  }, [activeBootCampRoute, activeCategory, allUpcomingCourses])
+  }, [activeTrainingPlanRoute, activeCategory, allUpcomingCourses])
 
   const routeOptions = useMemo(() => {
-    if (activeCategory !== 'BOOT_CAMP') return []
+    if (activeCategory !== 'TRAINING_PLAN') return []
 
-    return BOOT_CAMP_ROUTE_ORDER.map((route) => ({
+    return TRAINING_PLAN_ROUTE_ORDER.map((route) => ({
       route,
       count:
         route === null
           ? allUpcomingCourses.length
-          : allUpcomingCourses.filter((c) => getBootCampRoute(c) === route)
+          : allUpcomingCourses.filter((c) => getTrainingPlanRoute(c) === route)
               .length,
     })).filter((option) => option.count > 0)
   }, [activeCategory, allUpcomingCourses])
@@ -2538,7 +2538,7 @@ export function WeeklyScheduleSection({
 
   const displayCourses = useMemo(() => {
     const dateFilteredCourses =
-      isBootCampBookingMode && activeDateIso
+      isTrainingPlanBookingMode && activeDateIso
         ? venueFilteredCourses.filter((course) => course.date === activeDateIso)
         : venueFilteredCourses
 
@@ -2550,17 +2550,17 @@ export function WeeklyScheduleSection({
     activeDateIso,
     displayLimit,
     featuredCourseNames,
-    isBootCampBookingMode,
+    isTrainingPlanBookingMode,
     venueFilteredCourses,
   ])
 
   const availabilitySessionIds = useMemo(() => {
     return displayCourses.flatMap((course) => {
-      if (activeCategory !== 'BOOT_CAMP') {
+      if (activeCategory !== 'TRAINING_PLAN') {
         return [getSessionInventoryId(course)]
       }
 
-      return getBootCampSeries(course, 4).map((session) => session.id)
+      return getTrainingPlanSeries(course, 4).map((session) => session.id)
     })
   }, [activeCategory, displayCourses])
 
@@ -2588,7 +2588,7 @@ export function WeeklyScheduleSection({
       value,
       currency: 'TWD' as const,
       remaining,
-      route: getBootCampRoute(course) ?? 'none',
+      route: getTrainingPlanRoute(course) ?? 'none',
       booking_mode: bookingMode,
       has_live_data: hasLiveData,
     }),
@@ -2639,7 +2639,7 @@ export function WeeklyScheduleSection({
 
       const intent: Exclude<BookingIntent, 'choice'> =
         intentOverride ??
-        (isFreeTrialMode && course.category === 'FIGHT_NIGHT' && packageSize === 1
+        (isFreeTrialMode && course.category === 'SINGLE_SESSION' && packageSize === 1
           ? 'free_trial'
           : 'checkout')
 
@@ -2651,7 +2651,7 @@ export function WeeklyScheduleSection({
                 date: course.date,
               },
             ]
-          : getBootCampSeries(course, packageSize)
+          : getTrainingPlanSeries(course, packageSize)
 
       setCheckoutError(null)
       setPendingCheckout({
@@ -2665,7 +2665,7 @@ export function WeeklyScheduleSection({
         pricingTier,
         sessionIds: series.map((session) => session.id),
         seriesDates: series.map((session) => session.date),
-        route: getBootCampRoute(course),
+        route: getTrainingPlanRoute(course),
       })
       if (intent === 'free_trial') {
         track({
@@ -3028,7 +3028,7 @@ export function WeeklyScheduleSection({
       const sessionIds =
         count === 1
           ? [getSessionInventoryId(course)]
-          : getBootCampSeries(course, count).map((session) => session.id)
+          : getTrainingPlanSeries(course, count).map((session) => session.id)
       const records = sessionIds.map((sessionId) => getAvailability(sessionId))
       const capacity = Math.min(
         ...records.map((record) => record.capacity),
@@ -3047,11 +3047,11 @@ export function WeeklyScheduleSection({
 
   useEffect(() => {
     scrollerRef.current?.scrollTo({ left: 0, behavior: 'smooth' })
-  }, [activeCategory, activeBootCampRoute, activeVenueId])
+  }, [activeCategory, activeTrainingPlanRoute, activeVenueId])
 
   useEffect(() => {
     setHasTouchedVenueFilter(false)
-  }, [activeCategory, activeBootCampRoute, isBootCampBookingMode])
+  }, [activeCategory, activeTrainingPlanRoute, isTrainingPlanBookingMode])
 
   useEffect(() => {
     if (!activeVenueId) return
@@ -3062,7 +3062,7 @@ export function WeeklyScheduleSection({
   }, [activeVenueId, venueOptions])
 
   useEffect(() => {
-    if (!isBootCampBookingMode) {
+    if (!isTrainingPlanBookingMode) {
       if (activeDateIso) setActiveDateIso(null)
       return
     }
@@ -3079,12 +3079,12 @@ export function WeeklyScheduleSection({
     if (!activeDateIso || !stillAvailable) {
       setActiveDateIso(dateOptions[0].date)
     }
-  }, [activeDateIso, dateOptions, isBootCampBookingMode])
+  }, [activeDateIso, dateOptions, isTrainingPlanBookingMode])
 
   useEffect(() => {
     setSelectedCoach(null)
     setSelectedCourseDetail(null)
-  }, [activeCategory, activeBootCampRoute, activeVenueId, activeDateIso])
+  }, [activeCategory, activeTrainingPlanRoute, activeVenueId, activeDateIso])
 
   useEffect(() => {
     if (!selectedCoach && !selectedCourseDetail) return undefined
@@ -3107,24 +3107,24 @@ export function WeeklyScheduleSection({
   }, [selectedCoach, selectedCourseDetail])
 
   useEffect(() => {
-    if (!activeBootCampRoute) return
+    if (!activeTrainingPlanRoute) return
     const stillAvailable = routeOptions.some(
-      (option) => option.route === activeBootCampRoute,
+      (option) => option.route === activeTrainingPlanRoute,
     )
-    if (!stillAvailable) setActiveBootCampRoute(null)
-  }, [activeBootCampRoute, routeOptions, setActiveBootCampRoute])
+    if (!stillAvailable) setActiveTrainingPlanRoute(null)
+  }, [activeTrainingPlanRoute, routeOptions, setActiveTrainingPlanRoute])
 
   const meta = categoryMeta[activeCategory]
   const venueSelectionPending =
     showVenueFilter && upcomingCourses.length > 0 && !hasTouchedVenueFilter
   const purchaseSteps =
-    isBootCampBookingMode
+    isTrainingPlanBookingMode
       ? ['1 選路徑', '2 選場館日期', '3 確認堂數']
-      : activeCategory === 'BOOT_CAMP'
+      : activeCategory === 'TRAINING_PLAN'
       ? ['1 選路徑', '2 選梯次', '3 保留位置']
       : ['1 選場館', '2 選日期', '3 保留位置']
   const earliest = displayCourses[0]
-  const earliestLabel = earliest && !isBootCampBookingMode
+  const earliestLabel = earliest && !isTrainingPlanBookingMode
     ? `最早可購買 ${formatShortDate(earliest.date)} 週${earliest.weekday} ${earliest.startTime}`
     : null
   const shouldShowFootnote = !(embedded && isPurchaseLocked)
@@ -3197,13 +3197,13 @@ export function WeeklyScheduleSection({
       <SectionHeading
         title={title}
         subtitle={subtitle}
-        align={isBootCampBookingMode ? 'left' : 'center'}
+        align={isTrainingPlanBookingMode ? 'left' : 'center'}
         className={embedded ? 'mb-5 md:mb-7' : ''}
       />
 
       {categoryTabsPlacement === 'top' && categoryTabs}
 
-      {showCategoryLead && !isBootCampBookingMode && (
+      {showCategoryLead && !isTrainingPlanBookingMode && (
         <p className="mx-auto mb-2 max-w-2xl text-center text-sm leading-snug text-mist/75 md:mb-3 md:text-base">
           {meta.lead}
         </p>
@@ -3247,9 +3247,9 @@ export function WeeklyScheduleSection({
             </div>
 
             <div
-              data-swipe-hint={isBootCampBookingMode ? true : undefined}
+              data-swipe-hint={isTrainingPlanBookingMode ? true : undefined}
               className={`mt-3 gap-2 ${
-                isBootCampBookingMode
+                isTrainingPlanBookingMode
                   ? 'swipe-hint -mx-1 flex snap-x overflow-x-auto px-1 pb-1'
                   : 'grid grid-cols-1 md:grid-cols-4'
               }`}
@@ -3263,7 +3263,7 @@ export function WeeklyScheduleSection({
                 }}
                 data-cta={`${id}-venue-all`}
                 className={`relative min-h-[5.75rem] overflow-hidden rounded-xl border px-3.5 py-3 text-left transition-all duration-300 ${
-                  isBootCampBookingMode ? 'min-w-[8.5rem] snap-start' : ''
+                  isTrainingPlanBookingMode ? 'min-w-[8.5rem] snap-start' : ''
                 } ${
                   hasTouchedVenueFilter && activeVenueId === null
                     ? 'venue-option-selected border-neon/60 bg-neon/15 shadow-[0_0_30px_rgba(191,90,242,0.16)]'
@@ -3295,7 +3295,7 @@ export function WeeklyScheduleSection({
                   }}
                   data-cta={`${id}-venue-${venue.id}`}
                   className={`relative min-h-[5.75rem] overflow-hidden rounded-xl border px-3.5 py-3 text-left transition-all duration-300 ${
-                    isBootCampBookingMode ? 'min-w-[9.5rem] snap-start' : ''
+                    isTrainingPlanBookingMode ? 'min-w-[9.5rem] snap-start' : ''
                   } ${
                     active
                       ? 'venue-option-selected border-neon/60 bg-neon/15 shadow-[0_0_30px_rgba(191,90,242,0.16)]'
@@ -3323,7 +3323,7 @@ export function WeeklyScheduleSection({
           </div>
         )}
 
-        {isBootCampBookingMode && dateOptions.length > 0 && (
+        {isTrainingPlanBookingMode && dateOptions.length > 0 && (
           <div className="mb-5 rounded-2xl border border-pearl/10 bg-black/25 p-4 md:p-5">
             <div className="flex items-center justify-between gap-3">
               <p className="text-xs md:text-sm font-heading tracking-[0.22em] text-neon/80 uppercase">
@@ -3369,8 +3369,8 @@ export function WeeklyScheduleSection({
           </div>
         )}
 
-        {activeCategory === 'BOOT_CAMP' &&
-          showBootCampRouteFilter &&
+        {activeCategory === 'TRAINING_PLAN' &&
+          showTrainingPlanRouteFilter &&
           routeOptions.length > 0 && (
             <div className="mb-5 md:mb-6 rounded-2xl border border-neon/15 bg-neon/5 p-4 md:p-5">
               <div className="flex items-center justify-between gap-3">
@@ -3384,16 +3384,16 @@ export function WeeklyScheduleSection({
 
               <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-3">
                 {routeOptions.map(({ route, count }) => {
-                  const active = route === activeBootCampRoute
-                  const label = route ? bootCampRouteContent[route].label : '全部路徑'
-                  const hint = route ? bootCampRouteContent[route].hint : '拳擊與泰拳都看'
+                  const active = route === activeTrainingPlanRoute
+                  const label = route ? trainingPlanRouteContent[route].label : '全部路徑'
+                  const hint = route ? trainingPlanRouteContent[route].hint : '拳擊與泰拳都看'
 
                   return (
                     <button
                       key={route ?? 'all'}
                       type="button"
                       aria-pressed={active}
-                      onClick={() => setActiveBootCampRoute(route)}
+                      onClick={() => setActiveTrainingPlanRoute(route)}
                       data-cta={`${id}-route-${route ?? 'all'}`}
                       data-interaction-hint
                       className={`interaction-hint rounded-xl border px-3.5 py-3 text-left transition-colors ${
@@ -3459,37 +3459,37 @@ export function WeeklyScheduleSection({
               className={`${hasTouchedVenueFilter ? 'swipe-hint' : ''} -mx-3 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-3 pb-4 sm:mx-0 sm:px-0 md:gap-5`}
             >
               {displayCourses.map((c, i) => {
-                const bootCampRouteLabel =
-                  activeCategory === 'BOOT_CAMP'
-                    ? getBootCampRouteLabel(c)
+                const trainingPlanRouteLabel =
+                  activeCategory === 'TRAINING_PLAN'
+                    ? getTrainingPlanRouteLabel(c)
                     : null
-                const bootCampRoute =
-                  activeCategory === 'BOOT_CAMP' ? getBootCampRoute(c) : null
-                const routeContent = bootCampRoute
-                  ? bootCampRouteContent[bootCampRoute]
+                const trainingPlanRoute =
+                  activeCategory === 'TRAINING_PLAN' ? getTrainingPlanRoute(c) : null
+                const routeContent = trainingPlanRoute
+                  ? trainingPlanRouteContent[trainingPlanRoute]
                   : null
                 const sessionTitle =
-                  activeCategory === 'FIGHT_NIGHT'
-                    ? `${formatShortDate(c.date)} Fight Night Pass`
-                    : `${formatShortDate(c.date)} ${routeContent?.label ?? 'Boot Camp'} 起點`
+                  activeCategory === 'SINGLE_SESSION'
+                    ? `${formatShortDate(c.date)} 單次入場券`
+                    : `${formatShortDate(c.date)} ${routeContent?.label ?? '拳擊／泰拳課程'} 起點`
                 const sessionAvailability = getPackageAvailability(c, 1)
-                const bootCampSeries2 = getBootCampSeries(c, 2)
-                const bootCampSeries4 = getBootCampSeries(c, 4)
-                const bootCamp2Availability = getPackageAvailability(c, 2)
-                const bootCamp4Availability = getPackageAvailability(c, 4)
+                const trainingPlanSeries2 = getTrainingPlanSeries(c, 2)
+                const trainingPlanSeries4 = getTrainingPlanSeries(c, 4)
+                const trainingPlan2Availability = getPackageAvailability(c, 2)
+                const trainingPlan4Availability = getPackageAvailability(c, 4)
                 const displayAvailability =
-                  activeCategory === 'BOOT_CAMP'
-                    ? bootCamp4Availability
+                  activeCategory === 'TRAINING_PLAN'
+                    ? trainingPlan4Availability
                     : sessionAvailability
                 const remainingBadgeClass = getRemainingBadgeClass(
                   displayAvailability.remaining,
                   meta.badgeClass,
                 )
                 const merchandisingRemaining =
-                  activeCategory === 'BOOT_CAMP'
+                  activeCategory === 'TRAINING_PLAN'
                     ? Math.max(
-                        bootCamp2Availability.remaining,
-                        bootCamp4Availability.remaining,
+                        trainingPlan2Availability.remaining,
+                        trainingPlan4Availability.remaining,
                       )
                     : displayAvailability.remaining
                 const coachProfile = findCoachProfile(c.coach)
@@ -3521,76 +3521,76 @@ export function WeeklyScheduleSection({
                   c,
                   coachProfile,
                 )
-                const fightNightBasePrice = getCoursePriceModel({
+                const singleSessionBasePrice = getCoursePriceModel({
                   course: c,
                   pricingTier: coachPricingTier,
                   packageSize: 1,
                   remaining: sessionAvailability.remaining,
                   coachId: coachProfile?.id,
                 })
-                const fightNightPrice = applyFirstPurchaseOfferToPrice(
-                  fightNightBasePrice,
+                const singleSessionPrice = applyFirstPurchaseOfferToPrice(
+                  singleSessionBasePrice,
                   c,
                   1,
                   firstPurchaseOfferEligible,
                 )
-                const bootCamp2BasePrice = getCoursePriceModel({
+                const trainingPlan2BasePrice = getCoursePriceModel({
                   course: c,
                   pricingTier: coachPricingTier,
                   packageSize: 2,
-                  remaining: bootCamp2Availability.remaining,
+                  remaining: trainingPlan2Availability.remaining,
                   coachId: coachProfile?.id,
                 })
-                const bootCamp4BasePrice = getCoursePriceModel({
+                const trainingPlan4BasePrice = getCoursePriceModel({
                   course: c,
                   pricingTier: coachPricingTier,
                   packageSize: 4,
-                  remaining: bootCamp4Availability.remaining,
+                  remaining: trainingPlan4Availability.remaining,
                   coachId: coachProfile?.id,
                 })
-                const bootCamp2Price = applyFirstPurchaseOfferToPrice(
-                  bootCamp2BasePrice,
+                const trainingPlan2Price = applyFirstPurchaseOfferToPrice(
+                  trainingPlan2BasePrice,
                   c,
                   2,
                   firstPurchaseOfferEligible,
                 )
-                const bootCamp4Price = applyFirstPurchaseOfferToPrice(
-                  bootCamp4BasePrice,
+                const trainingPlan4Price = applyFirstPurchaseOfferToPrice(
+                  trainingPlan4BasePrice,
                   c,
                   4,
                   firstPurchaseOfferEligible,
                 )
                 const primaryCardPriceLabel =
-                  activeCategory === 'FIGHT_NIGHT'
+                  activeCategory === 'SINGLE_SESSION'
                     ? isPurchaseLocked
                       ? '首堂免費體驗'
                       : isChoiceMode
                         ? '首堂免費可用'
                       : isFreeTrialMode
-                      ? fightNightBasePrice.label
-                      : fightNightPrice.label
-                    : `${bootCamp2Price.label} 起`
+                      ? singleSessionBasePrice.label
+                      : singleSessionPrice.label
+                    : `${trainingPlan2Price.label} 起`
                 const primaryCardCompareAtLabel =
-                  activeCategory === 'FIGHT_NIGHT'
+                  activeCategory === 'SINGLE_SESSION'
                     ? isPurchaseLocked
-                      ? fightNightBasePrice.label
+                      ? singleSessionBasePrice.label
                       : isChoiceMode
-                        ? fightNightBasePrice.label
+                        ? singleSessionBasePrice.label
                       : isFreeTrialMode
                       ? undefined
-                      : fightNightPrice.compareAtLabel
-                    : bootCamp2Price.compareAtLabel
-                const fightNightOfferApplied =
+                      : singleSessionPrice.compareAtLabel
+                    : trainingPlan2Price.compareAtLabel
+                const singleSessionOfferApplied =
                   firstPurchaseOfferEligible &&
                   isFirstPurchaseOfferCourseEligible(c, 1) &&
-                  fightNightPrice.amount < fightNightBasePrice.amount
-                const bootCampOfferApplied =
-                  activeCategory === 'BOOT_CAMP' &&
+                  singleSessionPrice.amount < singleSessionBasePrice.amount
+                const trainingPlanOfferApplied =
+                  activeCategory === 'TRAINING_PLAN' &&
                   firstPurchaseOfferEligible &&
-                  (bootCamp2Price.tags.includes(FIRST_PURCHASE_OFFER_BADGE) ||
-                    bootCamp4Price.tags.includes(FIRST_PURCHASE_OFFER_BADGE))
+                  (trainingPlan2Price.tags.includes(FIRST_PURCHASE_OFFER_BADGE) ||
+                    trainingPlan4Price.tags.includes(FIRST_PURCHASE_OFFER_BADGE))
                 const shouldShowLockedOfferBadge =
-                  activeCategory === 'FIGHT_NIGHT' &&
+                  activeCategory === 'SINGLE_SESSION' &&
                   isPurchaseLocked &&
                   Boolean(lockedOfferBadgeLabel) &&
                   isFirstPurchaseOfferCourseEligible(c, 1)
@@ -3598,16 +3598,16 @@ export function WeeklyScheduleSection({
                   hasFreeTrialOption && isFirstPurchaseOfferCourseEligible(c, 1)
                 const displayCourseFeatureTags = Array.from(
                   new Set([
-                    ...(fightNightOfferApplied
+                    ...(singleSessionOfferApplied
                       ? [FIRST_PURCHASE_OFFER_BADGE]
                       : []),
-                    ...(bootCampOfferApplied ? [FIRST_PURCHASE_OFFER_BADGE] : []),
+                    ...(trainingPlanOfferApplied ? [FIRST_PURCHASE_OFFER_BADGE] : []),
                     ...(shouldShowFreeTrialBadge ? [freeTrialBadgeLabel] : []),
                     ...(shouldShowLockedOfferBadge ? [lockedOfferBadgeLabel!] : []),
                     ...courseFeatureTags,
                   ]),
                 )
-                const fightNightSession = [
+                const singleSessionSession = [
                   {
                     id: getSessionInventoryId(c),
                     date: c.date,
@@ -3616,20 +3616,20 @@ export function WeeklyScheduleSection({
                   },
                 ]
                 const courseDetailPackageOptions: CourseDetailPackageOption[] =
-                  activeCategory === 'BOOT_CAMP'
-                    ? bootCampPackageSizes.map((packageSize) => {
+                  activeCategory === 'TRAINING_PLAN'
+                    ? trainingPlanPackageSizes.map((packageSize) => {
                         const availability =
                           packageSize === 2
-                            ? bootCamp2Availability
-                            : bootCamp4Availability
+                            ? trainingPlan2Availability
+                            : trainingPlan4Availability
                         const price =
-                          packageSize === 2 ? bootCamp2Price : bootCamp4Price
+                          packageSize === 2 ? trainingPlan2Price : trainingPlan4Price
                         const offerApplied =
                           price.tags.includes(FIRST_PURCHASE_OFFER_BADGE)
                         return {
                           packageSize,
-                          label: `${bootCampPackageMeta[packageSize].label} Boot Camp`,
-                          description: bootCampPackageMeta[packageSize].description,
+                          label: `${trainingPlanPackageMeta[packageSize].label}拳擊／泰拳課程`,
+                          description: trainingPlanPackageMeta[packageSize].description,
                           priceLabel: price.label,
                           compareAtLabel: price.compareAtLabel,
                           value: price.amount,
@@ -3639,7 +3639,7 @@ export function WeeklyScheduleSection({
                           offerApplied,
                           remaining: availability.remaining,
                           series:
-                            packageSize === 2 ? bootCampSeries2 : bootCampSeries4,
+                            packageSize === 2 ? trainingPlanSeries2 : trainingPlanSeries4,
                           primary: packageSize === 4,
                         }
                       })
@@ -3647,21 +3647,21 @@ export function WeeklyScheduleSection({
                         {
                           intent: 'checkout',
                           packageSize: 1,
-                          label: fightNightOfferApplied
+                          label: singleSessionOfferApplied
                             ? '首購限定加購'
                             : '線上付款保留',
-                          description: fightNightOfferApplied
+                          description: singleSessionOfferApplied
                             ? '想多上一堂時，可用首購限定價加購。'
                             : '線上付款完成後保留名額，不用入會、不綁約。',
-                          priceLabel: fightNightPrice.label,
-                          compareAtLabel: fightNightPrice.compareAtLabel,
-                          value: fightNightPrice.amount,
-                          originalValue: fightNightOfferApplied
-                            ? fightNightBasePrice.amount
+                          priceLabel: singleSessionPrice.label,
+                          compareAtLabel: singleSessionPrice.compareAtLabel,
+                          value: singleSessionPrice.amount,
+                          originalValue: singleSessionOfferApplied
+                            ? singleSessionBasePrice.amount
                             : undefined,
-                          offerApplied: fightNightOfferApplied,
+                          offerApplied: singleSessionOfferApplied,
                           remaining: sessionAvailability.remaining,
-                          series: fightNightSession,
+                          series: singleSessionSession,
                           primary: !hasFreeTrialOption,
                         },
                         ...(hasFreeTrialOption
@@ -3673,12 +3673,12 @@ export function WeeklyScheduleSection({
                                 description:
                                   '每人僅限一次。',
                                 priceLabel: '免費',
-                                compareAtLabel: fightNightBasePrice.label,
+                                compareAtLabel: singleSessionBasePrice.label,
                                 value: 0,
-                                originalValue: fightNightBasePrice.amount,
+                                originalValue: singleSessionBasePrice.amount,
                                 offerApplied: false,
                                 remaining: sessionAvailability.remaining,
-                                series: fightNightSession,
+                                series: singleSessionSession,
                                 primary: true,
                               },
                             ]
@@ -3690,8 +3690,8 @@ export function WeeklyScheduleSection({
                   activeCategory,
                   productTitle: courseProductTitle,
                   featureTags: displayCourseFeatureTags,
-                  routeLabel: routeContent?.label ?? bootCampRouteLabel,
-                  routeBadge: routeContent?.shortLabel ?? bootCampRouteLabel,
+                  routeLabel: routeContent?.label ?? trainingPlanRouteLabel,
+                  routeBadge: routeContent?.shortLabel ?? trainingPlanRouteLabel,
                   routeSkills: routeContent?.skills.slice(0, 4) ?? [],
                   routeLesson: routeContent?.fighterLesson ?? null,
                   coachProfile,
@@ -3734,7 +3734,7 @@ export function WeeklyScheduleSection({
                     lineEventName: 'CourseDetailOpen',
                   })
                 }
-                if (isBootCampBookingMode) {
+                if (isTrainingPlanBookingMode) {
                   return (
                     <motion.div
                       key={`${hasTouchedVenueFilter ? activeVenueId ?? 'all' : 'venue'}-${c.id}`}
@@ -3864,21 +3864,21 @@ export function WeeklyScheduleSection({
                           </div>
                         </div>
 
-                        <div className={`grid gap-2 ${bootCampPackageFilter ? 'grid-cols-1' : 'grid-cols-2'}`}>
-                          {bootCampPackageSizes.map((packageSize) => {
+                        <div className={`grid gap-2 ${trainingPlanPackageFilter ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                          {trainingPlanPackageSizes.map((packageSize) => {
                             const availability =
                               packageSize === 2
-                                ? bootCamp2Availability
-                                : bootCamp4Availability
+                                ? trainingPlan2Availability
+                                : trainingPlan4Availability
                             const packagePrice =
-                              packageSize === 2 ? bootCamp2Price : bootCamp4Price
+                              packageSize === 2 ? trainingPlan2Price : trainingPlan4Price
                             const soldOut = availability.remaining <= 0
                             const packageOfferApplied =
                               packagePrice.tags.includes(FIRST_PURCHASE_OFFER_BADGE)
 
                             return soldOut ? (
                               <DisabledCta key={packageSize}>
-                                {`${bootCampPackageMeta[packageSize].label}已售完`}
+                                {`${trainingPlanPackageMeta[packageSize].label}已售完`}
                               </DisabledCta>
                             ) : (
                               <Button
@@ -3903,9 +3903,9 @@ export function WeeklyScheduleSection({
                                     packageOfferApplied,
                                   )
                                 }
-                                data-cta={`schedule-${c.id}-bootcamp-${packageSize}`}
+                                data-cta={`schedule-${c.id}-training-plan-${packageSize}`}
                               >
-                                {bootCampPackageMeta[packageSize].label} ·{' '}
+                                {trainingPlanPackageMeta[packageSize].label} ·{' '}
                                 {packagePrice.label}
                               </Button>
                             )
@@ -4001,9 +4001,9 @@ export function WeeklyScheduleSection({
                             {tag}
                           </p>
                         ))}
-                        {bootCampRouteLabel && (
+                        {trainingPlanRouteLabel && (
                           <p className="inline-flex w-fit rounded-full border border-neon/20 bg-neon/10 px-2.5 py-1 text-[11px] font-heading tracking-wide text-neon/90">
-                            {routeContent?.badge ?? bootCampRouteLabel}
+                            {routeContent?.badge ?? trainingPlanRouteLabel}
                           </p>
                         )}
                       </div>
@@ -4028,23 +4028,23 @@ export function WeeklyScheduleSection({
                     </button>
 
                     <div className="mt-auto space-y-2 px-4 pb-4 pt-3 md:px-5">
-                      {activeCategory === 'BOOT_CAMP' ? (
+                      {activeCategory === 'TRAINING_PLAN' ? (
                         <div className="space-y-2">
-                          <div className={`grid gap-2 ${bootCampPackageFilter ? 'grid-cols-1' : 'grid-cols-2'}`}>
-                            {bootCampPackageSizes.map((packageSize) => {
+                          <div className={`grid gap-2 ${trainingPlanPackageFilter ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                            {trainingPlanPackageSizes.map((packageSize) => {
                               const availability =
                                 packageSize === 2
-                                  ? bootCamp2Availability
-                                  : bootCamp4Availability
+                                  ? trainingPlan2Availability
+                                  : trainingPlan4Availability
                               const packagePrice =
-                                packageSize === 2 ? bootCamp2Price : bootCamp4Price
+                                packageSize === 2 ? trainingPlan2Price : trainingPlan4Price
                               const soldOut = availability.remaining <= 0
                               const packageOfferApplied =
                                 packagePrice.tags.includes(FIRST_PURCHASE_OFFER_BADGE)
 
                               return soldOut ? (
                                 <DisabledCta key={packageSize}>
-                                  {`${bootCampPackageMeta[packageSize].label}已售完`}
+                                  {`${trainingPlanPackageMeta[packageSize].label}已售完`}
                                 </DisabledCta>
                               ) : (
                                 <Button
@@ -4069,9 +4069,9 @@ export function WeeklyScheduleSection({
                                       packageOfferApplied,
                                     )
                                   }
-                                  data-cta={`schedule-${c.id}-bootcamp-${packageSize}`}
+                                  data-cta={`schedule-${c.id}-training-plan-${packageSize}`}
                                 >
-                                  保留{bootCampPackageMeta[packageSize].label} ·{' '}
+                                  保留{trainingPlanPackageMeta[packageSize].label} ·{' '}
                                   {packagePrice.label}
                                 </Button>
                               )
@@ -4086,8 +4086,8 @@ export function WeeklyScheduleSection({
                                 {isPurchaseLocked
                                   ? '熱門範例'
                                   : isFreeTrialMode
-                                    ? '一般單堂'
-                                    : '單堂入場'}
+                                    ? '一般單次'
+                                    : '單次入場'}
                               </p>
                               <div className="text-right">
                                 <p className="font-heading text-lg font-black text-pearl">
@@ -4119,14 +4119,14 @@ export function WeeklyScheduleSection({
                                   c,
                                   1,
                                   sessionAvailability.remaining,
-                                  isFreeTrialMode ? 0 : fightNightPrice.amount,
+                                  isFreeTrialMode ? 0 : singleSessionPrice.amount,
                                   coachPricingTier,
                                   isFreeTrialMode
-                                    ? fightNightBasePrice.amount
-                                    : fightNightOfferApplied
-                                    ? fightNightBasePrice.amount
+                                    ? singleSessionBasePrice.amount
+                                    : singleSessionOfferApplied
+                                    ? singleSessionBasePrice.amount
                                     : undefined,
-                                  isFreeTrialMode ? false : fightNightOfferApplied,
+                                  isFreeTrialMode ? false : singleSessionOfferApplied,
                                 )
                               }}
                               data-cta={
@@ -4134,7 +4134,7 @@ export function WeeklyScheduleSection({
                                   ? `schedule-${c.id}-select`
                                   : isFreeTrialMode
                                   ? `schedule-${c.id}-free-trial`
-                                  : `schedule-${c.id}-fight-night`
+                                  : `schedule-${c.id}-single-session`
                               }
                             >
                               {isPurchaseLocked
@@ -4143,9 +4143,9 @@ export function WeeklyScheduleSection({
                                   ? '選這堂免費體驗'
                                 : isFreeTrialMode
                                   ? freeTrialCtaLabel
-                                  : fightNightOfferApplied
-                                  ? `以首購價保留這一場 · ${fightNightPrice.label}`
-                                  : `保留這一場 · ${fightNightPrice.label}`}
+                                  : singleSessionOfferApplied
+                                  ? `以首購價保留這一場 · ${singleSessionPrice.label}`
+                                  : `保留這一場 · ${singleSessionPrice.label}`}
                             </Button>
                             {isPurchaseLocked && lockedPurchaseNote && (
                               <p className="mt-2 text-center text-xs leading-relaxed text-mist/55">
@@ -4280,3 +4280,4 @@ export function WeeklyScheduleSection({
     </SectionWrapper>
   )
 }
+

@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://fightnight.25min.co/sitemap.xml
+Sitemap: https://booking.ufcgym.com.tw/sitemap.xml

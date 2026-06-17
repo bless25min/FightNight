@@ -12,9 +12,9 @@ export function OtherCoursesConsultBlock({ className = '' }: Props) {
   return (
     <div
       data-section="other-courses-consult"
-      className={`mx-auto max-w-4xl rounded-lg border border-pearl/10 bg-pearl/[0.04] p-4 md:p-5 ${className}`}
+      className={`mx-auto w-full max-w-4xl rounded-lg border border-pearl/10 bg-pearl/[0.04] p-4 sm:p-5 ${className}`}
     >
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <div className="grid gap-4">
         <div className="min-w-0">
           <p className="text-base font-heading font-bold text-pearl md:text-lg">
             想瞭解其他課程、服務、時間嗎?
@@ -28,11 +28,11 @@ export function OtherCoursesConsultBlock({ className = '' }: Props) {
             讓我們帥氣／甜美的同仁為您推薦。
           </p>
         </div>
-        <div className="flex w-full shrink-0 flex-col gap-2 md:w-auto md:flex-row">
+        <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2">
           <Button
             href={siteConfig.lineUrl}
             variant="secondary"
-            className="w-full md:w-auto"
+            className="w-full whitespace-nowrap px-4"
             data-cta="other-courses-consult"
             onClick={() =>
               trackLineCta({
@@ -47,7 +47,7 @@ export function OtherCoursesConsultBlock({ className = '' }: Props) {
           <Button
             href={siteConfig.messengerUrl}
             variant="secondary"
-            className="w-full md:w-auto"
+            className="w-full whitespace-nowrap px-4"
             data-cta="other-courses-messenger-consult"
             onClick={() =>
               track({

@@ -1,7 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { BootCampPage } from './pages/BootCampPage'
-import { FightNightEventPage } from './pages/FightNightEventPage'
-import { FightNightIntroPage } from './pages/FightNightIntroPage'
+import { SingleSessionEventPage } from './pages/SingleSessionEventPage'
 import { OffersPage } from './pages/OffersPage'
 import { PaymentResultPage } from './pages/PaymentResultPage'
 import { AdminPage } from './pages/AdminPage'
@@ -20,9 +18,6 @@ function getCurrentRoutePath() {
   const hashPath = window.location.hash.replace(/^#/, '')
   if (
     hashPath.startsWith('/offers') ||
-    hashPath.startsWith('/boot-camp') ||
-    hashPath.startsWith('/fight-night-event') ||
-    hashPath.startsWith('/fight-night-intro') ||
     hashPath.startsWith('/payment/success') ||
     hashPath.startsWith('/admin') ||
     hashPath.startsWith('/privacy-policy') ||
@@ -35,9 +30,6 @@ function getCurrentRoutePath() {
 
   const pathname = window.location.pathname
   if (pathname.endsWith('/offers.html')) return '/offers'
-  if (pathname.endsWith('/boot-camp.html')) return '/boot-camp'
-  if (pathname.endsWith('/fight-night-event.html')) return '/fight-night-event'
-  if (pathname.endsWith('/fight-night-intro.html')) return '/fight-night-intro'
   if (pathname.endsWith('/admin.html')) return '/admin'
   if (pathname.endsWith('/privacy-policy.html')) return '/privacy-policy'
   if (pathname.endsWith('/terms-of-service.html')) return '/terms-of-service'
@@ -104,10 +96,8 @@ function shouldShowFloatingConsult(pathname: string) {
 
 function getFloatingConsultPlacement(pathname: string) {
   if (pathname.startsWith('/offers')) return 'offers'
-  if (pathname.startsWith('/boot-camp')) return 'boot_camp'
-  if (pathname.startsWith('/fight-night-intro')) return 'fight_night_intro'
   if (pathname.startsWith('/payment/success')) return 'payment_result'
-  return 'fight_night_event'
+  return 'landing'
 }
 
 function App() {
@@ -144,12 +134,6 @@ function App() {
 
   if (pathname.startsWith('/offers')) {
     page = <OffersPage />
-  } else if (pathname.startsWith('/boot-camp')) {
-    page = <BootCampPage />
-  } else if (pathname.startsWith('/fight-night-event')) {
-    page = <FightNightEventPage />
-  } else if (pathname.startsWith('/fight-night-intro')) {
-    page = <FightNightIntroPage />
   } else if (pathname.startsWith('/payment/success')) {
     page = <PaymentResultPage />
   } else if (pathname.startsWith('/guides/')) {
@@ -164,7 +148,7 @@ function App() {
   } else if (pathname.startsWith('/refund-policy')) {
     page = <RefundPolicyPage />
   } else {
-    page = <FightNightEventPage />
+    page = <SingleSessionEventPage />
   }
 
   return (

@@ -76,7 +76,7 @@ export const coachProfiles: CoachProfile[] = [
       'Champion - Shock Fight Boxe Thai',
       'Champion - Swiss of Muay Thai',
       'European Champion of Muay Thai',
-      'Bi-Champion of Fight Night - Zurich Swiss',
+      'Bi-Champion of international fight event - Zurich Swiss',
       'Champion - Shock Fight',
       'Champion - Bad Boy (Vale Tudo)',
       'Champion - Strick Brazil (Vale Tudo)',

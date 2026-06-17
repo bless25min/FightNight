@@ -1,6 +1,6 @@
-import beginnerPoster from '../assets/generated/bootcamp-core-pressure-memory.jpg'
-import boxingPoster from '../assets/generated/bootcamp-route-boxing-poster.jpg'
-import muayThaiPoster from '../assets/generated/bootcamp-route-muaythai-poster.jpg'
+﻿import beginnerPoster from '../assets/generated/training-plan-core-pressure-memory.jpg'
+import boxingPoster from '../assets/generated/training-plan-route-boxing-poster.jpg'
+import muayThaiPoster from '../assets/generated/training-plan-route-muaythai-poster.jpg'
 import stressPoster from '../assets/landing/pain-poster.jpg'
 
 export type SeoGuideSection = {
@@ -57,7 +57,7 @@ export const seoGuides: SeoGuide[] = [
       '拳擊和泰拳怎麼選',
     ],
     heroImage: boxingPoster,
-    heroAlt: '台北 UFC GYM Boot Camp 拳擊課程訓練畫面',
+    heroAlt: '台北 UFC GYM 拳擊與泰拳課程訓練畫面',
     venueIds: ['venue-dunnan', 'venue-neihu'],
     sections: [
       {
@@ -65,8 +65,8 @@ export const seoGuides: SeoGuide[] = [
         answer:
           '先看通勤距離與上課節奏。敦南旗艦館接近忠孝敦化站，適合下班後從大安、信義、東區過來；內科模範館在港墘站附近，對內湖科技園區、南港、松山通勤族更順。',
         bullets: [
-          '想先試一次，選 Fight Night Pass 的單堂進場體驗。',
-          '想固定幾週，選 Boot Camp，把同館同時段的兩堂或四堂先排好。',
+          '想先試一次，選單堂入場券的單堂進場體驗。',
+          '想固定幾週，選 拳擊／泰拳專項課程，把同館同時段的兩堂或四堂先排好。',
           '完全沒有基礎，先從拳擊或泰拳基礎課開始，不需要先會打。',
         ],
       },
@@ -85,7 +85,7 @@ export const seoGuides: SeoGuide[] = [
       {
         question: '台北拳擊課程適合完全新手嗎？',
         answer:
-          '適合。Fight Night 與 Boot Camp 都會把動作拆成可跟上的節奏，初學者不需要先有拳擊、泰拳或重訓經驗。',
+          '適合。UFC GYM 夜間體驗與拳擊／泰拳專項課程都會把動作拆成可跟上的節奏，初學者不需要先有拳擊、泰拳或重訓經驗。',
       },
       {
         question: '我只想紓壓，不想真的對打，可以上嗎？',
@@ -124,17 +124,17 @@ export const seoGuides: SeoGuide[] = [
       '想找固定運動習慣台中',
     ],
     heroImage: muayThaiPoster,
-    heroAlt: '台中 UFC GYM Boot Camp 泰拳課程訓練畫面',
+    heroAlt: '台中 UFC GYM 拳擊與泰拳課程訓練畫面',
     venueIds: ['venue-taichung'],
     sections: [
       {
         title: '如果你正在找「台中拳擊課程」',
         answer:
-          '先確認你要的是一次體驗，還是接下來幾週固定出現。Fight Night Pass 適合先進場感受氣氛；Boot Camp 適合想把兩堂或四堂排進行事曆的人。',
+          '先確認你要的是一次體驗，還是接下來幾週固定出現。單堂入場券適合先進場感受氣氛；拳擊／泰拳專項課程適合想把兩堂或四堂排進行事曆的人。',
         bullets: [
           '台中勤美旗艦館在公益路商圈，適合西區、北區、南屯通勤路線。',
           '第一次上課建議先選能穩定到場的時段，而不是只看課名。',
-          '如果你容易中斷運動，Boot Camp 比單堂更能幫你建立節奏。',
+          '如果你容易中斷運動，拳擊／泰拳專項課程比單堂更能幫你建立節奏。',
         ],
       },
       {
@@ -152,7 +152,7 @@ export const seoGuides: SeoGuide[] = [
       {
         question: '台中勤美旗艦館可以先體驗嗎？',
         answer:
-          '可以先從 Fight Night Pass 的單堂體驗開始；如果你想固定幾週，再改看 Boot Camp 梯次。',
+          '可以先從單堂入場券的單堂體驗開始；如果你想固定幾週，再改看 拳擊／泰拳專項課程梯次。',
       },
       {
         question: '拳擊、泰拳、踢拳哪個比較累？',
@@ -173,7 +173,7 @@ export const seoGuides: SeoGuide[] = [
     eyebrow: 'BEGINNER GUIDE',
     title: '拳擊、泰拳初學者可以上嗎？第一次格鬥健身指南',
     description:
-      '第一次想上拳擊課或泰拳課，常會擔心跟不上、被打、動作不會做。這份新手指南整理 Fight Night 與 Boot Camp 的差異和選課方式。',
+      '第一次想上拳擊課或泰拳課，常會擔心跟不上、被打、動作不會做。這份新手指南整理 UFC GYM 夜間體驗與拳擊／泰拳專項課程的差異和選課方式。',
     keywords: [
       '拳擊初學者',
       '泰拳初學者',
@@ -188,10 +188,10 @@ export const seoGuides: SeoGuide[] = [
       '泰拳課會不會被打',
       '第一次拳擊課要帶什麼',
       '格鬥健身適合女生嗎',
-      '不會運動可以上 Boot Camp 嗎',
+      '不會運動可以上拳擊／泰拳專項課程嗎',
     ],
     heroImage: beginnerPoster,
-    heroAlt: '教練引導初學者進行 Boot Camp 格鬥健身訓練',
+    heroAlt: '教練引導初學者進行 拳擊／泰拳專項課程格鬥健身訓練',
     venueIds: ['venue-dunnan', 'venue-neihu', 'venue-taichung'],
     sections: [
       {
@@ -200,9 +200,9 @@ export const seoGuides: SeoGuide[] = [
           '可以。初學者真正需要的是可理解的動作、教練在場引導，以及不會讓人一開始就放棄的節奏。你不需要先練好體能才來，課程本身就是建立體能和信心的起點。',
       },
       {
-        title: 'Fight Night 和 Boot Camp 怎麼選？',
+        title: 'UFC GYM 夜間體驗和拳擊／泰拳專項課程怎麼選？',
         answer:
-          '如果你只是想知道自己喜不喜歡這種訓練，先選 Fight Night Pass。若你已經知道自己不只想試一次，Boot Camp 會把接下來兩堂或四堂先排好，降低中斷的機率。',
+          '如果你只是想知道自己喜不喜歡這種訓練，先選單堂入場券。若你已經知道自己不只想試一次，拳擊／泰拳專項課程會把接下來兩堂或四堂先排好，降低中斷的機率。',
       },
       {
         title: '第一次上課最怕的是什麼？',
@@ -240,7 +240,7 @@ export const seoGuides: SeoGuide[] = [
     eyebrow: 'STRESS RELEASE GUIDE',
     title: '下班後想紓壓，拳擊和泰拳為什麼比一般運動更有感？',
     description:
-      '如果你搜尋壓力釋放運動、下班後運動、上班族紓壓，這頁整理拳擊、泰拳、Fight Night 與 Boot Camp 如何把情緒轉成可完成的身體節奏。',
+      '如果你搜尋壓力釋放運動、下班後運動、上班族紓壓，這頁整理拳擊、泰拳、UFC GYM 夜間體驗與拳擊／泰拳專項課程如何把情緒轉成可完成的身體節奏。',
     keywords: [
       '下班後運動',
       '壓力釋放運動',
@@ -259,7 +259,7 @@ export const seoGuides: SeoGuide[] = [
       '想找不無聊的固定運動',
     ],
     heroImage: stressPoster,
-    heroAlt: '下班後透過 Fight Night 拳擊訓練釋放壓力',
+    heroAlt: '下班後透過 UFC GYM 夜間體驗拳擊訓練釋放壓力',
     venueIds: ['venue-dunnan', 'venue-neihu', 'venue-taichung'],
     sections: [
       {
@@ -270,12 +270,12 @@ export const seoGuides: SeoGuide[] = [
       {
         title: '下班後運動最難的是開始',
         answer:
-          '真正卡住的通常不是不知道運動有用，而是下班後已經太累，不想再做選擇。這也是 Boot Camp 要先選場館、日期與堂數的原因：把決定提前做好，當天只要出現。',
+          '真正卡住的通常不是不知道運動有用，而是下班後已經太累，不想再做選擇。這也是 拳擊／泰拳專項課程要先選場館、日期與堂數的原因：把決定提前做好，當天只要出現。',
       },
       {
-        title: '想釋放壓力，要選單堂還是 Boot Camp？',
+        title: '想釋放壓力，要選單堂還是 拳擊／泰拳專項課程？',
         answer:
-          '如果你需要的是一晚的切換，選 Fight Night Pass。若你想讓這種狀態在接下來幾週反覆出現，選 Boot Camp，讓訓練變成固定節奏。',
+          '如果你需要的是一晚的切換，選單堂入場券。若你想讓這種狀態在接下來幾週反覆出現，選 拳擊／泰拳專項課程，讓訓練變成固定節奏。',
       },
     ],
     faqs: [
@@ -292,7 +292,7 @@ export const seoGuides: SeoGuide[] = [
       {
         question: '我只是想找不無聊的運動，適合嗎？',
         answer:
-          '適合。拳擊、泰拳和 Fight Night 的節奏感很強，對不喜歡傳統器材訓練或一個人運動的人，通常更容易進入狀態。',
+          '適合。拳擊、泰拳和 UFC GYM 夜間體驗的節奏感很強，對不喜歡傳統器材訓練或一個人運動的人，通常更容易進入狀態。',
       },
     ],
   },
@@ -301,3 +301,4 @@ export const seoGuides: SeoGuide[] = [
 export function findSeoGuide(slug: string) {
   return seoGuides.find((guide) => guide.slug === slug)
 }
+

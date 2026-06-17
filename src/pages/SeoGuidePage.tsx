@@ -1,4 +1,4 @@
-import { motion } from 'framer-motion'
+﻿import { motion } from 'framer-motion'
 import { Header } from '../components/layout/Header'
 import { Footer } from '../components/layout/Footer'
 import { Seo } from '../components/Seo'
@@ -86,10 +86,10 @@ function MissingGuidePage() {
           這個搜尋指南不存在
         </h1>
         <p className="mt-5 max-w-2xl text-base leading-relaxed text-mist/75 md:text-lg">
-          可以回到 Boot Camp 頁面，直接查看目前可預訂的拳擊與泰拳梯次。
+          可以回到課程方案頁面，直接查看目前可預訂的拳擊與泰拳梯次。
         </p>
-        <Button href="/boot-camp" size="lg" className="mt-8">
-          查看 Boot Camp 計畫
+        <Button href="/offers" size="lg" className="mt-8">
+          查看 拳擊／泰拳專項課程計畫
         </Button>
       </main>
       <Footer />
@@ -154,8 +154,8 @@ export function SeoGuidePage({ slug }: SeoGuidePageProps) {
                 ))}
               </div>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <Button href="/boot-camp" size="lg">
-                  查看 Boot Camp 計畫
+                <Button href="/offers" size="lg">
+                  查看 拳擊／泰拳專項課程計畫
                 </Button>
                 <Button href="/offers" variant="secondary" size="lg">
                   先看單堂體驗
@@ -291,11 +291,11 @@ export function SeoGuidePage({ slug }: SeoGuidePageProps) {
               </p>
             </div>
             <div className="mt-5 flex flex-col gap-3 sm:flex-row md:mt-0">
-              <Button href="/boot-camp" size="lg">
-                查看 Boot Camp 計畫
+              <Button href="/offers" size="lg">
+                查看 拳擊／泰拳專項課程計畫
               </Button>
               <Button href="/offers" variant="secondary" size="lg">
-                看 Fight Night Pass
+                看 單堂入場券
               </Button>
             </div>
           </div>
@@ -325,3 +325,4 @@ export function SeoGuidePage({ slug }: SeoGuidePageProps) {
     </div>
   )
 }
+

@@ -11,6 +11,7 @@ LANDING_SPLIT_ENABLED = "false"
 LANDING_SPLIT_ONLY_PAID = "true"
 LANDING_SPLIT_EXPERIMENT_ID = "event_landing_focus_v1"
 LANDING_SPLIT_WEIGHTS = "event:100"
+PUBLIC_ORIGIN = "https://booking.ufcgym.com.tw"
 
 [[d1_databases]]
 binding = "DB"

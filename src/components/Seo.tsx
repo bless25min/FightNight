@@ -44,7 +44,7 @@ function upsertCanonical(href: string) {
 }
 
 function upsertJsonLd(data: StructuredData | StructuredData[]) {
-  const id = 'fightnight-page-jsonld'
+  const id = 'ufcgym-page-jsonld'
   let element = document.getElementById(id) as HTMLScriptElement | null
 
   if (!element) {

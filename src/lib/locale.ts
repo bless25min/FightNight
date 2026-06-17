@@ -12,7 +12,7 @@ export type LocaleDecision = {
 
 export const supportedLocales: SupportedLocale[] = ['zh-TW', 'en']
 
-const localeStorageKey = 'fightnight_locale'
+const localeStorageKey = 'ufcgym_locale'
 
 function isSupportedLocale(value: string): value is SupportedLocale {
   return supportedLocales.includes(value as SupportedLocale)

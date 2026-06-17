@@ -63,7 +63,7 @@ function isConditioningCourse(course: WeeklyCourse) {
   return name.includes('體適能') || name.includes('戰鬥體適能')
 }
 
-function isFightNightCourse(course: WeeklyCourse) {
+function isSingleSessionCourse(course: WeeklyCourse) {
   return (
     isWeekdayCourse(course) &&
     isEveningCourse(course) &&
@@ -71,7 +71,7 @@ function isFightNightCourse(course: WeeklyCourse) {
   )
 }
 
-function isBootCampCourse(course: WeeklyCourse) {
+function isTrainingPlanCourse(course: WeeklyCourse) {
   return (
     isBoxingOrMuayThaiCourse(course) &&
     (isBasicCourse(course) || isTechniqueCourse(course))
@@ -79,16 +79,16 @@ function isBootCampCourse(course: WeeklyCourse) {
 }
 
 export function isPublicWeeklyCourse(course: WeeklyCourse) {
-  return isFightNightCourse(course)
+  return isSingleSessionCourse(course)
 }
 
 export function isWeeklyCourseAvailableForCategory(
   course: WeeklyCourse,
   category: CourseCategory,
 ) {
-  return category === 'FIGHT_NIGHT'
-    ? isFightNightCourse(course)
-    : isBootCampCourse(course)
+  return category === 'SINGLE_SESSION'
+    ? isSingleSessionCourse(course)
+    : isTrainingPlanCourse(course)
 }
 
 export function getWeeklyCourseForCategory(
@@ -110,7 +110,7 @@ export const weeklyScheduleSectionContent = {
 export const weeklyCourses: WeeklyCourse[] = [
   {
     id: 'wc-dn-0528-1210-boxing-tech',
-    category: 'BOOT_CAMP',
+    category: 'TRAINING_PLAN',
     venueId: 'venue-dunnan',
     venueName: '敦南旗艦館',
     name: '拳擊技巧訓練',
@@ -123,7 +123,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-dn-0528-1810-muaythai-cond',
-    category: 'FIGHT_NIGHT',
+    category: 'SINGLE_SESSION',
     venueId: 'venue-dunnan',
     venueName: '敦南旗艦館',
     name: '泰拳體適能',
@@ -136,7 +136,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-nh-0528-1910-boxing-cond',
-    category: 'FIGHT_NIGHT',
+    category: 'SINGLE_SESSION',
     venueId: 'venue-neihu',
     venueName: '內科模範館',
     name: '拳擊體適能',
@@ -149,7 +149,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-dn-0528-1910-muaythai-tech',
-    category: 'BOOT_CAMP',
+    category: 'TRAINING_PLAN',
     venueId: 'venue-dunnan',
     venueName: '敦南旗艦館',
     name: '泰拳技巧訓練',
@@ -162,7 +162,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-tc-0528-1910-basic-kickbox',
-    category: 'BOOT_CAMP',
+    category: 'TRAINING_PLAN',
     venueId: 'venue-taichung',
     venueName: '台中勤美旗艦',
     name: '基礎踢拳',
@@ -175,7 +175,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-nh-0528-2010-boxing-tech',
-    category: 'BOOT_CAMP',
+    category: 'TRAINING_PLAN',
     venueId: 'venue-neihu',
     venueName: '內科模範館',
     name: '拳擊技巧訓練',
@@ -188,7 +188,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-dn-0528-2010-fight-fit',
-    category: 'FIGHT_NIGHT',
+    category: 'SINGLE_SESSION',
     venueId: 'venue-dunnan',
     venueName: '敦南旗艦館',
     name: '戰鬥體適能',
@@ -201,7 +201,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-dn-0528-2010-boxing-tech',
-    category: 'BOOT_CAMP',
+    category: 'TRAINING_PLAN',
     venueId: 'venue-dunnan',
     venueName: '敦南旗艦館',
     name: '拳擊技巧訓練',
@@ -214,7 +214,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-tc-0528-2110-basic-muaythai',
-    category: 'BOOT_CAMP',
+    category: 'TRAINING_PLAN',
     venueId: 'venue-taichung',
     venueName: '台中勤美旗艦',
     name: '基礎泰拳',
@@ -227,7 +227,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-nh-0529-1210-basic-boxing',
-    category: 'BOOT_CAMP',
+    category: 'TRAINING_PLAN',
     venueId: 'venue-neihu',
     venueName: '內科模範館',
     name: '基礎拳擊',
@@ -240,7 +240,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-dn-0529-1310-boxing-tech',
-    category: 'BOOT_CAMP',
+    category: 'TRAINING_PLAN',
     venueId: 'venue-dunnan',
     venueName: '敦南旗艦館',
     name: '拳擊技巧訓練',
@@ -253,7 +253,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-nh-0529-1810-basic-boxing',
-    category: 'BOOT_CAMP',
+    category: 'TRAINING_PLAN',
     venueId: 'venue-neihu',
     venueName: '內科模範館',
     name: '基礎拳擊',
@@ -266,7 +266,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-nh-0529-1810-muaythai-tech',
-    category: 'BOOT_CAMP',
+    category: 'TRAINING_PLAN',
     venueId: 'venue-neihu',
     venueName: '內科模範館',
     name: '泰拳技巧訓練',
@@ -279,7 +279,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-nh-0529-1910-basic-muaythai',
-    category: 'BOOT_CAMP',
+    category: 'TRAINING_PLAN',
     venueId: 'venue-neihu',
     venueName: '內科模範館',
     name: '基礎泰拳',
@@ -292,7 +292,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-nh-0529-1910-boxing-tech',
-    category: 'BOOT_CAMP',
+    category: 'TRAINING_PLAN',
     venueId: 'venue-neihu',
     venueName: '內科模範館',
     name: '拳擊技巧訓練',
@@ -305,7 +305,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-tc-0529-1910-boxing-cond',
-    category: 'FIGHT_NIGHT',
+    category: 'SINGLE_SESSION',
     venueId: 'venue-taichung',
     venueName: '台中勤美旗艦',
     name: '拳擊體適能',
@@ -318,7 +318,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-nh-0529-2010-boxing-cond',
-    category: 'FIGHT_NIGHT',
+    category: 'SINGLE_SESSION',
     venueId: 'venue-neihu',
     venueName: '內科模範館',
     name: '拳擊體適能',
@@ -331,7 +331,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-dn-0529-2010-fight-fit',
-    category: 'FIGHT_NIGHT',
+    category: 'SINGLE_SESSION',
     venueId: 'venue-dunnan',
     venueName: '敦南旗艦館',
     name: '戰鬥體適能',
@@ -344,7 +344,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-dn-0529-2010-boxing-tech',
-    category: 'BOOT_CAMP',
+    category: 'TRAINING_PLAN',
     venueId: 'venue-dunnan',
     venueName: '敦南旗艦館',
     name: '拳擊技巧訓練',
@@ -357,7 +357,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-tc-0529-2010-basic-muaythai',
-    category: 'BOOT_CAMP',
+    category: 'TRAINING_PLAN',
     venueId: 'venue-taichung',
     venueName: '台中勤美旗艦',
     name: '基礎泰拳',
@@ -370,7 +370,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-dn-0529-2110-basic-boxing',
-    category: 'BOOT_CAMP',
+    category: 'TRAINING_PLAN',
     venueId: 'venue-dunnan',
     venueName: '敦南旗艦館',
     name: '基礎拳擊',
@@ -383,7 +383,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-nh-0530-1100-basic-boxing',
-    category: 'BOOT_CAMP',
+    category: 'TRAINING_PLAN',
     venueId: 'venue-neihu',
     venueName: '內科模範館',
     name: '基礎拳擊',
@@ -396,7 +396,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-nh-0530-1200-basic-kickbox',
-    category: 'BOOT_CAMP',
+    category: 'TRAINING_PLAN',
     venueId: 'venue-neihu',
     venueName: '內科模範館',
     name: '基礎踢拳',
@@ -409,7 +409,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-dn-0530-1200-basic-boxing',
-    category: 'BOOT_CAMP',
+    category: 'TRAINING_PLAN',
     venueId: 'venue-dunnan',
     venueName: '敦南旗艦館',
     name: '基礎拳擊',
@@ -422,7 +422,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-dn-0530-1500-basic-muaythai',
-    category: 'BOOT_CAMP',
+    category: 'TRAINING_PLAN',
     venueId: 'venue-dunnan',
     venueName: '敦南旗艦館',
     name: '基礎泰拳',
@@ -435,7 +435,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-nh-0530-1600-basic-boxing',
-    category: 'BOOT_CAMP',
+    category: 'TRAINING_PLAN',
     venueId: 'venue-neihu',
     venueName: '內科模範館',
     name: '基礎拳擊',
@@ -448,7 +448,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-dn-0530-1600-basic-boxing',
-    category: 'BOOT_CAMP',
+    category: 'TRAINING_PLAN',
     venueId: 'venue-dunnan',
     venueName: '敦南旗艦館',
     name: '基礎拳擊',
@@ -461,7 +461,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-tc-0530-1700-basic-muaythai',
-    category: 'BOOT_CAMP',
+    category: 'TRAINING_PLAN',
     venueId: 'venue-taichung',
     venueName: '台中勤美旗艦',
     name: '基礎泰拳',
@@ -474,7 +474,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-tc-0531-1100-basic-kickbox',
-    category: 'BOOT_CAMP',
+    category: 'TRAINING_PLAN',
     venueId: 'venue-taichung',
     venueName: '台中勤美旗艦',
     name: '基礎踢拳',
@@ -487,7 +487,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-nh-0531-1200-basic-kickbox',
-    category: 'BOOT_CAMP',
+    category: 'TRAINING_PLAN',
     venueId: 'venue-neihu',
     venueName: '內科模範館',
     name: '基礎踢拳',
@@ -500,7 +500,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-nh-0531-1400-boxing-tech',
-    category: 'BOOT_CAMP',
+    category: 'TRAINING_PLAN',
     venueId: 'venue-neihu',
     venueName: '內科模範館',
     name: '拳擊技巧訓練',
@@ -513,7 +513,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-tc-0531-1600-basic-boxing',
-    category: 'BOOT_CAMP',
+    category: 'TRAINING_PLAN',
     venueId: 'venue-taichung',
     venueName: '台中勤美旗艦',
     name: '基礎拳擊',
@@ -526,7 +526,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-tc-0531-1700-boxing-tech',
-    category: 'BOOT_CAMP',
+    category: 'TRAINING_PLAN',
     venueId: 'venue-taichung',
     venueName: '台中勤美旗艦',
     name: '拳擊技巧訓練',
@@ -539,7 +539,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-dn-0601-1010-basic-boxing',
-    category: 'BOOT_CAMP',
+    category: 'TRAINING_PLAN',
     venueId: 'venue-dunnan',
     venueName: '敦南旗艦館',
     name: '基礎拳擊',
@@ -552,7 +552,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-tc-0601-1210-basic-boxing',
-    category: 'BOOT_CAMP',
+    category: 'TRAINING_PLAN',
     venueId: 'venue-taichung',
     venueName: '台中勤美旗艦',
     name: '基礎拳擊',
@@ -565,7 +565,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-dn-0601-1310-basic-muaythai',
-    category: 'BOOT_CAMP',
+    category: 'TRAINING_PLAN',
     venueId: 'venue-dunnan',
     venueName: '敦南旗艦館',
     name: '基礎泰拳',
@@ -578,7 +578,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-nh-0601-1810-basic-boxing',
-    category: 'BOOT_CAMP',
+    category: 'TRAINING_PLAN',
     venueId: 'venue-neihu',
     venueName: '內科模範館',
     name: '基礎拳擊',
@@ -591,7 +591,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-tc-0601-1810-basic-muaythai',
-    category: 'BOOT_CAMP',
+    category: 'TRAINING_PLAN',
     venueId: 'venue-taichung',
     venueName: '台中勤美旗艦',
     name: '基礎泰拳',
@@ -604,7 +604,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-nh-0601-1910-basic-boxing',
-    category: 'BOOT_CAMP',
+    category: 'TRAINING_PLAN',
     venueId: 'venue-neihu',
     venueName: '內科模範館',
     name: '基礎拳擊',
@@ -617,7 +617,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-dn-0601-1910-muaythai-cond',
-    category: 'FIGHT_NIGHT',
+    category: 'SINGLE_SESSION',
     venueId: 'venue-dunnan',
     venueName: '敦南旗艦館',
     name: '泰拳體適能',
@@ -630,7 +630,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-dn-0601-1910-fight-fit',
-    category: 'FIGHT_NIGHT',
+    category: 'SINGLE_SESSION',
     venueId: 'venue-dunnan',
     venueName: '敦南旗艦館',
     name: '戰鬥體適能',
@@ -643,7 +643,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-tc-0601-1910-basic-boxing',
-    category: 'BOOT_CAMP',
+    category: 'TRAINING_PLAN',
     venueId: 'venue-taichung',
     venueName: '台中勤美旗艦',
     name: '基礎拳擊',
@@ -656,7 +656,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-nh-0601-2010-boxing-cond',
-    category: 'FIGHT_NIGHT',
+    category: 'SINGLE_SESSION',
     venueId: 'venue-neihu',
     venueName: '內科模範館',
     name: '拳擊體適能',
@@ -669,7 +669,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-dn-0601-2010-boxing-tech',
-    category: 'BOOT_CAMP',
+    category: 'TRAINING_PLAN',
     venueId: 'venue-dunnan',
     venueName: '敦南旗艦館',
     name: '拳擊技巧訓練',
@@ -682,7 +682,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-tc-0601-2010-boxing-tech',
-    category: 'BOOT_CAMP',
+    category: 'TRAINING_PLAN',
     venueId: 'venue-taichung',
     venueName: '台中勤美旗艦',
     name: '拳擊技巧訓練',
@@ -695,7 +695,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-tc-0601-2010-fight-fit',
-    category: 'FIGHT_NIGHT',
+    category: 'SINGLE_SESSION',
     venueId: 'venue-taichung',
     venueName: '台中勤美旗艦',
     name: '戰鬥體適能',
@@ -708,7 +708,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-dn-0601-2010-basic-muaythai',
-    category: 'BOOT_CAMP',
+    category: 'TRAINING_PLAN',
     venueId: 'venue-dunnan',
     venueName: '敦南旗艦館',
     name: '基礎泰拳',
@@ -721,7 +721,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-dn-0601-2110-muaythai-tech',
-    category: 'BOOT_CAMP',
+    category: 'TRAINING_PLAN',
     venueId: 'venue-dunnan',
     venueName: '敦南旗艦館',
     name: '泰拳技巧訓練',
@@ -734,7 +734,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-dn-0602-1010-basic-boxing',
-    category: 'BOOT_CAMP',
+    category: 'TRAINING_PLAN',
     venueId: 'venue-dunnan',
     venueName: '敦南旗艦館',
     name: '基礎拳擊',
@@ -747,7 +747,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-nh-0602-1210-basic-muaythai',
-    category: 'BOOT_CAMP',
+    category: 'TRAINING_PLAN',
     venueId: 'venue-neihu',
     venueName: '內科模範館',
     name: '基礎泰拳',
@@ -760,7 +760,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-dn-0602-1310-boxing-tech',
-    category: 'BOOT_CAMP',
+    category: 'TRAINING_PLAN',
     venueId: 'venue-dunnan',
     venueName: '敦南旗艦館',
     name: '拳擊技巧訓練',
@@ -773,7 +773,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-nh-0602-1810-basic-kickbox',
-    category: 'BOOT_CAMP',
+    category: 'TRAINING_PLAN',
     venueId: 'venue-neihu',
     venueName: '內科模範館',
     name: '基礎踢拳',
@@ -786,7 +786,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-dn-0602-1810-basic-kickbox',
-    category: 'BOOT_CAMP',
+    category: 'TRAINING_PLAN',
     venueId: 'venue-dunnan',
     venueName: '敦南旗艦館',
     name: '基礎踢拳',
@@ -799,7 +799,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-dn-0602-1810-kickbox-tech',
-    category: 'BOOT_CAMP',
+    category: 'TRAINING_PLAN',
     venueId: 'venue-dunnan',
     venueName: '敦南旗艦館',
     name: '踢拳技巧',
@@ -812,7 +812,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-nh-0602-1910-fight-fit',
-    category: 'FIGHT_NIGHT',
+    category: 'SINGLE_SESSION',
     venueId: 'venue-neihu',
     venueName: '內科模範館',
     name: '戰鬥體適能',
@@ -825,7 +825,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-tc-0602-1910-muaythai-cond',
-    category: 'FIGHT_NIGHT',
+    category: 'SINGLE_SESSION',
     venueId: 'venue-taichung',
     venueName: '台中勤美旗艦',
     name: '泰拳體適能',
@@ -838,7 +838,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-nh-0602-2010-muaythai-cond',
-    category: 'FIGHT_NIGHT',
+    category: 'SINGLE_SESSION',
     venueId: 'venue-neihu',
     venueName: '內科模範館',
     name: '泰拳體適能',
@@ -851,7 +851,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-dn-0602-2010-muaythai-cond',
-    category: 'FIGHT_NIGHT',
+    category: 'SINGLE_SESSION',
     venueId: 'venue-dunnan',
     venueName: '敦南旗艦館',
     name: '泰拳體適能',
@@ -864,7 +864,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-tc-0602-2010-basic-kickbox',
-    category: 'BOOT_CAMP',
+    category: 'TRAINING_PLAN',
     venueId: 'venue-taichung',
     venueName: '台中勤美旗艦',
     name: '基礎踢拳',
@@ -877,7 +877,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-nh-0602-2110-basic-muaythai',
-    category: 'BOOT_CAMP',
+    category: 'TRAINING_PLAN',
     venueId: 'venue-neihu',
     venueName: '內科模範館',
     name: '基礎泰拳',
@@ -890,7 +890,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-tc-0603-1100-basic-boxing',
-    category: 'BOOT_CAMP',
+    category: 'TRAINING_PLAN',
     venueId: 'venue-taichung',
     venueName: '台中勤美旗艦',
     name: '基礎拳擊',
@@ -903,7 +903,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-dn-0603-1110-basic-boxing',
-    category: 'BOOT_CAMP',
+    category: 'TRAINING_PLAN',
     venueId: 'venue-dunnan',
     venueName: '敦南旗艦館',
     name: '基礎拳擊',
@@ -916,7 +916,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-tc-0603-1210-basic-muaythai',
-    category: 'BOOT_CAMP',
+    category: 'TRAINING_PLAN',
     venueId: 'venue-taichung',
     venueName: '台中勤美旗艦',
     name: '基礎泰拳',
@@ -929,7 +929,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-dn-0603-1310-muaythai-tech',
-    category: 'BOOT_CAMP',
+    category: 'TRAINING_PLAN',
     venueId: 'venue-dunnan',
     venueName: '敦南旗艦館',
     name: '泰拳技巧訓練',
@@ -942,7 +942,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-tc-0603-1810-basic-boxing',
-    category: 'BOOT_CAMP',
+    category: 'TRAINING_PLAN',
     venueId: 'venue-taichung',
     venueName: '台中勤美旗艦',
     name: '基礎拳擊',
@@ -955,7 +955,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-dn-0603-1910-muaythai-cond',
-    category: 'FIGHT_NIGHT',
+    category: 'SINGLE_SESSION',
     venueId: 'venue-dunnan',
     venueName: '敦南旗艦館',
     name: '泰拳體適能',
@@ -968,7 +968,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-dn-0603-1910-boxing-tech',
-    category: 'BOOT_CAMP',
+    category: 'TRAINING_PLAN',
     venueId: 'venue-dunnan',
     venueName: '敦南旗艦館',
     name: '拳擊技巧訓練',
@@ -981,7 +981,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-tc-0603-1910-muaythai-cond',
-    category: 'FIGHT_NIGHT',
+    category: 'SINGLE_SESSION',
     venueId: 'venue-taichung',
     venueName: '台中勤美旗艦',
     name: '泰拳體適能',
@@ -994,7 +994,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-nh-0603-1910-muaythai-cond',
-    category: 'FIGHT_NIGHT',
+    category: 'SINGLE_SESSION',
     venueId: 'venue-neihu',
     venueName: '內科模範館',
     name: '泰拳體適能',
@@ -1007,7 +1007,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-dn-0603-2010-boxing-cond',
-    category: 'FIGHT_NIGHT',
+    category: 'SINGLE_SESSION',
     venueId: 'venue-dunnan',
     venueName: '敦南旗艦館',
     name: '拳擊體適能',
@@ -1020,7 +1020,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-dn-0603-2010-muaythai-tech',
-    category: 'BOOT_CAMP',
+    category: 'TRAINING_PLAN',
     venueId: 'venue-dunnan',
     venueName: '敦南旗艦館',
     name: '泰拳技巧訓練',
@@ -1033,7 +1033,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-tc-0603-2010-basic-kickbox',
-    category: 'BOOT_CAMP',
+    category: 'TRAINING_PLAN',
     venueId: 'venue-taichung',
     venueName: '台中勤美旗艦',
     name: '基礎踢拳',
@@ -1046,7 +1046,7 @@ export const weeklyCourses: WeeklyCourse[] = [
   },
   {
     id: 'wc-nh-0603-2010-boxing-cond',
-    category: 'FIGHT_NIGHT',
+    category: 'SINGLE_SESSION',
     venueId: 'venue-neihu',
     venueName: '內科模範館',
     name: '拳擊體適能',

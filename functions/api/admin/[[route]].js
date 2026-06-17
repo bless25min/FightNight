@@ -5,7 +5,7 @@ import {
 } from '../shopline/line-notify.js'
 
 const LINE_PUSH_ENDPOINT = 'https://api.line.me/v2/bot/message/push'
-const DEFAULT_PUBLIC_ORIGIN = 'https://fightnight.25min.co'
+const DEFAULT_PUBLIC_ORIGIN = 'https://booking.ufcgym.com.tw'
 const LINE_RECOVERY_BATCH_LIMIT = 50
 const LINE_RECOVERY_TEMPLATE_VERSION = '2026-06-03-admin-story-carousel-v2'
 const LINE_STORY_CARD_BLUE = '#073DAE'
@@ -51,7 +51,7 @@ const TRAFFIC_ACTION_EVENTS = [
   'free_trial_reservation_click',
   'free_trial_contact_submit',
   'free_trial_extension_offer_view',
-  'free_trial_bootcamp_bridge_click',
+  'free_trial_training_plan_bridge_click',
   'free_trial_add_on_category_select',
   'free_trial_add_on_view_click',
   'free_trial_keep_only_click',
@@ -60,16 +60,24 @@ const TRAFFIC_ACTION_EVENTS = [
   'free_trial_reservation_submit_before_checkout',
   'free_trial_reservation_error',
   'free_trial_reservation_already_exists',
+  'free_trial_bootcamp_bridge_click',
+  'training_plan_hero_cta_click',
   'bootcamp_hero_cta_click',
+  'training_plan_expectation_click',
   'bootcamp_expectation_click',
+  'training_plan_expectation_booking_click',
   'bootcamp_expectation_booking_click',
+  'training_plan_route_select',
   'bootcamp_route_select',
+  'training_plan_sticky_action_click',
   'bootcamp_sticky_action_click',
+  'training_plan_sticky_secondary_click',
   'bootcamp_sticky_secondary_click',
   'event_more_sessions_click',
   'event_ticket_cta_click',
   'event_free_trial_cta_click',
   'first_purchase_offer_check',
+  'training_plan_bridge_first_purchase_offer_check',
   'bootcamp_bridge_first_purchase_offer_check',
 ]
 
@@ -90,7 +98,15 @@ const LEAD_INTENT_EVENTS = [
 const TRAFFIC_ACTION_EVENT_SQL = TRAFFIC_ACTION_EVENTS.map(sqlString).join(', ')
 const CHECKOUT_INTENT_EVENT_SQL = CHECKOUT_INTENT_EVENTS.map(sqlString).join(', ')
 const LEAD_INTENT_EVENT_SQL = LEAD_INTENT_EVENTS.map(sqlString).join(', ')
-const SPLIT_TEST_ROUTE_SQL = ['/', '/boot-camp', '/fight-night-event', '/fight-night-intro']
+const SPLIT_TEST_ROUTE_SQL = [
+  '/',
+  '/training-plan',
+  '/single-session-event',
+  '/single-session-intro',
+  '/boot-camp',
+  '/fight-night-event',
+  '/fight-night-intro',
+]
   .map(sqlString)
   .join(', ')
 
@@ -131,7 +147,7 @@ const DEFAULT_CHANGE_RELEASES = [
     impactLevel: 'low',
     deployedAt: '2026-06-13 11:40:00',
     changedSummary:
-      '補強 Fight Night 頁面的社群標題、描述與預覽資訊，讓廣告或貼文點擊前後的品牌內容更一致。',
+      '補強 UFC GYM 單堂體驗頁面的社群標題、描述與預覽資訊，讓廣告或貼文點擊前後的品牌內容更一致。',
     hypothesis:
       '社群預覽與落地頁內容一致，有助於降低審查與使用者預期落差，也提升分享入口的可信度。',
     primaryMetric: 'social preview consistency / landing sessions',
@@ -145,7 +161,7 @@ const DEFAULT_CHANGE_RELEASES = [
     impactLevel: 'high',
     deployedAt: '2026-06-13 03:40:00',
     changedSummary:
-      '調整 Fight Night 票卡與購買前的 checkout intent 流程，讓方案選擇、訂購資料與付款銜接更清楚。',
+      '調整 UFC GYM 單堂體驗票卡與購買前的 checkout intent 流程，讓方案選擇、訂購資料與付款銜接更清楚。',
     hypothesis:
       '更清楚的方案卡與購買意圖紀錄，可降低結帳前流失，並讓 AddToCart 與 InitiateCheckout 更容易追蹤。',
     primaryMetric: 'AddToCart rate / checkout rate / Purchase rate',
@@ -183,11 +199,11 @@ const DEFAULT_CHANGE_RELEASES = [
     id: '2026-06-12-layout-footer-restore',
     title: '活動頁寬版排版與頁尾恢復',
     category: 'UX',
-    scope: '/fight-night-event / footer',
+    scope: '/single-session-event / footer',
     impactLevel: 'medium',
     deployedAt: '2026-06-12 11:22:00',
     changedSummary:
-      '恢復 Fight Night 活動頁較完整的寬版排版與頁尾資訊，改善桌面版閱讀與品牌信任資訊露出。',
+      '恢復 UFC GYM 單堂體驗活動頁較完整的寬版排版與頁尾資訊，改善桌面版閱讀與品牌信任資訊露出。',
     hypothesis:
       '桌面版有足夠頁寬展示圖片與方案，可降低內容壓縮感；頁尾資訊則補足審查與信任判斷所需訊號。',
     primaryMetric: 'desktop engagement / policy clicks / checkout rate',
@@ -195,13 +211,13 @@ const DEFAULT_CHANGE_RELEASES = [
   },
   {
     id: '2026-06-12-event-intro-routing',
-    title: 'Fight Night intro 路由與分流關閉',
+    title: '單堂體驗介紹 路由與分流關閉',
     category: 'ROUTING',
-    scope: '/fight-night-intro / split routing',
+    scope: '/single-session-intro / split routing',
     impactLevel: 'medium',
     deployedAt: '2026-06-12 11:04:00',
     changedSummary:
-      '新增 Fight Night intro 路由並調整分流策略，讓活動入口與首頁導向更可控。',
+      '新增 單堂體驗介紹 路由並調整分流策略，讓活動入口與首頁導向更可控。',
     hypothesis:
       '集中入口判斷能減少不同使用者看到內容不一致的機率，改善 Meta 審查與實際訪客體驗的一致性。',
     primaryMetric: 'canonical route sessions / route mismatch warnings',
@@ -215,7 +231,7 @@ const DEFAULT_CHANGE_RELEASES = [
     impactLevel: 'high',
     deployedAt: '2026-06-12 03:56:00',
     changedSummary:
-      '讓首頁進入 Fight Night 活動頁主流程，並修正付款成功後 Meta Purchase 同步路徑。',
+      '讓首頁進入 UFC GYM 單堂體驗活動頁主流程，並修正付款成功後 Meta Purchase 同步路徑。',
     hypothesis:
       '首頁、付款結果與 Meta Purchase 的主流程一致，可提升事件歸因完整度並降低成交後追蹤漏失。',
     primaryMetric: 'Purchase event match / paid order attribution / event_source_url consistency',
@@ -257,7 +273,7 @@ const DEFAULT_CHANGE_RELEASES = [
     impactLevel: 'high',
     deployedAt: '2026-06-06 07:32:00',
     changedSummary:
-      '讓 Fight Night 活動頁與 Boot Camp 頁使用各自對應的 LIFF ID，降低跨頁登入與回流混淆。',
+      '讓 UFC GYM 單堂體驗活動頁與 拳擊／泰拳訓練方案 頁使用各自對應的 LIFF ID，降低跨頁登入與回流混淆。',
     hypothesis:
       '頁面專屬 LIFF 設定可減少登入後回到錯頁、資料帶入錯誤或追蹤來源混淆。',
     primaryMetric: 'LINE return completion / Lead rate / session continuity',
@@ -267,11 +283,11 @@ const DEFAULT_CHANGE_RELEASES = [
     id: '2026-06-06-event-pass-framing',
     title: '活動 Pass 定位與頁面敘事精修',
     category: 'POSITIONING',
-    scope: '/fight-night-event',
+    scope: '/single-session-event',
     impactLevel: 'medium',
     deployedAt: '2026-06-06 06:04:00',
     changedSummary:
-      '調整 Fight Night 落地頁，使其更像夜間入場體驗與活動 Pass，而不是一般健身課程頁。',
+      '調整 UFC GYM 單堂體驗落地頁，使其更像夜間入場體驗與活動 Pass，而不是一般健身課程頁。',
     hypothesis:
       '清楚的活動 Pass 定位能提高廣告到落地頁的期待一致性，也讓使用者更容易理解購買的是一次入場體驗。',
     primaryMetric: 'AddToCart rate / checkout rate / engaged sessions',
@@ -281,11 +297,11 @@ const DEFAULT_CHANGE_RELEASES = [
     id: '2026-06-04-nearby-venue-recommendations',
     title: '加入鄰近場館推薦',
     category: 'CONTENT',
-    scope: '/fight-night-event / venue recommendations',
+    scope: '/single-session-event / venue recommendations',
     impactLevel: 'medium',
     deployedAt: '2026-06-04 15:34:00',
     changedSummary:
-      '在 Fight Night 活動頁加入鄰近館別推薦，讓使用者能更快確認適合自己的到場地點。',
+      '在 UFC GYM 單堂體驗活動頁加入鄰近館別推薦，讓使用者能更快確認適合自己的到場地點。',
     hypothesis:
       '如果使用者能快速找到可抵達的館場，方案點擊與預約完成率會更穩定。',
     primaryMetric: 'venue selection clicks / AddToCart rate / Lead rate',
@@ -351,11 +367,11 @@ const DEFAULT_CHANGE_RELEASES = [
     id: '2026-06-03-ticket-purchase-page',
     title: '活動頁改成票券購買主流程',
     category: 'CONVERSION',
-    scope: '/fight-night-event / ticket purchase',
+    scope: '/single-session-event / ticket purchase',
     impactLevel: 'high',
     deployedAt: '2026-06-03 08:53:00',
     changedSummary:
-      '將 Fight Night 活動頁重構成以票券購買為核心的流程，強化方案選擇與付款前資訊。',
+      '將 UFC GYM 單堂體驗活動頁重構成以票券購買為核心的流程，強化方案選擇與付款前資訊。',
     hypothesis:
       '把頁面主目標集中在購買票券，可降低使用者不知道下一步要做什麼的問題。',
     primaryMetric: 'AddToCart rate / checkout rate / Purchase rate',
@@ -365,7 +381,7 @@ const DEFAULT_CHANGE_RELEASES = [
     id: '2026-06-03-ticket-first-flow',
     title: '票券優先的頁面流程',
     category: 'CONVERSION',
-    scope: '/fight-night-event / ticket-first flow',
+    scope: '/single-session-event / ticket-first flow',
     impactLevel: 'high',
     deployedAt: '2026-06-03 08:24:00',
     changedSummary:
@@ -379,11 +395,11 @@ const DEFAULT_CHANGE_RELEASES = [
     id: '2026-06-03-paid-experience-framing',
     title: '付費體驗定位重整',
     category: 'POSITIONING',
-    scope: '/fight-night-event / paid experience',
+    scope: '/single-session-event / paid experience',
     impactLevel: 'medium',
     deployedAt: '2026-06-03 05:01:00',
     changedSummary:
-      '重整 Fight Night 的付費體驗文案，使其更像一晚的活動入場，而不是一般課程說明。',
+      '重整 UFC GYM 單堂體驗的付費體驗文案，使其更像一晚的活動入場，而不是一般課程說明。',
     hypothesis:
       '清楚說明付費體驗本質，可提升價格接受度並降低付款前疑慮。',
     primaryMetric: 'checkout rate / Purchase rate / refund inquiry risk',
@@ -391,13 +407,13 @@ const DEFAULT_CHANGE_RELEASES = [
   },
   {
     id: '2026-06-02-event-page-routing',
-    title: '新增 Fight Night 活動頁路由',
+    title: '新增 UFC GYM 單堂體驗活動頁路由',
     category: 'ROUTING',
-    scope: '/fight-night-event',
+    scope: '/single-session-event',
     impactLevel: 'medium',
     deployedAt: '2026-06-02 08:06:00',
     changedSummary:
-      '新增 Fight Night 活動頁入口，將活動內容與原本頁面動線拆出成可追蹤的獨立路由。',
+      '新增 UFC GYM 單堂體驗活動頁入口，將活動內容與原本頁面動線拆出成可追蹤的獨立路由。',
     hypothesis:
       '獨立活動頁能讓廣告、追蹤與後台報表更清楚分辨活動流量。',
     primaryMetric: 'route sessions / engaged sessions / route-specific conversion',
@@ -505,7 +521,7 @@ const DEFAULT_CHANGE_RELEASES = [
     id: '2026-06-17-neihu-signature',
     title: '英文館名 Neihu Signature',
     category: 'CONTENT',
-    scope: '/fight-night-event / LINE confirmation',
+    scope: '/single-session-event / LINE confirmation',
     impactLevel: 'low',
     deployedAt: '2026-06-17 05:16:00',
     changedSummary:
@@ -561,7 +577,7 @@ const DEFAULT_CHANGE_RELEASES = [
     impactLevel: 'high',
     deployedAt: '2026-06-15 08:00:00',
     changedSummary:
-      '配合 ufcgymtaiwan.25min.co 與 Meta 審查疑慮，補強官方場域、政策、退款取消、商家聯絡與品牌一致性內容。',
+      '配合 booking.ufcgym.com.tw 與 Meta 審查疑慮，補強官方場域、政策、退款取消、商家聯絡與品牌一致性內容。',
     hypothesis: '改善廣告與落地頁一致性，降低詐騙連結誤判風險。',
     primaryMetric: 'paid sessions / Lead rate / checkout rate / policy trust path',
     notes: 'Historical entry reconstructed from current admin handoff rollout.',
@@ -572,9 +588,12 @@ const CANONICAL_ROUTE_SQL = `
   COALESCE(
     NULLIF(canonical_route_path, ''),
     CASE
-      WHEN route_path LIKE '/boot-camp%' THEN '/boot-camp'
-      WHEN route_path LIKE '/fight-night-event%' THEN '/fight-night-event'
-      WHEN route_path LIKE '/fight-night-intro%' THEN '/fight-night-intro'
+      WHEN route_path LIKE '/training-plan%' THEN '/training-plan'
+      WHEN route_path LIKE '/boot-camp%' THEN '/training-plan'
+      WHEN route_path LIKE '/single-session-event%' THEN '/single-session-event'
+      WHEN route_path LIKE '/fight-night-event%' THEN '/single-session-event'
+      WHEN route_path LIKE '/single-session-intro%' THEN '/single-session-intro'
+      WHEN route_path LIKE '/fight-night-intro%' THEN '/single-session-intro'
       WHEN route_path LIKE '/offers%' THEN '/offers'
       WHEN route_path LIKE '/payment/success%' THEN '/payment/success'
       WHEN route_path LIKE '/guides/%' THEN '/guides'
@@ -3090,7 +3109,7 @@ function buildRecoveryTicketUrl(env, request, recoveryId, templateId) {
   url.searchParams.set('utm_medium', 'recovery')
   url.searchParams.set('utm_campaign', templateId)
   url.searchParams.set('recovery_id', recoveryId)
-  url.hash = 'fight-night-pass'
+  url.hash = 'single-session-pass'
   return url.toString()
 }
 
@@ -3135,7 +3154,7 @@ function buildLineImageUrl(env, request, fileName) {
 }
 
 function buildRecoveryOfferUrl(env, request, recoveryId, templateId) {
-  const url = new URL('/boot-camp', getPublicOrigin(env, request))
+  const url = new URL('/offers', getPublicOrigin(env, request))
   url.searchParams.set('from', 'line-recovery')
   url.searchParams.set('utm_source', 'line')
   url.searchParams.set('utm_medium', 'recovery')
@@ -3169,7 +3188,7 @@ function getRecoveryMessageCopy(customer, templateId) {
             latestCourseName
               ? `你剛剛選的「${latestCourseName}」還沒完成付款。`
               : '你剛剛建立的預約還沒完成付款。',
-            '這一場不用談方案。完成一次付款，就把這場 Fight Night 保留下來。',
+            '這一場不用談方案。完成一次付款，就把這場 UFC GYM 單堂體驗保留下來。',
           ],
           meta: latestAmount ? `目前金額 ${latestAmount}` : '付款完成後 LINE 會收到確認',
           button: '完成這場預約',
@@ -3179,7 +3198,7 @@ function getRecoveryMessageCopy(customer, templateId) {
           eyebrow: 'NO MEMBERSHIP',
           title: '不是入會前導',
           paragraphs: [
-            'Fight Night 是一場已經編排好的夜晚體驗。',
+            'UFC GYM 單堂體驗是一場已經編排好的夜晚體驗。',
             '你不用先承諾長期課程，也不需要在現場跟業務談方案。',
             '到場後跟著音樂、倒數、教練口令和全場節奏完成這 50 分鐘。',
           ],
@@ -3212,14 +3231,14 @@ function getRecoveryMessageCopy(customer, templateId) {
           paragraphs: [
             '很多人不是不知道該運動。',
             '是不想入會、不想被推銷，也覺得一般運動課很無聊。',
-            'Fight Night 解決的是這件事：把一堂課變成一場有情緒、有節奏、有現場感的夜晚體驗。',
+            'UFC GYM 單堂體驗 解決的是這件事：把一堂課變成一場有情緒、有節奏、有現場感的夜晚體驗。',
           ],
           meta: '先保留一場，不用先承諾長期課程',
           button: '保留免費體驗',
         },
         {
           image: 'hero-poster.jpg',
-          eyebrow: 'FIGHT NIGHT',
+          eyebrow: 'UFC GYM',
           title: '你不是來被上課',
           paragraphs: [
             '你是進到一個已經排好的現場。',
@@ -3269,15 +3288,15 @@ function getRecoveryMessageCopy(customer, templateId) {
             '如果你想把一次體驗接成固定訓練，可以先看 618 首購。',
             '不用在現場談方案，線上看懂再決定。',
           ],
-          meta: 'Boot Camp 或 Fight Night 都可選',
+          meta: '拳擊／泰拳訓練方案或 UFC GYM 單堂體驗 都可選',
           button: '看 618 方案',
         },
         {
-          image: 'bootcamp-origin-poster.jpg',
+          image: 'training-plan-origin-poster.jpg',
           eyebrow: 'NEXT STEP',
           title: '把一次體驗接成下一步',
           paragraphs: [
-            '如果你想更穩定進步，可以直接選 2 堂或 4 堂 Boot Camp。',
+            '如果你想更穩定進步，可以直接選 2 堂或 4 堂 拳擊／泰拳訓練方案。',
             '先把節奏建立起來，再決定要走多遠。',
           ],
           meta: '平易近人的付款流程',
@@ -3288,7 +3307,7 @@ function getRecoveryMessageCopy(customer, templateId) {
     offer_viewed_unpaid: {
       eyebrow: '618 OFFER',
       title: '你看過的首購優惠還在',
-      body: '如果你想把 Fight Night 變成固定開始的一步，可以回到 618 首購方案，直接完成付款。',
+      body: '如果你想把 UFC GYM 單堂體驗 變成固定開始的一步，可以回到 618 首購方案，直接完成付款。',
       meta: '不用入會 · 不用現場談方案',
       button: '回到 618 首購',
       cards: [
@@ -3304,9 +3323,9 @@ function getRecoveryMessageCopy(customer, templateId) {
           button: '回到 618 首購',
         },
         {
-          image: 'bootcamp-origin-poster.jpg',
-          eyebrow: 'BOOT CAMP',
-          title: '想更穩定，就選 Boot Camp',
+          image: 'training-plan-origin-poster.jpg',
+          eyebrow: '訓練方案',
+          title: '想更穩定，就選 拳擊／泰拳訓練方案',
           paragraphs: [
             '把拳擊或泰拳拆成更容易跟上的幾堂課。',
             '適合體驗後想繼續，但不想一次被推到長期方案的人。',
@@ -3316,10 +3335,10 @@ function getRecoveryMessageCopy(customer, templateId) {
         },
         {
           image: 'collective-euphoria-card.jpg',
-          eyebrow: 'FIGHT NIGHT',
+          eyebrow: 'UFC GYM',
           title: '也可以繼續買單場體驗',
           paragraphs: [
-            '如果你只想先保留下一場 Fight Night，也可以用單場方式進場。',
+            '如果你只想先保留下一場 UFC GYM 單堂體驗，也可以用單場方式進場。',
             '一次付款，一場完整體驗。',
           ],
           meta: '一次付款 · 一場完整體驗',
@@ -3328,20 +3347,20 @@ function getRecoveryMessageCopy(customer, templateId) {
       ],
     },
     course_reminder: {
-      eyebrow: 'Fight Night',
+      eyebrow: 'UFC GYM 單堂體驗',
       title: '如果你也一直卡在心裡',
-      body: '如果你只是還在看，可以先從一場能跟上的 Fight Night 開始。不用入會，不會中途推銷。',
+      body: '如果你只是還在看，可以先從一場能跟上的 UFC GYM 單堂體驗 開始。不用入會，不會中途推銷。',
       meta: '50 分鐘教練帶領 · 新手可進',
       button: '看本週可預約',
       cards: [
         {
-          eyebrow: 'FIGHT NIGHT',
+          eyebrow: 'UFC GYM',
           title: '如果你也一直卡在心裡',
           paragraphs: [
             '也許你不是沒興趣。',
             '你只是想到健身房，就想到入會、推銷、合約，或一堂很無聊的運動課。',
             '這件事不用自己猜到很煩。',
-            '先讓一場 Fight Night 告訴你：運動也可以是一段情緒價值體驗。',
+            '先讓一場 UFC GYM 單堂體驗 告訴你：運動也可以是一段情緒價值體驗。',
           ],
           meta: '不用入會 · 不被推銷',
           button: '看本週可預約',
@@ -3373,24 +3392,24 @@ function getRecoveryMessageCopy(customer, templateId) {
     newcomer_entry: {
       eyebrow: 'FIRST NIGHT',
       title: '這週先保留一場夜晚體驗',
-      body: '你不用先有拳擊或泰拳基礎。先選一場 Fight Night，進場完成一段有節奏的體驗。',
+      body: '你不用先有拳擊或泰拳基礎。先選一場 UFC GYM 單堂體驗，進場完成一段有節奏的體驗。',
       meta: '不用入會 · 不對打 · LINE 確認',
-      button: '看 Fight Night 場次',
+      button: '看 UFC GYM 單堂體驗場次',
       cards: [
         {
           eyebrow: 'FIRST NIGHT',
           title: '這週先保留一場夜晚體驗',
           paragraphs: [
             '你不用先喜歡運動，也不用先決定入會。',
-            '先把一場 Fight Night 保留下來。',
+            '先把一場 UFC GYM 單堂體驗保留下來。',
             '進場後，跟著教練、音樂和全場節奏完成 50 分鐘。',
           ],
           meta: '首堂免費體驗',
-          button: '看 Fight Night 場次',
+          button: '看 UFC GYM 單堂體驗場次',
         },
         {
           image: 'hero-poster.jpg',
-          eyebrow: 'FIGHT NIGHT',
+          eyebrow: 'UFC GYM',
           title: '不是冷冰冰的課程表',
           paragraphs: [
             '這是一場把拳擊、泰拳、節奏、教練帶領和現場氛圍編排好的體驗。',
