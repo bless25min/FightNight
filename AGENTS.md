@@ -23,6 +23,22 @@ Default to 1-to-100 Optimization for registration, checkout, payment, tracking, 
 
 ---
 
+## Codex Skill Integration
+
+Use the instruction layers in this order:
+
+1. `AGENTS.md` controls FightNight business and project rules.
+2. `karpathy-guidelines` controls engineering discipline: surface assumptions, keep changes surgical, avoid speculative abstraction, and define verifiable success criteria.
+3. `superpowers` controls workflow: brainstorming, implementation planning, TDD, systematic debugging, code review, and completion verification.
+
+When these layers conflict, preserve this project's protected business infrastructure first. Do not let generic workflow advice override registration, checkout, payment, event capacity, tracking, LINE / CRM, SEO, or Cloudflare binding rules.
+
+For new positioning, landing, or creative work, use Superpowers only to structure exploration; keep FightNight event/pass framing as the source of truth.
+
+For registration, checkout, tracking, payment, production, or bugfix work, use Superpowers to enforce plan/test/debug/verify discipline without changing protected behavior unless explicitly requested.
+
+---
+
 ## Core Positioning
 
 FightNight is not a normal fitness class.

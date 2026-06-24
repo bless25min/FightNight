@@ -2,6 +2,23 @@ import { motion } from 'framer-motion'
 import { SectionWrapper } from '../ui/SectionWrapper'
 
 const officialAppointmentAssetBaseUrl = 'https://www.ufcgym.com.tw'
+const professionalTeamImagePath =
+  '/assets/preorder/professional-team-15f78ccd75491e88e5a6d39318d7cce9bf43fef3473a3ac9556e73a3cb646f33.jpg'
+
+const professionalTeamTiles = [
+  { label: 'UFC GYM Taiwan', column: 0, row: 0 },
+  { label: 'Weights 重量訓練', column: 1, row: 0 },
+  { label: 'TRX 懸吊課程', column: 2, row: 0 },
+  { label: 'Youth/Kids 青少兒童', column: 3, row: 0 },
+  { label: 'MMA 綜合格鬥', column: 4, row: 0 },
+  { label: 'Boxing 拳擊課程', column: 5, row: 0 },
+  { label: 'Yoga 瑜珈課程', column: 0, row: 1 },
+  { label: 'BJJ 巴西柔術', column: 1, row: 1 },
+  { label: 'D.U.T. 功能訓練', column: 2, row: 1 },
+  { label: 'Kickboxing 踢拳擊', column: 3, row: 1 },
+  { label: 'Group Fit 團體有氧', column: 4, row: 1 },
+  { label: 'Train Different', column: 5, row: 1 },
+] as const
 
 const officialCourseProofGroups = [
   [
@@ -113,6 +130,8 @@ function officialAssetUrl(path: string) {
 }
 
 export function OfficialAppointmentProofSection() {
+  const professionalTeamImageUrl = officialAssetUrl(professionalTeamImagePath)
+
   return (
     <SectionWrapper
       id="official-appointment-proof"
@@ -191,14 +210,21 @@ export function OfficialAppointmentProofSection() {
           transition={{ duration: 0.45 }}
           className="mt-4 overflow-hidden rounded-2xl border border-pearl/10 bg-black/35"
         >
-          <img
-            src={officialAssetUrl(
-              '/assets/preorder/professional-team-15f78ccd75491e88e5a6d39318d7cce9bf43fef3473a3ac9556e73a3cb646f33.jpg',
-            )}
-            alt="UFC GYM Taiwan 專業國際化團隊"
-            loading="lazy"
-            className="aspect-[16/9] w-full object-cover lg:aspect-[21/8]"
-          />
+          <div className="grid grid-cols-2 gap-2 p-2 sm:gap-3 sm:p-3 md:grid-cols-3 xl:grid-cols-4">
+            {professionalTeamTiles.map((tile) => (
+              <div
+                key={tile.label}
+                role="img"
+                aria-label={`UFC GYM Taiwan ${tile.label}`}
+                className="aspect-[120/73] rounded-xl border border-pearl/10 bg-black/40 bg-no-repeat shadow-[0_14px_34px_rgba(0,0,0,0.28)]"
+                style={{
+                  backgroundImage: `url("${professionalTeamImageUrl}")`,
+                  backgroundSize: '600% 200%',
+                  backgroundPosition: `${(tile.column / 5) * 100}% ${tile.row * 100}%`,
+                }}
+              />
+            ))}
+          </div>
           <figcaption className="border-t border-pearl/10 p-4 lg:grid lg:grid-cols-[0.35fr_1fr] lg:items-center lg:gap-5 lg:p-6">
             <p className="font-heading text-lg font-black text-pearl lg:text-2xl">
               專業國際化團隊
