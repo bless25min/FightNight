@@ -21,7 +21,9 @@ export function Header() {
   const isTrainingPlanPage =
     pathname.startsWith('/training-plan')
   const isEventPage =
-    pathname === '/' || pathname.startsWith('/single-session-event')
+    pathname === '/' ||
+    pathname.startsWith('/single-session-event') ||
+    pathname.startsWith('/paid-event')
   const isGuidePage =
     pathname.startsWith('/guides/')
   const isUtilityPage =
@@ -42,7 +44,9 @@ export function Header() {
 
   const ctaLabel = isTrainingPlanPage
     ? '選路徑與梯次'
-    : isEventPage
+    : pathname === '/'
+      ? '預約體驗此課程'
+      : isEventPage
       ? '把這一晚留下來'
     : isOffersPage
       ? '選課程方案場次'

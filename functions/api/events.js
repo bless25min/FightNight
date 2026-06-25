@@ -247,6 +247,8 @@ function canonicalizeRoutePath(value) {
     return '/fight-night-event'
   }
   if (lower.startsWith('/fight-night-event/')) return '/fight-night-event'
+  if (lower === '/paid-event' || lower === '/paid-event.html') return '/paid-event'
+  if (lower.startsWith('/paid-event/')) return '/paid-event'
   if (lower === '/fight-night-intro' || lower === '/fight-night-intro.html') {
     return '/fight-night-intro'
   }

@@ -37,6 +37,8 @@ export function canonicalizeRoutePath(value: string) {
     return '/single-session-event'
   }
   if (lower.startsWith('/single-session-event/')) return '/single-session-event'
+  if (lower === '/paid-event' || lower === '/paid-event.html') return '/paid-event'
+  if (lower.startsWith('/paid-event/')) return '/paid-event'
   if (lower === '/single-session-intro' || lower === '/single-session-intro.html') {
     return '/single-session-intro'
   }

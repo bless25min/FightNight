@@ -56,7 +56,13 @@ function getSourcePath() {
 function getLiffSurface(sourcePath = getSourcePath()): LiffSurface {
   const pathname = canonicalizeRoutePath(sourcePath)
   if (pathname === '/training-plan') return 'trainingPlan'
-  if (pathname === '/' || pathname === '/single-session-event') return 'event'
+  if (
+    pathname === '/' ||
+    pathname === '/single-session-event' ||
+    pathname === '/paid-event'
+  ) {
+    return 'event'
+  }
   return 'default'
 }
 

@@ -18,6 +18,7 @@ function getCurrentRoutePath() {
   const hashPath = window.location.hash.replace(/^#/, '')
   if (
     hashPath.startsWith('/offers') ||
+    hashPath.startsWith('/paid-event') ||
     hashPath.startsWith('/payment/success') ||
     hashPath.startsWith('/admin') ||
     hashPath.startsWith('/privacy-policy') ||
@@ -30,6 +31,7 @@ function getCurrentRoutePath() {
 
   const pathname = window.location.pathname
   if (pathname.endsWith('/offers.html')) return '/offers'
+  if (pathname.endsWith('/paid-event.html')) return '/paid-event'
   if (pathname.endsWith('/admin.html')) return '/admin'
   if (pathname.endsWith('/privacy-policy.html')) return '/privacy-policy'
   if (pathname.endsWith('/terms-of-service.html')) return '/terms-of-service'
@@ -134,6 +136,8 @@ function App() {
 
   if (pathname.startsWith('/offers')) {
     page = <OffersPage />
+  } else if (pathname.startsWith('/paid-event')) {
+    page = <SingleSessionEventPage bookingMode="paid" />
   } else if (pathname.startsWith('/payment/success')) {
     page = <PaymentResultPage />
   } else if (pathname.startsWith('/guides/')) {
@@ -148,7 +152,7 @@ function App() {
   } else if (pathname.startsWith('/refund-policy')) {
     page = <RefundPolicyPage />
   } else {
-    page = <SingleSessionEventPage />
+    page = <SingleSessionEventPage bookingMode="free-trial" />
   }
 
   return (

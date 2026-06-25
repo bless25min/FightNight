@@ -27,6 +27,7 @@ const DEFAULT_META = {
 const ROUTE_META = {
   '/': DEFAULT_META,
   '/single-session-event': DEFAULT_META,
+  '/paid-event': DEFAULT_META,
   '/single-session-intro': DEFAULT_META,
   '/offers': {
     title: 'UFC GYM 課程方案｜預約與購買入口｜UFCGYM TAIWAN',

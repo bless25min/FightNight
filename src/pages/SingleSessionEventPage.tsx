@@ -113,6 +113,8 @@ type EventPassVariant = {
   highlights: EventPassHighlight[]
 }
 
+type EventBookingMode = 'free-trial' | 'paid'
+
 type FreeTrialStatusState =
   | 'unknown'
   | 'checking'
@@ -372,7 +374,7 @@ const eventPageCopy = {
       paidFallbackCta: 'NT$680｜保留這堂',
       checking: '確認資格中',
       unavailable: '暫時無法確認資格',
-      freeTrialCta: '首次限定｜免費保留這堂',
+      freeTrialCta: '預約體驗此課程',
       photo: '查看照片',
     },
     modal: {
@@ -619,7 +621,7 @@ const eventPageCopy = {
       paidFallbackCta: 'NT$680 | Reserve this session',
       checking: 'Checking eligibility',
       unavailable: 'Eligibility unavailable',
-      freeTrialCta: 'First-time only | Reserve free',
+      freeTrialCta: 'Reserve a trial class',
       photo: 'View photo',
     },
     modal: {
@@ -1668,8 +1670,8 @@ function getSourcePath() {
   return `${window.location.pathname}${window.location.search}${window.location.hash}`
 }
 
-function getEventCanonicalPath() {
-  return '/'
+function getEventCanonicalPath(bookingMode: EventBookingMode) {
+  return bookingMode === 'paid' ? '/paid-event' : '/'
 }
 
 function getLiffStatePath() {
@@ -2683,6 +2685,7 @@ function FreeTrialTicketCard({
   hasLiveData,
   locale,
   freeTrialStatus,
+  allowPaidFallback = true,
   onOpenInfo,
   onReserve,
   onPaidFallback,
@@ -2692,15 +2695,22 @@ function FreeTrialTicketCard({
   hasLiveData: boolean
   locale: SupportedLocale
   freeTrialStatus: FreeTrialStatusState
+  allowPaidFallback?: boolean
   onOpenInfo: (ticket: EventTicket) => void
   onReserve: (ticket: EventTicket) => void
   onPaidFallback: (ticket: EventTicket) => void
 }) {
   const used = freeTrialStatus === 'used'
+  const usePaidFallback = used && allowPaidFallback
   const statusUnavailable = freeTrialStatus === 'unavailable'
   const copy = getCopy(locale)
   const remainingLabel = getRemainingLabel(availability, hasLiveData, locale)
   const disabled = hasLiveData && availability.remaining <= 0
+  const actionDisabled =
+    disabled ||
+    freeTrialStatus === 'checking' ||
+    statusUnavailable ||
+    (used && !allowPaidFallback)
   const nearbyAreaLabel = getNearbyAreaLabel(ticket.course.venueId, locale)
   const coachProfile = findCoachProfile(ticket.course.coach)
   const coachLabel = getEventCoachDisplayLabel(
@@ -2740,7 +2750,9 @@ function FreeTrialTicketCard({
 
           <div className="mt-3 min-w-0">
             <h3 className="whitespace-nowrap font-heading text-[1.06rem] font-black leading-tight text-pearl">
-              {used ? copy.tickets.paidFallbackTitle : copy.tickets.freeTrialTitle}
+              {usePaidFallback
+                ? copy.tickets.paidFallbackTitle
+                : copy.tickets.freeTrialTitle}
             </h3>
             <p className="mt-1.5 font-heading text-sm text-mist/84">
               {ticket.dateLabel}｜{ticket.timeLabel}
@@ -2815,7 +2827,7 @@ function FreeTrialTicketCard({
               {used ? copy.tickets.usedFirstTime : copy.tickets.freeTrialFirstTimeBadge}
             </strong>
             <span className="text-mist/56">｜</span>
-            {used ? copy.tickets.usedFallback : copy.tickets.freeTrialLimit}
+            {usePaidFallback ? copy.tickets.usedFallback : copy.tickets.freeTrialLimit}
           </span>
         </p>
       </div>
@@ -2824,16 +2836,24 @@ function FreeTrialTicketCard({
         <Button
           size="lg"
           className="w-full"
-          disabled={disabled || freeTrialStatus === 'checking' || statusUnavailable}
-          onClick={() => (used ? onPaidFallback(ticket) : onReserve(ticket))}
-          data-cta={used ? 'event-free-trial-paid-fallback' : 'event-free-trial-reserve'}
+          disabled={actionDisabled}
+          onClick={() => (usePaidFallback ? onPaidFallback(ticket) : onReserve(ticket))}
+          data-cta={
+            usePaidFallback
+              ? 'event-free-trial-paid-fallback'
+              : used
+                ? 'event-free-trial-used'
+                : 'event-free-trial-reserve'
+          }
           data-ticket={ticket.id}
         >
           <AutoFitButtonLabel>
             {disabled
               ? copy.tickets.soldOut
-              : used
+              : usePaidFallback
                 ? copy.tickets.paidFallbackCta
+                : used
+                  ? copy.tickets.usedFirstTime
                 : freeTrialStatus === 'checking'
                   ? copy.tickets.checking
                   : statusUnavailable
@@ -2908,6 +2928,7 @@ function EventPassPreview({
 function EventTicketDropSection({
   tickets,
   freeTrialTickets,
+  bookingMode,
   freeTrialStatus,
   recommendation,
   showMoreSessions,
@@ -2926,6 +2947,7 @@ function EventTicketDropSection({
 }: {
   tickets: EventTicket[]
   freeTrialTickets: EventTicket[]
+  bookingMode: EventBookingMode
   freeTrialStatus: FreeTrialStatusState
   recommendation: VenueRecommendation | null
   showMoreSessions: boolean
@@ -2946,6 +2968,7 @@ function EventTicketDropSection({
   onFreeTrialPaidFallback: (ticket: EventTicket) => void
 }) {
   const copy = getCopy(locale).tickets
+  const isFreeTrialBookingMode = bookingMode === 'free-trial'
   const venueTabs = useMemo(() => getEventVenueTabs(locale), [locale])
   const visibleTickets = useMemo(
     () =>
@@ -2958,15 +2981,21 @@ function EventTicketDropSection({
     [getAvailability, hasLiveData, recommendation, tickets],
   )
   const visibleVenueTickets = useMemo(
-    () => [...visibleTickets, ...freeTrialTickets],
-    [freeTrialTickets, visibleTickets],
+    () =>
+      isFreeTrialBookingMode
+        ? visibleTickets
+        : [...visibleTickets, ...freeTrialTickets],
+    [freeTrialTickets, isFreeTrialBookingMode, visibleTickets],
   )
   const venueOptions = venueTabs.map((tab) => {
     const ticketCount =
       visibleTickets.filter((ticket) => ticket.course.venueId === tab.venueId)
         .length +
-      freeTrialTickets.filter((ticket) => ticket.course.venueId === tab.venueId)
-        .length
+      (isFreeTrialBookingMode
+        ? 0
+        : freeTrialTickets.filter(
+            (ticket) => ticket.course.venueId === tab.venueId,
+          ).length)
     return {
       ...tab,
       ticketCount,
@@ -3003,8 +3032,23 @@ function EventTicketDropSection({
       if (a.ticket.id !== b.ticket.id) return a.ticket.id < b.ticket.id ? -1 : 1
       return a.sortIndex - b.sortIndex
     })
-  const activeVenueGearCards = sortVenueCardsByTime(
-    activeVenueTickets.map((ticket) => ({
+  type VenueCard =
+    | {
+        type: 'paid'
+        key: string
+        ticket: EventTicket
+        variant: EventPassVariant
+        sortIndex: number
+      }
+    | {
+        type: 'free-trial'
+        key: string
+        ticket: EventTicket
+        sortIndex: number
+      }
+  const activeVenueGearCards: VenueCard[] = isFreeTrialBookingMode
+    ? []
+    : sortVenueCardsByTime(activeVenueTickets.map((ticket) => ({
       type: 'paid' as const,
       key: `${ticket.id}-single-session-gear-pass`,
       ticket,
@@ -3012,10 +3056,10 @@ function EventTicketDropSection({
         (variant) => variant.id === 'single-session-gear-pass',
       ) ?? eventPassVariants[0],
       sortIndex: 0,
-    })),
-  )
-  const activeVenuePassCards = sortVenueCardsByTime(
-    activeVenueTickets.map((ticket) => ({
+    })))
+  const activeVenuePassCards: VenueCard[] = isFreeTrialBookingMode
+    ? []
+    : sortVenueCardsByTime(activeVenueTickets.map((ticket) => ({
       type: 'paid' as const,
       key: `${ticket.id}-single-session-pass`,
       ticket,
@@ -3023,10 +3067,12 @@ function EventTicketDropSection({
         (variant) => variant.id === 'single-session-pass',
       ) ?? eventPassVariants[0],
       sortIndex: 0,
-    })),
-  )
-  const activeVenueFreeTrialCards = sortVenueCardsByTime(
-    activeVenueFreeTrialTickets.map((ticket, index) => ({
+    })))
+  const freeTrialCardSourceTickets = isFreeTrialBookingMode
+    ? activeVenueTickets
+    : activeVenueFreeTrialTickets
+  const activeVenueFreeTrialCards: VenueCard[] = sortVenueCardsByTime(
+    freeTrialCardSourceTickets.map((ticket, index) => ({
       type: 'free-trial' as const,
       key: `${ticket.id}-free-trial`,
       ticket,
@@ -3046,7 +3092,13 @@ function EventTicketDropSection({
     },
     {
       id: 'free-trial',
-      title: locale === 'en' ? 'FREE TRIAL THIS WEEK' : '本週免費課程',
+      title: isFreeTrialBookingMode
+        ? locale === 'en'
+          ? 'TRIAL CLASSES'
+          : '可預約體驗課程'
+        : locale === 'en'
+          ? 'FREE TRIAL THIS WEEK'
+          : '本週免費課程',
       cards: activeVenueFreeTrialCards,
     },
   ].filter((row) => row.cards.length > 0)
@@ -3054,22 +3106,7 @@ function EventTicketDropSection({
     (count, row) => count + row.cards.length,
     0,
   )
-  const renderVenueCard = (
-    card:
-      | {
-          type: 'paid'
-          key: string
-          ticket: EventTicket
-          variant: EventPassVariant
-          sortIndex: number
-        }
-      | {
-          type: 'free-trial'
-          key: string
-          ticket: EventTicket
-          sortIndex: number
-        },
-  ) => (
+  const renderVenueCard = (card: VenueCard) => (
     <div
       key={card.key}
       className="flex min-w-[90%] max-w-[90%] shrink-0 snap-start flex-col lg:min-w-0 lg:max-w-none lg:snap-align-none"
@@ -3094,6 +3131,7 @@ function EventTicketDropSection({
           hasLiveData={hasLiveData}
           locale={locale}
           freeTrialStatus={freeTrialStatus}
+          allowPaidFallback={!isFreeTrialBookingMode}
           onOpenInfo={onOpenInfo}
           onReserve={onFreeTrialReserve}
           onPaidFallback={onFreeTrialPaidFallback}
@@ -3102,9 +3140,10 @@ function EventTicketDropSection({
     </div>
   )
   const activeVenueSessionCount = new Set(
-    [...activeVenueTickets, ...activeVenueFreeTrialTickets].map(
-      (ticket) => ticket.id,
-    ),
+    [
+      ...activeVenueTickets,
+      ...(isFreeTrialBookingMode ? [] : activeVenueFreeTrialTickets),
+    ].map((ticket) => ticket.id),
   ).size
   const activeVenueLabel =
     venueOptions.find((tab) => tab.venueId === activeVenueId)?.label ??
@@ -3113,6 +3152,21 @@ function EventTicketDropSection({
     locale === 'en'
       ? `${count} session${count === 1 ? '' : 's'}`
       : `${count} 場`
+  const sectionEyebrow = isFreeTrialBookingMode
+    ? locale === 'en'
+      ? 'FREE TRIAL'
+      : '免費體驗'
+    : copy.sectionEyebrow
+  const sectionTitle = isFreeTrialBookingMode
+    ? locale === 'en'
+      ? 'Reserve a trial class'
+      : '預約體驗課程'
+    : copy.sectionTitle
+  const venueSelectPrompt = isFreeTrialBookingMode
+    ? locale === 'en'
+      ? 'Choose the venue you can reach, then reserve a trial class.'
+      : '先選你會抵達的場館，再預約想體驗的課程。'
+    : copy.venueSelectPrompt
 
   return (
     <SectionWrapper
@@ -3133,12 +3187,12 @@ function EventTicketDropSection({
           {showMoreSessions ? (
             <div id="event-more-sessions" className="min-w-0 max-w-full scroll-mt-24">
               <EventSectionHeading
-                eyebrow={copy.sectionEyebrow}
-                title={copy.sectionTitle}
+                eyebrow={sectionEyebrow}
+                title={sectionTitle}
               >
                 {activeVenueId
                   ? copy.sectionSummary(activeVenueLabel, activeVenueSessionCount)
-                  : copy.venueSelectPrompt}
+                  : venueSelectPrompt}
               </EventSectionHeading>
               <div
                 className={`mb-4 rounded-2xl border bg-black/25 p-3 ${
@@ -3198,7 +3252,7 @@ function EventTicketDropSection({
 
               {!activeVenueId ? (
                 <p className="rounded-xl border border-pearl/10 bg-black/25 px-4 py-4 text-sm leading-relaxed text-mist/68">
-                  {copy.venueSelectPrompt}
+                  {venueSelectPrompt}
                 </p>
               ) : activeVenueCardCount > 0 ? (
                 <div className="grid min-w-0 gap-8">
@@ -3264,6 +3318,7 @@ function CheckoutModal({
   selectedTicket,
   selectedVariant,
   availability,
+  bookingMode,
   locale,
   preferences,
   onClose,
@@ -3271,6 +3326,7 @@ function CheckoutModal({
   selectedTicket: EventTicket | null
   selectedVariant: EventPassVariant
   availability: SessionAvailability | null
+  bookingMode: EventBookingMode
   locale: SupportedLocale
   preferences: EventServicePreferences
   onClose: () => void
@@ -3379,6 +3435,8 @@ function CheckoutModal({
             initiateCheckoutEventId,
             landingVariant,
             eventName,
+            bookingMode,
+            conversionGoal: 'paid_checkout',
             ticketId: selectedTicket.id,
             eventPassVariant: selectedVariant.id,
             equipmentPackage: selectedVariant.equipmentPackage,
@@ -3440,6 +3498,8 @@ function CheckoutModal({
           event_pass_variant: selectedVariant.id,
           equipment_package: selectedVariant.equipmentPackage,
           event_id: initiateCheckoutEventId,
+          booking_mode: bookingMode,
+          conversion_goal: 'paid_checkout',
           pricing_mode: eventCoursePricingMode,
           line_linked_before_checkout: Boolean(linkedLineUserId),
         },
@@ -3461,6 +3521,8 @@ function CheckoutModal({
           source: landingVariant,
           course_id: selectedTicket.course.id,
           session_id: selectedTicket.sessionId,
+          booking_mode: bookingMode,
+          conversion_goal: 'paid_checkout',
           error_message: message,
         },
       })
@@ -3605,12 +3667,14 @@ function CheckoutModal({
 function FreeTrialReservationModal({
   selectedTicket,
   availability,
+  bookingMode,
   locale,
   onClose,
   onReserved,
 }: {
   selectedTicket: EventTicket | null
   availability: SessionAvailability | null
+  bookingMode: EventBookingMode
   locale: SupportedLocale
   onClose: () => void
   onReserved: () => void
@@ -3693,6 +3757,8 @@ function FreeTrialReservationModal({
             leadEventId,
             landingVariant,
             eventName,
+            bookingMode,
+            conversionGoal: 'free_trial_reservation',
             ticketId: selectedTicket.id,
             freeTrial: true,
             firstTimeOnly: true,
@@ -3731,6 +3797,8 @@ function FreeTrialReservationModal({
           coach: selectedTicket.course.coach,
           remaining: availability.remaining,
           first_time_only: true,
+          booking_mode: bookingMode,
+          conversion_goal: 'free_trial_reservation',
           event_id: leadEventId,
         },
         metaStandardEvent: 'Lead',
@@ -3752,6 +3820,8 @@ function FreeTrialReservationModal({
           source: landingVariant,
           course_id: selectedTicket.course.id,
           session_id: selectedTicket.sessionId,
+          booking_mode: bookingMode,
+          conversion_goal: 'free_trial_reservation',
           error_message: message,
         },
       })
@@ -3859,13 +3929,20 @@ function FreeTrialReservationModal({
   )
 }
 
-export function SingleSessionEventPage() {
+type SingleSessionEventPageProps = {
+  bookingMode?: EventBookingMode
+}
+
+export function SingleSessionEventPage({
+  bookingMode = 'free-trial',
+}: SingleSessionEventPageProps = {}) {
   const { locale, source: languageSource, setLocale } = useLocale()
   const copy = getCopy(locale)
+  const isFreeTrialBookingMode = bookingMode === 'free-trial'
   const tickets = useMemo(() => getPaidEventTickets(locale), [locale])
   const freeTrialTickets = useMemo(
-    () => getWeeklyFreeTrialTickets(locale),
-    [locale],
+    () => (isFreeTrialBookingMode ? [] : getWeeklyFreeTrialTickets(locale)),
+    [isFreeTrialBookingMode, locale],
   )
   const faqItems = useMemo(() => copy.faq.items as FAQItem[], [copy.faq.items])
   const sessionIds = useMemo(
@@ -3962,13 +4039,14 @@ export function SingleSessionEventPage() {
         source: landingVariant,
         event_name: eventName,
         entry_ticket_flow: true,
+        booking_mode: bookingMode,
         page_language: locale,
         language_source: languageSource,
       },
       metaStandardEvent: 'ViewContent',
       lineEventName: 'EventPageView',
     })
-  }, [languageSource, locale, track])
+  }, [bookingMode, languageSource, locale, track])
 
   useEffect(() => {
     if (gateState.status !== 'unlocked') return
@@ -4073,6 +4151,8 @@ export function SingleSessionEventPage() {
         ticket_id: targetTicket.id,
         course_id: targetTicket.course.id,
         gate_status: gateState.status,
+        booking_mode: bookingMode,
+        conversion_goal: 'paid_checkout',
         event_product: 'single_session_entry_ticket_no_membership',
         event_pass_variant: variant.id,
         equipment_package: variant.equipmentPackage,
@@ -4099,15 +4179,22 @@ export function SingleSessionEventPage() {
         course_id: ticket.course.id,
         gate_status: gateState.status,
         first_time_only: true,
+        booking_mode: bookingMode,
+        conversion_goal: 'free_trial_reservation',
+        free_trial_surface: isFreeTrialBookingMode
+          ? 'homepage_all_free'
+          : 'secondary_free_trial',
         free_trial_status: freeTrialStatus,
       },
       lineEventName: 'FreeTrialClick',
     })
 
-    if (freeTrialStatus === 'used') {
+    if (freeTrialStatus === 'used' && !isFreeTrialBookingMode) {
       openCheckout(ticket, singleClassPaidVariant)
       return
     }
+
+    if (freeTrialStatus === 'used') return
 
     setSelectedFreeTrialTicket(ticket)
   }
@@ -4116,11 +4203,17 @@ export function SingleSessionEventPage() {
     openCheckout(ticket, singleClassPaidVariant)
   }
 
-  const canonicalPath = getEventCanonicalPath()
+  const canonicalPath = getEventCanonicalPath(bookingMode)
   const structuredData = featuredTicket
     ? {
         '@type': 'Event',
-        name: locale === 'en' ? `${eventName} Entry Pass` : `${eventName} 入場票`,
+        name: isFreeTrialBookingMode
+          ? locale === 'en'
+            ? `${eventName} Trial Reservation`
+            : `${eventName} 免費體驗預約`
+          : locale === 'en'
+            ? `${eventName} Entry Pass`
+            : `${eventName} 入場票`,
         description: copy.eventDescription,
         startDate: `${featuredTicket.course.date}T${featuredTicket.course.startTime}:00+08:00`,
         endDate: `${featuredTicket.course.date}T${featuredTicket.course.endTime}:00+08:00`,
@@ -4133,7 +4226,9 @@ export function SingleSessionEventPage() {
         },
         offers: {
           '@type': 'Offer',
-          price: String(featuredPrice?.amount ?? ''),
+          price: isFreeTrialBookingMode
+            ? '0'
+            : String(featuredPrice?.amount ?? ''),
           priceCurrency: 'TWD',
           availability: 'https://schema.org/InStock',
         },
@@ -4184,6 +4279,7 @@ export function SingleSessionEventPage() {
           <EventTicketDropSection
             tickets={tickets}
             freeTrialTickets={freeTrialTickets}
+            bookingMode={bookingMode}
             freeTrialStatus={freeTrialStatus}
             recommendation={recommendation}
             showMoreSessions={showMoreSessions}
@@ -4230,6 +4326,7 @@ export function SingleSessionEventPage() {
           selectedTicket ? getAvailability(selectedTicket.sessionId) : null
         }
         locale={locale}
+        bookingMode={bookingMode}
         preferences={servicePreferences}
         onClose={() => {
           setSelectedTicket(null)
@@ -4244,6 +4341,7 @@ export function SingleSessionEventPage() {
             : null
         }
         locale={locale}
+        bookingMode={bookingMode}
         onClose={() => setSelectedFreeTrialTicket(null)}
         onReserved={() =>
           setFreeTrialStatusSnapshot({

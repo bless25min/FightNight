@@ -306,6 +306,7 @@ type TrafficSource = {
   pageViews: number
   ticketSessions: number
   leadSessions: number
+  freeTrialClickSessions: number
   freeTrialSessions: number
   purchaseClickSessions: number
   actions: number
@@ -327,6 +328,7 @@ type TrafficCampaign = {
   paidSessions: number
   ticketSessions: number
   leadSessions: number
+  freeTrialClickSessions: number
   freeTrialSessions: number
   purchaseClickSessions: number
   checkoutSessions: number
@@ -342,6 +344,7 @@ type TrafficPage = {
   pageViews: number
   ticketSessions: number
   leadSessions: number
+  freeTrialClickSessions: number
   freeTrialSessions: number
   actions: number
   checkoutIntents: number
@@ -387,6 +390,7 @@ type TrafficSplitVariant = {
   sessions: number
   pageViews: number
   leadSessions: number
+  freeTrialClickSessions: number
   freeTrialSessions: number
   purchaseClickSessions: number
   actions: number
@@ -454,6 +458,7 @@ type TrafficOverview = {
   utmSessions: number
   ticketSessions: number
   leadSessions: number
+  freeTrialClickSessions: number
   freeTrialSessions: number
   purchaseClickSessions: number
   checkoutSessions: number
@@ -473,6 +478,7 @@ type TrafficDaily = {
   utmSessions: number
   ticketSessions: number
   leadSessions: number
+  freeTrialClickSessions: number
   freeTrialSessions: number
   purchaseClickSessions: number
   checkoutSessions: number
@@ -862,6 +868,7 @@ function routeLabel(value?: string | null) {
   if (value === '/') return '首頁'
   if (value === '/training-plan') return 'BOOTCAMP'
   if (value === '/single-session-event') return '活動頁'
+  if (value === '/paid-event') return '原付費活動頁'
   if (value === '/single-session-intro') return 'Intro'
   if (value === '/offers') return 'Offers'
   if (value === '/payment/success') return '付款成功'
@@ -2622,7 +2629,7 @@ function TrafficDashboard({ traffic }: { traffic?: TrafficData }) {
         <MetricCard
           label="免費預約"
           value={`${overview?.freeTrialSessions ?? 0}`}
-          detail={`已保留 ${overview?.freeOrders ?? 0} · Lead to free ${formatRate(overview?.freeTrialSessions, overview?.leadSessions)}`}
+          detail={`CTA ${overview?.freeTrialClickSessions ?? 0} · 已保留 ${overview?.freeOrders ?? 0} · Click to lead ${formatRate(overview?.freeTrialSessions, overview?.freeTrialClickSessions)}`}
         />
         <MetricCard
           label="付款營收"
@@ -2647,7 +2654,7 @@ function TrafficDashboard({ traffic }: { traffic?: TrafficData }) {
             每日漏斗
           </p>
           <div className="mt-3 overflow-x-auto">
-            <table className="min-w-[1040px] w-full text-left text-sm">
+            <table className="min-w-[1120px] w-full text-left text-sm">
               <thead className="font-heading text-xs tracking-[0.16em] text-mist/55">
                 <tr>
                   <th className="py-2 pr-4">日期</th>
@@ -2656,6 +2663,7 @@ function TrafficDashboard({ traffic }: { traffic?: TrafficData }) {
                   <th className="py-2 pr-4">課程區</th>
                   <th className="py-2 pr-4">LINE/登入</th>
                   <th className="py-2 pr-4">登入率</th>
+                  <th className="py-2 pr-4">免費 CTA</th>
                   <th className="py-2 pr-4">免費預約</th>
                   <th className="py-2 pr-4">購買點擊</th>
                   <th className="py-2 pr-4">結帳</th>
@@ -2674,6 +2682,7 @@ function TrafficDashboard({ traffic }: { traffic?: TrafficData }) {
                     <td className="py-3 pr-4 text-mist/75">
                       {formatRate(row.leadSessions, row.sessions)}
                     </td>
+                    <td className="py-3 pr-4 text-mist/75">{row.freeTrialClickSessions}</td>
                     <td className="py-3 pr-4 text-mist/75">{row.freeTrialSessions}</td>
                     <td className="py-3 pr-4 text-mist/75">{row.purchaseClickSessions}</td>
                     <td className="py-3 pr-4 text-gold">{row.checkoutSessions}</td>
@@ -2703,7 +2712,7 @@ function TrafficDashboard({ traffic }: { traffic?: TrafficData }) {
         </div>
 
         <div className="mt-4 overflow-x-auto">
-          <table className="min-w-[1180px] w-full text-left text-sm">
+          <table className="min-w-[1260px] w-full text-left text-sm">
             <thead className="font-heading text-xs tracking-[0.16em] text-mist/55">
               <tr>
                 <th className="py-2 pr-4">版本</th>
@@ -2712,6 +2721,7 @@ function TrafficDashboard({ traffic }: { traffic?: TrafficData }) {
                 <th className="py-2 pr-4">Sessions</th>
                 <th className="py-2 pr-4">PV</th>
                 <th className="py-2 pr-4">LINE</th>
+                <th className="py-2 pr-4">免費 CTA</th>
                 <th className="py-2 pr-4">免費預約</th>
                 <th className="py-2 pr-4">購買點擊</th>
                 <th className="py-2 pr-4">Checkout</th>
@@ -2736,6 +2746,7 @@ function TrafficDashboard({ traffic }: { traffic?: TrafficData }) {
                   <td className="py-3 pr-4 text-mist/75">{row.sessions}</td>
                   <td className="py-3 pr-4 text-mist/75">{row.pageViews}</td>
                   <td className="py-3 pr-4 text-neon">{row.leadSessions}</td>
+                  <td className="py-3 pr-4 text-mist/75">{row.freeTrialClickSessions}</td>
                   <td className="py-3 pr-4 text-mist/75">{row.freeTrialSessions}</td>
                   <td className="py-3 pr-4 text-mist/75">{row.purchaseClickSessions}</td>
                   <td className="py-3 pr-4 text-gold">{row.checkoutIntents}</td>
@@ -2753,7 +2764,7 @@ function TrafficDashboard({ traffic }: { traffic?: TrafficData }) {
               ))}
               {splitVariants.length === 0 && (
                 <tr>
-                  <td className="py-4 text-sm text-mist/55" colSpan={13}>
+                  <td className="py-4 text-sm text-mist/55" colSpan={14}>
                     尚未收到分流版本事件。上線後有使用者進站，這裡會開始出現三個頁面的比較。
                   </td>
                 </tr>
@@ -2813,7 +2824,7 @@ function TrafficDashboard({ traffic }: { traffic?: TrafficData }) {
             Campaign / Content
           </p>
           <div className="mt-3 overflow-x-auto">
-            <table className="min-w-[1180px] w-full text-left text-sm">
+            <table className="min-w-[1260px] w-full text-left text-sm">
               <thead className="font-heading text-xs tracking-[0.16em] text-mist/55">
                 <tr>
                   <th className="py-2 pr-4">Campaign</th>
@@ -2824,6 +2835,7 @@ function TrafficDashboard({ traffic }: { traffic?: TrafficData }) {
                   <th className="py-2 pr-4">課程區</th>
                   <th className="py-2 pr-4">LINE/登入</th>
                   <th className="py-2 pr-4">登入率</th>
+                  <th className="py-2 pr-4">免費 CTA</th>
                   <th className="py-2 pr-4">免費</th>
                   <th className="py-2 pr-4">購買點擊</th>
                   <th className="py-2 pr-4">結帳</th>
@@ -2857,6 +2869,7 @@ function TrafficDashboard({ traffic }: { traffic?: TrafficData }) {
                     <td className="py-3 pr-4 text-mist/75">
                       {formatRate(campaign.leadSessions, campaign.sessions)}
                     </td>
+                    <td className="py-3 pr-4 text-mist/75">{campaign.freeTrialClickSessions}</td>
                     <td className="py-3 pr-4 text-mist/75">{campaign.freeTrialSessions}</td>
                     <td className="py-3 pr-4 text-mist/75">{campaign.purchaseClickSessions}</td>
                     <td className="py-3 pr-4 text-gold">{campaign.checkoutSessions}</td>
@@ -2876,13 +2889,14 @@ function TrafficDashboard({ traffic }: { traffic?: TrafficData }) {
           來源與跳出
         </p>
         <div className="mt-3 overflow-x-auto">
-          <table className="min-w-[860px] w-full text-left text-sm">
+          <table className="min-w-[940px] w-full text-left text-sm">
             <thead className="font-heading text-xs tracking-[0.16em] text-mist/55">
               <tr>
                 <th className="py-2 pr-4">來源</th>
                 <th className="py-2 pr-4">Sessions</th>
                 <th className="py-2 pr-4">課程區</th>
                 <th className="py-2 pr-4">LINE/登入</th>
+                <th className="py-2 pr-4">免費 CTA</th>
                 <th className="py-2 pr-4">免費</th>
                 <th className="py-2 pr-4">CTA</th>
                 <th className="py-2 pr-4">結帳意圖</th>
@@ -2900,6 +2914,7 @@ function TrafficDashboard({ traffic }: { traffic?: TrafficData }) {
                   <td className="py-3 pr-4 text-mist/75">{source.sessions}</td>
                   <td className="py-3 pr-4 text-mist/75">{source.ticketSessions}</td>
                   <td className="py-3 pr-4 text-neon">{source.leadSessions}</td>
+                  <td className="py-3 pr-4 text-mist/75">{source.freeTrialClickSessions}</td>
                   <td className="py-3 pr-4 text-mist/75">{source.freeTrialSessions}</td>
                   <td className="py-3 pr-4 text-mist/75">{source.actions}</td>
                   <td className="py-3 pr-4 text-neon">{source.checkoutIntents}</td>
@@ -2924,7 +2939,7 @@ function TrafficDashboard({ traffic }: { traffic?: TrafficData }) {
           頁面表現
         </p>
         <div className="mt-3 overflow-x-auto">
-          <table className="min-w-[940px] w-full text-left text-sm">
+          <table className="min-w-[1020px] w-full text-left text-sm">
             <thead className="font-heading text-xs tracking-[0.16em] text-mist/55">
               <tr>
                 <th className="py-2 pr-4">頁面</th>
@@ -2932,6 +2947,7 @@ function TrafficDashboard({ traffic }: { traffic?: TrafficData }) {
                 <th className="py-2 pr-4">PV</th>
                 <th className="py-2 pr-4">課程區</th>
                 <th className="py-2 pr-4">LINE/登入</th>
+                <th className="py-2 pr-4">免費 CTA</th>
                 <th className="py-2 pr-4">免費</th>
                 <th className="py-2 pr-4">CTA</th>
                 <th className="py-2 pr-4">結帳意圖</th>
@@ -2952,6 +2968,7 @@ function TrafficDashboard({ traffic }: { traffic?: TrafficData }) {
                   <td className="py-3 pr-4 text-mist/75">{page.pageViews}</td>
                   <td className="py-3 pr-4 text-mist/75">{page.ticketSessions}</td>
                   <td className="py-3 pr-4 text-neon">{page.leadSessions}</td>
+                  <td className="py-3 pr-4 text-mist/75">{page.freeTrialClickSessions}</td>
                   <td className="py-3 pr-4 text-mist/75">{page.freeTrialSessions}</td>
                   <td className="py-3 pr-4 text-mist/75">{page.actions}</td>
                   <td className="py-3 pr-4 text-neon">{page.checkoutIntents}</td>

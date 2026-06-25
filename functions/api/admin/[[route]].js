@@ -83,7 +83,18 @@ const TRAFFIC_ACTION_EVENTS = [
 
 const CHECKOUT_INTENT_EVENTS = [
   'course_purchase_click',
+  'event_ticket_cta_click',
   'shopline_checkout_submit',
+]
+
+const PURCHASE_CLICK_EVENTS = [
+  'course_purchase_click',
+  'event_ticket_cta_click',
+]
+
+const FREE_TRIAL_CLICK_EVENTS = [
+  'free_trial_reservation_click',
+  'event_free_trial_cta_click',
 ]
 
 const LEAD_INTENT_EVENTS = [
@@ -97,11 +108,14 @@ const LEAD_INTENT_EVENTS = [
 
 const TRAFFIC_ACTION_EVENT_SQL = TRAFFIC_ACTION_EVENTS.map(sqlString).join(', ')
 const CHECKOUT_INTENT_EVENT_SQL = CHECKOUT_INTENT_EVENTS.map(sqlString).join(', ')
+const PURCHASE_CLICK_EVENT_SQL = PURCHASE_CLICK_EVENTS.map(sqlString).join(', ')
+const FREE_TRIAL_CLICK_EVENT_SQL = FREE_TRIAL_CLICK_EVENTS.map(sqlString).join(', ')
 const LEAD_INTENT_EVENT_SQL = LEAD_INTENT_EVENTS.map(sqlString).join(', ')
 const SPLIT_TEST_ROUTE_SQL = [
   '/',
   '/training-plan',
   '/single-session-event',
+  '/paid-event',
   '/single-session-intro',
   '/boot-camp',
   '/fight-night-event',
@@ -591,6 +605,7 @@ const CANONICAL_ROUTE_SQL = `
       WHEN route_path LIKE '/training-plan%' THEN '/training-plan'
       WHEN route_path LIKE '/boot-camp%' THEN '/training-plan'
       WHEN route_path LIKE '/single-session-event%' THEN '/single-session-event'
+      WHEN route_path LIKE '/paid-event%' THEN '/paid-event'
       WHEN route_path LIKE '/fight-night-event%' THEN '/single-session-event'
       WHEN route_path LIKE '/single-session-intro%' THEN '/single-session-intro'
       WHEN route_path LIKE '/fight-night-intro%' THEN '/single-session-intro'
@@ -1987,8 +2002,9 @@ async function getTraffic(env, url) {
               COUNT(DISTINCT CASE WHEN event_name = 'page_view' AND (utm_source IS NOT NULL OR utm_medium IS NOT NULL OR utm_campaign IS NOT NULL) THEN session_id ELSE NULL END) AS utm_sessions,
               COUNT(DISTINCT CASE WHEN event_name = 'ticket_view' THEN session_id ELSE NULL END) AS ticket_sessions,
               COUNT(DISTINCT CASE WHEN event_name IN (${LEAD_INTENT_EVENT_SQL}) THEN session_id ELSE NULL END) AS lead_sessions,
+              COUNT(DISTINCT CASE WHEN event_name IN (${FREE_TRIAL_CLICK_EVENT_SQL}) THEN session_id ELSE NULL END) AS free_trial_click_sessions,
               COUNT(DISTINCT CASE WHEN event_name = 'free_trial_reservation_submit' THEN session_id ELSE NULL END) AS free_trial_sessions,
-              COUNT(DISTINCT CASE WHEN event_name = 'course_purchase_click' THEN session_id ELSE NULL END) AS purchase_click_sessions,
+              COUNT(DISTINCT CASE WHEN event_name IN (${PURCHASE_CLICK_EVENT_SQL}) THEN session_id ELSE NULL END) AS purchase_click_sessions,
               COUNT(DISTINCT CASE WHEN event_name = 'shopline_checkout_submit' THEN session_id ELSE NULL END) AS checkout_sessions,
               COUNT(DISTINCT CASE WHEN event_name = 'scroll_depth' AND COALESCE(scroll_depth, max_scroll_depth, 0) >= 50 THEN session_id ELSE NULL END) AS scroll_50_sessions,
               COUNT(DISTINCT CASE WHEN event_name = 'page_exit' THEN session_id ELSE NULL END) AS exit_sessions,
@@ -2014,8 +2030,9 @@ async function getTraffic(env, url) {
               COUNT(DISTINCT CASE WHEN event_name = 'page_view' AND (utm_source IS NOT NULL OR utm_medium IS NOT NULL OR utm_campaign IS NOT NULL) THEN session_id ELSE NULL END) AS utm_sessions,
               COUNT(DISTINCT CASE WHEN event_name = 'ticket_view' THEN session_id ELSE NULL END) AS ticket_sessions,
               COUNT(DISTINCT CASE WHEN event_name IN (${LEAD_INTENT_EVENT_SQL}) THEN session_id ELSE NULL END) AS lead_sessions,
+              COUNT(DISTINCT CASE WHEN event_name IN (${FREE_TRIAL_CLICK_EVENT_SQL}) THEN session_id ELSE NULL END) AS free_trial_click_sessions,
               COUNT(DISTINCT CASE WHEN event_name = 'free_trial_reservation_submit' THEN session_id ELSE NULL END) AS free_trial_sessions,
-              COUNT(DISTINCT CASE WHEN event_name = 'course_purchase_click' THEN session_id ELSE NULL END) AS purchase_click_sessions,
+              COUNT(DISTINCT CASE WHEN event_name IN (${PURCHASE_CLICK_EVENT_SQL}) THEN session_id ELSE NULL END) AS purchase_click_sessions,
               COUNT(DISTINCT CASE WHEN event_name = 'shopline_checkout_submit' THEN session_id ELSE NULL END) AS checkout_sessions
        FROM tracking_events
        WHERE created_at >= datetime('now', '${lookbackSql}')
@@ -2042,8 +2059,9 @@ async function getTraffic(env, url) {
               COALESCE(SUM(CASE WHEN event_name = 'page_view' THEN 1 ELSE 0 END), 0) AS page_views,
               COUNT(DISTINCT CASE WHEN event_name = 'ticket_view' THEN session_id ELSE NULL END) AS ticket_sessions,
               COUNT(DISTINCT CASE WHEN event_name IN (${LEAD_INTENT_EVENT_SQL}) THEN session_id ELSE NULL END) AS lead_sessions,
+              COUNT(DISTINCT CASE WHEN event_name IN (${FREE_TRIAL_CLICK_EVENT_SQL}) THEN session_id ELSE NULL END) AS free_trial_click_sessions,
               COUNT(DISTINCT CASE WHEN event_name = 'free_trial_reservation_submit' THEN session_id ELSE NULL END) AS free_trial_sessions,
-              COUNT(DISTINCT CASE WHEN event_name = 'course_purchase_click' THEN session_id ELSE NULL END) AS purchase_click_sessions,
+              COUNT(DISTINCT CASE WHEN event_name IN (${PURCHASE_CLICK_EVENT_SQL}) THEN session_id ELSE NULL END) AS purchase_click_sessions,
               COALESCE(SUM(CASE WHEN event_name IN (${TRAFFIC_ACTION_EVENT_SQL}) THEN 1 ELSE 0 END), 0) AS actions,
               COALESCE(SUM(CASE WHEN event_name IN (${CHECKOUT_INTENT_EVENT_SQL}) THEN 1 ELSE 0 END), 0) AS checkout_intents,
               COALESCE(SUM(CASE WHEN event_name = 'page_exit' AND is_bounce = 1 THEN 1 ELSE 0 END), 0) AS bounces,
@@ -2068,8 +2086,9 @@ async function getTraffic(env, url) {
               COUNT(DISTINCT CASE WHEN event_name = 'page_view' AND COALESCE(first_source_channel, source_channel, '') = 'paid' THEN session_id ELSE NULL END) AS paid_sessions,
               COUNT(DISTINCT CASE WHEN event_name = 'ticket_view' THEN session_id ELSE NULL END) AS ticket_sessions,
               COUNT(DISTINCT CASE WHEN event_name IN (${LEAD_INTENT_EVENT_SQL}) THEN session_id ELSE NULL END) AS lead_sessions,
+              COUNT(DISTINCT CASE WHEN event_name IN (${FREE_TRIAL_CLICK_EVENT_SQL}) THEN session_id ELSE NULL END) AS free_trial_click_sessions,
               COUNT(DISTINCT CASE WHEN event_name = 'free_trial_reservation_submit' THEN session_id ELSE NULL END) AS free_trial_sessions,
-              COUNT(DISTINCT CASE WHEN event_name = 'course_purchase_click' THEN session_id ELSE NULL END) AS purchase_click_sessions,
+              COUNT(DISTINCT CASE WHEN event_name IN (${PURCHASE_CLICK_EVENT_SQL}) THEN session_id ELSE NULL END) AS purchase_click_sessions,
               COUNT(DISTINCT CASE WHEN event_name = 'shopline_checkout_submit' THEN session_id ELSE NULL END) AS checkout_sessions,
               COALESCE(SUM(CASE WHEN event_name IN (${CHECKOUT_INTENT_EVENT_SQL}) THEN 1 ELSE 0 END), 0) AS checkout_intents,
               COALESCE(SUM(CASE WHEN event_name IN (${TRAFFIC_ACTION_EVENT_SQL}) THEN 1 ELSE 0 END), 0) AS actions,
@@ -2096,6 +2115,7 @@ async function getTraffic(env, url) {
               COALESCE(SUM(CASE WHEN event_name = 'page_view' THEN 1 ELSE 0 END), 0) AS page_views,
               COUNT(DISTINCT CASE WHEN event_name = 'ticket_view' THEN session_id ELSE NULL END) AS ticket_sessions,
               COUNT(DISTINCT CASE WHEN event_name IN (${LEAD_INTENT_EVENT_SQL}) THEN session_id ELSE NULL END) AS lead_sessions,
+              COUNT(DISTINCT CASE WHEN event_name IN (${FREE_TRIAL_CLICK_EVENT_SQL}) THEN session_id ELSE NULL END) AS free_trial_click_sessions,
               COUNT(DISTINCT CASE WHEN event_name = 'free_trial_reservation_submit' THEN session_id ELSE NULL END) AS free_trial_sessions,
               COALESCE(SUM(CASE WHEN event_name IN (${CHECKOUT_INTENT_EVENT_SQL}) THEN 1 ELSE 0 END), 0) AS checkout_intents,
               COALESCE(SUM(CASE WHEN event_name IN (${TRAFFIC_ACTION_EVENT_SQL}) THEN 1 ELSE 0 END), 0) AS actions,
@@ -2135,8 +2155,9 @@ async function getTraffic(env, url) {
               COUNT(DISTINCT CASE WHEN event_name = 'page_view' THEN session_id ELSE NULL END) AS sessions,
               COALESCE(SUM(CASE WHEN event_name = 'page_view' THEN 1 ELSE 0 END), 0) AS page_views,
               COUNT(DISTINCT CASE WHEN event_name IN (${LEAD_INTENT_EVENT_SQL}) THEN session_id ELSE NULL END) AS lead_sessions,
+              COUNT(DISTINCT CASE WHEN event_name IN (${FREE_TRIAL_CLICK_EVENT_SQL}) THEN session_id ELSE NULL END) AS free_trial_click_sessions,
               COUNT(DISTINCT CASE WHEN event_name = 'free_trial_reservation_submit' THEN session_id ELSE NULL END) AS free_trial_sessions,
-              COUNT(DISTINCT CASE WHEN event_name = 'course_purchase_click' THEN session_id ELSE NULL END) AS purchase_click_sessions,
+              COUNT(DISTINCT CASE WHEN event_name IN (${PURCHASE_CLICK_EVENT_SQL}) THEN session_id ELSE NULL END) AS purchase_click_sessions,
               COALESCE(SUM(CASE WHEN event_name IN (${CHECKOUT_INTENT_EVENT_SQL}) THEN 1 ELSE 0 END), 0) AS checkout_intents,
               COALESCE(SUM(CASE WHEN event_name IN (${TRAFFIC_ACTION_EVENT_SQL}) THEN 1 ELSE 0 END), 0) AS actions,
               COALESCE(SUM(CASE WHEN event_name = 'page_exit' THEN 1 ELSE 0 END), 0) AS exits,
@@ -2320,6 +2341,7 @@ async function getTraffic(env, url) {
       utmSessions: toNumber(overview.utm_sessions),
       ticketSessions: toNumber(overview.ticket_sessions),
       leadSessions: toNumber(overview.lead_sessions),
+      freeTrialClickSessions: toNumber(overview.free_trial_click_sessions),
       freeTrialSessions: toNumber(overview.free_trial_sessions),
       purchaseClickSessions: toNumber(overview.purchase_click_sessions),
       checkoutSessions: toNumber(overview.checkout_sessions),
@@ -2340,6 +2362,7 @@ async function getTraffic(env, url) {
         utmSessions: toNumber(row.utm_sessions),
         ticketSessions: toNumber(row.ticket_sessions),
         leadSessions: toNumber(row.lead_sessions),
+        freeTrialClickSessions: toNumber(row.free_trial_click_sessions),
         freeTrialSessions: toNumber(row.free_trial_sessions),
         purchaseClickSessions: toNumber(row.purchase_click_sessions),
         checkoutSessions: toNumber(row.checkout_sessions),
@@ -2357,6 +2380,7 @@ async function getTraffic(env, url) {
       pageViews: toNumber(row.page_views),
       ticketSessions: toNumber(row.ticket_sessions),
       leadSessions: toNumber(row.lead_sessions),
+      freeTrialClickSessions: toNumber(row.free_trial_click_sessions),
       freeTrialSessions: toNumber(row.free_trial_sessions),
       purchaseClickSessions: toNumber(row.purchase_click_sessions),
       actions: toNumber(row.actions),
@@ -2377,6 +2401,7 @@ async function getTraffic(env, url) {
       paidSessions: toNumber(row.paid_sessions),
       ticketSessions: toNumber(row.ticket_sessions),
       leadSessions: toNumber(row.lead_sessions),
+      freeTrialClickSessions: toNumber(row.free_trial_click_sessions),
       freeTrialSessions: toNumber(row.free_trial_sessions),
       purchaseClickSessions: toNumber(row.purchase_click_sessions),
       checkoutSessions: toNumber(row.checkout_sessions),
@@ -2391,6 +2416,7 @@ async function getTraffic(env, url) {
       pageViews: toNumber(row.page_views),
       ticketSessions: toNumber(row.ticket_sessions),
       leadSessions: toNumber(row.lead_sessions),
+      freeTrialClickSessions: toNumber(row.free_trial_click_sessions),
       freeTrialSessions: toNumber(row.free_trial_sessions),
       actions: toNumber(row.actions),
       checkoutIntents: toNumber(row.checkout_intents),
@@ -2416,6 +2442,7 @@ async function getTraffic(env, url) {
       sessions: toNumber(row.sessions),
       pageViews: toNumber(row.page_views),
       leadSessions: toNumber(row.lead_sessions),
+      freeTrialClickSessions: toNumber(row.free_trial_click_sessions),
       freeTrialSessions: toNumber(row.free_trial_sessions),
       purchaseClickSessions: toNumber(row.purchase_click_sessions),
       actions: toNumber(row.actions),
@@ -2631,7 +2658,7 @@ async function getPeriodMetrics(env, startAt, endAt) {
               COUNT(DISTINCT CASE WHEN event_name = 'page_view' AND device_type = 'mobile' THEN session_id ELSE NULL END) AS mobile_sessions,
               COUNT(DISTINCT CASE WHEN event_name = 'page_view' AND device_type = 'desktop' THEN session_id ELSE NULL END) AS desktop_sessions,
               COUNT(DISTINCT CASE WHEN event_name IN (${LEAD_INTENT_EVENT_SQL}) THEN session_id ELSE NULL END) AS lead_sessions,
-              COUNT(DISTINCT CASE WHEN event_name = 'course_purchase_click' THEN session_id ELSE NULL END) AS add_to_cart_sessions,
+              COUNT(DISTINCT CASE WHEN event_name IN (${PURCHASE_CLICK_EVENT_SQL}) THEN session_id ELSE NULL END) AS add_to_cart_sessions,
               COUNT(DISTINCT CASE WHEN event_name = 'shopline_checkout_submit' THEN session_id ELSE NULL END) AS checkout_sessions,
               COUNT(DISTINCT CASE WHEN event_name = 'free_trial_reservation_submit' THEN session_id ELSE NULL END) AS free_trial_sessions
        FROM tracking_events
