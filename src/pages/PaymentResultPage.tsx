@@ -4,6 +4,12 @@ import { Header } from '../components/layout/Header'
 import { Button } from '../components/ui/Button'
 import { siteConfig } from '../data/landingContent'
 import { useTracking } from '../hooks/useTracking'
+import {
+  buildFreeTrialLineConfirmPath,
+  buildLiffUrl,
+  getBuildTimeLineConfirmLiffId,
+  getRuntimeLineConfirmLiffId,
+} from '../lib/freeTrialLineConfirm'
 
 type OrderStatus =
   | 'pending'
@@ -217,9 +223,9 @@ function getLineHandoffCopy(status: string, isFreeTrialResult: boolean) {
 
   if (isFreeTrialResult) {
     return {
-      title: '到 LINE 與專員確認報名',
-      body: '免費預約送出後，請加入官方 LINE，把預約編號傳給同仁，確認報名、入場與現場注意事項。',
-      buttonLabel: '到 LINE 確認報名',
+      title: 'LINE 快速自助確認',
+      body: '帥氣可愛的專員將聯繫你，幫您安排入館時間。不想等電話聯繫？LINE 快速自助確認，直接確認預約時間！',
+      buttonLabel: 'LINE 快速自助確認',
       intent: 'free_trial_booking_confirmation',
     }
   }
@@ -245,6 +251,9 @@ export function PaymentResultPage() {
   const { track } = useTracking()
   const [data, setData] = useState<OrderStatusResponse | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [lineConfirmLiffId, setLineConfirmLiffId] = useState(
+    getBuildTimeLineConfirmLiffId,
+  )
   const params = new URLSearchParams(window.location.search)
   const referenceId = params.get('referenceId') || ''
   const resultMode = params.get('mode')
@@ -264,6 +273,37 @@ export function PaymentResultPage() {
     () => getLineHandoffCopy(displayStatus, isFreeTrialResult),
     [displayStatus, isFreeTrialResult],
   )
+  const freeTrialLineConfirmPath = referenceId
+    ? buildFreeTrialLineConfirmPath(referenceId)
+    : '/line/free-trial-confirm'
+  const lineCtaHref =
+    isFreeTrialResult && referenceId
+      ? lineConfirmLiffId
+        ? buildLiffUrl(lineConfirmLiffId, freeTrialLineConfirmPath)
+        : freeTrialLineConfirmPath
+      : siteConfig.lineUrl
+
+  useEffect(() => {
+    if (!isFreeTrialResult) return undefined
+
+    let active = true
+
+    fetch('/api/config', {
+      headers: { accept: 'application/json' },
+      cache: 'no-store',
+    })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((config) => {
+        if (!active) return
+        const runtimeLiffId = getRuntimeLineConfirmLiffId(config)
+        if (runtimeLiffId) setLineConfirmLiffId(runtimeLiffId)
+      })
+      .catch(() => undefined)
+
+    return () => {
+      active = false
+    }
+  }, [isFreeTrialResult])
 
   useEffect(() => {
     if (!referenceId) {
@@ -383,19 +423,20 @@ export function PaymentResultPage() {
 
           <div className="mt-7 flex flex-col gap-3 sm:flex-row">
             <Button
-              href={siteConfig.lineUrl}
+              href={lineCtaHref}
+              target={isFreeTrialResult ? '_self' : undefined}
               variant="primary"
               size="lg"
               className="w-full"
-              data-cta={isFreeTrialResult ? 'free-trial-result-line' : 'payment-result-line'}
+              data-cta={isFreeTrialResult ? 'free-trial-line-confirm' : 'payment-result-line'}
               onClick={() =>
                 track({
                   event: isFreeTrialResult
-                    ? 'free_trial_result_line_click'
+                    ? 'free_trial_line_confirm_click'
                     : 'payment_result_line_click',
                   params: {
                     cta_id: isFreeTrialResult
-                      ? 'free-trial-result-line'
+                      ? 'free-trial-line-confirm'
                       : 'payment-result-line',
                     reference_id: referenceId,
                     reference_type: isFreeTrialResult ? 'reservation' : 'order',
@@ -403,8 +444,10 @@ export function PaymentResultPage() {
                     display_status: displayStatus,
                     line_handoff_intent: lineHandoffCopy.intent,
                   },
-                  metaStandardEvent: 'Lead',
-                  lineEventName: 'LeadClick',
+                  metaStandardEvent: isFreeTrialResult ? 'Contact' : 'Lead',
+                  lineEventName: isFreeTrialResult
+                    ? 'FreeTrialLineConfirm'
+                    : 'LeadClick',
                 })
               }
             >
@@ -432,7 +475,7 @@ export function PaymentResultPage() {
                     handoff_intent: lineHandoffCopy.intent,
                     channel: 'messenger',
                   },
-                  metaStandardEvent: 'Lead',
+                  metaStandardEvent: isFreeTrialResult ? 'Contact' : 'Lead',
                 })
               }
             >
