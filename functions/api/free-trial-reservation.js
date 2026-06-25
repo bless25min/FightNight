@@ -221,10 +221,6 @@ export async function onRequestPost({ request, env, waitUntil }) {
     const course = resolveCourseFromCatalog(body?.course)
     assertCourse(course)
 
-    if (course.category !== 'SINGLE_SESSION') {
-      throw new Error('免費體驗僅開放 UFC GYM 單堂體驗課程。')
-    }
-
     const buyer = {
       name: trimText(body?.buyer?.name, 120),
       phone: normalizePhone(body?.buyer?.phone),

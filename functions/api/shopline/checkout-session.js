@@ -341,7 +341,10 @@ export function resolveCourseFromCatalog(submittedCourse) {
   }
   const courseCategory =
     normalizeCourseCategory(submittedCourse?.category) ?? baseCourse.category
-  if (!isWeeklyCourseAvailableForCategory(baseCourse, courseCategory)) {
+  if (
+    courseCategory !== normalizeCourseCategory(baseCourse.category) &&
+    !isWeeklyCourseAvailableForCategory(baseCourse, courseCategory)
+  ) {
     throw new Error('Course is not available for online checkout')
   }
   const catalogCourse = getWeeklyCourseForCategory(baseCourse, courseCategory)
