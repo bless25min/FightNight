@@ -22,7 +22,9 @@ export type LiffInstance = {
     withLoginOnExternalBrowser?: boolean
   }) => Promise<void>
   isLoggedIn: () => boolean
+  isInClient?: () => boolean
   login: (config?: { redirectUri?: string }) => void
+  closeWindow?: () => void
   getAccessToken?: () => string | null
   getIDToken?: () => string | null
   getDecodedIDToken?: () => LiffDecodedIdToken | null

@@ -85,7 +85,7 @@ test('binds a free trial reservation to LINE and sends the confirmation card', a
   assert.equal(calls.upserted.lineUserId, 'U123')
   assert.deepEqual(calls.notified, {
     referenceId: 'FR123',
-    options: { force: true },
+    options: undefined,
   })
 })
 

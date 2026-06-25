@@ -350,7 +350,7 @@ export async function confirmFreeTrialLineReservation({
     }
   }
 
-  const lineNotify = await notifyLine(env, normalizedReferenceId, { force: true })
+  const lineNotify = await notifyLine(env, normalizedReferenceId)
 
   return {
     ok: true,

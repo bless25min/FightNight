@@ -9,7 +9,11 @@ import {
   getBuildTimeLineConfirmLiffId,
   getRuntimeLineConfirmLiffId,
 } from '../lib/freeTrialLineConfirm'
-import { loadLiffSdk } from '../lib/liff'
+import {
+  isLineNotifyDelivered,
+  isLineNotifyPending,
+} from '../lib/freeTrialLineConfirmStatus'
+import { loadLiffSdk, type LiffInstance } from '../lib/liff'
 import { saveLineContext } from '../lib/lineContext'
 
 type ConfirmStatus =
@@ -19,6 +23,7 @@ type ConfirmStatus =
   | 'login'
   | 'friend-required'
   | 'confirming'
+  | 'sending'
   | 'success'
   | 'partial'
   | 'error'
@@ -53,6 +58,23 @@ function getReferenceIdFromLocation() {
   return new URLSearchParams(hashQuery).get('referenceId') || ''
 }
 
+function buildCleanConfirmPath(referenceId: string) {
+  const params = new URLSearchParams({ referenceId })
+  return `/line/free-trial-confirm?${params.toString()}`
+}
+
+function getCleanConfirmUrl(referenceId: string) {
+  return new URL(buildCleanConfirmPath(referenceId), window.location.origin).toString()
+}
+
+function normalizeConfirmLocation(referenceId: string) {
+  const cleanPath = buildCleanConfirmPath(referenceId)
+  const currentPath = `${window.location.pathname}${window.location.search}`
+  if (currentPath !== cleanPath || window.location.hash) {
+    window.history.replaceState(null, '', cleanPath)
+  }
+}
+
 function getLiffEmail() {
   const email = window.liff?.getDecodedIDToken?.()?.email
   return typeof email === 'string' && email.trim() ? email.trim() : undefined
@@ -72,10 +94,44 @@ async function getLineConfirmLiffId() {
   }
 }
 
-function isLineNotifySent(status: string | undefined) {
-  return ['sent', 'skipped_already_sent', 'skipped_in_progress_or_sent'].includes(
-    status || '',
-  )
+function getFriendRequestStorageKey(referenceId: string) {
+  return `ufcgym:free-trial-line-friend-request:${referenceId}`
+}
+
+function hasRequestedFriendship(referenceId: string) {
+  try {
+    return window.sessionStorage.getItem(getFriendRequestStorageKey(referenceId)) === '1'
+  } catch {
+    return false
+  }
+}
+
+function markFriendshipRequested(referenceId: string) {
+  try {
+    window.sessionStorage.setItem(getFriendRequestStorageKey(referenceId), '1')
+  } catch {
+    // Session storage may be unavailable in some in-app browsers.
+  }
+}
+
+async function requestFriendshipAndRefresh(liff: LiffInstance, referenceId: string) {
+  markFriendshipRequested(referenceId)
+  try {
+    await liff.requestFriendship()
+    const nextFriendship = await liff.getFriendship()
+    return nextFriendship.friendFlag
+  } catch {
+    return false
+  }
+}
+
+function closeLiffWindow() {
+  const liff = window.liff
+  if (liff?.closeWindow && (!liff.isInClient || liff.isInClient())) {
+    liff.closeWindow()
+    return true
+  }
+  return false
 }
 
 function getStatusCopy(status: ConfirmStatus) {
@@ -83,7 +139,7 @@ function getStatusCopy(status: ConfirmStatus) {
     return {
       eyebrow: 'LINE CONFIRMED',
       title: 'LINE 確認卡已送出。',
-      body: '預約已綁定你的 LINE，確認卡已傳到聊天室。點開卡片按鈕後，就能在 LINE 對話中完成確認。',
+      body: '確認卡已傳到你的 LINE 聊天室。請回到 LINE，點開卡片完成預約確認。',
     }
   }
   if (status === 'partial') {
@@ -93,11 +149,18 @@ function getStatusCopy(status: ConfirmStatus) {
       body: '請先保留這組預約編號，直接到 LINE 私訊專員協助確認入館時間。',
     }
   }
+  if (status === 'sending') {
+    return {
+      eyebrow: 'LINE SENDING',
+      title: '確認卡正在送出中。',
+      body: '系統正在把確認卡送到你的 LINE 聊天室。請回到 LINE 查看；如果稍後仍沒收到，再請專員協助確認。',
+    }
+  }
   if (status === 'friend-required') {
     return {
       eyebrow: 'ADD LINE FRIEND',
       title: '請先加入官方 LINE 好友。',
-      body: '加入好友後回到這個頁面，系統才能把預約確認卡傳到你的 LINE 聊天室。',
+      body: '如果剛剛沒有完成加入好友，可以再開啟一次加好友；完成後系統會繼續送出確認卡。',
     }
   }
   if (status === 'login') {
@@ -151,6 +214,7 @@ export function LineFreeTrialConfirmPage() {
   )
   const [error, setError] = useState('')
   const [lineNotifyStatus, setLineNotifyStatus] = useState('')
+  const [friendRetrying, setFriendRetrying] = useState(false)
 
   useEffect(() => {
     if (!referenceId || hasStarted.current) return
@@ -179,6 +243,7 @@ export function LineFreeTrialConfirmPage() {
           liffId,
           withLoginOnExternalBrowser: false,
         })
+        normalizeConfirmLocation(referenceId)
 
         if (!liff.isLoggedIn()) {
           if (!cancelled) setStatus('login')
@@ -187,7 +252,7 @@ export function LineFreeTrialConfirmPage() {
             params: { reference_id: referenceId },
             lineEventName: 'FreeTrialLineLogin',
           })
-          liff.login({ redirectUri: window.location.href })
+          liff.login({ redirectUri: getCleanConfirmUrl(referenceId) })
           return
         }
 
@@ -199,12 +264,8 @@ export function LineFreeTrialConfirmPage() {
 
         if (!isFriend) {
           if (!cancelled) setStatus('friend-required')
-          try {
-            await liff.requestFriendship()
-            const nextFriendship = await liff.getFriendship()
-            isFriend = nextFriendship.friendFlag
-          } catch {
-            isFriend = false
+          if (!hasRequestedFriendship(referenceId)) {
+            isFriend = await requestFriendshipAndRefresh(liff, referenceId)
           }
         }
 
@@ -255,20 +316,47 @@ export function LineFreeTrialConfirmPage() {
         }
 
         const notifyStatus = data.lineNotify?.status || ''
+        const notifyDelivered = isLineNotifyDelivered(notifyStatus)
+        const notifyPending = isLineNotifyPending(notifyStatus)
         if (!cancelled) {
           setLineNotifyStatus(notifyStatus)
-          setStatus(isLineNotifySent(notifyStatus) ? 'success' : 'partial')
+          setStatus(
+            notifyDelivered ? 'success' : notifyPending ? 'sending' : 'partial',
+          )
         }
 
-        track({
-          event: 'free_trial_line_confirm_success',
-          params: {
-            reference_id: referenceId,
-            line_notify_status: notifyStatus,
-          },
-          metaStandardEvent: 'Schedule',
-          lineEventName: 'FreeTrialConfirmed',
-        })
+        if (notifyDelivered) {
+          track({
+            event: 'free_trial_line_confirm_success',
+            params: {
+              reference_id: referenceId,
+              line_notify_status: notifyStatus,
+            },
+            metaStandardEvent: 'Schedule',
+            lineEventName: 'FreeTrialConfirmed',
+          })
+          window.setTimeout(() => {
+            if (!cancelled) closeLiffWindow()
+          }, 1200)
+        } else if (notifyPending) {
+          track({
+            event: 'free_trial_line_confirm_pending',
+            params: {
+              reference_id: referenceId,
+              line_notify_status: notifyStatus,
+            },
+            lineEventName: 'FreeTrialConfirmPending',
+          })
+        } else {
+          track({
+            event: 'free_trial_line_confirm_partial',
+            params: {
+              reference_id: referenceId,
+              line_notify_status: notifyStatus,
+            },
+            lineEventName: 'FreeTrialConfirmPartial',
+          })
+        }
       } catch (confirmError) {
         const message =
           confirmError instanceof Error
@@ -296,8 +384,36 @@ export function LineFreeTrialConfirmPage() {
     }
   }, [referenceId, track])
 
+  const handleFriendRetry = async () => {
+    const liff = window.liff
+    if (!referenceId || !liff) {
+      setError('LINE SDK 尚未完成，請重新開啟確認連結。')
+      setStatus('error')
+      return
+    }
+
+    setFriendRetrying(true)
+    track({
+      event: 'free_trial_line_confirm_friend_retry',
+      params: { reference_id: referenceId },
+      lineEventName: 'FreeTrialAddFriendRetry',
+    })
+
+    const isFriend = await requestFriendshipAndRefresh(liff, referenceId)
+    if (isFriend) {
+      window.location.reload()
+      return
+    }
+
+    setFriendRetrying(false)
+    setStatus('friend-required')
+  }
+
   const copy = getStatusCopy(status)
-  const isBusy = ['loading', 'login', 'confirming'].includes(status)
+  const isBusy = ['loading', 'login', 'confirming'].includes(status) || friendRetrying
+  const shouldShowLineReturnButton = status === 'success' || status === 'sending'
+  const shouldShowFriendRetryButton = status === 'friend-required'
+  const shouldShowSupportButton = ['friend-required', 'partial', 'error', 'missing-config', 'missing-reference'].includes(status)
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-abyss text-pearl">
@@ -320,7 +436,7 @@ export function LineFreeTrialConfirmPage() {
             </p>
           )}
 
-          {lineNotifyStatus && status === 'partial' && (
+          {lineNotifyStatus && ['partial', 'sending'].includes(status) && (
             <p className="mt-3 text-xs leading-relaxed text-coral/80">
               LINE 發送狀態：{lineNotifyStatus}
             </p>
@@ -333,27 +449,63 @@ export function LineFreeTrialConfirmPage() {
           )}
 
           <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-            <Button
-              href={siteConfig.lineUrl}
-              variant={status === 'success' ? 'primary' : 'secondary'}
-              size="lg"
-              className="w-full"
-              data-cta="free-trial-line-confirm-open-chat"
-              onClick={() =>
-                track({
-                  event: 'free_trial_line_confirm_open_chat',
-                  params: {
-                    reference_id: referenceId,
-                    confirm_status: status,
-                    line_notify_status: lineNotifyStatus,
-                  },
-                  metaStandardEvent: 'Contact',
-                  lineEventName: 'FreeTrialLineChat',
-                })
-              }
-            >
-              打開 LINE 聊天室
-            </Button>
+            {shouldShowLineReturnButton && (
+              <Button
+                variant="primary"
+                size="lg"
+                className="w-full"
+                data-cta="free-trial-line-confirm-close"
+                onClick={() => {
+                  track({
+                    event: 'free_trial_line_confirm_close',
+                    params: {
+                      reference_id: referenceId,
+                      confirm_status: status,
+                      line_notify_status: lineNotifyStatus,
+                    },
+                    lineEventName: 'FreeTrialLineClose',
+                  })
+                  closeLiffWindow()
+                }}
+              >
+                {status === 'sending' ? '回到 LINE 等確認卡' : '回到 LINE 查看確認卡'}
+              </Button>
+            )}
+            {shouldShowFriendRetryButton && (
+              <Button
+                variant="primary"
+                size="lg"
+                className="w-full"
+                data-cta="free-trial-line-confirm-friend-retry"
+                disabled={friendRetrying}
+                onClick={handleFriendRetry}
+              >
+                {friendRetrying ? '正在開啟 LINE 加好友' : '再次開啟 LINE 加好友'}
+              </Button>
+            )}
+            {shouldShowSupportButton && (
+              <Button
+                href={siteConfig.lineUrl}
+                variant="secondary"
+                size="lg"
+                className="w-full"
+                data-cta="free-trial-line-confirm-open-chat"
+                onClick={() =>
+                  track({
+                    event: 'free_trial_line_confirm_open_chat',
+                    params: {
+                      reference_id: referenceId,
+                      confirm_status: status,
+                      line_notify_status: lineNotifyStatus,
+                    },
+                    metaStandardEvent: 'Contact',
+                    lineEventName: 'FreeTrialLineChat',
+                  })
+                }
+              >
+                找專員協助確認
+              </Button>
+            )}
             <Button
               href="/"
               variant="ghost"

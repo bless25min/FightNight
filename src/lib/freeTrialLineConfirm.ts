@@ -29,5 +29,5 @@ export function buildFreeTrialLineConfirmPath(referenceId: string) {
 export function buildLiffUrl(liffId: string, returnPath: string) {
   const encodedLiffId = encodeURIComponent(liffId)
   const stateUrl = new URL(returnPath, 'https://ufcgym.local')
-  return `https://liff.line.me/${encodedLiffId}${stateUrl.pathname}${stateUrl.search}${stateUrl.hash}`
+  return `https://line.me/R/app/${encodedLiffId}${stateUrl.search}${stateUrl.hash}`
 }
