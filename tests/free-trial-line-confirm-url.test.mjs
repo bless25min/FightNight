@@ -36,6 +36,7 @@ test('builds LINE app LIFF URL without duplicating the endpoint path', async () 
     buildFreeTrialLineConfirmPath,
     buildVenuePassLineConfirmPath,
     buildLiffUrl,
+    buildLiffStateUrl,
   } =
     await importFreeTrialLineConfirm()
   const returnPath = buildFreeTrialLineConfirmPath('FR123')
@@ -50,5 +51,9 @@ test('builds LINE app LIFF URL without duplicating the endpoint path', async () 
   assert.equal(
     buildLiffUrl('2009987027-MnsDjd6l', venuePassReturnPath),
     'https://line.me/R/app/2009987027-MnsDjd6l?referenceId=VP123',
+  )
+  assert.equal(
+    buildLiffStateUrl('2009987027-MnsDjd6l', venuePassReturnPath),
+    'https://line.me/R/app/2009987027-MnsDjd6l?liff.state=%2Fline%2Fvenue-pass-confirm%3FreferenceId%3DVP123',
   )
 })

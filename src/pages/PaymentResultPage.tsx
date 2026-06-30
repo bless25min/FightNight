@@ -7,6 +7,7 @@ import { useTracking } from '../hooks/useTracking'
 import {
   buildFreeTrialLineConfirmPath,
   buildVenuePassLineConfirmPath,
+  buildLiffStateUrl,
   buildLiffUrl,
   getBuildTimeLineConfirmLiffId,
   getRuntimeLineConfirmLiffId,
@@ -268,9 +269,9 @@ function getLineHandoffCopy(
 
   if (isVenuePassResult) {
     return {
-      title: '加入 LINE 確認七日通行',
-      body: '請加入官方 LINE，將登記編號傳給同仁確認七日通行、可使用時段與入館方式。',
-      buttonLabel: '到 LINE 確認七日通行',
+      title: 'LINE 快速自助確認',
+      body: '帥氣可愛的專員將聯繫你，幫您安排入館時間。不想等電話聯繫？LINE 快速自助確認，直接領取七日通行確認卡！',
+      buttonLabel: 'LINE 快速自助確認',
       intent: 'venue_pass_line_confirmation',
     }
   }
@@ -333,7 +334,7 @@ export function PaymentResultPage() {
         : freeTrialLineConfirmPath
       : isVenuePassResult && referenceId
         ? lineConfirmLiffId
-          ? buildLiffUrl(lineConfirmLiffId, venuePassLineConfirmPath)
+          ? buildLiffStateUrl(lineConfirmLiffId, venuePassLineConfirmPath)
           : venuePassLineConfirmPath
       : siteConfig.lineUrl
 

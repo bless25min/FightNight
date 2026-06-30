@@ -38,3 +38,8 @@ export function buildLiffUrl(liffId: string, returnPath: string) {
   const stateUrl = new URL(returnPath, 'https://ufcgym.local')
   return `https://line.me/R/app/${encodedLiffId}${stateUrl.search}${stateUrl.hash}`
 }
+
+export function buildLiffStateUrl(liffId: string, returnPath: string) {
+  const encodedLiffId = encodeURIComponent(liffId)
+  return `https://line.me/R/app/${encodedLiffId}?liff.state=${encodeURIComponent(returnPath)}`
+}
