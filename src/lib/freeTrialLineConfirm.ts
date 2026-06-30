@@ -26,6 +26,13 @@ export function buildFreeTrialLineConfirmPath(referenceId: string) {
   return `/line/free-trial-confirm?${params.toString()}`
 }
 
+export function buildVenuePassLineConfirmPath(referenceId: string) {
+  const params = new URLSearchParams({
+    referenceId,
+  })
+  return `/line/venue-pass-confirm?${params.toString()}`
+}
+
 export function buildLiffUrl(liffId: string, returnPath: string) {
   const encodedLiffId = encodeURIComponent(liffId)
   const stateUrl = new URL(returnPath, 'https://ufcgym.local')

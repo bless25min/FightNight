@@ -6,6 +6,7 @@ import { siteConfig } from '../data/landingContent'
 import { useTracking } from '../hooks/useTracking'
 import {
   buildFreeTrialLineConfirmPath,
+  buildVenuePassLineConfirmPath,
   buildLiffUrl,
   getBuildTimeLineConfirmLiffId,
   getRuntimeLineConfirmLiffId,
@@ -16,6 +17,7 @@ type OrderStatus =
   | 'payment_processing'
   | 'free_reserved'
   | 'free_attended'
+  | 'venue_pass_lead'
   | 'paid'
   | 'expired'
   | 'failed'
@@ -77,6 +79,13 @@ const statusCopy: Record<
     eyebrow: 'TRIAL COMPLETE',
     title: '免費體驗已完成。',
     description: '這筆免費體驗紀錄已完成報到。若還需要確認後續課程，請到 LINE 與專員聯繫。',
+    tone: 'border-neon/35 bg-neon/10 text-neon',
+  },
+  venue_pass_lead: {
+    eyebrow: 'VENUE PASS REQUEST',
+    title: '場館七日通行登記完成。',
+    description:
+      '我們已收到你的場館七日通行登記資料，現場同仁會協助確認可使用時段與入館方式。',
     tone: 'border-neon/35 bg-neon/10 text-neon',
   },
   pending: {
@@ -178,7 +187,13 @@ function formatDate(iso: string) {
 }
 
 function getDisplayStatus(data: OrderStatusResponse | null, mode: string | null) {
-  const localStatus = data?.order?.status || (mode === 'free-trial' ? 'free_reserved' : 'pending')
+  const localStatus =
+    data?.order?.status ||
+    (mode === 'free-trial'
+      ? 'free_reserved'
+      : mode === 'venue-pass'
+        ? 'venue_pass_lead'
+        : 'pending')
   const diagnosis = data?.provider?.diagnosis
   const canUseProviderDiagnosis = [
     'pending',
@@ -191,6 +206,23 @@ function getDisplayStatus(data: OrderStatusResponse | null, mode: string | null)
   }
 
   return localStatus
+}
+
+function createVenuePassFallbackData(referenceId: string): OrderStatusResponse {
+  return {
+    order: {
+      referenceId,
+      status: 'venue_pass_lead',
+      courseName: '場館七日通行',
+      category: 'VENUE_PASS',
+      venueName: 'UFC GYM',
+      packageSize: 1,
+      amountValue: 0,
+      currency: 'TWD',
+      seriesDates: [],
+      createdAt: '',
+    },
+  }
 }
 
 function providerStatusLabel(provider: OrderStatusResponse['provider']) {
@@ -208,7 +240,11 @@ function providerStatusLabel(provider: OrderStatusResponse['provider']) {
   return null
 }
 
-function getLineHandoffCopy(status: string, isFreeTrialResult: boolean) {
+function getLineHandoffCopy(
+  status: string,
+  isFreeTrialResult: boolean,
+  isVenuePassResult: boolean,
+) {
   const supportStatuses = new Set([
     'cancelled',
     'expired',
@@ -227,6 +263,15 @@ function getLineHandoffCopy(status: string, isFreeTrialResult: boolean) {
       body: '帥氣可愛的專員將聯繫你，幫您安排入館時間。不想等電話聯繫？LINE 快速自助確認，直接確認預約時間！',
       buttonLabel: 'LINE 快速自助確認',
       intent: 'free_trial_booking_confirmation',
+    }
+  }
+
+  if (isVenuePassResult) {
+    return {
+      title: '加入 LINE 確認七日通行',
+      body: '請加入官方 LINE，將登記編號傳給同仁確認七日通行、可使用時段與入館方式。',
+      buttonLabel: '到 LINE 確認七日通行',
+      intent: 'venue_pass_line_confirmation',
     }
   }
 
@@ -261,6 +306,8 @@ export function PaymentResultPage() {
     resultMode === 'free-trial' ||
     data?.order?.status === 'free_reserved' ||
     data?.order?.status === 'free_attended'
+  const isVenuePassResult =
+    resultMode === 'venue-pass' || data?.order?.status === 'venue_pass_lead'
   const displayStatus = useMemo(
     () => getDisplayStatus(data, resultMode),
     [data, resultMode],
@@ -270,21 +317,28 @@ export function PaymentResultPage() {
     [displayStatus],
   )
   const lineHandoffCopy = useMemo(
-    () => getLineHandoffCopy(displayStatus, isFreeTrialResult),
-    [displayStatus, isFreeTrialResult],
+    () => getLineHandoffCopy(displayStatus, isFreeTrialResult, isVenuePassResult),
+    [displayStatus, isFreeTrialResult, isVenuePassResult],
   )
   const freeTrialLineConfirmPath = referenceId
     ? buildFreeTrialLineConfirmPath(referenceId)
     : '/line/free-trial-confirm'
+  const venuePassLineConfirmPath = referenceId
+    ? buildVenuePassLineConfirmPath(referenceId)
+    : '/line/venue-pass-confirm'
   const lineCtaHref =
     isFreeTrialResult && referenceId
       ? lineConfirmLiffId
         ? buildLiffUrl(lineConfirmLiffId, freeTrialLineConfirmPath)
         : freeTrialLineConfirmPath
+      : isVenuePassResult && referenceId
+        ? lineConfirmLiffId
+          ? buildLiffUrl(lineConfirmLiffId, venuePassLineConfirmPath)
+          : venuePassLineConfirmPath
       : siteConfig.lineUrl
 
   useEffect(() => {
-    if (!isFreeTrialResult) return undefined
+    if (!isFreeTrialResult && !isVenuePassResult) return undefined
 
     let active = true
 
@@ -303,7 +357,7 @@ export function PaymentResultPage() {
     return () => {
       active = false
     }
-  }, [isFreeTrialResult])
+  }, [isFreeTrialResult, isVenuePassResult])
 
   useEffect(() => {
     if (!referenceId) {
@@ -320,10 +374,20 @@ export function PaymentResultPage() {
           `/api/shopline/order-status?referenceId=${encodeURIComponent(referenceId)}`,
           { cache: 'no-store' },
         )
+        if (!response.ok && resultMode === 'venue-pass') {
+          if (!cancelled) setData(createVenuePassFallbackData(referenceId))
+          return
+        }
         const nextData = (await response.json()) as OrderStatusResponse
         if (!cancelled) setData(nextData)
       } catch {
-        if (!cancelled) setData({ error: '付款狀態讀取失敗' })
+        if (!cancelled) {
+          setData(
+            resultMode === 'venue-pass'
+              ? createVenuePassFallbackData(referenceId)
+              : { error: '付款狀態讀取失敗' },
+          )
+        }
       } finally {
         if (!cancelled) setIsLoading(false)
       }
@@ -336,18 +400,36 @@ export function PaymentResultPage() {
       cancelled = true
       window.clearInterval(intervalId)
     }
-  }, [referenceId])
+  }, [referenceId, resultMode])
 
   const order = data?.order
   const providerLabel = providerStatusLabel(data?.provider)
-  const referenceLabel = isFreeTrialResult ? '預約編號' : '訂單編號'
+  const referenceLabel =
+    isVenuePassResult ? '登記編號' : isFreeTrialResult ? '預約編號' : '訂單編號'
   const amountLabel =
     isFreeTrialResult || order?.amountValue === 0
       ? '免費'
       : `NT${(order?.amountValue ?? 0).toLocaleString('en-US')}`
+  const lineCtaId = isFreeTrialResult
+    ? 'free-trial-line-confirm'
+    : isVenuePassResult
+      ? 'venue-pass-line-confirm'
+      : 'payment-result-line'
+  const messengerCtaId = isFreeTrialResult
+    ? 'free-trial-result-messenger'
+    : isVenuePassResult
+      ? 'venue-pass-result-messenger'
+      : 'payment-result-messenger'
+  const referenceType = isVenuePassResult
+    ? 'venue_pass_lead'
+    : isFreeTrialResult
+      ? 'reservation'
+      : 'order'
   const loadingTitle = isFreeTrialResult
     ? '讀取預約結果中。'
-    : '讀取付款結果中。'
+    : isVenuePassResult
+      ? '讀取登記結果中。'
+      : '讀取付款結果中。'
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-abyss text-pearl">
@@ -375,7 +457,9 @@ export function PaymentResultPage() {
                 </span>
               </div>
               <div className="flex justify-between gap-4">
-                <span className="font-heading text-mist/45">課程</span>
+                <span className="font-heading text-mist/45">
+                  {isVenuePassResult ? '方案' : '課程'}
+                </span>
                 <span className="text-right text-pearl">
                   {order.courseName}
                 </span>
@@ -386,12 +470,14 @@ export function PaymentResultPage() {
                   {order.venueName}
                 </span>
               </div>
-              <div className="flex justify-between gap-4">
-                <span className="font-heading text-mist/45">日期</span>
-                <span className="text-right font-heading text-pearl">
-                  {order.seriesDates.map(formatDate).join(' / ')}
-                </span>
-              </div>
+              {!isVenuePassResult && (
+                <div className="flex justify-between gap-4">
+                  <span className="font-heading text-mist/45">日期</span>
+                  <span className="text-right font-heading text-pearl">
+                    {order.seriesDates.map(formatDate).join(' / ')}
+                  </span>
+                </div>
+              )}
               <div className="flex justify-between gap-4">
                 <span className="font-heading text-mist/45">金額</span>
                 <span className="text-right font-heading text-neon">
@@ -424,22 +510,22 @@ export function PaymentResultPage() {
           <div className="mt-7 flex flex-col gap-3 sm:flex-row">
             <Button
               href={lineCtaHref}
-              target={isFreeTrialResult ? '_self' : undefined}
+              target={isFreeTrialResult || isVenuePassResult ? '_self' : undefined}
               variant="primary"
               size="lg"
               className="w-full"
-              data-cta={isFreeTrialResult ? 'free-trial-line-confirm' : 'payment-result-line'}
+              data-cta={lineCtaId}
               onClick={() =>
                 track({
                   event: isFreeTrialResult
                     ? 'free_trial_line_confirm_click'
-                    : 'payment_result_line_click',
+                    : isVenuePassResult
+                      ? 'venue_pass_line_confirm_click'
+                      : 'payment_result_line_click',
                   params: {
-                    cta_id: isFreeTrialResult
-                      ? 'free-trial-line-confirm'
-                      : 'payment-result-line',
+                    cta_id: lineCtaId,
                     reference_id: referenceId,
-                    reference_type: isFreeTrialResult ? 'reservation' : 'order',
+                    reference_type: referenceType,
                     order_status: order?.status ?? '',
                     display_status: displayStatus,
                     line_handoff_intent: lineHandoffCopy.intent,
@@ -447,7 +533,9 @@ export function PaymentResultPage() {
                   metaStandardEvent: isFreeTrialResult ? 'Contact' : 'Lead',
                   lineEventName: isFreeTrialResult
                     ? 'FreeTrialLineConfirm'
-                    : 'LeadClick',
+                    : isVenuePassResult
+                      ? 'VenuePassLineConfirm'
+                      : 'LeadClick',
                 })
               }
             >
@@ -458,18 +546,18 @@ export function PaymentResultPage() {
               variant="secondary"
               size="lg"
               className="w-full"
-              data-cta={isFreeTrialResult ? 'free-trial-result-messenger' : 'payment-result-messenger'}
+              data-cta={messengerCtaId}
               onClick={() =>
                 track({
                   event: isFreeTrialResult
                     ? 'free_trial_result_messenger_click'
-                    : 'payment_result_messenger_click',
+                    : isVenuePassResult
+                      ? 'venue_pass_result_messenger_click'
+                      : 'payment_result_messenger_click',
                   params: {
-                    cta_id: isFreeTrialResult
-                      ? 'free-trial-result-messenger'
-                      : 'payment-result-messenger',
+                    cta_id: messengerCtaId,
                     reference_id: referenceId,
-                    reference_type: isFreeTrialResult ? 'reservation' : 'order',
+                    reference_type: referenceType,
                     order_status: order?.status ?? '',
                     display_status: displayStatus,
                     handoff_intent: lineHandoffCopy.intent,

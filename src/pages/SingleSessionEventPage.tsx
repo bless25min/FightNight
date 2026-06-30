@@ -11,6 +11,15 @@ import courseBasicMuaythai from '../assets/event/course-basic-muaythai.jpg'
 import courseBoxingConditioning from '../assets/event/course-boxing-conditioning.jpg'
 import courseFightFit from '../assets/event/course-fight-fit.jpg'
 import courseMuaythaiKickboxingConditioning from '../assets/event/course-muaythai-kickboxing-conditioning.jpg'
+import venuePassBagZone from '../assets/event/venue-pass-bag-zone.jpg'
+import venuePassCardio from '../assets/event/venue-pass-cardio.jpg'
+import venuePassDumbbells from '../assets/event/venue-pass-dumbbells.jpg'
+import venuePassGymFloor from '../assets/event/venue-pass-gym-floor.jpg'
+import venuePassMachineZone from '../assets/event/venue-pass-machine-zone.jpg'
+import venuePassOctagon from '../assets/event/venue-pass-octagon.jpg'
+import venuePassRecovery from '../assets/event/venue-pass-recovery.jpg'
+import venuePassRunway from '../assets/event/venue-pass-runway.jpg'
+import venuePassStrengthFloor from '../assets/event/venue-pass-strength-floor.jpg'
 import ufcBoxingGloves from '../assets/products/ufc-boxing-gloves.webp'
 import ufcHandWraps from '../assets/products/ufc-hand-wraps.webp'
 import { Footer } from '../components/layout/Footer'
@@ -114,6 +123,7 @@ type EventPassVariant = {
 }
 
 type EventBookingMode = 'free-trial' | 'paid'
+type FreeTrialLeadIntent = 'class' | 'venue-pass'
 
 type FreeTrialStatusState =
   | 'unknown'
@@ -186,6 +196,63 @@ const eventCoursePhotos = {
     altEn: 'Muay Thai and Kickboxing Conditioning course photo',
   },
 } satisfies Record<string, EventCoursePhoto>
+
+const venueSevenDayPassCards = [
+  {
+    id: 'strength-floor',
+    src: venuePassStrengthFloor,
+    altZh: 'UFC GYM 重訓與功能訓練區',
+    altEn: 'UFC GYM strength and functional training floor',
+  },
+  {
+    id: 'recovery',
+    src: venuePassRecovery,
+    altZh: 'UFC GYM 恢復與放鬆區',
+    altEn: 'UFC GYM recovery and relaxation area',
+  },
+  {
+    id: 'dumbbells',
+    src: venuePassDumbbells,
+    altZh: 'UFC GYM 啞鈴與重量訓練器材',
+    altEn: 'UFC GYM dumbbells and strength equipment',
+  },
+  {
+    id: 'gym-floor',
+    src: venuePassGymFloor,
+    altZh: 'UFC GYM 綜合訓練場地',
+    altEn: 'UFC GYM open training floor',
+  },
+  {
+    id: 'cardio',
+    src: venuePassCardio,
+    altZh: 'UFC GYM 有氧跑步機區',
+    altEn: 'UFC GYM cardio treadmill area',
+  },
+  {
+    id: 'octagon',
+    src: venuePassOctagon,
+    altZh: 'UFC GYM 八角籠訓練區',
+    altEn: 'UFC GYM octagon training area',
+  },
+  {
+    id: 'bag-zone',
+    src: venuePassBagZone,
+    altZh: 'UFC GYM 沙包訓練區',
+    altEn: 'UFC GYM heavy bag training zone',
+  },
+  {
+    id: 'runway',
+    src: venuePassRunway,
+    altZh: 'UFC GYM 跑道與功能訓練場地',
+    altEn: 'UFC GYM runway and functional training area',
+  },
+  {
+    id: 'machine-zone',
+    src: venuePassMachineZone,
+    altZh: 'UFC GYM 重量訓練機械區',
+    altEn: 'UFC GYM strength machine zone',
+  },
+] satisfies Array<EventCoursePhoto & { id: string }>
 
 const eventPageCopy = {
   'zh-TW': {
@@ -375,6 +442,17 @@ const eventPageCopy = {
       checking: '確認資格中',
       unavailable: '暫時無法確認資格',
       freeTrialCta: '預約體驗此課程',
+      venuePassRowTitle: '純場地使用',
+      venuePassCount: '9 張照片',
+      venuePassBadge: '7日通行',
+      venuePassTitle: '場館七日通行',
+      venuePassHighlights: [
+        '頂級訓練器材',
+        '淋浴更衣設備',
+        '感應式私人置物櫃',
+        '飯店級盥洗用品',
+      ],
+      venuePassCta: '登記領取場館七日通行',
       photo: '查看照片',
     },
     modal: {
@@ -410,6 +488,12 @@ const eventPageCopy = {
       freeTrialEyebrow: '首次限定｜本週限量免費體驗',
       freeTrialTitle: '免費保留這堂',
       freeTrialNote: '每支手機限保留一次。裝備可自備，或現場租用。',
+      venuePassLeadEyebrow: '首次限定｜場館七日通行',
+      venuePassLeadTitle: '登記領取場館七日通行',
+      venuePassLeadNote:
+        '留下資料後，現場會依你選的場館協助確認七日通行與可使用時段。',
+      venuePassLeadVenueLine: '場館通行｜現場確認可使用時段',
+      venuePassLeadSubmit: '送出登記，領取七日通行',
       freeTrialLoginRequired: '請先填寫姓名與手機後，再保留免費體驗。',
       freeTrialError: '免費預約建立失敗，請稍後再試。',
       freeTrialSubmitting: '正在保留...',
@@ -622,6 +706,17 @@ const eventPageCopy = {
       checking: 'Checking eligibility',
       unavailable: 'Eligibility unavailable',
       freeTrialCta: 'Reserve a trial class',
+      venuePassRowTitle: 'Open gym access',
+      venuePassCount: '9 photos',
+      venuePassBadge: '7-day access',
+      venuePassTitle: 'Venue seven-day pass',
+      venuePassHighlights: [
+        'Premium training equipment',
+        'Shower and changing facilities',
+        'Private sensor lockers',
+        'Hotel-grade toiletries',
+      ],
+      venuePassCta: 'Register for venue seven-day access',
       photo: 'View photo',
     },
     modal: {
@@ -660,6 +755,13 @@ const eventPageCopy = {
       freeTrialTitle: 'Reserve free',
       freeTrialNote:
         'One free trial per mobile number. Bring your own gear or rent gear on site.',
+      venuePassLeadEyebrow: 'First-time only | Venue seven-day pass',
+      venuePassLeadTitle: 'Register for venue seven-day access',
+      venuePassLeadNote:
+        'Leave your details and the venue team will confirm seven-day access and usable hours with you.',
+      venuePassLeadVenueLine:
+        'Facility access | Usable hours confirmed by the venue team',
+      venuePassLeadSubmit: 'Submit and claim seven-day access',
       freeTrialLoginRequired:
         'Please enter your name and mobile number before reserving the free trial.',
       freeTrialError: 'Unable to create the free reservation. Please try again later.',
@@ -2679,6 +2781,86 @@ function EventPreferenceControls({
   )
 }
 
+function VenueSevenDayPassCard({
+  ticket,
+  photo,
+  locale,
+  onAction,
+}: {
+  ticket: EventTicket
+  photo: (typeof venueSevenDayPassCards)[number]
+  locale: SupportedLocale
+  onAction: (ticket: EventTicket) => void
+}) {
+  const copy = getCopy(locale).tickets
+  const nearbyAreaLabel = getNearbyAreaLabel(ticket.course.venueId, locale)
+  const photoAlt = locale === 'en' ? photo.altEn : photo.altZh
+
+  return (
+    <article
+      aria-label={`${copy.venuePassTitle}，${ticket.venueLabel}`}
+      className="relative flex h-full min-w-0 max-w-full flex-col overflow-hidden rounded-2xl border border-neon/18 bg-[linear-gradient(180deg,rgba(155,255,101,0.095),rgba(0,0,0,0.36))] shadow-[0_18px_52px_rgba(0,0,0,0.24)]"
+    >
+      <div className="relative aspect-[16/10] shrink-0 overflow-hidden border-b border-pearl/10">
+        <img
+          src={photo.src}
+          alt={photoAlt}
+          loading="lazy"
+          className="h-full w-full object-cover"
+        />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.06),rgba(0,0,0,0.72))]" />
+        <div className="absolute inset-x-3 bottom-3 flex min-w-0 items-end justify-between gap-2">
+          <div className="min-w-0">
+            <span className="inline-flex rounded-full border border-neon/35 bg-black/45 px-3 py-1 font-heading text-xs text-neon">
+              {copy.venuePassBadge}
+            </span>
+            <h3 className="mt-2 font-heading text-[1.35rem] font-black leading-tight text-pearl">
+              {copy.venuePassTitle}
+            </h3>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-1 flex-col px-4 py-4">
+        <div className="flex flex-wrap gap-2">
+          <span className="rounded-full border border-pearl/15 bg-black/20 px-3 py-1.5 font-heading text-xs text-pearl">
+            {ticket.venueLabel}
+          </span>
+          {nearbyAreaLabel ? (
+            <span className="rounded-full border border-neon/20 bg-neon/10 px-3 py-1.5 font-heading text-xs text-neon">
+              {nearbyAreaLabel}
+            </span>
+          ) : null}
+        </div>
+
+        <div className="mt-4 grid gap-2">
+          {copy.venuePassHighlights.map((item) => (
+            <p
+              key={item}
+              className="grid grid-cols-[0.45rem_minmax(0,1fr)] gap-2 text-xs leading-relaxed text-mist/74"
+            >
+              <span className="mt-[0.43rem] h-1.5 w-1.5 rounded-full bg-neon" />
+              <span>{item}</span>
+            </p>
+          ))}
+        </div>
+
+        <div className="mt-auto pt-4">
+          <Button
+            size="lg"
+            className="w-full"
+            onClick={() => onAction(ticket)}
+            data-cta="event-venue-seven-day-pass"
+            data-ticket={ticket.id}
+          >
+            <AutoFitButtonLabel>{copy.venuePassCta}</AutoFitButtonLabel>
+          </Button>
+        </div>
+      </div>
+    </article>
+  )
+}
+
 function FreeTrialTicketCard({
   ticket,
   availability,
@@ -2944,6 +3126,7 @@ function EventTicketDropSection({
   onPurchase,
   onFreeTrialReserve,
   onFreeTrialPaidFallback,
+  onVenuePassLead,
 }: {
   tickets: EventTicket[]
   freeTrialTickets: EventTicket[]
@@ -2966,6 +3149,7 @@ function EventTicketDropSection({
   onPurchase: (ticket: EventTicket, variant: EventPassVariant) => void
   onFreeTrialReserve: (ticket: EventTicket) => void
   onFreeTrialPaidFallback: (ticket: EventTicket) => void
+  onVenuePassLead: (ticket: EventTicket) => void
 }) {
   const copy = getCopy(locale).tickets
   const isFreeTrialBookingMode = bookingMode === 'free-trial'
@@ -3046,6 +3230,23 @@ function EventTicketDropSection({
         ticket: EventTicket
         sortIndex: number
       }
+    | {
+        type: 'venue-pass'
+        key: string
+        ticket: EventTicket
+        photo: (typeof venueSevenDayPassCards)[number]
+        sortIndex: number
+      }
+  const activeVenuePassLeadCards: VenueCard[] =
+    isFreeTrialBookingMode && activeVenueTickets[0]
+      ? venueSevenDayPassCards.map((photo, index) => ({
+          type: 'venue-pass' as const,
+          key: `${activeVenueTickets[0].course.venueId}-venue-seven-day-pass-${photo.id}`,
+          ticket: activeVenueTickets[0],
+          photo,
+          sortIndex: index,
+        }))
+      : []
   const activeVenueGearCards: VenueCard[] = isFreeTrialBookingMode
     ? []
     : sortVenueCardsByTime(activeVenueTickets.map((ticket) => ({
@@ -3081,13 +3282,21 @@ function EventTicketDropSection({
   )
   const activeVenueCardRows = [
     {
+      id: 'venue-pass',
+      title: copy.venuePassRowTitle,
+      countLabel: copy.venuePassCount,
+      cards: activeVenuePassLeadCards,
+    },
+    {
       id: 'gear',
       title: '完整準備',
+      countLabel: null,
       cards: activeVenueGearCards,
     },
     {
       id: 'pass',
       title: '新手入門',
+      countLabel: null,
       cards: activeVenuePassCards,
     },
     {
@@ -3099,6 +3308,7 @@ function EventTicketDropSection({
         : locale === 'en'
           ? 'FREE TRIAL THIS WEEK'
           : '本週免費課程',
+      countLabel: null,
       cards: activeVenueFreeTrialCards,
     },
   ].filter((row) => row.cards.length > 0)
@@ -3124,7 +3334,7 @@ function EventTicketDropSection({
           onOpenProduct={onOpenProduct}
           onPurchase={onPurchase}
         />
-      ) : (
+      ) : card.type === 'free-trial' ? (
         <FreeTrialTicketCard
           ticket={card.ticket}
           availability={getAvailability(card.ticket.sessionId)}
@@ -3135,6 +3345,13 @@ function EventTicketDropSection({
           onOpenInfo={onOpenInfo}
           onReserve={onFreeTrialReserve}
           onPaidFallback={onFreeTrialPaidFallback}
+        />
+      ) : (
+        <VenueSevenDayPassCard
+          ticket={card.ticket}
+          photo={card.photo}
+          locale={locale}
+          onAction={onVenuePassLead}
         />
       )}
     </div>
@@ -3263,7 +3480,7 @@ function EventTicketDropSection({
                           {row.title}
                         </p>
                         <span className="shrink-0 rounded-full border border-pearl/10 px-2.5 py-1 font-heading text-[10px] text-mist/66">
-                          {getVenueCountLabel(row.cards.length)}
+                          {row.countLabel ?? getVenueCountLabel(row.cards.length)}
                         </span>
                       </div>
                       <div
@@ -3669,6 +3886,7 @@ function FreeTrialReservationModal({
   availability,
   bookingMode,
   locale,
+  leadIntent,
   onClose,
   onReserved,
 }: {
@@ -3676,6 +3894,7 @@ function FreeTrialReservationModal({
   availability: SessionAvailability | null
   bookingMode: EventBookingMode
   locale: SupportedLocale
+  leadIntent: FreeTrialLeadIntent
   onClose: () => void
   onReserved: () => void
 }) {
@@ -3708,6 +3927,7 @@ function FreeTrialReservationModal({
 
   const disabled = availability.remaining <= 0
   const copy = getCopy(locale).modal
+  const isVenuePassLead = leadIntent === 'venue-pass'
   const courseName = getCourseDisplayName(selectedTicket.course, locale)
   const handleChange =
     (field: keyof BuyerContactForm) =>
@@ -3741,7 +3961,11 @@ function FreeTrialReservationModal({
 
     try {
       const leadEventId = createMetaEventId('lead')
-      const response = await fetch('/api/free-trial-reservation', {
+      const response = await fetch(
+        isVenuePassLead
+          ? '/api/venue-pass-lead'
+          : '/api/free-trial-reservation',
+        {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
@@ -3758,14 +3982,18 @@ function FreeTrialReservationModal({
             landingVariant,
             eventName,
             bookingMode,
-            conversionGoal: 'free_trial_reservation',
+            conversionGoal: isVenuePassLead
+              ? 'venue_seven_day_pass_lead'
+              : 'free_trial_reservation',
             ticketId: selectedTicket.id,
             freeTrial: true,
             firstTimeOnly: true,
+            leadIntent,
           },
           client: getClientContext(),
         }),
-      })
+        },
+      )
 
       const data = (await response.json().catch(() => null)) as
         | {
@@ -3798,7 +4026,10 @@ function FreeTrialReservationModal({
           remaining: availability.remaining,
           first_time_only: true,
           booking_mode: bookingMode,
-          conversion_goal: 'free_trial_reservation',
+          conversion_goal: isVenuePassLead
+            ? 'venue_seven_day_pass_lead'
+            : 'free_trial_reservation',
+          lead_intent: leadIntent,
           event_id: leadEventId,
         },
         metaStandardEvent: 'Lead',
@@ -3807,7 +4038,10 @@ function FreeTrialReservationModal({
       })
 
       onReserved()
-      window.location.href = buildPaymentResultUrl(data.referenceId, 'free-trial')
+      window.location.href = buildPaymentResultUrl(
+        data.referenceId,
+        isVenuePassLead ? 'venue-pass' : 'free-trial',
+      )
     } catch (error) {
       const message =
         error instanceof Error
@@ -3821,7 +4055,10 @@ function FreeTrialReservationModal({
           course_id: selectedTicket.course.id,
           session_id: selectedTicket.sessionId,
           booking_mode: bookingMode,
-          conversion_goal: 'free_trial_reservation',
+          conversion_goal: isVenuePassLead
+            ? 'venue_seven_day_pass_lead'
+            : 'free_trial_reservation',
+          lead_intent: leadIntent,
           error_message: message,
         },
       })
@@ -3847,22 +4084,25 @@ function FreeTrialReservationModal({
 
         <form onSubmit={handleSubmit}>
           <p className="font-heading text-xs text-neon/80">
-            {copy.freeTrialEyebrow}
+            {isVenuePassLead
+              ? copy.venuePassLeadEyebrow
+              : copy.freeTrialEyebrow}
           </p>
           <h2 className="mt-3 text-3xl font-heading font-bold text-pearl">
-            {copy.freeTrialTitle}
+            {isVenuePassLead ? copy.venuePassLeadTitle : copy.freeTrialTitle}
           </h2>
 
           <div className="mt-5 rounded-2xl border border-neon/20 bg-neon/[0.04] p-4">
             <p className="font-heading font-bold text-pearl">
-              {courseName}
+              {isVenuePassLead ? selectedTicket.venueLabel : courseName}
             </p>
             <p className="mt-2 text-sm text-mist/70">
-              {selectedTicket.venueLabel} · {selectedTicket.dateLabel}{' '}
-              {selectedTicket.timeLabel}
+              {isVenuePassLead
+                ? copy.venuePassLeadVenueLine
+                : `${selectedTicket.venueLabel} · ${selectedTicket.dateLabel} ${selectedTicket.timeLabel}`}
             </p>
             <p className="mt-3 text-sm leading-relaxed text-mist/62">
-              {copy.freeTrialNote}
+              {isVenuePassLead ? copy.venuePassLeadNote : copy.freeTrialNote}
             </p>
           </div>
 
@@ -3920,7 +4160,9 @@ function FreeTrialReservationModal({
               ? getCopy(locale).tickets.soldOut
               : isSubmitting
                 ? copy.freeTrialSubmitting
-                : getCopy(locale).tickets.freeTrialCta}
+                : isVenuePassLead
+                  ? copy.venuePassLeadSubmit
+                  : getCopy(locale).tickets.freeTrialCta}
           </Button>
         </form>
       </motion.div>
@@ -3963,6 +4205,8 @@ export function SingleSessionEventPage({
   )
   const [selectedFreeTrialTicket, setSelectedFreeTrialTicket] =
     useState<EventTicket | null>(null)
+  const [freeTrialLeadIntent, setFreeTrialLeadIntent] =
+    useState<FreeTrialLeadIntent>('class')
   const [freeTrialStatusSnapshot, setFreeTrialStatusSnapshot] =
     useState<FreeTrialStatusSnapshot | null>(null)
   const [selectedInfoTicket, setSelectedInfoTicket] =
@@ -4196,6 +4440,27 @@ export function SingleSessionEventPage({
 
     if (freeTrialStatus === 'used') return
 
+    setFreeTrialLeadIntent('class')
+    setSelectedFreeTrialTicket(ticket)
+  }
+
+  const openVenueSevenDayPassLead = (ticket: EventTicket) => {
+    track({
+      event: 'event_venue_seven_day_pass_click',
+      params: {
+        source: landingVariant,
+        ticket_id: ticket.id,
+        course_id: ticket.course.id,
+        gate_status: gateState.status,
+        booking_mode: bookingMode,
+        conversion_goal: 'venue_seven_day_pass_lead',
+        venue_id: ticket.course.venueId,
+        venue_name: ticket.course.venueName,
+      },
+      lineEventName: 'VenueSevenDayPassClick',
+    })
+
+    setFreeTrialLeadIntent('venue-pass')
     setSelectedFreeTrialTicket(ticket)
   }
 
@@ -4275,7 +4540,9 @@ export function SingleSessionEventPage({
             alt={copy.photoAlts.impact}
           />
           <EventProofSection locale={locale} />
-          <EventSafetySection locale={locale} />
+          {!isFreeTrialBookingMode ? (
+            <EventSafetySection locale={locale} />
+          ) : null}
           <EventTicketDropSection
             tickets={tickets}
             freeTrialTickets={freeTrialTickets}
@@ -4301,6 +4568,7 @@ export function SingleSessionEventPage({
             onFreeTrialPaidFallback={(ticket) => {
               void openFreeTrialPaidFallback(ticket)
             }}
+            onVenuePassLead={openVenueSevenDayPassLead}
           />
           <OfficialAppointmentProofSection />
           <EventStandalonePhotoSection
@@ -4342,7 +4610,11 @@ export function SingleSessionEventPage({
         }
         locale={locale}
         bookingMode={bookingMode}
-        onClose={() => setSelectedFreeTrialTicket(null)}
+        leadIntent={freeTrialLeadIntent}
+        onClose={() => {
+          setSelectedFreeTrialTicket(null)
+          setFreeTrialLeadIntent('class')
+        }}
         onReserved={() =>
           setFreeTrialStatusSnapshot({
             lineUserId: currentLineUserId,

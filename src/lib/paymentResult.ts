@@ -1,4 +1,4 @@
-export type PaymentResultMode = 'payment' | 'free-trial'
+export type PaymentResultMode = 'payment' | 'free-trial' | 'venue-pass'
 
 export function buildPaymentResultUrl(
   referenceId: string,

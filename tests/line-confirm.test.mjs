@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import { confirmFreeTrialLineReservation } from '../functions/api/free-trial-reservation/line-confirm.js'
+import { confirmVenuePassLineReservation } from '../functions/api/venue-pass-lead/line-confirm.js'
 
 function createEnv(order) {
   const state = {
@@ -112,4 +113,46 @@ test('does not rebind a free trial reservation already linked to another LINE us
   assert.equal(result.status, 409)
   assert.equal(state.order.line_user_id, 'U999')
   assert.equal(state.updateArgs, null)
+})
+
+test('binds a venue pass lead to LINE and sends the venue pass confirmation card', async () => {
+  const { env, state } = createEnv({
+    reference_id: 'VP123',
+    status: 'venue_pass_lead',
+    line_user_id: null,
+  })
+  const calls = {
+    upserted: null,
+    notified: null,
+  }
+
+  const result = await confirmVenuePassLineReservation({
+    env,
+    referenceId: 'VP123',
+    lineContext: {
+      lineUserId: 'U123',
+      displayName: 'LINE User',
+      pictureUrl: 'https://example.com/u.jpg',
+      email: 'line@example.com',
+      emailVerified: true,
+      isFriend: true,
+    },
+    upsertLineCustomer: async (_env, lineContext) => {
+      calls.upserted = lineContext
+    },
+    notifyLineVenuePassLead: async (_env, referenceId, options) => {
+      calls.notified = { referenceId, options }
+      return { status: 'sent' }
+    },
+  })
+
+  assert.equal(result.ok, true)
+  assert.equal(result.lineNotify.status, 'sent')
+  assert.equal(state.order.line_user_id, 'U123')
+  assert.equal(JSON.parse(state.order.line_context_json).source, 'venue_pass_line_confirm')
+  assert.equal(calls.upserted.lineUserId, 'U123')
+  assert.deepEqual(calls.notified, {
+    referenceId: 'VP123',
+    options: undefined,
+  })
 })

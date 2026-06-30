@@ -588,6 +588,135 @@ function buildFreeTrialConfirmationCard(order) {
   }
 }
 
+function buildVenuePassConfirmationText(order) {
+  const locale = getOrderLocale(order)
+  const fieldSeparator = locale === 'en' ? ': ' : '：'
+  const titleSeparator = locale === 'en' ? ' | ' : '｜'
+  const venue = getVenueDisplayName(order.venue_name, locale) || 'UFC GYM'
+  const title =
+    locale === 'en' ? '7-day venue pass registered' : '場館七日通行登記完成'
+  const labels =
+    locale === 'en'
+      ? {
+          venue: 'Venue',
+          pass: 'Pass',
+          contact: 'Contact',
+          phone: 'Phone',
+          reference: 'Ref',
+        }
+      : {
+          venue: '場館',
+          pass: '方案',
+          contact: '聯絡人',
+          phone: '電話',
+          reference: '登記編號',
+        }
+  const lines = [
+    `${title}${titleSeparator}${venue}`,
+    `${labels.venue}${fieldSeparator}${venue}`,
+    `${labels.pass}${fieldSeparator}${locale === 'en' ? '7-day venue access' : '場館七日通行'}`,
+    `${labels.contact}${fieldSeparator}${order.buyer_name || '-'}`,
+    `${labels.phone}${fieldSeparator}${order.buyer_phone || '-'}`,
+    `${labels.reference}${fieldSeparator}${order.reference_id}`,
+  ]
+
+  if (order.buyer_email) {
+    lines.splice(5, 0, `Email${fieldSeparator}${order.buyer_email}`)
+  }
+
+  return lines.join('\n').slice(0, 300)
+}
+
+function buildVenuePassConfirmationCard(order) {
+  const locale = getOrderLocale(order)
+  const venue = getVenueDisplayName(order.venue_name, locale) || 'UFC GYM'
+  const isEnglish = locale === 'en'
+  const title = isEnglish
+    ? '7-day venue pass registered'
+    : '場館七日通行登記完成'
+  const body = isEnglish
+    ? 'Your LINE confirmation card is ready. Show this card at the venue, and the team will help confirm access hours and entry details.'
+    : '七日通行確認卡已建立。到場時請出示這張卡，現場同仁會協助確認可使用時段與入館方式。'
+  const labels = isEnglish
+    ? {
+        venue: 'Venue',
+        pass: 'Pass',
+        access: 'Access',
+        reference: 'Ref',
+      }
+    : {
+        venue: '場館',
+        pass: '方案',
+        access: '通行',
+        reference: '登記編號',
+      }
+  const confirmationText = buildVenuePassConfirmationText(order)
+
+  return {
+    type: 'flex',
+    altText: isEnglish
+      ? `7-day venue pass registered: ${venue}`
+      : `場館七日通行登記完成：${venue}`,
+    contents: {
+      type: 'bubble',
+      size: 'mega',
+      body: {
+        type: 'box',
+        layout: 'vertical',
+        spacing: 'md',
+        contents: [
+          {
+            type: 'text',
+            text: title,
+            weight: 'bold',
+            size: 'xl',
+            color: '#111111',
+          },
+          {
+            type: 'text',
+            text: body,
+            size: 'sm',
+            color: '#666666',
+            wrap: true,
+          },
+          {
+            type: 'separator',
+            margin: 'md',
+          },
+          {
+            type: 'box',
+            layout: 'vertical',
+            spacing: 'sm',
+            margin: 'md',
+            contents: [
+              buildInfoRow(labels.venue, venue),
+              buildInfoRow(labels.pass, isEnglish ? '7-day venue access' : '場館七日通行'),
+              buildInfoRow(labels.access, isEnglish ? 'Valid after venue confirmation' : '依場館確認可使用時段'),
+              buildInfoRow(labels.reference, order.reference_id),
+            ],
+          },
+        ],
+      },
+      footer: {
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          {
+            type: 'button',
+            style: 'primary',
+            color: '#E3242B',
+            action: {
+              type: 'message',
+              label: isEnglish ? 'Confirm pass' : '確認七日通行',
+              text: confirmationText,
+            },
+          },
+        ],
+      },
+    },
+  }
+}
+
 function getPublicOrigin(env) {
   const configured =
     env.PUBLIC_SITE_URL ||
@@ -606,8 +735,8 @@ function getPublicOrigin(env) {
   return DEFAULT_PUBLIC_ORIGIN
 }
 
-function buildSingleSessionEventSessionsUrl(env, referenceId, locale = 'zh-TW') {
-  const url = new URL('/offers', getPublicOrigin(env))
+function buildFreeTrialAlreadyReservedHomeUrl(env, referenceId, locale = 'zh-TW') {
+  const url = new URL('/', getPublicOrigin(env))
   url.searchParams.set('from', 'line-auto')
   url.searchParams.set('utm_source', 'line')
   url.searchParams.set('utm_medium', 'auto')
@@ -618,7 +747,6 @@ function buildSingleSessionEventSessionsUrl(env, referenceId, locale = 'zh-TW') 
   if (referenceId) {
     url.searchParams.set('reference_id', referenceId)
   }
-  url.hash = 'event-more-sessions'
   return url.toString()
 }
 
@@ -1044,7 +1172,7 @@ export async function notifyLineFreeTrialAlreadyReservedOffer(env, referenceId) 
   }
 
   const locale = getOrderLocale(order)
-  const targetUrl = buildSingleSessionEventSessionsUrl(env, referenceId, locale)
+  const targetUrl = buildFreeTrialAlreadyReservedHomeUrl(env, referenceId, locale)
   const message = buildFreeTrialAlreadyReservedOfferCard(order, targetUrl)
   const messageId = createLineMessageId('lms_reserved_offer')
   const resultMeta = {
@@ -1213,6 +1341,157 @@ export async function notifyLineFreeTrialReservation(env, referenceId, options =
     referenceId,
     source: 'auto',
     messageType: 'free_trial_confirmation',
+    templateId,
+    targetUrl: null,
+    message,
+  })
+
+  const payload = {
+    to: order.line_user_id,
+    messages: [message],
+  }
+
+  try {
+    const response = await fetch(LINE_PUSH_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${env.LINE_CHANNEL_ACCESS_TOKEN}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    })
+    const responseBody = await response.json().catch(() => null)
+
+    if (!response.ok) {
+      const result = {
+        status: 'failed',
+        response: responseBody,
+        error: `LINE push failed with HTTP ${response.status}`,
+      }
+      await updateLineMessageSend(env, messageId, result)
+      await recordLineNotifyStatus(env, referenceId, result)
+      return result
+    }
+
+    const result = {
+      status: 'sent',
+      response: responseBody || { ok: true },
+    }
+    await updateLineMessageSend(env, messageId, result)
+    await recordLineNotifyStatus(env, referenceId, result)
+    return result
+  } catch (error) {
+    const result = {
+      status: 'failed',
+      error:
+        error instanceof Error
+          ? error.message
+        : 'LINE push request failed',
+    }
+    await updateLineMessageSend(env, messageId, result)
+    await recordLineNotifyStatus(env, referenceId, result)
+    return result
+  }
+}
+
+export async function notifyLineVenuePassLead(env, referenceId, options = {}) {
+  const force = options?.force === true
+  if (!env.DB || !referenceId) {
+    return { status: 'skipped_invalid_request' }
+  }
+
+  await ensureLineNotificationColumns(env)
+
+  const order = await env.DB.prepare(
+    `SELECT reference_id, status, course_id, course_name, venue_name,
+            package_size, amount_value, currency, series_dates_json,
+            buyer_name, buyer_phone, buyer_email, line_user_id,
+            line_display_name, line_payment_notify_status,
+            line_payment_notify_attempted_at, line_payment_notified_at,
+            raw_request_json
+     FROM course_orders
+     WHERE reference_id = ?`,
+  )
+    .bind(referenceId)
+    .first()
+
+  if (!order || order.status !== 'venue_pass_lead') {
+    return { status: 'skipped_not_venue_pass_lead' }
+  }
+  if (order.line_payment_notified_at && !force) {
+    return { status: 'skipped_already_sent' }
+  }
+  if (!order.line_user_id) {
+    const result = {
+      status: 'skipped_no_line_user',
+      error: 'Venue pass lead has no linked LINE user',
+    }
+    await recordLineNotifyStatus(env, referenceId, result)
+    return result
+  }
+  if (!env.LINE_CHANNEL_ACCESS_TOKEN) {
+    const result = {
+      status: 'skipped_missing_token',
+      error: 'Missing LINE_CHANNEL_ACCESS_TOKEN',
+    }
+    await recordLineNotifyStatus(env, referenceId, result)
+    return result
+  }
+
+  const claim = force
+    ? await env.DB.prepare(
+        `UPDATE course_orders
+         SET line_payment_notify_status = 'sending',
+             line_payment_notify_attempted_at = datetime('now'),
+             line_payment_notified_at = NULL,
+             line_payment_notify_error = NULL,
+             updated_at = datetime('now')
+         WHERE reference_id = ?
+           AND status = 'venue_pass_lead'
+           AND line_user_id IS NOT NULL
+           AND line_user_id != ''`,
+      )
+        .bind(referenceId)
+        .run()
+    : await env.DB.prepare(
+        `UPDATE course_orders
+         SET line_payment_notify_status = 'sending',
+             line_payment_notify_attempted_at = datetime('now'),
+             line_payment_notify_error = NULL,
+             updated_at = datetime('now')
+         WHERE reference_id = ?
+           AND status = 'venue_pass_lead'
+           AND line_user_id IS NOT NULL
+           AND line_user_id != ''
+           AND line_payment_notified_at IS NULL
+           AND (
+             line_payment_notify_status IS NULL
+             OR line_payment_notify_status IN ('failed', 'skipped_missing_token', 'skipped_no_line_user')
+             OR (
+               line_payment_notify_status = 'sending'
+               AND datetime(line_payment_notify_attempted_at) <= datetime('now', '-5 minutes')
+             )
+           )`,
+      )
+        .bind(referenceId)
+        .run()
+
+  if (!claim.meta?.changes) {
+    return { status: 'skipped_in_progress_or_sent' }
+  }
+
+  const locale = getOrderLocale(order)
+  const message = buildVenuePassConfirmationCard(order)
+  const messageId = createLineMessageId('lms_venue')
+  const templateId =
+    locale === 'en' ? 'venue_pass_confirmation_en' : 'venue_pass_confirmation'
+
+  await insertLineMessageSend(env, {
+    messageId,
+    lineUserId: order.line_user_id,
+    referenceId,
+    source: 'auto',
+    messageType: 'venue_pass_confirmation',
     templateId,
     targetUrl: null,
     message,

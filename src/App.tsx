@@ -3,6 +3,7 @@ import { SingleSessionEventPage } from './pages/SingleSessionEventPage'
 import { OffersPage } from './pages/OffersPage'
 import { PaymentResultPage } from './pages/PaymentResultPage'
 import { LineFreeTrialConfirmPage } from './pages/LineFreeTrialConfirmPage'
+import { LineVenuePassConfirmPage } from './pages/LineVenuePassConfirmPage'
 import { AdminPage } from './pages/AdminPage'
 import { SeoGuidePage } from './pages/SeoGuidePage'
 import { PrivacyPolicyPage } from './pages/PrivacyPolicyPage'
@@ -22,7 +23,8 @@ function getCurrentRoutePath() {
     liffStatePath.startsWith('/offers') ||
     liffStatePath.startsWith('/paid-event') ||
     liffStatePath.startsWith('/payment/success') ||
-    liffStatePath.startsWith('/line/free-trial-confirm')
+    liffStatePath.startsWith('/line/free-trial-confirm') ||
+    liffStatePath.startsWith('/line/venue-pass-confirm')
   ) {
     return liffStatePath
   }
@@ -33,6 +35,7 @@ function getCurrentRoutePath() {
     hashPath.startsWith('/paid-event') ||
     hashPath.startsWith('/payment/success') ||
     hashPath.startsWith('/line/free-trial-confirm') ||
+    hashPath.startsWith('/line/venue-pass-confirm') ||
     hashPath.startsWith('/admin') ||
     hashPath.startsWith('/privacy-policy') ||
     hashPath.startsWith('/terms-of-service') ||
@@ -46,6 +49,7 @@ function getCurrentRoutePath() {
   if (pathname.endsWith('/offers.html')) return '/offers'
   if (pathname.endsWith('/paid-event.html')) return '/paid-event'
   if (pathname.endsWith('/line/free-trial-confirm.html')) return '/line/free-trial-confirm'
+  if (pathname.endsWith('/line/venue-pass-confirm.html')) return '/line/venue-pass-confirm'
   if (pathname.endsWith('/admin.html')) return '/admin'
   if (pathname.endsWith('/privacy-policy.html')) return '/privacy-policy'
   if (pathname.endsWith('/terms-of-service.html')) return '/terms-of-service'
@@ -104,6 +108,7 @@ function shouldShowFloatingConsult(pathname: string) {
   return (
     !pathname.startsWith('/admin') &&
     !pathname.startsWith('/line/free-trial-confirm') &&
+    !pathname.startsWith('/line/venue-pass-confirm') &&
     !pathname.startsWith('/privacy-policy') &&
     !pathname.startsWith('/terms-of-service') &&
     !pathname.startsWith('/refund-policy') &&
@@ -157,6 +162,8 @@ function App() {
     page = <PaymentResultPage />
   } else if (pathname.startsWith('/line/free-trial-confirm')) {
     page = <LineFreeTrialConfirmPage />
+  } else if (pathname.startsWith('/line/venue-pass-confirm')) {
+    page = <LineVenuePassConfirmPage />
   } else if (pathname.startsWith('/guides/')) {
     const slug = pathname.replace(/^\/guides\//, '').split('/')[0]
     page = <SeoGuidePage slug={decodeURIComponent(slug)} />
