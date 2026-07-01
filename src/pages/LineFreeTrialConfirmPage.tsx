@@ -256,51 +256,51 @@ function closeLiffWindow() {
 function getVenuePassStatusCopy(status: ConfirmStatus) {
   if (status === 'success') {
     return {
-      eyebrow: 'LINE CONFIRMED',
-      title: 'LINE 已確認場館七日通行。',
-      body: '七日通行確認卡已傳到你的 LINE 聊天室。到場時請出示 LINE 卡片，現場同仁會協助確認可使用時段與入館方式。',
+      eyebrow: 'LINE CARD SENT',
+      title: '七日通行優惠已保留。',
+      body: '確認卡已傳到你的 LINE 聊天室。請回 LINE 點擊「確認領取」，場館方才會在聊天室接手安排。',
     }
   }
   if (status === 'partial') {
     return {
       eyebrow: 'LINE NEEDS HELP',
       title: '登記已綁定，確認卡暫時沒有送出。',
-      body: '請先保留這組登記編號，直接到 LINE 私訊專員協助確認七日通行。',
+      body: '七日通行優惠已保留。請先保留這組登記編號，直接到 LINE 私訊專員協助確認領取。',
     }
   }
   if (status === 'sending') {
     return {
       eyebrow: 'LINE SENDING',
       title: '確認卡正在送出中。',
-      body: '系統正在把七日通行確認卡送到你的 LINE 聊天室。請回到 LINE 查看；如果稍後仍沒收到，再請專員協助確認。',
+      body: '系統正在把七日通行優惠確認卡送到你的 LINE 聊天室。請回到 LINE 查看，收到後點擊「確認領取」。',
     }
   }
   if (status === 'friend-required') {
     return {
       eyebrow: 'ADD LINE FRIEND',
       title: '請先加入官方 LINE 好友。',
-      body: '如果剛剛沒有完成加入好友，可以再開啟一次加好友；完成後系統會繼續送出七日通行確認卡。',
+      body: '如果剛剛沒有完成加入好友，可以再開啟一次加好友；完成後系統會繼續送出七日通行優惠確認卡。',
     }
   }
   if (status === 'login') {
     return {
       eyebrow: 'LINE LOGIN',
       title: '正在開啟 LINE 登入。',
-      body: '登入完成後，系統會自動回到這裡幫你送出七日通行確認卡。',
+      body: '登入完成後，系統會自動回到這裡幫你送出七日通行優惠確認卡。',
     }
   }
   if (status === 'confirming') {
     return {
       eyebrow: 'CONFIRMING',
-      title: '正在確認你的七日通行。',
-      body: '我們正在綁定登記編號，並把確認卡送到你的 LINE 聊天室。',
+      title: '正在保留你的七日通行優惠。',
+      body: '我們正在綁定登記編號，並把確認領取卡送到你的 LINE 聊天室。',
     }
   }
   if (status === 'missing-config') {
     return {
       eyebrow: 'LINE CONFIG',
       title: '目前找不到 LINE LIFF 設定。',
-      body: '請先用官方 LINE 私訊登記編號，專員會協助確認七日通行。',
+      body: '請先用官方 LINE 私訊登記編號，專員會協助確認領取七日通行優惠。',
     }
   }
   if (status === 'missing-reference') {
@@ -314,13 +314,13 @@ function getVenuePassStatusCopy(status: ConfirmStatus) {
     return {
       eyebrow: 'CONFIRM FAILED',
       title: 'LINE 快速確認沒有完成。',
-      body: '請重新開啟一次確認連結；如果還是不成功，直接到 LINE 私訊登記編號即可。',
+      body: '請重新開啟一次確認連結；如果還是不成功，直接到 LINE 私訊登記編號協助確認領取。',
     }
   }
   return {
     eyebrow: 'LINE CONFIRM',
-    title: '正在準備 LINE 場館七日通行確認。',
-    body: '請稍候，我們會把你的登記帶入 LINE 確認流程。',
+    title: '正在準備 LINE 場館七日通行優惠確認。',
+    body: '請稍候，我們會把你的登記帶入 LINE 確認領取流程。',
   }
 }
 

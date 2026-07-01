@@ -594,7 +594,9 @@ function buildVenuePassConfirmationText(order) {
   const titleSeparator = locale === 'en' ? ' | ' : '｜'
   const venue = getVenueDisplayName(order.venue_name, locale) || 'UFC GYM'
   const title =
-    locale === 'en' ? '7-day venue pass registered' : '場館七日通行登記完成'
+    locale === 'en'
+      ? '7-day venue pass offer held'
+      : '場館七日通行優惠已保留'
   const labels =
     locale === 'en'
       ? {
@@ -632,11 +634,11 @@ function buildVenuePassConfirmationCard(order) {
   const venue = getVenueDisplayName(order.venue_name, locale) || 'UFC GYM'
   const isEnglish = locale === 'en'
   const title = isEnglish
-    ? '7-day venue pass registered'
-    : '場館七日通行登記完成'
+    ? '7-day venue pass offer held'
+    : '場館七日通行優惠已保留'
   const body = isEnglish
-    ? 'Your LINE confirmation card is ready. Show this card at the venue, and the team will help confirm access hours and entry details.'
-    : '七日通行確認卡已建立。到場時請出示這張卡，現場同仁會協助確認可使用時段與入館方式。'
+    ? 'Tap the button below to claim the pass. The venue team will continue the handoff in this LINE chat after you confirm.'
+    : '請點擊下方按鈕確認領取。確認後，場館方會在聊天室接手安排可使用時段與入館方式。'
   const labels = isEnglish
     ? {
         venue: 'Venue',
@@ -655,8 +657,8 @@ function buildVenuePassConfirmationCard(order) {
   return {
     type: 'flex',
     altText: isEnglish
-      ? `7-day venue pass registered: ${venue}`
-      : `場館七日通行登記完成：${venue}`,
+      ? `7-day venue pass offer held: ${venue}`
+      : `場館七日通行優惠已保留：${venue}`,
     contents: {
       type: 'bubble',
       size: 'mega',
@@ -691,7 +693,7 @@ function buildVenuePassConfirmationCard(order) {
             contents: [
               buildInfoRow(labels.venue, venue),
               buildInfoRow(labels.pass, isEnglish ? '7-day venue access' : '場館七日通行'),
-              buildInfoRow(labels.access, isEnglish ? 'Valid after venue confirmation' : '依場館確認可使用時段'),
+              buildInfoRow(labels.access, isEnglish ? 'Claim to arrange access hours' : '確認後安排可使用時段'),
               buildInfoRow(labels.reference, order.reference_id),
             ],
           },
@@ -707,7 +709,7 @@ function buildVenuePassConfirmationCard(order) {
             color: '#E3242B',
             action: {
               type: 'message',
-              label: isEnglish ? 'Confirm pass' : '確認七日通行',
+              label: isEnglish ? 'Claim pass' : '確認領取',
               text: confirmationText,
             },
           },

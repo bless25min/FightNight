@@ -36,7 +36,14 @@ test('venue pass lead uses a dedicated flow instead of free-trial reservation', 
   assert.equal(resultSource.includes('場館七日通行登記完成'), true)
   assert.equal(resultSource.includes('isVenuePassResult'), true)
   assert.equal(resultSource.includes('buildVenuePassLineConfirmPath'), true)
-  assert.equal(resultSource.includes('buildLiffStateUrl'), true)
+  assert.match(
+    resultSource,
+    /buildLiffUrl\(lineConfirmLiffId,\s*venuePassLineConfirmPath\)/,
+  )
+  assert.doesNotMatch(
+    resultSource,
+    /buildLiffStateUrl\(lineConfirmLiffId,\s*venuePassLineConfirmPath\)/,
+  )
   assert.equal(resultSource.includes('createVenuePassFallbackData'), true)
   assert.equal(resultSource.includes('venue-pass-line-confirm'), true)
   assert.doesNotMatch(resultSource, /將登記編號傳給同仁/)
