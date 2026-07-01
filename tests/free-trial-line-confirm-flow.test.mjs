@@ -45,3 +45,16 @@ test('classifies in-progress LINE notify status as pending, not delivered', asyn
   assert.equal(isLineNotifyDelivered('skipped_in_progress_or_sent'), false)
   assert.equal(isLineNotifyPending('skipped_in_progress_or_sent'), true)
 })
+
+test('free trial LIFF endpoint routes venue pass references to venue pass confirmation', async () => {
+  const source = await readFile(
+    new URL('../src/pages/LineFreeTrialConfirmPage.tsx', import.meta.url),
+    'utf8',
+  )
+
+  assert.match(source, /isVenuePassReferenceId/)
+  assert.match(source, /\/api\/venue-pass-lead\/line-confirm/)
+  assert.match(source, /Only free trial reservations can be confirmed through this flow/)
+  assert.match(source, /登記編號/)
+  assert.match(source, /venue_pass_line_confirm_success/)
+})

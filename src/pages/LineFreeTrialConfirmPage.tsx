@@ -38,6 +38,110 @@ type LineConfirmResponse = {
   }
 }
 
+type ConfirmMode = 'free-trial' | 'venue-pass'
+
+type ConfirmTrackingNames = {
+  startEvent: string
+  startLineEventName: string
+  loginRedirectEvent: string
+  loginLineEventName: string
+  friendRequiredEvent: string
+  friendRequiredLineEventName: string
+  successEvent: string
+  successLineEventName: string
+  pendingEvent: string
+  pendingLineEventName: string
+  partialEvent: string
+  partialLineEventName: string
+  errorEvent: string
+  errorLineEventName: string
+  friendRetryEvent: string
+  friendRetryLineEventName: string
+  closeEvent: string
+  closeLineEventName: string
+  openChatEvent: string
+  openChatLineEventName: string
+  ctaPrefix: string
+  successMetaStandardEvent: 'Schedule' | 'Lead'
+}
+
+const FREE_TRIAL_CONFIRM_ENDPOINT = '/api/free-trial-reservation/line-confirm'
+const VENUE_PASS_CONFIRM_ENDPOINT = '/api/venue-pass-lead/line-confirm'
+const WRONG_FREE_TRIAL_FLOW_ERROR =
+  'Only free trial reservations can be confirmed through this flow'
+
+function isVenuePassReferenceId(referenceId: string) {
+  return /^VP[A-Z0-9]/i.test(referenceId.trim())
+}
+
+function getConfirmModeForReferenceId(referenceId: string): ConfirmMode {
+  return isVenuePassReferenceId(referenceId) ? 'venue-pass' : 'free-trial'
+}
+
+function getConfirmEndpoint(mode: ConfirmMode) {
+  return mode === 'venue-pass'
+    ? VENUE_PASS_CONFIRM_ENDPOINT
+    : FREE_TRIAL_CONFIRM_ENDPOINT
+}
+
+function isWrongFreeTrialFlowError(message?: string) {
+  return message === WRONG_FREE_TRIAL_FLOW_ERROR
+}
+
+function getTrackingNames(mode: ConfirmMode): ConfirmTrackingNames {
+  if (mode === 'venue-pass') {
+    return {
+      startEvent: 'venue_pass_line_confirm_start',
+      startLineEventName: 'VenuePassLineStart',
+      loginRedirectEvent: 'venue_pass_line_confirm_login_redirect',
+      loginLineEventName: 'VenuePassLineLogin',
+      friendRequiredEvent: 'venue_pass_line_confirm_friend_required',
+      friendRequiredLineEventName: 'VenuePassAddFriend',
+      successEvent: 'venue_pass_line_confirm_success',
+      successLineEventName: 'VenuePassConfirmed',
+      pendingEvent: 'venue_pass_line_confirm_pending',
+      pendingLineEventName: 'VenuePassConfirmPending',
+      partialEvent: 'venue_pass_line_confirm_partial',
+      partialLineEventName: 'VenuePassConfirmPartial',
+      errorEvent: 'venue_pass_line_confirm_error',
+      errorLineEventName: 'VenuePassLineError',
+      friendRetryEvent: 'venue_pass_line_confirm_friend_retry',
+      friendRetryLineEventName: 'VenuePassAddFriendRetry',
+      closeEvent: 'venue_pass_line_confirm_close',
+      closeLineEventName: 'VenuePassLineClose',
+      openChatEvent: 'venue_pass_line_confirm_open_chat',
+      openChatLineEventName: 'VenuePassLineChat',
+      ctaPrefix: 'venue-pass-line-confirm',
+      successMetaStandardEvent: 'Lead',
+    }
+  }
+
+  return {
+    startEvent: 'free_trial_line_confirm_start',
+    startLineEventName: 'FreeTrialLineStart',
+    loginRedirectEvent: 'free_trial_line_confirm_login_redirect',
+    loginLineEventName: 'FreeTrialLineLogin',
+    friendRequiredEvent: 'free_trial_line_confirm_friend_required',
+    friendRequiredLineEventName: 'FreeTrialAddFriend',
+    successEvent: 'free_trial_line_confirm_success',
+    successLineEventName: 'FreeTrialConfirmed',
+    pendingEvent: 'free_trial_line_confirm_pending',
+    pendingLineEventName: 'FreeTrialConfirmPending',
+    partialEvent: 'free_trial_line_confirm_partial',
+    partialLineEventName: 'FreeTrialConfirmPartial',
+    errorEvent: 'free_trial_line_confirm_error',
+    errorLineEventName: 'FreeTrialLineError',
+    friendRetryEvent: 'free_trial_line_confirm_friend_retry',
+    friendRetryLineEventName: 'FreeTrialAddFriendRetry',
+    closeEvent: 'free_trial_line_confirm_close',
+    closeLineEventName: 'FreeTrialLineClose',
+    openChatEvent: 'free_trial_line_confirm_open_chat',
+    openChatLineEventName: 'FreeTrialLineChat',
+    ctaPrefix: 'free-trial-line-confirm',
+    successMetaStandardEvent: 'Schedule',
+  }
+}
+
 function getReferenceIdFromLocation() {
   const params = new URLSearchParams(window.location.search)
   const referenceId = params.get('referenceId')
@@ -58,17 +162,25 @@ function getReferenceIdFromLocation() {
   return new URLSearchParams(hashQuery).get('referenceId') || ''
 }
 
-function buildCleanConfirmPath(referenceId: string) {
+function buildCleanConfirmPath(referenceId: string, mode: ConfirmMode = 'free-trial') {
   const params = new URLSearchParams({ referenceId })
-  return `/line/free-trial-confirm?${params.toString()}`
+  const path =
+    mode === 'venue-pass' ? '/line/venue-pass-confirm' : '/line/free-trial-confirm'
+  return `${path}?${params.toString()}`
 }
 
-function getCleanConfirmUrl(referenceId: string) {
-  return new URL(buildCleanConfirmPath(referenceId), window.location.origin).toString()
+function getCleanConfirmUrl(referenceId: string, mode: ConfirmMode = 'free-trial') {
+  return new URL(
+    buildCleanConfirmPath(referenceId, mode),
+    window.location.origin,
+  ).toString()
 }
 
-function normalizeConfirmLocation(referenceId: string) {
-  const cleanPath = buildCleanConfirmPath(referenceId)
+function normalizeConfirmLocation(
+  referenceId: string,
+  mode: ConfirmMode = 'free-trial',
+) {
+  const cleanPath = buildCleanConfirmPath(referenceId, mode)
   const currentPath = `${window.location.pathname}${window.location.search}`
   if (currentPath !== cleanPath || window.location.hash) {
     window.history.replaceState(null, '', cleanPath)
@@ -94,28 +206,35 @@ async function getLineConfirmLiffId() {
   }
 }
 
-function getFriendRequestStorageKey(referenceId: string) {
-  return `ufcgym:free-trial-line-friend-request:${referenceId}`
+function getFriendRequestStorageKey(referenceId: string, mode: ConfirmMode) {
+  return `ufcgym:${mode}-line-friend-request:${referenceId}`
 }
 
-function hasRequestedFriendship(referenceId: string) {
+function hasRequestedFriendship(referenceId: string, mode: ConfirmMode) {
   try {
-    return window.sessionStorage.getItem(getFriendRequestStorageKey(referenceId)) === '1'
+    return (
+      window.sessionStorage.getItem(getFriendRequestStorageKey(referenceId, mode)) ===
+      '1'
+    )
   } catch {
     return false
   }
 }
 
-function markFriendshipRequested(referenceId: string) {
+function markFriendshipRequested(referenceId: string, mode: ConfirmMode) {
   try {
-    window.sessionStorage.setItem(getFriendRequestStorageKey(referenceId), '1')
+    window.sessionStorage.setItem(getFriendRequestStorageKey(referenceId, mode), '1')
   } catch {
     // Session storage may be unavailable in some in-app browsers.
   }
 }
 
-async function requestFriendshipAndRefresh(liff: LiffInstance, referenceId: string) {
-  markFriendshipRequested(referenceId)
+async function requestFriendshipAndRefresh(
+  liff: LiffInstance,
+  referenceId: string,
+  mode: ConfirmMode,
+) {
+  markFriendshipRequested(referenceId, mode)
   try {
     await liff.requestFriendship()
     const nextFriendship = await liff.getFriendship()
@@ -134,7 +253,82 @@ function closeLiffWindow() {
   return false
 }
 
-function getStatusCopy(status: ConfirmStatus) {
+function getVenuePassStatusCopy(status: ConfirmStatus) {
+  if (status === 'success') {
+    return {
+      eyebrow: 'LINE CONFIRMED',
+      title: 'LINE 已確認場館七日通行。',
+      body: '七日通行確認卡已傳到你的 LINE 聊天室。到場時請出示 LINE 卡片，現場同仁會協助確認可使用時段與入館方式。',
+    }
+  }
+  if (status === 'partial') {
+    return {
+      eyebrow: 'LINE NEEDS HELP',
+      title: '登記已綁定，確認卡暫時沒有送出。',
+      body: '請先保留這組登記編號，直接到 LINE 私訊專員協助確認七日通行。',
+    }
+  }
+  if (status === 'sending') {
+    return {
+      eyebrow: 'LINE SENDING',
+      title: '確認卡正在送出中。',
+      body: '系統正在把七日通行確認卡送到你的 LINE 聊天室。請回到 LINE 查看；如果稍後仍沒收到，再請專員協助確認。',
+    }
+  }
+  if (status === 'friend-required') {
+    return {
+      eyebrow: 'ADD LINE FRIEND',
+      title: '請先加入官方 LINE 好友。',
+      body: '如果剛剛沒有完成加入好友，可以再開啟一次加好友；完成後系統會繼續送出七日通行確認卡。',
+    }
+  }
+  if (status === 'login') {
+    return {
+      eyebrow: 'LINE LOGIN',
+      title: '正在開啟 LINE 登入。',
+      body: '登入完成後，系統會自動回到這裡幫你送出七日通行確認卡。',
+    }
+  }
+  if (status === 'confirming') {
+    return {
+      eyebrow: 'CONFIRMING',
+      title: '正在確認你的七日通行。',
+      body: '我們正在綁定登記編號，並把確認卡送到你的 LINE 聊天室。',
+    }
+  }
+  if (status === 'missing-config') {
+    return {
+      eyebrow: 'LINE CONFIG',
+      title: '目前找不到 LINE LIFF 設定。',
+      body: '請先用官方 LINE 私訊登記編號，專員會協助確認七日通行。',
+    }
+  }
+  if (status === 'missing-reference') {
+    return {
+      eyebrow: 'MISSING REQUEST',
+      title: '找不到登記編號。',
+      body: '請回到登記成功頁，或直接到 LINE 私訊專員協助查詢。',
+    }
+  }
+  if (status === 'error') {
+    return {
+      eyebrow: 'CONFIRM FAILED',
+      title: 'LINE 快速確認沒有完成。',
+      body: '請重新開啟一次確認連結；如果還是不成功，直接到 LINE 私訊登記編號即可。',
+    }
+  }
+  return {
+    eyebrow: 'LINE CONFIRM',
+    title: '正在準備 LINE 場館七日通行確認。',
+    body: '請稍候，我們會把你的登記帶入 LINE 確認流程。',
+  }
+}
+
+function getStatusCopy(status: ConfirmStatus, mode: ConfirmMode) {
+  if (mode === 'venue-pass') {
+    return getVenuePassStatusCopy(status)
+  }
+
   if (status === 'success') {
     return {
       eyebrow: 'LINE CONFIRMED',
@@ -209,6 +403,9 @@ export function LineFreeTrialConfirmPage() {
   const { track } = useTracking()
   const hasStarted = useRef(false)
   const referenceId = useMemo(getReferenceIdFromLocation, [])
+  const [confirmMode, setConfirmMode] = useState<ConfirmMode>(() =>
+    getConfirmModeForReferenceId(referenceId),
+  )
   const [status, setStatus] = useState<ConfirmStatus>(
     referenceId ? 'loading' : 'missing-reference',
   )
@@ -223,13 +420,17 @@ export function LineFreeTrialConfirmPage() {
     let cancelled = false
 
     const run = async () => {
+      let activeConfirmMode = getConfirmModeForReferenceId(referenceId)
+      if (!cancelled) setConfirmMode(activeConfirmMode)
+
       try {
+        let trackingNames = getTrackingNames(activeConfirmMode)
         track({
-          event: 'free_trial_line_confirm_start',
+          event: trackingNames.startEvent,
           params: {
             reference_id: referenceId,
           },
-          lineEventName: 'FreeTrialLineStart',
+          lineEventName: trackingNames.startLineEventName,
         })
 
         const liffId = await getLineConfirmLiffId()
@@ -243,16 +444,20 @@ export function LineFreeTrialConfirmPage() {
           liffId,
           withLoginOnExternalBrowser: false,
         })
-        normalizeConfirmLocation(referenceId)
+        if (activeConfirmMode === 'venue-pass') {
+          normalizeConfirmLocation(referenceId, activeConfirmMode)
+        } else {
+          normalizeConfirmLocation(referenceId)
+        }
 
         if (!liff.isLoggedIn()) {
           if (!cancelled) setStatus('login')
           track({
-            event: 'free_trial_line_confirm_login_redirect',
+            event: trackingNames.loginRedirectEvent,
             params: { reference_id: referenceId },
-            lineEventName: 'FreeTrialLineLogin',
+            lineEventName: trackingNames.loginLineEventName,
           })
-          liff.login({ redirectUri: getCleanConfirmUrl(referenceId) })
+          liff.login({ redirectUri: getCleanConfirmUrl(referenceId, activeConfirmMode) })
           return
         }
 
@@ -264,16 +469,20 @@ export function LineFreeTrialConfirmPage() {
 
         if (!isFriend) {
           if (!cancelled) setStatus('friend-required')
-          if (!hasRequestedFriendship(referenceId)) {
-            isFriend = await requestFriendshipAndRefresh(liff, referenceId)
+          if (!hasRequestedFriendship(referenceId, activeConfirmMode)) {
+            isFriend = await requestFriendshipAndRefresh(
+              liff,
+              referenceId,
+              activeConfirmMode,
+            )
           }
         }
 
         if (!isFriend) {
           track({
-            event: 'free_trial_line_confirm_friend_required',
+            event: trackingNames.friendRequiredEvent,
             params: { reference_id: referenceId },
-            lineEventName: 'FreeTrialAddFriend',
+            lineEventName: trackingNames.friendRequiredLineEventName,
           })
           return
         }
@@ -288,28 +497,47 @@ export function LineFreeTrialConfirmPage() {
 
         if (!cancelled) setStatus('confirming')
 
-        const response = await fetch('/api/free-trial-reservation/line-confirm', {
-          method: 'POST',
-          headers: {
-            'content-type': 'application/json',
+        const lineConfirmPayload = {
+          referenceId,
+          lineContext: {
+            accessToken: liff.getAccessToken?.(),
+            idToken: liff.getIDToken?.(),
+            email: getLiffEmail(),
+            displayName: profile.displayName,
+            pictureUrl: profile.pictureUrl,
+            friendFlag: isFriend,
           },
-          body: JSON.stringify({
-            referenceId,
-            lineContext: {
-              accessToken: liff.getAccessToken?.(),
-              idToken: liff.getIDToken?.(),
-              email: getLiffEmail(),
-              displayName: profile.displayName,
-              pictureUrl: profile.pictureUrl,
-              friendFlag: isFriend,
+          tracking: getCheckoutTrackingContext(),
+          sourcePath: `${window.location.pathname}${window.location.search}${window.location.hash}`,
+        }
+
+        const postLineConfirm = async (mode: ConfirmMode) => {
+          const response = await fetch(getConfirmEndpoint(mode), {
+            method: 'POST',
+            headers: {
+              'content-type': 'application/json',
             },
-            tracking: getCheckoutTrackingContext(),
-            sourcePath: `${window.location.pathname}${window.location.search}${window.location.hash}`,
-          }),
-        })
-        const data = (await response.json().catch(() => null)) as
-          | LineConfirmResponse
-          | null
+            body: JSON.stringify(lineConfirmPayload),
+          })
+          const data = (await response.json().catch(() => null)) as
+            | LineConfirmResponse
+            | null
+          return { response, data }
+        }
+
+        let { response, data } = await postLineConfirm(activeConfirmMode)
+        if (
+          activeConfirmMode === 'free-trial' &&
+          (!response.ok || !data?.ok) &&
+          isWrongFreeTrialFlowError(data?.error)
+        ) {
+          activeConfirmMode = 'venue-pass'
+          trackingNames = getTrackingNames(activeConfirmMode)
+          if (!cancelled) setConfirmMode(activeConfirmMode)
+          const venuePassResult = await postLineConfirm(activeConfirmMode)
+          response = venuePassResult.response
+          data = venuePassResult.data
+        }
 
         if (!response.ok || !data?.ok) {
           throw new Error(data?.error || 'LINE 確認失敗，請稍後再試。')
@@ -327,34 +555,34 @@ export function LineFreeTrialConfirmPage() {
 
         if (notifyDelivered) {
           track({
-            event: 'free_trial_line_confirm_success',
+            event: trackingNames.successEvent,
             params: {
               reference_id: referenceId,
               line_notify_status: notifyStatus,
             },
-            metaStandardEvent: 'Schedule',
-            lineEventName: 'FreeTrialConfirmed',
+            metaStandardEvent: trackingNames.successMetaStandardEvent,
+            lineEventName: trackingNames.successLineEventName,
           })
           window.setTimeout(() => {
             if (!cancelled) closeLiffWindow()
           }, 1200)
         } else if (notifyPending) {
           track({
-            event: 'free_trial_line_confirm_pending',
+            event: trackingNames.pendingEvent,
             params: {
               reference_id: referenceId,
               line_notify_status: notifyStatus,
             },
-            lineEventName: 'FreeTrialConfirmPending',
+            lineEventName: trackingNames.pendingLineEventName,
           })
         } else {
           track({
-            event: 'free_trial_line_confirm_partial',
+            event: trackingNames.partialEvent,
             params: {
               reference_id: referenceId,
               line_notify_status: notifyStatus,
             },
-            lineEventName: 'FreeTrialConfirmPartial',
+            lineEventName: trackingNames.partialLineEventName,
           })
         }
       } catch (confirmError) {
@@ -366,13 +594,14 @@ export function LineFreeTrialConfirmPage() {
           setError(message)
           setStatus('error')
         }
+        const trackingNames = getTrackingNames(activeConfirmMode)
         track({
-          event: 'free_trial_line_confirm_error',
+          event: trackingNames.errorEvent,
           params: {
             reference_id: referenceId,
             error_message: message,
           },
-          lineEventName: 'FreeTrialLineError',
+          lineEventName: trackingNames.errorLineEventName,
         })
       }
     }
@@ -393,13 +622,14 @@ export function LineFreeTrialConfirmPage() {
     }
 
     setFriendRetrying(true)
+    const trackingNames = getTrackingNames(confirmMode)
     track({
-      event: 'free_trial_line_confirm_friend_retry',
+      event: trackingNames.friendRetryEvent,
       params: { reference_id: referenceId },
-      lineEventName: 'FreeTrialAddFriendRetry',
+      lineEventName: trackingNames.friendRetryLineEventName,
     })
 
-    const isFriend = await requestFriendshipAndRefresh(liff, referenceId)
+    const isFriend = await requestFriendshipAndRefresh(liff, referenceId, confirmMode)
     if (isFriend) {
       window.location.reload()
       return
@@ -409,11 +639,14 @@ export function LineFreeTrialConfirmPage() {
     setStatus('friend-required')
   }
 
-  const copy = getStatusCopy(status)
+  const copy = getStatusCopy(status, confirmMode)
+  const trackingNames = getTrackingNames(confirmMode)
   const isBusy = ['loading', 'login', 'confirming'].includes(status) || friendRetrying
   const shouldShowLineReturnButton = status === 'success' || status === 'sending'
   const shouldShowFriendRetryButton = status === 'friend-required'
   const shouldShowSupportButton = ['friend-required', 'partial', 'error', 'missing-config', 'missing-reference'].includes(status)
+  const referenceLabel = confirmMode === 'venue-pass' ? '登記編號' : '預約編號'
+  const homeLabel = confirmMode === 'venue-pass' ? '回到活動頁' : '回到課程頁'
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-abyss text-pearl">
@@ -432,7 +665,7 @@ export function LineFreeTrialConfirmPage() {
 
           {referenceId && (
             <p className="mt-5 rounded-xl border border-pearl/10 bg-black/24 px-3 py-2 font-mono text-xs text-mist/72">
-              預約編號：{referenceId}
+              {referenceLabel}：{referenceId}
             </p>
           )}
 
@@ -454,16 +687,16 @@ export function LineFreeTrialConfirmPage() {
                 variant="primary"
                 size="lg"
                 className="w-full"
-                data-cta="free-trial-line-confirm-close"
+                data-cta={`${trackingNames.ctaPrefix}-close`}
                 onClick={() => {
                   track({
-                    event: 'free_trial_line_confirm_close',
+                    event: trackingNames.closeEvent,
                     params: {
                       reference_id: referenceId,
                       confirm_status: status,
                       line_notify_status: lineNotifyStatus,
                     },
-                    lineEventName: 'FreeTrialLineClose',
+                    lineEventName: trackingNames.closeLineEventName,
                   })
                   closeLiffWindow()
                 }}
@@ -476,7 +709,7 @@ export function LineFreeTrialConfirmPage() {
                 variant="primary"
                 size="lg"
                 className="w-full"
-                data-cta="free-trial-line-confirm-friend-retry"
+                data-cta={`${trackingNames.ctaPrefix}-friend-retry`}
                 disabled={friendRetrying}
                 onClick={handleFriendRetry}
               >
@@ -489,17 +722,17 @@ export function LineFreeTrialConfirmPage() {
                 variant="secondary"
                 size="lg"
                 className="w-full"
-                data-cta="free-trial-line-confirm-open-chat"
+                data-cta={`${trackingNames.ctaPrefix}-open-chat`}
                 onClick={() =>
                   track({
-                    event: 'free_trial_line_confirm_open_chat',
+                    event: trackingNames.openChatEvent,
                     params: {
                       reference_id: referenceId,
                       confirm_status: status,
                       line_notify_status: lineNotifyStatus,
                     },
                     metaStandardEvent: 'Contact',
-                    lineEventName: 'FreeTrialLineChat',
+                    lineEventName: trackingNames.openChatLineEventName,
                   })
                 }
               >
@@ -511,9 +744,9 @@ export function LineFreeTrialConfirmPage() {
               variant="ghost"
               size="lg"
               className="w-full"
-              data-cta="free-trial-line-confirm-home"
+              data-cta={`${trackingNames.ctaPrefix}-home`}
             >
-              回到課程頁
+              {homeLabel}
             </Button>
           </div>
 
